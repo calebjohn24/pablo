@@ -104,7 +104,7 @@ fn help_version_and_invalid_options_are_honest_about_the_checkpoint() {
     let fixture = Fixture::new();
     let help = fixture.command().arg("--help").output().unwrap();
     assert!(help.status.success());
-    assert!(String::from_utf8_lossy(&help.stdout).contains("C1.3"));
+    assert!(String::from_utf8_lossy(&help.stdout).contains("C1.5"));
     let version = fixture.command().arg("--version").output().unwrap();
     assert!(version.status.success());
     assert!(

@@ -46,6 +46,7 @@ impl std::error::Error for RunError {}
 /// The caller drives one future; tools complete cleanup before it settles.
 pub struct Runtime<T> {
     tracer: T,
+    parent: Context,
 }
 
 struct Execution<'a> {
@@ -73,7 +74,17 @@ where
     T::Span: Send + Sync + 'static,
 {
     pub fn new(tracer: T) -> Self {
-        Self { tracer }
+        Self {
+            tracer,
+            parent: Context::new(),
+        }
+    }
+
+    /// Explicit host context; never reads or installs a thread-local context.
+    /// Protocol hosts must extract remote context before crossing this boundary.
+    pub fn with_parent_context(mut self, parent: Context) -> Self {
+        self.parent = parent;
+        self
     }
 
     /// Convenience entry point granting no tools.
@@ -127,7 +138,7 @@ where
                     KeyValue::new("pablo.otel.mapping.version", telemetry::MAPPING_VERSION),
                     KeyValue::new("pablo.trace.format.version", SCHEMA_VERSION),
                 ])
-                .start_with_context(&self.tracer, &Context::new()),
+                .start_with_context(&self.tracer, &self.parent),
         );
         if !root.span().span_context().is_valid() {
             root.span().end();
@@ -149,7 +160,19 @@ where
             deadline,
             root: &root,
         };
-        let outcome = match lifecycle.emit(EventKind::RunStarted, &root, None, started, false) {
+        let parent_id = self
+            .parent
+            .span()
+            .span_context()
+            .is_valid()
+            .then(|| self.parent.span().span_context().span_id().to_string());
+        let outcome = match lifecycle.emit(
+            EventKind::RunStarted,
+            &root,
+            parent_id.as_deref(),
+            started,
+            false,
+        ) {
             Err(outcome) => outcome,
             Ok(()) if execution.stop().is_some() => execution.stop().expect("stop is monotonic"),
             Ok(())
@@ -167,7 +190,7 @@ where
                 outcome: outcome.clone(),
             },
             &root,
-            None,
+            parent_id.as_deref(),
             finished,
         );
         let delivered = lifecycle.sink.emit(&terminal);

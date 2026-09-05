@@ -1,0 +1,24 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: ${env:PABLO_COLLECTOR_LISTEN}
+exporters:
+  otlp_http/proof:
+    endpoint: ${env:PABLO_COLLECTOR_PROOF}
+    encoding: json
+    compression: none
+    retry_on_failure:
+      enabled: false
+    sending_queue:
+      enabled: false
+service:
+  telemetry:
+    logs:
+      level: error
+    metrics:
+      level: none
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [otlp_http/proof]

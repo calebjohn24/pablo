@@ -1,20 +1,19 @@
 mod acp;
 mod config;
+mod otel;
 
 use std::{
     fs::OpenOptions,
     io::{self, BufWriter, Write},
     process::ExitCode,
-    time::Duration,
 };
 
-use opentelemetry_sdk::{Resource, trace::SdkTracerProvider};
 use pablo_core::{
     CancellationToken, EventKind, EventSink, JsonlSink, Provider, RunEvent, RunOutcome, Runtime,
     ScriptedProvider, SinkError, ToolRegistry, gateway::GatewayProvider, telemetry,
 };
 
-const HELP: &str = "pablo — headless Rust runtime (C1.3 spike)\n\nUsage:\n  pablo run \"TASK\" [--workspace PATH] [--model ID] [--no-shell]\n                 [--env-file PATH] [--timeout SECONDS] [--tool-timeout SECONDS]\n                 [--max-tool-calls N] [--max-model-calls N]\n                 [--trace PATH] [--capture-content]\n  pablo acp --stdio [--model ID] [--no-shell] [--env-file PATH]\n                  [--max-tool-calls N] [--max-model-calls N]\n                  [--timeout SECONDS] [--tool-timeout SECONDS] [--trace PATH] [--capture-content]\n  pablo demo [--trace PATH] [--capture-content]\n  pablo --version\n  pablo --help\n\nRun sends one task to Vercel AI Gateway using direct HTTP.\nDefault model: google/gemini-3.8-flash. Workspace: current directory.\nReads AI_GATEWAY_API_KEY (alias VERCEL_AI_GATEWAY) from the environment\nor .env in the invoking directory.\nShell is enabled for run; use --no-shell for text only. Ctrl-C cancels and cleans up.\nDefaults: 3600 seconds per run, 900 seconds per shell call. Timeouts accept 1–86400.\nModel and tool call counts are unlimited by default; use --max-*-calls to cap them.\nEach invocation is a fresh task (no saved chat history).\nDemo is offline. Trace files must be new; native content is off by default.\nNo network telemetry exporter is enabled.\n";
+const HELP: &str = "pablo — headless Rust runtime (C1.5 spike)\n\nUsage:\n  pablo run \"TASK\" [--workspace PATH] [--model ID] [--no-shell]\n                 [--env-file PATH] [--timeout SECONDS] [--tool-timeout SECONDS]\n                 [--max-tool-calls N] [--max-model-calls N]\n                 [--trace PATH] [--capture-content]\n  pablo acp --stdio [--model ID] [--no-shell] [--env-file PATH]\n                  [--max-tool-calls N] [--max-model-calls N]\n                  [--timeout SECONDS] [--tool-timeout SECONDS] [--trace PATH] [--capture-content]\n  pablo demo [--trace PATH] [--capture-content]\n  CLI trace context: --traceparent VALUE [--tracestate VALUE] (run/demo)\n  pablo --version\n  pablo --help\n\nRun sends one task to Vercel AI Gateway using direct HTTP.\nDefault model: google/gemini-3.8-flash. Workspace: current directory.\nReads AI_GATEWAY_API_KEY (alias VERCEL_AI_GATEWAY) from the environment\nor .env in the invoking directory.\nShell is enabled for run; use --no-shell for text only. Ctrl-C cancels and cleans up.\nDefaults: 3600 seconds per run, 900 seconds per shell call. Timeouts accept 1–86400.\nModel and tool call counts are unlimited by default; use --max-*-calls to cap them.\nEach invocation is a fresh task (no saved chat history).\nDemo is offline. Trace files must be new; native content is off by default.\nNetwork telemetry is off by default; set OTEL_TRACES_EXPORTER=otlp for OTLP/HTTP Protobuf.\n";
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> ExitCode {
@@ -82,18 +81,11 @@ async fn execute() -> Result<ExitCode, String> {
         }
         None => None,
     };
-    let sdk = SdkTracerProvider::builder()
-        .with_resource(
-            Resource::builder_empty()
-                .with_service_name("pablo")
-                .with_attribute(opentelemetry::KeyValue::new(
-                    "service.version",
-                    env!("CARGO_PKG_VERSION"),
-                ))
-                .build(),
-        )
-        .build();
-    let runtime = Runtime::new(telemetry::tracer(&sdk));
+    let sdk = otel::Telemetry::new();
+    let runtime = Runtime::new(telemetry::tracer(&sdk.sdk)).with_parent_context(otel::parent(
+        options.traceparent.as_deref(),
+        options.tracestate.as_deref(),
+    ));
     let cancellation = CancellationToken::new();
     // Register before starting work. Poll signals alongside the same run future;
     // never drop a running shell future on Ctrl-C.
@@ -165,9 +157,7 @@ async fn execute() -> Result<ExitCode, String> {
             }
         }
     };
-    if sdk.shutdown_with_timeout(Duration::from_secs(2)).is_err() {
-        eprintln!("pablo: telemetry shutdown failed");
-    }
+    sdk.shutdown().await;
     if options.live && needs_newline {
         writeln!(stdout).map_err(|_| "cannot write terminal output")?;
     }

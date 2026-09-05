@@ -13,6 +13,8 @@ pub struct Options {
     pub trace_path: Option<PathBuf>,
     pub env_file: Option<PathBuf>,
     pub no_shell: bool,
+    pub traceparent: Option<String>,
+    pub tracestate: Option<String>,
     input: String,
     workspace: Option<PathBuf>,
     model: Option<String>,
@@ -33,6 +35,8 @@ impl Options {
             trace_path: None,
             env_file: None,
             no_shell: false,
+            traceparent: None,
+            tracestate: None,
             input: String::new(),
             workspace: None,
             model: None,
@@ -78,6 +82,7 @@ impl Options {
                 continue;
             }
             if arg != "--trace"
+                && !(matches!(arg, "--traceparent" | "--tracestate") && !options.acp)
                 && !(options.live
                     && matches!(
                         arg,
@@ -96,6 +101,20 @@ impl Options {
                 .next()
                 .ok_or_else(|| format!("{arg} requires a value"))?;
             match arg {
+                "--traceparent" => {
+                    options.traceparent = Some(
+                        value
+                            .into_string()
+                            .map_err(|_| "traceparent must be UTF-8")?,
+                    )
+                }
+                "--tracestate" => {
+                    options.tracestate = Some(
+                        value
+                            .into_string()
+                            .map_err(|_| "tracestate must be UTF-8")?,
+                    )
+                }
                 "--trace" => options.trace_path = Some(value.into()),
                 "--workspace" => options.workspace = Some(value.into()),
                 "--env-file" => options.env_file = Some(value.into()),

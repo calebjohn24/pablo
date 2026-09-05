@@ -12,7 +12,10 @@
     "test": "node --test scripts/project.test.mjs",
     "typecheck": "tsc --noEmit",
     "test:acp": "cargo build --locked -p pablo && node --test tests/acp.test.ts",
-    "smoke:live:acp": "cargo build --locked -p pablo && node scripts/smoke-live-acp.ts"
+    "smoke:live:acp": "cargo build --locked -p pablo && node scripts/smoke-live-acp.ts",
+    "test:telemetry": "cargo build --locked -p pablo && node --test tests/telemetry.test.ts",
+    "smoke:collector": "cargo build --locked -p pablo && node scripts/smoke-collector.ts",
+    "measure": "cargo build --release --locked -p pablo --bin pablo --example measure && node scripts/measure.ts"
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "1.4.0"

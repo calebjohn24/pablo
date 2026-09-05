@@ -3,7 +3,6 @@ use agent_client_protocol::{
     Agent, Client, ConnectionTo, Error, Lines, Responder, schema::v1 as wire,
 };
 use futures::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt};
-use opentelemetry_sdk::trace::SdkTracerProvider;
 use pablo_core::{
     CancellationToken, EventKind, EventSink, JsonlSink, LimitKind, RunError, RunEvent, RunOutcome,
     RunSpec, Runtime, SinkError, ToolRegistry, gateway::GatewayProvider, telemetry,
@@ -218,11 +217,16 @@ async fn serve_streams(
                     Err(_) => return responder.respond_with_error(Error::internal_error().data("invalid host configuration")),
                 };
                 spec.workspace = cwd; spec.input = input; spec.session_id = Some(request.session_id.to_string());
+                let incoming = request.meta.as_ref().and_then(|m| m.get(EXTENSION));
+                let parent = if extended {
+                    crate::otel::parent(incoming.and_then(|m| m.get("traceparent")).and_then(Value::as_str),
+                        incoming.and_then(|m| m.get("tracestate")).and_then(Value::as_str))
+                } else { opentelemetry::Context::new() };
                 let (tx, rx) = async_channel::bounded(QUEUE_EVENTS);
                 state.lock().unwrap().events = Some(tx.clone());
                 let worker = {
                     let options = options.clone(); let cancel = cancellation.clone();
-                    std::thread::Builder::new().name("pablo-run".into()).spawn(move || run_worker(options, spec, cancel, tx))
+                    std::thread::Builder::new().name("pablo-run".into()).spawn(move || run_worker(options, spec, parent, cancel, tx))
                 };
                 let Ok(worker) = worker else { return responder.respond_with_error(Error::internal_error().data("cannot start runtime worker")); };
                 {
@@ -321,6 +325,7 @@ fn prompt_text(blocks: &[wire::ContentBlock]) -> Result<String, Error> {
 fn run_worker(
     options: Arc<Options>,
     spec: RunSpec,
+    parent: opentelemetry::Context,
     cancel: CancellationToken,
     tx: async_channel::Sender<RunEvent>,
 ) -> Result<RunOutcome, String> {
@@ -358,8 +363,8 @@ fn run_worker(
         } else {
             None
         };
-        let sdk = SdkTracerProvider::builder().build();
-        let runtime = Runtime::new(telemetry::tracer(&sdk));
+        let sdk = crate::otel::Telemetry::new();
+        let runtime = Runtime::new(telemetry::tracer(&sdk.sdk)).with_parent_context(parent);
         let mut slow_reported = false;
         let mut sink = |event: &RunEvent| -> Result<(), SinkError> {
             if let Some(trace) = trace.as_mut() {
@@ -381,9 +386,7 @@ fn run_worker(
         let outcome = runtime
             .run_with_tools(&spec, &provider, &tools, &cancel, &mut sink)
             .await;
-        if sdk.shutdown_with_timeout(Duration::from_secs(2)).is_err() {
-            eprintln!("pablo: telemetry shutdown failed");
-        }
+        sdk.shutdown().await;
         match outcome {
             Ok(outcome) => Ok(outcome),
             Err(RunError::EventDelivery { outcome, .. }) => Ok(*outcome),

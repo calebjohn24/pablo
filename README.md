@@ -62,7 +62,7 @@ mkdir -p .pablo/traces
 cargo run --locked -p pablo -- demo --trace .pablo/traces/demo.jsonl
 ```
 
-Add `--capture-content` to include the synthetic response in that trace. The default records metadata and byte counts. Trace files are created with private permissions on Unix and existing files are preserved. OTel content and network export are disabled.
+Add `--capture-content` to include the synthetic response in that trace. The default records metadata and byte counts. Trace files are created with private permissions on Unix and existing files are preserved. OTel content stays disabled; network export is off by default.
 
 ```sh
 cargo fmt --all -- --check
@@ -70,16 +70,19 @@ cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --locked
 npm run typecheck
 npm run test:acp
+npm run test:telemetry
 cargo build --release --locked -p pablo
 ```
 
-See [the runtime contracts and telemetry mapping](docs/runtime.md) for embedding and limits. The core supports streamed model/tool turns, bounded shell execution, and cancellation. See [the shell contract](docs/shell.md). The `run` command uses the live gateway; `demo` remains an offline text fixture. The ACP command drives the same runtime, with [verified live Vercel acceptance](docs/project/evidence/c1.4.md). Run `npm run smoke:live:acp` to repeat the explicit paid fixture. Collector export is the next checkpoint.
+See [the runtime contracts and telemetry mapping](docs/runtime.md) for embedding and limits. The core supports streamed model/tool turns, bounded shell execution, and cancellation. See [the shell contract](docs/shell.md). The `run` command uses the live gateway; `demo` remains an offline text fixture. The ACP command drives the same runtime, with [verified live Vercel acceptance](docs/project/evidence/c1.4.md). Run `npm run smoke:live:acp` to repeat the explicit paid fixture. CLI and ACP support [OTLP/HTTP Protobuf export and incoming W3C context](docs/telemetry.md). Run `npm run smoke:collector` for the pinned real local Collector proof; it uses an offline model fixture and no provider credential. The [C1 acceptance report](docs/project/evidence/c1.6.md) records macOS/Linux arm64 checks, live Vercel and Collector proof, and release measurements. The focused spike is complete; the full alpha.1/0.1 surface remains future work.
 
 Run the real shell round-trip fixture with:
 
 ```sh
 cargo test --locked -p pablo-core --test tool_loop actual_shell_evidence_round_trip
 ```
+
+Repeat the offline release measurements with `npm run measure -- 30`; see [measurement methods](docs/measurements.md) for timing boundaries and limitations.
 
 ## Getting oriented
 

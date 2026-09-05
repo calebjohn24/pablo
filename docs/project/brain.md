@@ -81,6 +81,14 @@ The user requested no default tool budget. Default both model and tool call coun
 
 The user asked for generous timeouts and sizes before committing C1.3. Defaults are one hour per run, 15 minutes per shell, 1 MiB input/arguments, 8 MiB tool results, 4 MiB model output, 32 MiB context, 65,536 requested output tokens, one million events, and 256 MiB native traces. Increase gateway and ACP capacities together so protocol framing and escaping do not impose the old smaller caps. Explicit run/tool timeout overrides accept up to 24 hours; cancellation and the separate short cleanup allowances remain. See [runtime limits](../runtime.md) and [ACP transport bounds](../acp.md#transport-bounds-and-ownership).
 
+### D017 — Keep Collector export owned, bounded and separate from task content
+
+C1.5 shares one standalone SDK setup across CLI/ACP, using the pinned OTLP 0.32.0 exporter and bounded SDK batch processor. A dedicated current-thread executor lets shutdown cancel HTTP/retry work before the two-second deadline and join the batch thread without blocking the model loop. Adapt the pinned SDK's service-name precedence and overly broad retry classification; sanitize diagnostics and count losses, including partial rejection. Incoming context uses the existing negotiated `pablo/v1` ACP namespace (stable ACP has no dedicated fields), CLI flags, or explicit host OTel context. Baggage has an empty allowlist. The real Collector 0.160.0 proof checks native/span IDs and timestamps without a paid provider. See [configuration and ownership](../telemetry.md) and [evidence](evidence/c1.5.md).
+
+### D018 — C1 acceptance establishes scoped baselines, not release ceilings
+
+C1.6 verifies the focused fixtures on native macOS arm64 and an isolated Ubuntu 24.04 arm64 VM, plus a fresh explicit live Vercel ACP run on macOS and real Collector proof on both systems. Release measurements use 30 samples after five warm-ups; event latency uses 30,000 deltas. Report timing boundaries, virtualization and source fingerprints so setup costs are not mistaken for pure protocol overhead. C1 is complete, while native Linux x86_64 measurements and broader alpha.1/0.1 gates remain unclaimed. No provisional performance number becomes a CI failure threshold. See [acceptance](evidence/c1.6.md), [methods](../measurements.md), and [the proposed next cycle](proposals/002-single-agent-completion.md); adopting C2 is the next session's work.
+
 ## Working constraints
 
 - Keep `docs/context.md` as the detailed design source; review deliberate changes using the state file's stored SHA-256.

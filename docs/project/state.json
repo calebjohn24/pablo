@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-05T04:21:44.021Z",
+  "updated_at": "2026-09-05T05:01:14.807Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C1.5",
-  "next_action": "Start C1.5: add OTLP/HTTP Protobuf export and a pinned local Collector fixture. Prove incoming W3C propagation, native/span identity correlation, metadata-only export and bounded cleanup during Collector failure. Live ACP C1.4 passed; repeat explicitly with npm run smoke:live:acp when needed. Linux acceptance and performance measurements remain C1.6.",
-  "latest_log_entry": "LOG-0026",
+  "next_checkpoint": null,
+  "next_action": "C1 focused spike is complete. Review/adopt docs/project/proposals/002-single-agent-completion.md in a new session, then initialize C2 checkpoint state while preserving C1 history. No next checkpoint is active yet. Repeat measurements with npm run measure -- 30; retain native Linux x86_64 and full alpha.1/0.1 acceptance as future gates. The local pablo-c16 Linux VM is stopped.",
+  "latest_log_entry": "LOG-0029",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -106,9 +106,11 @@
       "depends_on": [
         "C1.4"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0028"
+      ]
     },
     {
       "id": "C1.6",
@@ -117,9 +119,11 @@
       "depends_on": [
         "C1.5"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0029"
+      ]
     }
   ]
 }

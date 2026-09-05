@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Pablo ACP v1 checkpoint C1.3 metadata",
+  "title": "Pablo ACP v1 checkpoint C1.5 metadata",
   "oneOf": [
     {
       "type": "boolean",
@@ -11,6 +11,9 @@
     },
     {
       "$ref": "#/$defs/terminal"
+    },
+    {
+      "$ref": "#/$defs/incoming_trace"
     }
   ],
   "$defs": {
@@ -314,6 +317,23 @@
         "outcome"
       ],
       "additionalProperties": false
+    },
+    "incoming_trace": {
+      "type": "object",
+      "properties": {
+        "traceparent": {
+          "type": "string",
+          "maxLength": 512
+        },
+        "tracestate": {
+          "type": "string",
+          "maxLength": 512
+        }
+      },
+      "required": [
+        "traceparent"
+      ],
+      "additionalProperties": true
     }
   }
 }

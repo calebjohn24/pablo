@@ -57,7 +57,7 @@ The scope is `pablo`, versioned with the Cargo package and carrying that schema 
 
 | Operation | Span | Kind | Parent |
 | --- | --- | --- | --- |
-| Run | `invoke_agent pablo` | INTERNAL | New root |
+| Run | `invoke_agent pablo` | INTERNAL | Explicit host parent, otherwise new root |
 | Streamed model call | `chat {model}` | CLIENT | Run |
 | Tool call | `execute_tool shell.run` | INTERNAL | Run |
 
@@ -78,4 +78,4 @@ These provisional custom attributes are scoped to mapping `c1.2`:
 | `pablo.model.output.chunks` | Integer; accepted delta count | Numeric measurement; no content |
 | `pablo.event.delivery_failed` | Boolean; true if terminal sink delivery fails | Fixed; diagnostic on run span |
 
-Model/provider/session names are bounded metadata supplied by the host and must not contain credentials or task content. The CLI sets `service.name=pablo` and `service.version`. It owns an SDK without exporters and requests shutdown with a two-second timeout. Incoming W3C context, full standard OTel environment configuration, OTLP/HTTP export, and real Collector acceptance remain C1.3–C1.5 work.
+Model/provider/session names are bounded metadata supplied by the host and must not contain credentials or task content. CLI and ACP share an owned SDK with opt-in OTLP/HTTP Protobuf export, explicit incoming W3C context, and a two-second shutdown deadline. See [C1.5 telemetry](telemetry.md) for configuration, ownership, unsupported settings, and real Collector acceptance.

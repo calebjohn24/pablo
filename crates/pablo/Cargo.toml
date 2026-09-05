@@ -17,6 +17,12 @@ tokio = { workspace = true, features = ["signal", "io-util", "net", "sync"] }
 uuid.workspace = true
 dotenvy.workspace = true
 serde_json.workspace = true
+reqwest.workspace = true
+opentelemetry-otlp = { version = "=0.32.0", default-features = false, features = ["trace", "http-proto", "reqwest-rustls", "reqwest-client", "gzip-http", "experimental-http-retry"] }
+opentelemetry-http = { version = "=0.32.0", default-features = false }
+async-trait = "=0.1.92"
+opentelemetry-proto = { version = "=0.32.0", default-features = false, features = ["trace", "gen-tonic-messages"] }
+prost = { version = "=0.14.4", default-features = false, features = ["std"] }
 
 [dev-dependencies]
 serde_json.workspace = true
