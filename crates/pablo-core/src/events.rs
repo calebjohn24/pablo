@@ -4,6 +4,7 @@ use std::{
 };
 
 use crate::{EventKind, RunEvent, RunSpec};
+use serde::{Serialize, Serializer, ser::SerializeMap};
 
 #[derive(Debug)]
 pub enum SinkError {
@@ -50,6 +51,7 @@ pub struct JsonlSink<W> {
     terminal_reserve: usize,
     bytes_written: usize,
     closed: bool,
+    buffer: Vec<u8>,
 }
 
 impl<W: Write> JsonlSink<W> {
@@ -77,6 +79,7 @@ impl<W: Write> JsonlSink<W> {
             terminal_reserve,
             bytes_written: 0,
             closed: false,
+            buffer: Vec::with_capacity(4096),
         })
     }
 
@@ -94,107 +97,205 @@ impl<W: Write + Send> EventSink for JsonlSink<W> {
             return Err(io::Error::other("trace is closed").into());
         }
         let terminal = matches!(event.kind, EventKind::RunFinished { .. });
-        // Remove content before it reaches the serializer. Keep the original
-        // event intact for live consumers and use its lengths for the projection.
-        let redacted_kind = if self.capture_content {
-            None
-        } else {
-            match &event.kind {
-                EventKind::TextDelta { .. } => Some(EventKind::TextDelta {
-                    text: String::new(),
-                }),
-                EventKind::ToolStarted { call } => Some(EventKind::ToolStarted {
-                    call: crate::ToolCall {
-                        arguments: serde_json::Value::Null,
-                        ..call.clone()
-                    },
-                }),
-                EventKind::ToolFinished {
-                    call_id,
-                    name,
-                    result,
-                } => {
-                    let mut result = result.clone();
-                    if let Some(shell) = result.shell.as_mut() {
-                        shell.stdout.clear();
-                        shell.stderr.clear();
-                    }
-                    Some(EventKind::ToolFinished {
-                        call_id: call_id.clone(),
-                        name: name.clone(),
-                        result,
-                    })
-                }
-                EventKind::RunFinished {
-                    outcome:
-                        crate::RunOutcome::Completed {
-                            finish_reason,
-                            usage,
-                            ..
-                        },
-                } => Some(EventKind::RunFinished {
-                    outcome: crate::RunOutcome::Completed {
-                        output: String::new(),
-                        finish_reason: *finish_reason,
-                        usage: usage.clone(),
-                    },
-                }),
-                _ => None,
-            }
-        };
-        let redacted = redacted_kind.map(|kind| RunEvent {
-            kind,
-            ..event.clone()
-        });
-        let mut value =
-            serde_json::to_value(redacted.as_ref().unwrap_or(event)).map_err(io::Error::other)?;
-        if !self.capture_content {
-            match &event.kind {
-                EventKind::TextDelta { text } => {
-                    value["text"] = serde_json::Value::Null;
-                    value["text_bytes"] = text.len().into();
-                    value["content_redacted"] = true.into();
-                }
-                EventKind::ToolStarted { .. } => {
-                    value["content_redacted"] = true.into();
-                }
-                EventKind::ToolFinished { result, .. } => {
-                    if let Some(shell) = &result.shell {
-                        value["result"]["shell"]["stdout"] = serde_json::Value::Null;
-                        value["result"]["shell"]["stderr"] = serde_json::Value::Null;
-                        value["result"]["shell"]["stdout_bytes"] = shell.stdout.len().into();
-                        value["result"]["shell"]["stderr_bytes"] = shell.stderr.len().into();
-                    }
-                    value["content_redacted"] = true.into();
-                }
-                EventKind::RunFinished {
-                    outcome: crate::RunOutcome::Completed { output, .. },
-                } => {
-                    value["outcome"]["output"] = serde_json::Value::Null;
-                    value["outcome"]["output_bytes"] = output.len().into();
-                    value["content_redacted"] = true.into();
-                }
-                _ => {}
-            }
-        }
-        let mut bytes = serde_json::to_vec(&value).map_err(io::Error::other)?;
-        bytes.push(b'\n');
         let ceiling = if terminal {
             self.max_bytes
         } else {
             self.max_bytes - self.terminal_reserve
         };
-        if bytes.len() > ceiling.saturating_sub(self.bytes_written) {
+        let remaining = ceiling.saturating_sub(self.bytes_written);
+        if remaining == 0 {
             return Err(SinkError::Capacity);
         }
+        self.buffer.clear();
+        let mut buffer = BoundedBuffer {
+            bytes: &mut self.buffer,
+            limit: remaining - 1, // Reserve the newline as part of the record.
+        };
+        // Redact through borrowed views before serialization. Never copy task
+        // content into a temporary JSON tree, even with content capture enabled.
+        let encoded = if self.capture_content {
+            serde_json::to_writer(&mut buffer, event)
+        } else {
+            serde_json::to_writer(&mut buffer, &RedactedEvent(event))
+        };
+        encoded.map_err(|error| {
+            if error.io_error_kind() == Some(io::ErrorKind::FileTooLarge) {
+                SinkError::Capacity
+            } else {
+                SinkError::Io(io::Error::other(error))
+            }
+        })?;
+        self.buffer.push(b'\n');
         // No partial record is written on capacity failure. I/O failure can
         // leave a partial record and cannot promise terminal delivery.
-        self.writer.write_all(&bytes)?;
-        self.bytes_written += bytes.len();
+        self.writer.write_all(&self.buffer)?;
+        self.bytes_written += self.buffer.len();
         if terminal {
             self.closed = true;
             self.writer.flush()?;
         }
         Ok(())
+    }
+}
+
+/// Stops oversized serialization in memory, before any of the record is written.
+struct BoundedBuffer<'a> {
+    bytes: &'a mut Vec<u8>,
+    limit: usize,
+}
+impl Write for BoundedBuffer<'_> {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        if bytes.len() > self.limit.saturating_sub(self.bytes.len()) {
+            return Err(io::ErrorKind::FileTooLarge.into());
+        }
+        self.bytes.extend_from_slice(bytes);
+        Ok(bytes.len())
+    }
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+struct RedactedEvent<'a>(&'a RunEvent);
+impl Serialize for RedactedEvent<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let e = self.0;
+        let mut map = serializer.serialize_map(None)?;
+        map.serialize_entry("schema_version", &e.schema_version)?;
+        map.serialize_entry("seq", &e.seq)?;
+        map.serialize_entry("timestamp_unix_micros", &e.timestamp_unix_micros)?;
+        map.serialize_entry("run_id", &e.run_id)?;
+        map.serialize_entry("session_id", &e.session_id)?;
+        map.serialize_entry("trace_id", &e.trace_id)?;
+        map.serialize_entry("span_id", &e.span_id)?;
+        map.serialize_entry("parent_span_id", &e.parent_span_id)?;
+        map.serialize_entry("trace_flags", &e.trace_flags)?;
+        match &e.kind {
+            EventKind::RunStarted => map.serialize_entry("type", "run.started")?,
+            EventKind::ModelStarted { provider, model } => {
+                map.serialize_entry("type", "model.started")?;
+                map.serialize_entry("provider", provider)?;
+                map.serialize_entry("model", model)?;
+            }
+            EventKind::TextDelta { text } => {
+                map.serialize_entry("type", "assistant.text.delta")?;
+                map.serialize_entry("text", &())?;
+                map.serialize_entry("text_bytes", &text.len())?;
+                map.serialize_entry("content_redacted", &true)?;
+            }
+            EventKind::ModelFinished {
+                status,
+                finish_reason,
+                usage,
+                output_bytes,
+            } => {
+                map.serialize_entry("type", "model.finished")?;
+                map.serialize_entry("status", status)?;
+                map.serialize_entry("finish_reason", finish_reason)?;
+                map.serialize_entry("usage", usage)?;
+                map.serialize_entry("output_bytes", output_bytes)?;
+            }
+            EventKind::ToolStarted { call } => {
+                #[derive(Serialize)]
+                struct Call<'a> {
+                    id: &'a str,
+                    name: &'a str,
+                    arguments: (),
+                }
+                map.serialize_entry("type", "tool.started")?;
+                map.serialize_entry(
+                    "call",
+                    &Call {
+                        id: &call.id,
+                        name: &call.name,
+                        arguments: (),
+                    },
+                )?;
+                map.serialize_entry("content_redacted", &true)?;
+            }
+            EventKind::ShellStarted {
+                call_id,
+                process_id,
+            } => {
+                map.serialize_entry("type", "shell.started")?;
+                map.serialize_entry("call_id", call_id)?;
+                map.serialize_entry("process_id", process_id)?;
+            }
+            EventKind::ToolFinished {
+                call_id,
+                name,
+                result,
+            } => {
+                #[derive(Serialize)]
+                struct Result<'a> {
+                    status: crate::tool::ToolStatus,
+                    policy_rule: &'a Option<crate::PolicyRule>,
+                    shell: Option<RedactedShell<'a>>,
+                }
+                map.serialize_entry("type", "tool.finished")?;
+                map.serialize_entry("call_id", call_id)?;
+                map.serialize_entry("name", name)?;
+                map.serialize_entry(
+                    "result",
+                    &Result {
+                        status: result.status,
+                        policy_rule: &result.policy_rule,
+                        shell: result.shell.as_ref().map(RedactedShell),
+                    },
+                )?;
+                map.serialize_entry("content_redacted", &true)?;
+            }
+            EventKind::RunFinished { outcome } => {
+                map.serialize_entry("type", "run.finished")?;
+                if let crate::RunOutcome::Completed {
+                    output,
+                    finish_reason,
+                    usage,
+                } = outcome
+                {
+                    #[derive(Serialize)]
+                    struct Completed<'a> {
+                        status: &'static str,
+                        output: (),
+                        output_bytes: usize,
+                        finish_reason: &'a crate::FinishReason,
+                        usage: &'a crate::Usage,
+                    }
+                    map.serialize_entry(
+                        "outcome",
+                        &Completed {
+                            status: "completed",
+                            output: (),
+                            output_bytes: output.len(),
+                            finish_reason,
+                            usage,
+                        },
+                    )?;
+                    map.serialize_entry("content_redacted", &true)?;
+                } else {
+                    map.serialize_entry("outcome", outcome)?;
+                }
+            }
+        }
+        map.end()
+    }
+}
+
+struct RedactedShell<'a>(&'a crate::tool::ShellResult);
+impl Serialize for RedactedShell<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let shell = self.0;
+        let mut map = serializer.serialize_map(Some(10))?;
+        map.serialize_entry("stdout", &())?;
+        map.serialize_entry("stderr", &())?;
+        map.serialize_entry("stdout_bytes", &shell.stdout.len())?;
+        map.serialize_entry("stderr_bytes", &shell.stderr.len())?;
+        map.serialize_entry("exit_code", &shell.exit_code)?;
+        map.serialize_entry("signal", &shell.signal)?;
+        map.serialize_entry("stdout_truncated", &shell.stdout_truncated)?;
+        map.serialize_entry("stderr_truncated", &shell.stderr_truncated)?;
+        map.serialize_entry("stdout_lossy", &shell.stdout_lossy)?;
+        map.serialize_entry("stderr_lossy", &shell.stderr_lossy)?;
+        map.end()
     }
 }

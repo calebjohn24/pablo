@@ -69,6 +69,18 @@ Run all focused fixtures on macOS and Linux. Produce a local cycle report with a
 
 Acceptance: live Vercel proof, real Collector proof, platform checks, and complete project records all exist. Record stripped binary size, startup time, idle RSS, event latency, trace overhead, and ACP stdio overhead relative to the in-process fixture. Include platform, tool versions, sample counts, and method. Establish measured baselines before imposing performance gates. Do not label the focused spike a complete alpha.1 or 0.1 release.
 
+## C1.7: Runtime performance follow-up
+
+Added at the user's request after C1 acceptance. Optimize Pablo itself: borrowed and buffered native trace serialization, bounded ACP size accounting, immediate first text delivery, reuse of process-owned setup across sequential independent ACP tasks, and measured release-profile tuning. Model selection, provider routing, prompt caching, call budgets and tool execution order stay outside this checkpoint.
+
+Acceptance:
+
+- Native JSONL preserves its existing fields, redaction, lossless ordering, capacity failure semantics and terminal reservation while avoiding intermediate JSON trees and repeated buffer allocation.
+- ACP preserves bounded queues/frames, physical-write acknowledgements, correlation, cancellation and joined cleanup. The first text delta of each model operation is forwarded immediately; later deltas retain bounded batching.
+- Sequential new ACP sessions reuse one lazily created runtime worker, provider client, tool registry and telemetry SDK. Tasks retain independent inputs, workspaces, trace contexts, cancellation tokens and outcomes. Concurrent/repeated prompts remain rejected; no conversation persistence or session resume is added.
+- Reused tasks, cancellation followed by another task, slow/disconnected output and private per-session traces are exercised against local fixtures. Real Collector receipt and shutdown remain verified without a paid model call.
+- Record reproducible before/after release measurements, first-text delivery and warm-task measurements, build-profile comparisons and meaningful regression checks. Keep the original C1.6 evidence intact and report platform/method limitations.
+
 ## Runtime contracts and defaults
 
 - Core spec: input, workspace, provider/model configuration, limits, and trace settings. Supply credentials separately. Terminal outcomes distinguish completion, cancellation, timeout, limit exhaustion, policy denial, and failure with provider-delivery certainty. Events carry sequence, timestamp, run/session identity, and OTel correlation.

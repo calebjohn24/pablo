@@ -3,15 +3,11 @@ use agent_client_protocol::{
     Agent, Client, ConnectionTo, Error, Lines, Responder, schema::v1 as wire,
 };
 use futures::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt};
-use pablo_core::{
-    CancellationToken, EventKind, EventSink, JsonlSink, LimitKind, RunError, RunEvent, RunOutcome,
-    RunSpec, Runtime, SinkError, ToolRegistry, gateway::GatewayProvider, telemetry,
-    tool::ToolStatus,
-};
+use pablo_core::{CancellationToken, EventKind, LimitKind, RunEvent, RunOutcome, tool::ToolStatus};
 use serde_json::{Value, json};
 use std::{
-    fs::{File, OpenOptions},
-    io::{self, BufWriter},
+    fs::File,
+    io,
     process::ExitCode,
     sync::{
         Arc, Mutex,
@@ -21,7 +17,10 @@ use std::{
 };
 use tokio::sync::Notify;
 
-use crate::config::{self, Options};
+use crate::config::Options;
+
+mod worker;
+use worker::{Task, Worker};
 
 const EXTENSION: &str = "pablo/v1";
 const FRAME_BYTES: usize = 32 * 1024 * 1024;
@@ -30,7 +29,6 @@ const INPUT_MESSAGES: usize = 128;
 const QUEUE_EVENTS: usize = 8;
 const WRITE_TIMEOUT: Duration = Duration::from_secs(30);
 
-type Worker = std::thread::JoinHandle<Result<RunOutcome, String>>;
 #[derive(Default)]
 struct State {
     initialized: bool,
@@ -39,6 +37,7 @@ struct State {
     prompted: bool,
     prompt_active: bool,
     worker: Option<Worker>,
+    cancellation: Option<CancellationToken>,
     events: Option<async_channel::Sender<RunEvent>>,
 }
 #[derive(Default)]
@@ -96,7 +95,7 @@ async fn serve_streams(
     let options = Arc::new(options);
     let cancellation = CancellationToken::new();
     let written = Arc::new(Written::default());
-    // In addition to individual frames, bound the entire single-task connection.
+    // In addition to individual frames, bound the entire process connection.
     // This bounds the SDK's internal incoming queues even under request floods.
     let incoming = futures::stream::try_unfold(
         (futures::io::BufReader::new(input), 0usize, 0usize),
@@ -134,9 +133,16 @@ async fn serve_streams(
             if line.len() + 1 > FRAME_BYTES {
                 return Err(io::Error::other("ACP output frame limit exceeded"));
             }
-            let notification = serde_json::from_str::<Value>(&line)
+            // Borrow only the method; skip the payload without materializing a
+            // second JSON tree just to acknowledge a session/update write.
+            #[derive(serde::Deserialize)]
+            struct Message<'a> {
+                #[serde(borrow)]
+                method: Option<&'a str>,
+            }
+            let notification = serde_json::from_str::<Message<'_>>(&line)
                 .ok()
-                .is_some_and(|v| v["method"] == "session/update");
+                .is_some_and(|message| message.method == Some("session/update"));
             tokio::time::timeout(WRITE_TIMEOUT, async {
                 output.write_all(line.as_bytes()).await?;
                 output.write_all(b"\n").await?;
@@ -154,103 +160,217 @@ async fn serve_streams(
             Ok((output, written))
         },
     );
-    let builder = Agent.builder().name("pablo")
-        .on_receive_request({
-            let state = state.clone();
-            async move |request: wire::InitializeRequest, responder: Responder<wire::InitializeResponse>, _cx| {
-                let mut state = state.lock().unwrap();
-                if state.initialized { return responder.respond_with_error(invalid("already initialized")); }
-                // ACP negotiation returns our supported version. A client that
-                // cannot speak v1 must disconnect; draft v2 is never selected.
-                state.initialized = true;
-                state.extended = request.client_capabilities.meta.as_ref()
-                    .and_then(|m| m.get(EXTENSION)) == Some(&json!(true));
-                let caps = wire::AgentCapabilities::new().meta(meta(json!(true)));
-                responder.respond(wire::InitializeResponse::new(agent_client_protocol::schema::ProtocolVersion::V1)
-                    .agent_capabilities(caps)
-                    .agent_info(wire::Implementation::new("pablo", env!("CARGO_PKG_VERSION"))))
-            }
-        }, agent_client_protocol::on_receive_request!())
-        .on_receive_request({
-            let state = state.clone();
-            async move |request: wire::NewSessionRequest, responder: Responder<wire::NewSessionResponse>, _cx| {
-                let mut state = state.lock().unwrap();
-                if !state.initialized { return responder.respond_with_error(invalid("initialize first")); }
-                if state.session.is_some() { return responder.respond_with_error(invalid("one session per process")); }
-                if !request.mcp_servers.is_empty() { return responder.respond_with_error(invalid("MCP servers are unsupported")); }
-                if !request.cwd.is_absolute() { return responder.respond_with_error(invalid("cwd must be absolute")); }
-                let Ok(cwd) = request.cwd.canonicalize() else { return responder.respond_with_error(invalid("cwd must be an existing directory")); };
-                if !cwd.is_dir() { return responder.respond_with_error(invalid("cwd must be a directory")); }
-                let id = wire::SessionId::new(uuid::Uuid::new_v4().to_string());
-                state.session = Some((id.clone(), cwd));
-                responder.respond(wire::NewSessionResponse::new(id))
-            }
-        }, agent_client_protocol::on_receive_request!())
-        .on_receive_notification({
-            let state = state.clone(); let cancellation = cancellation.clone();
-            async move |request: wire::CancelNotification, _cx| {
-                let s = state.lock().unwrap();
-                if s.prompt_active && s.session.as_ref().is_some_and(|(id,_)| *id == request.session_id) {
-                    if !cancellation.is_cancelled() { eprintln!("pablo: ACP cancellation requested"); }
-                    cancellation.cancel();
+    let builder = Agent
+        .builder()
+        .name("pablo")
+        .on_receive_request(
+            {
+                let state = state.clone();
+                async move |request: wire::InitializeRequest,
+                            responder: Responder<wire::InitializeResponse>,
+                            _cx| {
+                    let mut state = state.lock().unwrap();
+                    if state.initialized {
+                        return responder.respond_with_error(invalid("already initialized"));
+                    }
+                    // ACP negotiation returns our supported version. A client that
+                    // cannot speak v1 must disconnect; draft v2 is never selected.
+                    state.initialized = true;
+                    state.extended = request
+                        .client_capabilities
+                        .meta
+                        .as_ref()
+                        .and_then(|m| m.get(EXTENSION))
+                        == Some(&json!(true));
+                    let caps = wire::AgentCapabilities::new().meta(meta(json!(true)));
+                    responder.respond(
+                        wire::InitializeResponse::new(
+                            agent_client_protocol::schema::ProtocolVersion::V1,
+                        )
+                        .agent_capabilities(caps)
+                        .agent_info(wire::Implementation::new(
+                            "pablo",
+                            env!("CARGO_PKG_VERSION"),
+                        )),
+                    )
                 }
-                Ok(())
-            }
-        }, agent_client_protocol::on_receive_notification!())
-        .on_receive_request({
-            let state = state.clone(); let options = options.clone();
-            let cancellation = cancellation.clone(); let written = written.clone();
-            async move |request: wire::PromptRequest, responder: Responder<wire::PromptResponse>, cx: ConnectionTo<Client>| {
-                let input = match prompt_text(&request.prompt) {
-                    Ok(input) => input,
-                    Err(error) => return responder.respond_with_error(error),
-                };
-                let (cwd, extended) = {
-                    let mut s = state.lock().unwrap();
-                    let Some((id, cwd)) = &s.session else { return responder.respond_with_error(invalid("create a session first")); };
-                    if *id != request.session_id { return responder.respond_with_error(invalid("unknown session")); }
-                    if s.prompted { return responder.respond_with_error(invalid("one prompt per session; start a new process")); }
-                    let cwd = cwd.clone(); s.prompted = true; (cwd, s.extended)
-                };
-                let mut spec = match options.spec() {
-                    Ok(spec) => spec,
-                    Err(_) => return responder.respond_with_error(Error::internal_error().data("invalid host configuration")),
-                };
-                spec.workspace = cwd; spec.input = input; spec.session_id = Some(request.session_id.to_string());
-                let incoming = request.meta.as_ref().and_then(|m| m.get(EXTENSION));
-                let parent = if extended {
-                    crate::otel::parent(incoming.and_then(|m| m.get("traceparent")).and_then(Value::as_str),
-                        incoming.and_then(|m| m.get("tracestate")).and_then(Value::as_str))
-                } else { opentelemetry::Context::new() };
-                let (tx, rx) = async_channel::bounded(QUEUE_EVENTS);
-                state.lock().unwrap().events = Some(tx.clone());
-                let worker = {
-                    let options = options.clone(); let cancel = cancellation.clone();
-                    std::thread::Builder::new().name("pablo-run".into()).spawn(move || run_worker(options, spec, parent, cancel, tx))
-                };
-                let Ok(worker) = worker else { return responder.respond_with_error(Error::internal_error().data("cannot start runtime worker")); };
-                {
-                    let mut s = state.lock().unwrap();
-                    s.worker = Some(worker);
-                    s.prompt_active = true;
+            },
+            agent_client_protocol::on_receive_request!(),
+        )
+        .on_receive_request(
+            {
+                let state = state.clone();
+                async move |request: wire::NewSessionRequest,
+                            responder: Responder<wire::NewSessionResponse>,
+                            _cx| {
+                    let mut state = state.lock().unwrap();
+                    if !state.initialized {
+                        return responder.respond_with_error(invalid("initialize first"));
+                    }
+                    if state.prompt_active || (state.session.is_some() && !state.prompted) {
+                        return responder.respond_with_error(invalid(
+                            "finish the current session before creating another",
+                        ));
+                    }
+                    if !request.mcp_servers.is_empty() {
+                        return responder
+                            .respond_with_error(invalid("MCP servers are unsupported"));
+                    }
+                    if !request.cwd.is_absolute() {
+                        return responder.respond_with_error(invalid("cwd must be absolute"));
+                    }
+                    let Ok(cwd) = request.cwd.canonicalize() else {
+                        return responder
+                            .respond_with_error(invalid("cwd must be an existing directory"));
+                    };
+                    if !cwd.is_dir() {
+                        return responder.respond_with_error(invalid("cwd must be a directory"));
+                    }
+                    let id = wire::SessionId::new(uuid::Uuid::new_v4().to_string());
+                    state.session = Some((id.clone(), cwd));
+                    state.prompted = false;
+                    responder.respond(wire::NewSessionResponse::new(id))
                 }
-                let state = state.clone(); let written = written.clone(); let cancellation = cancellation.clone();
-                let sender = cx.clone();
-                cx.spawn(async move {
-                    let request_cancel = responder.cancellation();
-                    let forwarding = forward_events(rx, &sender, &written, extended);
-                    tokio::pin!(forwarding);
-                    let terminal = tokio::select! {
-                        result = &mut forwarding => result,
-                        _ = request_cancel.cancelled() => { cancellation.cancel(); forwarding.await }
-                    }?;
-                    let worker = state.lock().unwrap().worker.take();
-                    let outcome = join_worker(worker).await;
-                    state.lock().unwrap().prompt_active = false;
-                    responder.respond_with_result(prompt_response(outcome, terminal, extended, cancellation.is_cancelled()))
-                })
-            }
-        }, agent_client_protocol::on_receive_request!())
+            },
+            agent_client_protocol::on_receive_request!(),
+        )
+        .on_receive_notification(
+            {
+                let state = state.clone();
+                async move |request: wire::CancelNotification, _cx| {
+                    let s = state.lock().unwrap();
+                    if s.prompt_active
+                        && s.session
+                            .as_ref()
+                            .is_some_and(|(id, _)| *id == request.session_id)
+                        && let Some(cancel) = &s.cancellation
+                    {
+                        if !cancel.is_cancelled() {
+                            eprintln!("pablo: ACP cancellation requested");
+                        }
+                        cancel.cancel();
+                    }
+                    Ok(())
+                }
+            },
+            agent_client_protocol::on_receive_notification!(),
+        )
+        .on_receive_request(
+            {
+                let state = state.clone();
+                let options = options.clone();
+                let cancellation = cancellation.clone();
+                let written = written.clone();
+                async move |request: wire::PromptRequest,
+                            responder: Responder<wire::PromptResponse>,
+                            cx: ConnectionTo<Client>| {
+                    let input = match prompt_text(&request.prompt) {
+                        Ok(input) => input,
+                        Err(error) => return responder.respond_with_error(error),
+                    };
+                    let (cwd, extended) = {
+                        let mut s = state.lock().unwrap();
+                        let Some((id, cwd)) = &s.session else {
+                            return responder.respond_with_error(invalid("create a session first"));
+                        };
+                        if *id != request.session_id {
+                            return responder.respond_with_error(invalid("unknown session"));
+                        }
+                        if s.prompted {
+                            return responder.respond_with_error(invalid(
+                                "one prompt per session; create a new session",
+                            ));
+                        }
+                        let cwd = cwd.clone();
+                        s.prompted = true;
+                        (cwd, s.extended)
+                    };
+                    let mut spec = match options.spec() {
+                        Ok(spec) => spec,
+                        Err(_) => {
+                            return responder.respond_with_error(
+                                Error::internal_error().data("invalid host configuration"),
+                            );
+                        }
+                    };
+                    spec.workspace = cwd;
+                    spec.input = input;
+                    spec.session_id = Some(request.session_id.to_string());
+                    let incoming = request.meta.as_ref().and_then(|m| m.get(EXTENSION));
+                    let parent = if extended {
+                        crate::otel::parent(
+                            incoming
+                                .and_then(|m| m.get("traceparent"))
+                                .and_then(Value::as_str),
+                            incoming
+                                .and_then(|m| m.get("tracestate"))
+                                .and_then(Value::as_str),
+                        )
+                    } else {
+                        opentelemetry::Context::new()
+                    };
+                    let (tx, rx) = async_channel::bounded(QUEUE_EVENTS);
+                    let cancel = cancellation.child_token();
+                    let (completed, outcome) = tokio::sync::oneshot::channel();
+                    {
+                        let mut s = state.lock().unwrap();
+                        if s.worker.is_none() {
+                            match Worker::start(options.clone()) {
+                                Ok(worker) => s.worker = Some(worker),
+                                Err(_) => {
+                                    return responder.respond_with_error(
+                                        Error::internal_error().data("cannot start runtime worker"),
+                                    );
+                                }
+                            }
+                        }
+                        let task = Task {
+                            spec,
+                            parent,
+                            cancel: cancel.clone(),
+                            events: tx.clone().into(),
+                            completed,
+                        };
+                        if s.worker.as_ref().unwrap().submit(task).is_err() {
+                            return responder.respond_with_error(
+                                Error::internal_error().data("runtime worker unavailable"),
+                            );
+                        }
+                        s.events = Some(tx);
+                        s.cancellation = Some(cancel.clone());
+                        s.prompt_active = true;
+                    }
+                    let state = state.clone();
+                    let written = written.clone();
+                    let sender = cx.clone();
+                    cx.spawn(async move {
+                        let request_cancel = responder.cancellation();
+                        let forwarding = forward_events(rx, &sender, &written, extended);
+                        tokio::pin!(forwarding);
+                        let terminal = tokio::select! {
+                            result = &mut forwarding => result,
+                            _ = request_cancel.cancelled() => { cancel.cancel(); forwarding.await }
+                        }?;
+                        let outcome = outcome
+                            .await
+                            .unwrap_or_else(|_| Err("runtime worker failed".into()));
+                        {
+                            let mut s = state.lock().unwrap();
+                            s.prompt_active = false;
+                            s.events = None;
+                            s.cancellation = None;
+                        }
+                        responder.respond_with_result(prompt_response(
+                            outcome,
+                            terminal,
+                            extended,
+                            cancel.is_cancelled(),
+                        ))
+                    })
+                }
+            },
+            agent_client_protocol::on_receive_request!(),
+        )
         .on_close({
             let cancellation = cancellation.clone();
             async move |_cx| {
@@ -289,7 +409,8 @@ async fn serve_streams(
     }
     let worker = state.lock().unwrap().worker.take();
     if let Some(worker) = worker {
-        join_worker(Some(worker))
+        worker
+            .shutdown()
             .await
             .map_err(|_| "ACP runtime cleanup failed")?;
     }
@@ -322,108 +443,33 @@ fn prompt_text(blocks: &[wire::ContentBlock]) -> Result<String, Error> {
     Ok(input)
 }
 
-fn run_worker(
-    options: Arc<Options>,
-    spec: RunSpec,
-    parent: opentelemetry::Context,
-    cancel: CancellationToken,
-    tx: async_channel::Sender<RunEvent>,
-) -> Result<RunOutcome, String> {
-    let executor = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build();
-    let Ok(executor) = executor else {
-        tx.close();
-        return Err("cannot create runtime".into());
-    };
-    let result = executor.block_on(async {
-        let provider = if let Some(endpoint) = std::env::var_os("PABLO_FIXTURE_ENDPOINT") {
-            GatewayProvider::local_fixture(endpoint.to_str().ok_or("invalid fixture endpoint")?)?
-        } else {
-            GatewayProvider::vercel(&config::gateway_key(options.env_file.as_deref())?)?
-        };
-        let tools = if options.no_shell {
-            ToolRegistry::default()
-        } else {
-            ToolRegistry::with_shell().map_err(|_| "cannot initialize shell tool")?
-        };
-        let mut trace = if let Some(path) = &options.trace_path {
-            let mut open = OpenOptions::new();
-            open.write(true).create_new(true);
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::OpenOptionsExt;
-                open.mode(0o600);
-            }
-            let file = open.open(path).map_err(|_| "cannot create trace file")?;
-            Some(
-                JsonlSink::new(BufWriter::new(file), &spec)
-                    .map_err(|_| "invalid trace settings")?,
-            )
-        } else {
-            None
-        };
-        let sdk = crate::otel::Telemetry::new();
-        let runtime = Runtime::new(telemetry::tracer(&sdk.sdk)).with_parent_context(parent);
-        let mut slow_reported = false;
-        let mut sink = |event: &RunEvent| -> Result<(), SinkError> {
-            if let Some(trace) = trace.as_mut() {
-                trace.emit(event)?;
-            }
-            if serde_json::to_vec(event).map_err(io::Error::other)?.len() > FRAME_BYTES {
-                return Err(SinkError::Capacity);
-            }
-            if tx.is_full() && !slow_reported {
-                eprintln!("pablo: ACP consumer slow; runtime waiting for output capacity");
-                slow_reported = true;
-            }
-            // Only this dedicated runtime thread blocks. The transport continues
-            // reading cancellation and enforces its write deadline independently.
-            tx.send_blocking(event.clone())
-                .map_err(|_| io::Error::other("ACP consumer closed"))?;
-            Ok(())
-        };
-        let outcome = runtime
-            .run_with_tools(&spec, &provider, &tools, &cancel, &mut sink)
-            .await;
-        sdk.shutdown().await;
-        match outcome {
-            Ok(outcome) => Ok(outcome),
-            Err(RunError::EventDelivery { outcome, .. }) => Ok(*outcome),
-            Err(_) => Err("runtime rejected the run".into()),
-        }
-    });
-    tx.close();
-    result
-}
-
-async fn join_worker(worker: Option<Worker>) -> Result<RunOutcome, String> {
-    let worker = worker.ok_or("missing runtime worker")?;
-    tokio::task::spawn_blocking(move || worker.join())
-        .await
-        .map_err(|_| "runtime join failed")?
-        .map_err(|_| "runtime worker failed")?
-}
-
-async fn forward_events(
+struct EventStream {
     rx: async_channel::Receiver<RunEvent>,
-    cx: &ConnectionTo<Client>,
-    written: &Written,
-    extended: bool,
-) -> Result<Option<RunEvent>, Error> {
-    let mut pending = None;
-    let mut terminal = None;
-    let mut sent = 0;
-    loop {
-        let mut event = match pending.take() {
+    pending: Option<RunEvent>,
+    first_text: bool,
+}
+impl EventStream {
+    fn new(rx: async_channel::Receiver<RunEvent>) -> Self {
+        Self {
+            rx,
+            pending: None,
+            first_text: true,
+        }
+    }
+    async fn next(&mut self) -> Option<(RunEvent, u64)> {
+        let mut event = match self.pending.take() {
             Some(event) => event,
-            None => match rx.recv().await {
+            None => match self.rx.recv().await {
                 Ok(event) => event,
-                Err(_) => break,
+                Err(_) => return None,
             },
         };
         let first = event.seq;
-        if matches!(event.kind, EventKind::TextDelta { .. }) {
+        if matches!(event.kind, EventKind::ModelStarted { .. }) {
+            self.first_text = true;
+        }
+        let text = matches!(event.kind, EventKind::TextDelta { .. });
+        if text && !self.first_text {
             let deadline = tokio::time::Instant::now() + Duration::from_millis(16);
             loop {
                 let EventKind::TextDelta { text } = &event.kind else {
@@ -432,7 +478,7 @@ async fn forward_events(
                 if text.len() >= 4096 {
                     break;
                 }
-                let Ok(Ok(next)) = tokio::time::timeout_at(deadline, rx.recv()).await else {
+                let Ok(Ok(next)) = tokio::time::timeout_at(deadline, self.rx.recv()).await else {
                     break;
                 };
                 if let (EventKind::TextDelta { text }, EventKind::TextDelta { text: more }) =
@@ -444,11 +490,28 @@ async fn forward_events(
                     event.seq = next.seq;
                     event.timestamp_unix_micros = next.timestamp_unix_micros;
                 } else {
-                    pending = Some(next);
+                    self.pending = Some(next);
                     break;
                 }
             }
         }
+        if text {
+            self.first_text = false;
+        }
+        Some((event, first))
+    }
+}
+
+async fn forward_events(
+    rx: async_channel::Receiver<RunEvent>,
+    cx: &ConnectionTo<Client>,
+    written: &Written,
+    extended: bool,
+) -> Result<Option<RunEvent>, Error> {
+    let mut events = EventStream::new(rx);
+    let mut terminal = None;
+    let mut sent = written.count.load(Ordering::Acquire);
+    while let Some((event, first)) = events.next().await {
         if matches!(event.kind, EventKind::RunFinished { .. }) {
             terminal = Some(event.clone());
         }
@@ -546,4 +609,80 @@ fn prompt_response(
         response.meta = Some(meta(details));
     }
     Ok(response)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::task::Poll;
+
+    fn event(seq: u64, kind: EventKind) -> RunEvent {
+        RunEvent {
+            schema_version: "c1.2".into(),
+            seq,
+            timestamp_unix_micros: seq,
+            run_id: "run".into(),
+            session_id: "session".into(),
+            trace_id: "trace".into(),
+            span_id: "model".into(),
+            parent_span_id: None,
+            trace_flags: "01".into(),
+            kind,
+        }
+    }
+
+    #[tokio::test]
+    async fn first_text_of_each_model_is_ready_without_waiting_for_more_events_or_a_timer() {
+        let (tx, rx) = async_channel::bounded(8);
+        let mut stream = EventStream::new(rx);
+        for seq in [1, 3] {
+            tx.send(event(
+                seq,
+                EventKind::ModelStarted {
+                    provider: "fixture".into(),
+                    model: "test".into(),
+                },
+            ))
+            .await
+            .unwrap();
+            stream.next().await.unwrap();
+            tx.send(event(
+                seq + 1,
+                EventKind::TextDelta {
+                    text: "first".into(),
+                },
+            ))
+            .await
+            .unwrap();
+            assert!(
+                matches!(futures::poll!(Box::pin(stream.next())), Poll::Ready(Some((_, first))) if first == seq + 1)
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn later_text_is_batched_with_its_native_range_and_a_finite_deadline() {
+        let (tx, rx) = async_channel::bounded(8);
+        let mut stream = EventStream::new(rx);
+        for seq in 1..=3 {
+            tx.send(event(
+                seq,
+                EventKind::TextDelta {
+                    text: seq.to_string(),
+                },
+            ))
+            .await
+            .unwrap();
+        }
+        stream.next().await.unwrap();
+        let next = stream.next();
+        tokio::pin!(next);
+        assert!(futures::poll!(&mut next).is_pending());
+        let (event, first) = tokio::time::timeout(Duration::from_secs(1), next)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!((first, event.seq, event.timestamp_unix_micros), (2, 3, 3));
+        assert_eq!(event.kind, EventKind::TextDelta { text: "23".into() });
+    }
 }

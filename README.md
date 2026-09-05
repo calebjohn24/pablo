@@ -45,7 +45,7 @@ cargo build --locked -p pablo
 node examples/acp-client.ts "Read README.md and summarize it." /absolute/workspace
 ```
 
-The reference client starts `pablo acp --stdio`, negotiates stable ACP v1, streams message/tool updates, and reads the typed outcome. Ctrl-C sends cancellation and waits for cleanup. Each process admits one session and one prompt. See [the ACP contract](docs/acp.md) for host configuration, protocol bounds, SDK pins and the offline acceptance suite.
+The reference client starts `pablo acp --stdio`, negotiates stable ACP v1, streams message/tool updates, and reads the typed outcome. Ctrl-C sends cancellation and waits for cleanup. An ACP host can reuse the process for successive independent sessions, with one prompt per session; provider connections, compiled tools and telemetry setup stay warm. The reference CLI still runs one task and exits. See [the ACP contract](docs/acp.md) for host configuration, protocol bounds, SDK pins and the offline acceptance suite.
 
 ## Offline demo and development checks
 
@@ -82,7 +82,7 @@ Run the real shell round-trip fixture with:
 cargo test --locked -p pablo-core --test tool_loop actual_shell_evidence_round_trip
 ```
 
-Repeat the offline release measurements with `npm run measure -- 30`; see [measurement methods](docs/measurements.md) for timing boundaries and limitations.
+The release profile uses thin LTO, one codegen unit and stripped symbols. The [C1.7 performance report](docs/project/evidence/c1.7.md) compares trace encoding, first-text delivery, reused tasks and build profiles. Repeat the offline release measurements with `npm run measure -- 30`; see [measurement methods](docs/measurements.md) for timing boundaries and limitations.
 
 ## Getting oriented
 

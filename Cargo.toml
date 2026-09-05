@@ -34,4 +34,5 @@ all = "warn"
 
 [profile.release]
 lto = "thin"
-strip = "debuginfo"
+codegen-units = 1
+strip = "symbols"

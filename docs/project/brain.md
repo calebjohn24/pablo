@@ -63,7 +63,7 @@ The user asked to test real tasks immediately after C1.2. Add C1.2a before ACP: 
 
 ### D012 — Pin stable ACP v1 and preserve native outcome truth
 
-C1.3 uses the official Rust and TypeScript SDKs with exact releases/schema fingerprints in [the ACP lock](../acp-lock.json). The spike admits one session and one prompt per process, negotiates `pablo/v1` metadata, and advertises only implemented capabilities. Standard stop reasons control the ACP turn; metadata preserves the immutable native outcome if a late cancellation arrives during final output draining. This meets cancellation semantics without rewriting trace history. See [the ACP contract](../acp.md); release-stable extension naming and broader session support remain deferred.
+C1.3 uses the official Rust and TypeScript SDKs with exact releases/schema fingerprints in [the ACP lock](../acp-lock.json). C1.3 initially admitted one session and one prompt per process (D019 extends process reuse), negotiates `pablo/v1` metadata, and advertises only implemented capabilities. Standard stop reasons control the ACP turn; metadata preserves the immutable native outcome if a late cancellation arrives during final output draining. This meets cancellation semantics without rewriting trace history. See [the ACP contract](../acp.md); release-stable extension naming and broader session support remain deferred.
 
 ### D013 — Bound ACP traffic around the official SDK
 
@@ -88,6 +88,14 @@ C1.5 shares one standalone SDK setup across CLI/ACP, using the pinned OTLP 0.32.
 ### D018 — C1 acceptance establishes scoped baselines, not release ceilings
 
 C1.6 verifies the focused fixtures on native macOS arm64 and an isolated Ubuntu 24.04 arm64 VM, plus a fresh explicit live Vercel ACP run on macOS and real Collector proof on both systems. Release measurements use 30 samples after five warm-ups; event latency uses 30,000 deltas. Report timing boundaries, virtualization and source fingerprints so setup costs are not mistaken for pure protocol overhead. C1 is complete, while native Linux x86_64 measurements and broader alpha.1/0.1 gates remain unclaimed. No provisional performance number becomes a CI failure threshold. See [acceptance](evidence/c1.6.md), [methods](../measurements.md), and [the proposed next cycle](proposals/002-single-agent-completion.md); adopting C2 is the next session's work.
+
+### D019 — Optimize Pablo without changing model behavior
+
+The user requested a C1.7 performance follow-up and explicitly excluded provider routing and model/prompt optimization. Serialize borrowed redacted trace views into one bounded reusable buffer, count ACP sizes without temporary JSON allocations, and forward the first text of each model operation immediately. Reuse one worker, HTTP client/pool, compiled tool catalog and SDK across successive independent ACP sessions; retain one prompt per session, process-lifetime ingress bounds, per-task cancellation/context and exclusive per-session trace files. This lowers local latency while preserving the existing lifecycle and isolation. See [ACP](../acp.md) and [performance evidence](evidence/c1.7.md).
+
+### D020 — Prefer the measured speed/size balance of thin LTO
+
+Use thin LTO, one codegen unit and stripped symbols for release builds. Full LTO makes the binary smaller but repeated alternating comparisons show slower trace encoding; the selected profile already fits the provisional 10 MiB headless target on measured macOS and Linux arm64 systems. Preserve unwinding and portable target defaults. The [C1.7 report](evidence/c1.7.md) retains all candidate measurements, workload boundaries and remaining performance limits.
 
 ## Working constraints
 

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { test, type TestContext } from 'node:test';
 import { createServer, type ServerResponse } from 'node:http';
-import { mkdtemp, writeFile, readFile, rm, realpath } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, rm, realpath, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
@@ -42,9 +42,10 @@ async function sse(res: ServerResponse, body: string) {
 }
 async function fixture(t: TestContext, handler: (body: any, res: ServerResponse, call: number) => Promise<void>) {
   const cwd = await realpath(await mkdtemp(join(tmpdir(), 'pablo-acp-')));
-  const errors: unknown[] = []; const requests: any[] = [];
+  const errors: unknown[] = []; const requests: any[] = []; const connections = new Set();
   const server = createServer(async (req, res) => {
     try {
+      connections.add(req.socket);
       const chunks: Buffer[] = [];
       for await (const chunk of req) chunks.push(chunk);
       const body = JSON.parse(Buffer.concat(chunks).toString());
@@ -57,7 +58,7 @@ async function fixture(t: TestContext, handler: (body: any, res: ServerResponse,
   const address = server.address(); assert.ok(address && typeof address !== 'string');
   const env = { ...process.env, AI_GATEWAY_API_KEY: 'synthetic-secret', PABLO_FIXTURE_ENDPOINT: `http://127.0.0.1:${address.port}/v1/chat/completions` };
   t.after(async () => { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); await rm(cwd, { recursive: true, force: true }); assert.deepEqual(errors, []); });
-  return { cwd, env, requests };
+  return { cwd, env, requests, connections };
 }
 async function setup(cx: ClientContext, cwd: string, extended = true) {
   const init = await cx.request('initialize', { protocolVersion: 1, clientCapabilities: extended ? { _meta: { 'pablo/v1': true } } : {} });
@@ -145,7 +146,9 @@ test('generic v1 peers need no Pablo metadata; unsupported methods and content a
     const response = await cx.request('session/prompt', { sessionId: id, prompt: [{ type: 'resource_link', uri: 'file:///unfetched.txt', name: 'reference' }, { type: 'text', text: 'Describe the reference' }] });
     assert.equal(response.stopReason, 'end_turn'); assert.equal(response._meta, undefined);
     await assert.rejects(prompt(cx, id), (e: any) => e.code === -32602);
-    await assert.rejects(cx.request('session/new', { cwd: f.cwd, mcpServers: [] }), (e: any) => e.code === -32602);
+    const next = await cx.request('session/new', { cwd: f.cwd, mcpServers: [] });
+    assert.notEqual(next.sessionId, id);
+    await assert.rejects(prompt(cx, id), (e: any) => e.code === -32602);
   });
   assert.equal(f.requests.length, 1);
   assert.ok(f.requests[0].messages[1].content.includes('file:///unfetched.txt'));
@@ -390,6 +393,7 @@ test('busy prompts, idle cancellation, future fields and version negotiation kee
     const running = prompt(cx, sessionId);
     await first;
     await assert.rejects(prompt(cx, sessionId), (e: any) => e.code === -32602);
+    await assert.rejects(cx.request('session/new', { cwd: f.cwd, mcpServers: [] }), (e: any) => e.code === -32602);
     await cx.notify('session/cancel', { sessionId: 'another-session' });
     release();
     assert.equal((await running).stopReason, 'end_turn');
@@ -574,4 +578,62 @@ test('explicit shell timeout remains effective with generous defaults', { timeou
   const records = await trace(path);
   gone(records.find(e => e.type === 'shell.started').process_id);
   assert.equal(records.at(-1).outcome.status, 'timed_out');
+});
+
+
+test('sequential independent sessions reuse HTTP setup and recover after cancellation with separate workspaces and traces', { timeout: 20000 }, async t => {
+  const f = await fixture(t, async (body, res) => {
+    if (body.messages.at(-1).role === 'tool') {
+      const result = JSON.parse(body.messages.at(-1).content);
+      assert.equal(result.shell.exit_code, 0);
+      await sse(res, frame({ content: result.shell.stdout }) + end());
+    } else {
+      assert.equal(body.messages.length, 2, 'each new task has only its system instructions and own input');
+      await sse(res, tool(body.messages.at(-1).content === 'cancel task' ? 'exec sleep 30' : 'cat evidence.txt'));
+    }
+  });
+  const secondCwd = join(f.cwd, 'second'); await mkdir(secondCwd);
+  await writeFile(join(f.cwd, 'evidence.txt'), 'first-evidence');
+  await writeFile(join(secondCwd, 'evidence.txt'), 'second-evidence');
+  const ids: string[] = []; let cancelling = false;
+  const updates: SessionNotification[] = [];
+  await withPablo({ env: f.env, args: ['--trace', join(f.cwd, '{session_id}.jsonl')], onUpdate: async (n, cx) => {
+    updates.push(n);
+    if (cancelling && n.update.sessionUpdate === 'tool_call_update' && n.update.status === 'in_progress') {
+      await cx.notify('session/cancel', { sessionId: n.sessionId });
+    }
+  } }, async cx => {
+    let sessionId = await setup(cx, f.cwd);
+    for (let index = 0; index < 3; index++) {
+      cancelling = index === 1;
+      if (index > 0) ({ sessionId } = await cx.request('session/new', { cwd: index === 2 ? secondCwd : f.cwd, mcpServers: [] }));
+      ids.push(sessionId);
+      const traceId = String(index + 1).repeat(32);
+      const response = await cx.request('session/prompt', { sessionId,
+        prompt: [{ type: 'text', text: cancelling ? 'cancel task' : `read task ${index}` }],
+        _meta: { 'pablo/v1': { traceparent: `00-${traceId}-123456789abcdef0-01` } },
+      });
+      assert.equal(response.stopReason, cancelling ? 'cancelled' : 'end_turn');
+      const outcome = outcomeOf(response);
+      if (cancelling) assert.equal(outcome.status, 'cancelled');
+      else { assert.equal(outcome.status, 'completed'); assert(outcome.status === 'completed'); assert.equal(outcome.output, index === 0 ? 'first-evidence' : 'second-evidence'); }
+      const path = join(f.cwd, `${sessionId}.jsonl`);
+      const records = await trace(path);
+      assert.equal((await stat(path)).mode & 0o777, 0o600);
+      assert.equal(records[0].seq, 1);
+      assert.equal(records[0].parent_span_id, '123456789abcdef0');
+      assert(records.every(e => e.session_id === sessionId && e.trace_id === traceId));
+      assert.equal(records.filter(e => e.type === 'run.finished').length, 1);
+      assert.equal(records.at(-1).outcome.status, cancelling ? 'cancelled' : 'completed');
+      gone(records.find(e => e.type === 'shell.started').process_id);
+      const native = await readFile(path, 'utf8');
+      assert(!native.includes('first-evidence') && !native.includes('second-evidence'));
+      const current = updates.filter(n => n.sessionId === sessionId);
+      assert(current.length >= 3);
+      assert(current.every((n, i) => i === 0 || (n._meta!['pablo/v1'] as any).seq_start > (current[i - 1]._meta!['pablo/v1'] as any).seq_end));
+    }
+  });
+  assert.equal(new Set(ids).size, 3);
+  assert.equal(f.requests.length, 5);
+  assert.equal(f.connections.size, 1, 'completed model responses return one shared HTTP connection to the pool across tasks');
 });

@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-05T05:01:14.807Z",
+  "updated_at": "2026-09-05T06:12:30.685Z",
   "active_checkpoint": null,
   "next_checkpoint": null,
-  "next_action": "C1 focused spike is complete. Review/adopt docs/project/proposals/002-single-agent-completion.md in a new session, then initialize C2 checkpoint state while preserving C1 history. No next checkpoint is active yet. Repeat measurements with npm run measure -- 30; retain native Linux x86_64 and full alpha.1/0.1 acceptance as future gates. The local pablo-c16 Linux VM is stopped.",
-  "latest_log_entry": "LOG-0029",
+  "next_action": "C1.7 performance follow-up is complete. In the next session, review/adopt docs/project/proposals/002-single-agent-completion.md starting with C2.0 contracts and scope; initialize C2 state while preserving C1 history before implementing bounded filesystem read/list/search. Retain C1.7 measurement methods and behavior. Routing stays deferred; the local Linux VM is stopped.",
+  "latest_log_entry": "LOG-0033",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -123,6 +123,19 @@
       "blockers": [],
       "verification": [
         "LOG-0029"
+      ]
+    },
+    {
+      "id": "C1.7",
+      "title": "Runtime performance follow-up",
+      "spec": "docs/project/cycles/001-first-spike.md#c17-runtime-performance-follow-up",
+      "depends_on": [
+        "C1.6"
+      ],
+      "status": "done",
+      "blockers": [],
+      "verification": [
+        "LOG-0033"
       ]
     }
   ]

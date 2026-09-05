@@ -1612,6 +1612,7 @@ dependencies = [
  "pablo-core",
  "prost",
  "reqwest",
+ "serde",
  "serde_json",
  "tokio",
  "uuid",

@@ -100,11 +100,10 @@ fn content_capture_is_explicit_and_existing_trace_files_are_preserved() {
 }
 
 #[test]
-fn help_version_and_invalid_options_are_honest_about_the_checkpoint() {
+fn help_version_and_invalid_options_keep_the_cli_contract() {
     let fixture = Fixture::new();
     let help = fixture.command().arg("--help").output().unwrap();
     assert!(help.status.success());
-    assert!(String::from_utf8_lossy(&help.stdout).contains("C1.5"));
     let version = fixture.command().arg("--version").output().unwrap();
     assert!(version.status.success());
     assert!(
