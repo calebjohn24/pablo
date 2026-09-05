@@ -1,0 +1,20 @@
+[package]
+name = "pablo"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+pablo-core = { path = "../pablo-core" }
+opentelemetry.workspace = true
+opentelemetry_sdk.workspace = true
+tokio = { workspace = true, features = ["signal"] }
+dotenvy.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[lints]
+workspace = true

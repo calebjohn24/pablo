@@ -1,0 +1,257 @@
+use std::path::PathBuf;
+
+use serde::{Deserialize, Serialize};
+
+/// Checkpoint-local contract revision; not the full 0.1 protocol contract.
+pub const SCHEMA_VERSION: &str = "c1.2";
+
+/// Model-visible configuration never contains provider or exporter credentials.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RunSpec {
+    pub input: String,
+    pub instructions: String,
+    pub workspace: PathBuf,
+    pub model: String,
+    pub session_id: Option<String>,
+    pub limits: RunLimits,
+    pub trace: TraceSettings,
+}
+
+impl RunSpec {
+    pub fn new(input: impl Into<String>, workspace: PathBuf, model: impl Into<String>) -> Self {
+        Self {
+            input: input.into(),
+            instructions: String::new(),
+            workspace,
+            model: model.into(),
+            session_id: None,
+            limits: RunLimits::default(),
+            trace: TraceSettings::default(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RunLimits {
+    pub max_model_calls: u32,
+    pub max_tool_calls: u32,
+    pub max_tool_duration_ms: u64,
+    pub max_tool_input_bytes: usize,
+    /// Maximum serialized tool result, including metadata and JSON escaping.
+    pub max_tool_output_bytes: usize,
+    pub max_context_bytes: usize,
+    pub max_run_duration_ms: u64,
+    pub max_input_bytes: usize,
+    pub max_output_bytes: usize,
+    /// Passed to the provider; the core cannot infer token counts from text.
+    pub max_output_tokens: u32,
+    /// Includes lifecycle records and the terminal event.
+    pub max_events: u64,
+}
+
+impl Default for RunLimits {
+    fn default() -> Self {
+        Self {
+            max_model_calls: 4,
+            max_tool_calls: 2,
+            max_tool_duration_ms: 30_000,
+            max_tool_input_bytes: 64 * 1024,
+            max_tool_output_bytes: 64 * 1024,
+            max_context_bytes: 256 * 1024,
+            max_run_duration_ms: 120_000,
+            max_input_bytes: 64 * 1024,
+            max_output_bytes: 64 * 1024,
+            max_output_tokens: 2_048,
+            max_events: 1_024,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TraceSettings {
+    pub capture_content: bool,
+    pub max_bytes: usize,
+}
+
+impl Default for TraceSettings {
+    fn default() -> Self {
+        Self {
+            capture_content: false,
+            max_bytes: 1024 * 1024,
+        }
+    }
+}
+
+/// None means unknown, including for cache usage; never infer a zero.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Usage {
+    pub input_tokens: Option<u64>,
+    pub output_tokens: Option<u64>,
+    pub cache_read_input_tokens: Option<u64>,
+    pub cache_write_input_tokens: Option<u64>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FinishReason {
+    Stop,
+    Length,
+    ToolCalls,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DeliveryCertainty {
+    NotSent,
+    MayHaveBeenSent,
+    ResponseReceived,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FailureCode {
+    ProviderRejected,
+    ProviderTransport,
+    MalformedStream,
+    EventSinkIo,
+    InvalidToolArguments,
+    ToolExecution,
+    ToolCleanup,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LimitKind {
+    InputBytes,
+    OutputBytes,
+    OutputTokens,
+    ModelCalls,
+    Events,
+    TraceBytes,
+    ToolCalls,
+    ToolInputBytes,
+    ToolOutputBytes,
+    ContextBytes,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "status", rename_all = "snake_case")]
+pub enum RunOutcome {
+    Completed {
+        output: String,
+        finish_reason: FinishReason,
+        usage: Usage,
+    },
+    TimedOut,
+    Cancelled,
+    PolicyDenied {
+        rule: PolicyRule,
+    },
+    LimitExceeded {
+        limit: LimitKind,
+    },
+    Failed {
+        code: FailureCode,
+        delivery: DeliveryCertainty,
+    },
+}
+
+impl RunOutcome {
+    pub fn is_completed(&self) -> bool {
+        matches!(self, Self::Completed { .. })
+    }
+
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Completed { .. } => "completed",
+            Self::TimedOut => "timed_out",
+            Self::Cancelled => "cancelled",
+            Self::PolicyDenied { .. } => "policy_denied",
+            Self::LimitExceeded { .. } => "limit_exceeded",
+            Self::Failed { .. } => "failed",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PolicyRule {
+    ToolUnavailable,
+    Workspace,
+    Environment,
+    UnsupportedPlatform,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ToolCall {
+    pub id: String,
+    pub name: String,
+    pub arguments: serde_json::Value,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "role", rename_all = "snake_case")]
+pub enum Message {
+    User {
+        text: String,
+    },
+    Assistant {
+        text: String,
+        tool_calls: Vec<ToolCall>,
+    },
+    Tool {
+        call_id: String,
+        name: String,
+        result: crate::tool::ToolResult,
+    },
+}
+
+/// Live events contain content. JsonlSink applies its independent capture policy.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RunEvent {
+    pub schema_version: String,
+    pub seq: u64,
+    /// UTC Unix microseconds, shared exactly with OTel lifecycle timestamps.
+    pub timestamp_unix_micros: u64,
+    pub run_id: String,
+    pub session_id: String,
+    pub trace_id: String,
+    pub span_id: String,
+    pub parent_span_id: Option<String>,
+    pub trace_flags: String,
+    #[serde(flatten)]
+    pub kind: EventKind,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum EventKind {
+    #[serde(rename = "run.started")]
+    RunStarted,
+    #[serde(rename = "model.started")]
+    ModelStarted { provider: String, model: String },
+    #[serde(rename = "assistant.text.delta")]
+    TextDelta { text: String },
+    #[serde(rename = "model.finished")]
+    ModelFinished {
+        status: String,
+        finish_reason: Option<FinishReason>,
+        usage: Usage,
+        output_bytes: usize,
+    },
+    #[serde(rename = "tool.started")]
+    ToolStarted { call: ToolCall },
+    #[serde(rename = "shell.started")]
+    ShellStarted { call_id: String, process_id: u32 },
+    #[serde(rename = "tool.finished")]
+    ToolFinished {
+        call_id: String,
+        name: String,
+        result: crate::tool::ToolResult,
+    },
+    #[serde(rename = "run.finished")]
+    RunFinished { outcome: RunOutcome },
+}

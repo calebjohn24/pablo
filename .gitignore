@@ -1,0 +1,14 @@
+# Local credentials: keep examples explicit and credential-free.
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Build output and local runtime data.
+/target/
+/node_modules/
+/.pablo/
+/.cache/
+/coverage/
+*.tsbuildinfo
+.DS_Store

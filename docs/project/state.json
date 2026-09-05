@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "cycle": {
+    "id": "C1",
+    "title": "Focused first spike",
+    "spec": "docs/project/cycles/001-first-spike.md"
+  },
+  "source_context": {
+    "path": "docs/context.md",
+    "sha256": "fc24bebe8f42a6b6d7ab66807b874dbaf95d20ef1602c1f6ed21fcb82fe6875f",
+    "reviewed_at": "2026-09-05T01:28:09Z"
+  },
+  "documents": {
+    "brain": "docs/project/brain.md",
+    "backlog": "docs/project/backlog.md",
+    "instructions": "AGENTS.md"
+  },
+  "updated_at": "2026-09-05T03:05:08Z",
+  "active_checkpoint": null,
+  "next_checkpoint": "C1.3",
+  "next_action": "Start C1.3: pin official ACP Rust/TypeScript SDKs and stable-v1 contracts, add pablo acp --stdio and the reference client, and reuse GatewayProvider with local HTTP/SSE fixtures. Verify ordered updates, bounded queues, cancellation after cleanup, disconnects, slow consumers and protocol-only stdout. Live ACP acceptance remains C1.4.",
+  "latest_log_entry": "LOG-0012",
+  "checkpoints": [
+    {
+      "id": "C1.0",
+      "title": "Project memory",
+      "spec": "docs/project/cycles/001-first-spike.md#c10-project-memory",
+      "depends_on": [],
+      "status": "done",
+      "blockers": [],
+      "verification": [
+        "LOG-0003"
+      ]
+    },
+    {
+      "id": "C1.1",
+      "title": "Small runtime foundation",
+      "spec": "docs/project/cycles/001-first-spike.md#c11-small-runtime-foundation",
+      "depends_on": [
+        "C1.0"
+      ],
+      "status": "done",
+      "blockers": [],
+      "verification": [
+        "LOG-0006"
+      ]
+    },
+    {
+      "id": "C1.2",
+      "title": "Bounded shell loop",
+      "spec": "docs/project/cycles/001-first-spike.md#c12-bounded-shell-loop",
+      "depends_on": [
+        "C1.1"
+      ],
+      "status": "done",
+      "blockers": [],
+      "verification": [
+        "LOG-0009"
+      ]
+    },
+    {
+      "id": "C1.2a",
+      "title": "End-user run preview",
+      "spec": "docs/project/cycles/001-first-spike.md#c12a-end-user-run-preview",
+      "depends_on": [
+        "C1.2"
+      ],
+      "status": "done",
+      "blockers": [],
+      "verification": [
+        "LOG-0012"
+      ]
+    },
+    {
+      "id": "C1.3",
+      "title": "ACP process boundary",
+      "spec": "docs/project/cycles/001-first-spike.md#c13-acp-process-boundary",
+      "depends_on": [
+        "C1.2a"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C1.4",
+      "title": "Live Vercel path",
+      "spec": "docs/project/cycles/001-first-spike.md#c14-live-vercel-path",
+      "depends_on": [
+        "C1.3"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C1.5",
+      "title": "Collector proof",
+      "spec": "docs/project/cycles/001-first-spike.md#c15-collector-proof",
+      "depends_on": [
+        "C1.4"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C1.6",
+      "title": "Cycle acceptance",
+      "spec": "docs/project/cycles/001-first-spike.md#c16-cycle-acceptance",
+      "depends_on": [
+        "C1.5"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "pablo-project",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "project:status": "node scripts/project.mjs status",
+    "project:context": "node scripts/project.mjs context",
+    "project:check": "node scripts/project.mjs check",
+    "test": "node --test scripts/project.test.mjs"
+  }
+}

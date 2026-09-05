@@ -1,0 +1,75 @@
+# Project brain
+
+## Purpose
+
+Pablo is a small headless Rust agent runtime for applications doing arbitrary work. Hosts own their sandboxes, business state, approvals, and user experience. CLI and protocol clients share one runtime lifecycle.
+
+This file holds durable context. [State](state.json) reports current progress, [the log](log.jsonl) records history, and [the cycle plan](cycles/001-first-spike.md) defines the work. Run `node scripts/project.mjs context` for a focused handoff.
+
+## Read the design selectively
+
+- [Architecture brief](../context.md), section 29.1: authoritative 0.1 release contract.
+- Section 37.1: focused first spike; the boundary for cycle C1.
+- Sections 12–14: typed contracts, run lifecycle, cancellation, shell behavior.
+- Sections 19 and 21: providers and native OTel instrumentation.
+- Sections 28, 31, and 32: performance baselines, release acceptance, tests.
+- [Backlog](backlog.md): preserved later slices and when to consider them.
+
+## Accepted decisions
+
+### D001 — One checkpoint per implementation session
+
+The user selected this cadence to keep changes manageable. Finish verification and project records, leave the next checkpoint ready, and stop. Partial checkpoints can resume across sessions; explicit user steering can change the cadence.
+
+### D002 — Cycle C1 proves the focused spike
+
+Use section 37.1, not the whole 0.1 release or alpha.1, as the completion boundary. Prove one model/shell loop through ACP plus native/OTel trace correlation. Keep filesystem tools, other providers, extensibility, TUI, and durable runtime state in later slices.
+
+### D003 — Repository files are the development memory
+
+Use curated Markdown, one structured current-state file, and append-only JSONL work history. A dependency-free Node helper reads and validates those records. This keeps context inspectable in Git and avoids introducing a database or separate service before a runtime exists.
+
+### D004 — Vercel is the first live provider
+
+The user selected Vercel AI Gateway. Use `AI_GATEWAY_API_KEY` and an explicit profile, initially `openai/gpt-4.1-mini`, following the approved cycle plan. The user supplied the credential in the root `.env`; its contents are private and uninspected by the project helper. The end-user preview in D011 brings a narrow live CLI smoke forward; live ACP acceptance remains C1.4.
+
+### D005 — Start with two Rust crates
+
+Create `pablo-core` and the `pablo` executable at C1.1. Keep providers, tools, protocol adapters, and telemetry in owned modules initially. The brief's larger crate map describes ownership, not a scaffolding requirement.
+
+### D006 — One lifecycle with native telemetry
+
+Root execution, model calls, tools, ACP updates, JSONL records, and OTel spans originate from one runtime lifecycle. Instrument the first operation; add the network exporter later. ACP is the process protocol. No alternate proprietary loop or process lifecycle is introduced.
+
+### D007 — Reuse installed development tools
+
+Rust is installed. Node 24.20.0 and npm 11.19.0 are installed through nvm; noninteractive shells may need nvm initialization. Python/uv are also available. Use Node's built-in modules and test runner for project management; pin dependencies and protocols when introduced.
+
+### D008 — Inject the tracer and stream into a host-owned sink
+
+The core accepts an OTel tracer and inline event sink, with no global installation or detached worker. The CLI owns its SDK. This gives the ACP adapter one existing lifecycle to drive. Sink calls must return promptly; asynchronous transport backpressure belongs to C1.3. Checkpoint-versioned contracts expose only implemented behavior. The `c1.2` contracts add sequential tool turns and explicit cancellation through this same lifecycle. See [runtime contracts](../runtime.md).
+
+### D009 — Pin the native telemetry mapping from the first run
+
+Rust 1.98.1, OTel API 0.32.0, SDK 0.32.1, and all introduced dependencies are pinned. The GenAI mapping retains the brief's immutable revision `fee465db333bdd6a7d2faa320edab5cf3101a4f4` in the separate GenAI conventions repository. Native events reuse SDK identities and exact lifecycle timestamps; JSONL content capture is independent of metadata-only OTel spans. See [the mapping](../runtime.md#otel-mapping).
+
+### D010 — Shell is an explicit capability with owned cleanup
+
+`ToolRegistry::with_shell()` enables the single built-in tool; empty catalogs grant none. Shell uses a contained canonical cwd, cleared environment plus `PABLO_TASK_` additions, bounded results, and a new process group. Cancellation awaits group kill, leader reaping, pipe draining, and group disappearance. The two-second cleanup allowance follows the execution deadline. No global subreaper is installed; hosts provide containment and orphan reaping. Details and the observed macOS zombie-group case are in [the shell contract](../shell.md).
+
+### D011 — Bring a small end-user preview forward
+
+The user asked to test real tasks immediately after C1.2. Add C1.2a before ACP: a one-task `pablo run` CLI and reusable Vercel adapter through the existing runtime, with a small live synthetic-evidence smoke. The user explicitly selected direct HTTP; use a general Rust HTTP client, with no Vercel SDK. The existing `.env` key name `VERCEL_AI_GATEWAY` is supported as an alias for `AI_GATEWAY_API_KEY`. This changes the checkpoint order without claiming C1.3 or C1.4 complete. Keep ACP, durable chat, and the remaining live acceptance separate.
+
+## Working constraints
+
+- Keep `docs/context.md` as the detailed design source; review deliberate changes using the state file's stored SHA-256.
+- Secrets and generated runtime traces stay out of project memory and Git. The root `.env` is ignored; shell subprocesses must not inherit provider/exporter credentials.
+- Static execution policy is not containment. Hosts provide isolation.
+- Ordinary tests use offline fixtures. Live provider and real Collector gates require actual evidence before cycle completion.
+- Unsupported release capabilities stay visible in the backlog. A green checkpoint does not imply a complete 0.1 runtime.
+- Prefer measured baselines to speculative performance gates.
+
+## How to resume
+
+Read [working instructions](../../AGENTS.md), run `node scripts/project.mjs context`, and inspect the working tree. The selected checkpoint and next action come from state. Read only the corresponding cycle section and relevant design sections before making changes.
