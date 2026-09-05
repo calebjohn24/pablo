@@ -96,7 +96,7 @@ impl Provider for GatedProvider {
         Box::pin(async move {
             assert_eq!(request.model, "scripted/text-v1");
             assert_eq!(request.input, "synthetic-private-input-9ac");
-            assert_eq!(request.max_output_tokens, 2048);
+            assert_eq!(request.max_output_tokens, 65_536);
             assert!(request.deadline > tokio::time::Instant::now());
             assert!(request.context.span().span_context().is_valid());
             let guard = DropSignal(self.dropped.clone());
@@ -365,7 +365,7 @@ async fn byte_model_event_and_token_limits_settle_without_false_completion() {
         let mut spec = spec();
         match limit {
             LimitKind::InputBytes => spec.limits.max_input_bytes = 0,
-            LimitKind::ModelCalls => spec.limits.max_model_calls = 0,
+            LimitKind::ModelCalls => spec.limits.max_model_calls = Some(0),
             LimitKind::OutputBytes => spec.limits.max_output_bytes = 3,
             LimitKind::Events => spec.limits.max_events = 4,
             LimitKind::OutputTokens => spec.limits.max_output_tokens = 1,
@@ -756,4 +756,36 @@ async fn sink_failure_before_the_model_call_records_that_nothing_was_sent() {
     );
     assert_eq!(terminal, Some(outcome));
     assert_eq!(exporter.get_finished_spans().unwrap().len(), 1);
+}
+
+#[tokio::test(start_paused = true)]
+async fn default_deadline_allows_long_work_and_still_settles_at_one_hour() {
+    let (sdk, _) = sdk();
+    let runtime = Runtime::new(telemetry::tracer(&sdk));
+    for (seconds, completes) in [(901, true), (3601, false)] {
+        let provider = ScriptedProvider::new(vec![
+            (
+                Duration::from_secs(seconds),
+                Ok(ProviderEvent::TextDelta("done".into())),
+            ),
+            (Duration::ZERO, Ok(finish())),
+        ]);
+        let started = tokio::time::Instant::now();
+        let mut events = Vec::new();
+        let outcome = runtime
+            .run(&spec(), &provider, &mut |event: &RunEvent| {
+                events.push(event.clone());
+                Ok(())
+            })
+            .await
+            .unwrap();
+        if completes {
+            assert!(outcome.is_completed());
+            assert!(started.elapsed() >= Duration::from_secs(901));
+        } else {
+            assert_eq!(outcome, RunOutcome::TimedOut);
+            assert_eq!(started.elapsed(), Duration::from_secs(3600));
+        }
+        assert_terminal(&events, &outcome);
+    }
 }

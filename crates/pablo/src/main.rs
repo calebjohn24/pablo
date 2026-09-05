@@ -1,3 +1,4 @@
+mod acp;
 mod config;
 
 use std::{
@@ -13,7 +14,7 @@ use pablo_core::{
     ScriptedProvider, SinkError, ToolRegistry, gateway::GatewayProvider, telemetry,
 };
 
-const HELP: &str = "pablo — headless Rust runtime (C1.2a preview)\n\nUsage:\n  pablo run \"TASK\" [--workspace PATH] [--model ID] [--no-shell]\n                 [--env-file PATH] [--timeout SECONDS]\n                 [--trace PATH] [--capture-content]\n  pablo demo [--trace PATH] [--capture-content]\n  pablo --version\n  pablo --help\n\nRun sends one task to Vercel AI Gateway using direct HTTP.\nDefault model: openai/gpt-4.1-mini. Workspace: current directory.\nReads AI_GATEWAY_API_KEY (alias VERCEL_AI_GATEWAY) from the environment\nor .env in the invoking directory.\nShell is enabled for run; use --no-shell for text only. Ctrl-C cancels and cleans up.\nEach invocation is a fresh task (no saved chat history).\nDemo is offline. Trace files must be new; native content is off by default.\nNo network telemetry exporter is enabled.\n";
+const HELP: &str = "pablo — headless Rust runtime (C1.3 spike)\n\nUsage:\n  pablo run \"TASK\" [--workspace PATH] [--model ID] [--no-shell]\n                 [--env-file PATH] [--timeout SECONDS] [--tool-timeout SECONDS]\n                 [--max-tool-calls N] [--max-model-calls N]\n                 [--trace PATH] [--capture-content]\n  pablo acp --stdio [--model ID] [--no-shell] [--env-file PATH]\n                  [--max-tool-calls N] [--max-model-calls N]\n                  [--timeout SECONDS] [--tool-timeout SECONDS] [--trace PATH] [--capture-content]\n  pablo demo [--trace PATH] [--capture-content]\n  pablo --version\n  pablo --help\n\nRun sends one task to Vercel AI Gateway using direct HTTP.\nDefault model: google/gemini-3.8-flash. Workspace: current directory.\nReads AI_GATEWAY_API_KEY (alias VERCEL_AI_GATEWAY) from the environment\nor .env in the invoking directory.\nShell is enabled for run; use --no-shell for text only. Ctrl-C cancels and cleans up.\nDefaults: 3600 seconds per run, 900 seconds per shell call. Timeouts accept 1–86400.\nModel and tool call counts are unlimited by default; use --max-*-calls to cap them.\nEach invocation is a fresh task (no saved chat history).\nDemo is offline. Trace files must be new; native content is off by default.\nNo network telemetry exporter is enabled.\n";
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> ExitCode {
@@ -43,6 +44,9 @@ async fn execute() -> Result<ExitCode, String> {
         return Ok(ExitCode::SUCCESS);
     }
     let options = config::Options::parse(command, args)?;
+    if options.acp {
+        return acp::serve(options).await;
+    }
     let spec = options.spec()?;
     let provider: Box<dyn Provider> = if options.live {
         if let Some(endpoint) = std::env::var_os("PABLO_FIXTURE_ENDPOINT") {

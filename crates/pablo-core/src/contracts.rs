@@ -35,8 +35,10 @@ impl RunSpec {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct RunLimits {
-    pub max_model_calls: u32,
-    pub max_tool_calls: u32,
+    /// None means no call-count limit; Some(0) disables model calls.
+    pub max_model_calls: Option<u32>,
+    /// None means no call-count limit; Some(0) disables tool calls.
+    pub max_tool_calls: Option<u32>,
     pub max_tool_duration_ms: u64,
     pub max_tool_input_bytes: usize,
     /// Maximum serialized tool result, including metadata and JSON escaping.
@@ -54,17 +56,17 @@ pub struct RunLimits {
 impl Default for RunLimits {
     fn default() -> Self {
         Self {
-            max_model_calls: 4,
-            max_tool_calls: 2,
-            max_tool_duration_ms: 30_000,
-            max_tool_input_bytes: 64 * 1024,
-            max_tool_output_bytes: 64 * 1024,
-            max_context_bytes: 256 * 1024,
-            max_run_duration_ms: 120_000,
-            max_input_bytes: 64 * 1024,
-            max_output_bytes: 64 * 1024,
-            max_output_tokens: 2_048,
-            max_events: 1_024,
+            max_model_calls: None,
+            max_tool_calls: None,
+            max_tool_duration_ms: 15 * 60 * 1000,
+            max_tool_input_bytes: 1024 * 1024,
+            max_tool_output_bytes: 8 * 1024 * 1024,
+            max_context_bytes: 32 * 1024 * 1024,
+            max_run_duration_ms: 60 * 60 * 1000,
+            max_input_bytes: 1024 * 1024,
+            max_output_bytes: 4 * 1024 * 1024,
+            max_output_tokens: 65_536,
+            max_events: 1_000_000,
         }
     }
 }
@@ -80,7 +82,7 @@ impl Default for TraceSettings {
     fn default() -> Self {
         Self {
             capture_content: false,
-            max_bytes: 1024 * 1024,
+            max_bytes: 256 * 1024 * 1024,
         }
     }
 }

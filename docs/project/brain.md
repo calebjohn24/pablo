@@ -31,7 +31,7 @@ Use curated Markdown, one structured current-state file, and append-only JSONL w
 
 ### D004 — Vercel is the first live provider
 
-The user selected Vercel AI Gateway. Use `AI_GATEWAY_API_KEY` and an explicit profile, initially `openai/gpt-4.1-mini`, following the approved cycle plan. The user supplied the credential in the root `.env`; its contents are private and uninspected by the project helper. The end-user preview in D011 brings a narrow live CLI smoke forward; live ACP acceptance remains C1.4.
+The user selected Vercel AI Gateway. Use `AI_GATEWAY_API_KEY` and an explicit profile, initially `openai/gpt-4.1-mini`, following the approved cycle plan; D014 records the replacement default. The user supplied the credential in the root `.env`; its contents are private and uninspected by the project helper. The end-user preview in D011 brings a narrow live CLI smoke forward; live ACP acceptance remains C1.4.
 
 ### D005 — Start with two Rust crates
 
@@ -60,6 +60,26 @@ Rust 1.98.1, OTel API 0.32.0, SDK 0.32.1, and all introduced dependencies are pi
 ### D011 — Bring a small end-user preview forward
 
 The user asked to test real tasks immediately after C1.2. Add C1.2a before ACP: a one-task `pablo run` CLI and reusable Vercel adapter through the existing runtime, with a small live synthetic-evidence smoke. The user explicitly selected direct HTTP; use a general Rust HTTP client, with no Vercel SDK. The existing `.env` key name `VERCEL_AI_GATEWAY` is supported as an alias for `AI_GATEWAY_API_KEY`. This changes the checkpoint order without claiming C1.3 or C1.4 complete. Keep ACP, durable chat, and the remaining live acceptance separate.
+
+### D012 — Pin stable ACP v1 and preserve native outcome truth
+
+C1.3 uses the official Rust and TypeScript SDKs with exact releases/schema fingerprints in [the ACP lock](../acp-lock.json). The spike admits one session and one prompt per process, negotiates `pablo/v1` metadata, and advertises only implemented capabilities. Standard stop reasons control the ACP turn; metadata preserves the immutable native outcome if a late cancellation arrives during final output draining. This meets cancellation semantics without rewriting trace history. See [the ACP contract](../acp.md); release-stable extension naming and broader session support remain deferred.
+
+### D013 — Bound ACP traffic around the official SDK
+
+The selected SDK has unbounded internal channels. Enforce connection/frame limits before ingress and acknowledge physical stdout writes before enqueueing another update. A bounded eight-event queue bridges the existing synchronous sink to one joined runtime thread, allowing the protocol to process cancellation while the worker waits for capacity. Stall/disconnect handling wakes the producer and awaits owned cleanup. This retains one core lifecycle and the embedding contract; [transport limits](../acp.md#transport-bounds-and-ownership) explain the exact bounds.
+
+### D014 — Use the user-selected Gemini Flash default
+
+The user selected `google/gemini-3.8-flash` for both CLI and ACP. The exact identifier was verified in the [official Vercel catalog](https://vercel.com/ai-gateway/models/gemini-3.8-flash). Preserve `--model` overrides and the existing direct HTTP adapter. Prior GPT-4.1 mini evidence remains historical; live Gemini acceptance still belongs to C1.4.
+
+### D015 — Call-count budgets are opt-in
+
+The user requested no default tool budget. Default both model and tool call counts to unlimited so the former four-model-call ceiling cannot silently replace the removed two-tool ceiling. Hosts use optional `RunLimits` counts; CLI/ACP expose `--max-tool-calls` and `--max-model-calls`. Zero disables those calls. Explicit caps remain hard limits, with a provider hint requesting a final answer when no further tool result can be consumed. Timeouts, memory/transport bounds, and cancellation remain separate. See [runtime limits](../runtime.md).
+
+### D016 — Use generous execution and transport capacities
+
+The user asked for generous timeouts and sizes before committing C1.3. Defaults are one hour per run, 15 minutes per shell, 1 MiB input/arguments, 8 MiB tool results, 4 MiB model output, 32 MiB context, 65,536 requested output tokens, one million events, and 256 MiB native traces. Increase gateway and ACP capacities together so protocol framing and escaping do not impose the old smaller caps. Explicit run/tool timeout overrides accept up to 24 hours; cancellation and the separate short cleanup allowances remain. See [runtime limits](../runtime.md) and [ACP transport bounds](../acp.md#transport-bounds-and-ownership).
 
 ## Working constraints
 

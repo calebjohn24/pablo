@@ -17,6 +17,9 @@ pub struct ModelRequest<'a> {
     pub instructions: &'a str,
     pub messages: &'a [Message],
     pub tools: &'a [ToolDescriptor],
+    /// Ask for a final answer when no further tool result can be consumed.
+    /// The runtime still enforces its limits if a provider ignores this hint.
+    pub allow_tool_calls: bool,
     pub max_output_tokens: u32,
     pub deadline: Instant,
     pub context: Context,

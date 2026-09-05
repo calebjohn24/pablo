@@ -104,7 +104,7 @@ fn help_version_and_invalid_options_are_honest_about_the_checkpoint() {
     let fixture = Fixture::new();
     let help = fixture.command().arg("--help").output().unwrap();
     assert!(help.status.success());
-    assert!(String::from_utf8_lossy(&help.stdout).contains("C1.2"));
+    assert!(String::from_utf8_lossy(&help.stdout).contains("C1.3"));
     let version = fixture.command().arg("--version").output().unwrap();
     assert!(version.status.success());
     assert!(
@@ -112,7 +112,8 @@ fn help_version_and_invalid_options_are_honest_about_the_checkpoint() {
             .contains("fee465db333bdd6a7d2faa320edab5cf3101a4f4")
     );
     for args in [
-        vec!["acp", "--stdio"],
+        vec!["acp"],
+        vec!["acp", "--stdio", "--workspace", "."],
         vec!["demo", "--capture-content"],
         vec!["demo", "--trace"],
         vec!["demo", "--wat"],
@@ -122,5 +123,40 @@ fn help_version_and_invalid_options_are_honest_about_the_checkpoint() {
         assert!(!result.status.success());
         assert!(result.stdout.is_empty());
         assert!(!result.stderr.is_empty());
+    }
+}
+
+#[test]
+fn invalid_call_caps_are_rejected_before_loading_credentials() {
+    let fixture = Fixture::new();
+    for command in ["run", "acp"] {
+        for flag in ["--max-tool-calls", "--max-model-calls"] {
+            for value in ["-1", "1.5", "abc", "4294967296", "", "+1"] {
+                let result = fixture
+                    .command()
+                    .args([
+                        command,
+                        if command == "run" { "Task" } else { "--stdio" },
+                        flag,
+                        value,
+                    ])
+                    .output()
+                    .unwrap();
+                assert!(!result.status.success());
+                assert!(result.stdout.is_empty());
+                assert!(String::from_utf8_lossy(&result.stderr).contains("must be an integer"));
+            }
+            let missing = fixture
+                .command()
+                .args([
+                    command,
+                    if command == "run" { "Task" } else { "--stdio" },
+                    flag,
+                ])
+                .output()
+                .unwrap();
+            assert!(!missing.status.success());
+            assert!(String::from_utf8_lossy(&missing.stderr).contains("requires a value"));
+        }
     }
 }

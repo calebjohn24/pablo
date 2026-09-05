@@ -13,11 +13,11 @@ use crate::{
 };
 
 pub const VERCEL_ENDPOINT: &str = "https://ai-gateway.vercel.sh/v1/chat/completions";
-const MAX_FRAME: usize = 128 * 1024;
-const MAX_RESPONSE: usize = 2 * 1024 * 1024;
-const MAX_REQUEST: usize = 2 * 1024 * 1024;
-const MAX_FRAMES: usize = 4096;
-const MAX_CALLS: u64 = 8;
+const MAX_FRAME: usize = 32 * 1024 * 1024;
+const MAX_RESPONSE: usize = 128 * 1024 * 1024;
+const MAX_REQUEST: usize = 128 * 1024 * 1024;
+const MAX_FRAMES: usize = 1_000_000;
+const MAX_CALLS: u64 = 128;
 
 /// No Debug implementation: the credential is never a diagnostic value.
 pub struct GatewayProvider {
@@ -63,7 +63,7 @@ impl GatewayProvider {
             .redirect(reqwest::redirect::Policy::none())
             .retry(reqwest::retry::never())
             .no_proxy()
-            .connect_timeout(Duration::from_secs(15))
+            .connect_timeout(Duration::from_secs(60))
             .build()
             .map_err(|_| "cannot initialize gateway transport")?;
         Ok(Self {
@@ -209,7 +209,11 @@ fn request_body(request: &ModelRequest<'_>) -> Result<Vec<u8>, ProviderError> {
             })
             .collect();
         body["tools"] = json!(tools?);
-        body["tool_choice"] = json!("auto");
+        body["tool_choice"] = json!(if request.allow_tool_calls {
+            "auto"
+        } else {
+            "none"
+        });
         body["parallel_tool_calls"] = json!(false);
     }
     let body = serde_json::to_vec(&body).map_err(|_| not_sent())?;

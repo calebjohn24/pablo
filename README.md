@@ -12,7 +12,7 @@ From the project directory:
 cargo run --locked -p pablo -- run "Read README.md and summarize what Pablo can do."
 ```
 
-Pablo loads your gateway key from the ignored `.env`, streams the answer, and shows shell activity in the terminal. Both `AI_GATEWAY_API_KEY` and your existing `VERCEL_AI_GATEWAY` name work. It uses direct HTTPS through a Rust HTTP client; no Vercel SDK is installed. The default model is `openai/gpt-4.1-mini`.
+Pablo loads your gateway key from the ignored `.env`, streams the answer, and shows shell activity in the terminal. Both `AI_GATEWAY_API_KEY` and your existing `VERCEL_AI_GATEWAY` name work. It uses direct HTTPS through a Rust HTTP client; no Vercel SDK is installed. The default model is `google/gemini-3.8-flash`.
 
 To work in a different folder while keeping credentials in this project:
 
@@ -20,9 +20,13 @@ To work in a different folder while keeping credentials in this project:
 cargo run --locked -p pablo -- run "List the files here and explain the project." --workspace /path/to/project
 ```
 
-Press **Ctrl-C** to cancel and wait for shell cleanup. Each invocation is a fresh task, with up to two shell calls, four model calls, and 120 seconds by default. Shell runs on your machine with your user permissions; the workspace selects its working directory, not an OS sandbox. Use `--no-shell` for text-only tasks. There is no persistent chat or TUI yet.
+Press **Ctrl-C** to cancel and wait for shell cleanup. Each invocation is a fresh task. Tool and model call counts are unlimited by default; the default deadline is one hour per run and 15 minutes per shell call. Shell runs on your machine with your user permissions; the workspace selects its working directory, not an OS sandbox. Use `--no-shell` for text-only tasks. There is no persistent chat or TUI yet.
 
-Use `--model provider/model` to choose another compatible model, `--timeout SECONDS` to change the run deadline (1–3600), or `--env-file PATH` to select a credential file. Environment variables take precedence over file values; credential files are parsed privately without sourcing them or modifying the process environment. `--workspace` does not change where `.env` is loaded from.
+Set `--max-tool-calls N` or `--max-model-calls N` to opt into call-count limits (zero disables the corresponding calls). Omit these options for unlimited call counts. These options work with both `run` and `acp --stdio`, including through the reference client.
+
+Default capacities are 1 MiB input, 8 MiB per tool result, 32 MiB context, 4 MiB model output, and 65,536 requested output tokens per model call. Optional native traces allow 256 MiB.
+
+Use `--model provider/model` to choose another compatible model, `--timeout SECONDS` or `--tool-timeout SECONDS` to change the run or shell deadline (1–86400 each), or `--env-file PATH` to select a credential file. Environment variables take precedence over file values; credential files are parsed privately without sourcing them or modifying the process environment. `--workspace` does not change where `.env` is loaded from.
 
 For a built executable:
 
@@ -32,6 +36,16 @@ cargo build --release --locked -p pablo
 ```
 
 See [the gateway and CLI contract](docs/gateway.md) for transport details, trace options, and the explicit live smoke check.
+
+## Use ACP from TypeScript
+
+```sh
+npm ci
+cargo build --locked -p pablo
+node examples/acp-client.ts "Read README.md and summarize it." /absolute/workspace
+```
+
+The reference client starts `pablo acp --stdio`, negotiates stable ACP v1, streams message/tool updates, and reads the typed outcome. Ctrl-C sends cancellation and waits for cleanup. Each process admits one session and one prompt. See [the ACP contract](docs/acp.md) for host configuration, protocol bounds, SDK pins and the offline acceptance suite.
 
 ## Offline demo and development checks
 
@@ -54,10 +68,12 @@ Add `--capture-content` to include the synthetic response in that trace. The def
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --locked
+npm run typecheck
+npm run test:acp
 cargo build --release --locked -p pablo
 ```
 
-See [the runtime contracts and telemetry mapping](docs/runtime.md) for embedding and limits. The core supports streamed model/tool turns, bounded shell execution, and cancellation. See [the shell contract](docs/shell.md). The `run` command uses the live gateway; `demo` remains an offline text fixture. ACP is the next checkpoint.
+See [the runtime contracts and telemetry mapping](docs/runtime.md) for embedding and limits. The core supports streamed model/tool turns, bounded shell execution, and cancellation. See [the shell contract](docs/shell.md). The `run` command uses the live gateway; `demo` remains an offline text fixture. The ACP command drives the same runtime; live ACP acceptance is the next checkpoint.
 
 Run the real shell round-trip fixture with:
 

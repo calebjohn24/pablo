@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-05T03:05:08Z",
+  "updated_at": "2026-09-05T03:59:10.168Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C1.3",
-  "next_action": "Start C1.3: pin official ACP Rust/TypeScript SDKs and stable-v1 contracts, add pablo acp --stdio and the reference client, and reuse GatewayProvider with local HTTP/SSE fixtures. Verify ordered updates, bounded queues, cancellation after cleanup, disconnects, slow consumers and protocol-only stdout. Live ACP acceptance remains C1.4.",
-  "latest_log_entry": "LOG-0012",
+  "next_checkpoint": "C1.4",
+  "next_action": "Start C1.4: explicitly verify live ACP model/shell/model with google/gemini-3.8-flash, synthetic evidence, usage, safe failures and cleanup. D015/D016 define unlimited call counts and generous capacities; use explicit caps/timeouts where a fixture needs smaller bounds. Keep native traces private and summarize actual live evidence. Collector work remains C1.5.",
+  "latest_log_entry": "LOG-0022",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -78,9 +78,13 @@
       "depends_on": [
         "C1.2a"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0016",
+        "LOG-0020",
+        "LOG-0022"
+      ]
     },
     {
       "id": "C1.4",

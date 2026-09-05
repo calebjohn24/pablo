@@ -53,7 +53,7 @@ Acceptance: the client initializes, creates an in-memory session, streams ordere
 
 ## C1.4: Live Vercel path
 
-Complete direct Vercel HTTP/SSE transport through the same provider boundary. Explicitly load the user's `AI_GATEWAY_API_KEY` from the ignored root `.env` for the live fixture. Use `openai/gpt-4.1-mini` as the initial smoke profile with an explicit override. Keep credentials outside serialized `RunSpec`, native trace content, tool environment, and project records.
+Complete direct Vercel HTTP/SSE transport through the same provider boundary. Explicitly load the user's `AI_GATEWAY_API_KEY` from the ignored root `.env` for the live fixture. Use the user-selected `google/gemini-3.8-flash` default profile, with an explicit override available. D014 replaces the original GPT-4.1 mini smoke profile. Keep credentials outside serialized `RunSpec`, native trace content, tool environment, and project records.
 
 Acceptance: a live model uses the shell to read temporary evidence and returns an answer containing that evidence. Record the model/profile, usage, safe errors, and a redacted evidence summary referencing the local runtime trace. A missing key or unrun live fixture leaves the gate pending.
 
@@ -76,7 +76,7 @@ Acceptance: live Vercel proof, real Collector proof, platform checks, and comple
 - Shell: command, explicit working directory, environment additions, timeout, and output bound. Return separate stdout/stderr, exit status, and truncation metadata. Noninteractive `/bin/sh`, a workspace-contained working directory, and a minimal environment excluding provider/exporter secrets. Static policy is not containment; hosts own isolation.
 - Tool schemas: Draft 2020-12 with remote-reference retrieval disabled. Reject unsupported behavior explicitly. Map the internal `shell.run` identity to a provider-valid function name in the adapter rather than weakening the internal identity.
 - ACP: standard lifecycle, message/tool updates, and stop reasons. Negotiate `pablo/v1` metadata for richer outcomes and correlation; follow the pinned ACP trace-context fields. Complete cancellation cleanup and pending updates before the prompt response. Diagnostics go to stderr.
-- Initial bounds: four model calls, two tool calls, one active shell process, 120 seconds per run, 30 seconds per shell call, 2,048 output tokens per model request, and 64 KiB per input/tool/final result. Bound protocol frames, stream buffers, and event queues. These are configurable spike defaults; full cost-ledger enforcement is later release work.
+- Current defaults (D015/D016): unlimited model/tool call counts with optional explicit caps, one active shell process, one hour per run, 15 minutes per shell call, 65,536 output tokens per model request, 1 MiB input/tool arguments, 8 MiB tool results, 4 MiB model output, and 32 MiB context. Optional native traces allow 256 MiB. Bound protocol frames, stream buffers, and event queues. These are configurable spike defaults; full cost-ledger enforcement is later release work.
 - Telemetry: create OTel spans and native events at the same lifecycle transitions. Disable network export by default and keep OTel content disabled. Explicit native content capture is independent; fixtures enable it for synthetic evidence. Bound JSONL size, reserve terminal-record space, and stop cleanly on trace-capacity exhaustion. Exporter errors remain diagnostic with a two-second shutdown flush deadline.
 
 ## Verification strategy
@@ -91,6 +91,6 @@ Project-memory checks validate record consistency, not whether runtime acceptanc
 - [ACP extension rules](https://agentclientprotocol.com/protocol/v1/extensibility)
 - [Official ACP Rust SDK](https://github.com/agentclientprotocol/rust-sdk)
 - [Vercel REST API](https://vercel.com/docs/ai-gateway/sdks-and-apis/openai-chat-completions/rest-api)
-- [Initial Vercel model identifier](https://vercel.com/ai-gateway/models/gpt-4.1-mini)
+- [Current Vercel model identifier](https://vercel.com/ai-gateway/models/gemini-3.8-flash)
 
 These references were inspected during planning. Pin exact protocol and SDK revisions when introduced; record any necessary compatibility decision in the brain.

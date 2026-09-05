@@ -1,0 +1,34 @@
+{
+  "protocol_version": 1,
+  "rust_sdk": {
+    "crate": "agent-client-protocol",
+    "version": "2.1.0",
+    "revision": "726c5030bfaa88cfdac2fb1f71a63abb331ce586",
+    "source": "https://github.com/agentclientprotocol/rust-sdk/tree/726c5030bfaa88cfdac2fb1f71a63abb331ce586",
+    "features": []
+  },
+  "rust_schema": {
+    "crate": "agent-client-protocol-schema",
+    "version": "1.7.0",
+    "revision": "272bf799f35a258c6a4107a0410ed361e83683d3"
+  },
+  "typescript_sdk": {
+    "package": "@agentclientprotocol/sdk",
+    "version": "1.4.0",
+    "revision": "e6463f444093ed7c5f1cc937c3f32afb5853e906",
+    "source": "https://github.com/agentclientprotocol/typescript-sdk/tree/e6463f444093ed7c5f1cc937c3f32afb5853e906",
+    "entry_point": "@agentclientprotocol/sdk",
+    "schema_path": "node_modules/@agentclientprotocol/sdk/schema/schema.json",
+    "schema_sha256": "7f77702b34e0a0558e77220e9007bf8ee161a976bb8ac5021aba1b7e7b2c5708"
+  },
+  "reviewed_upstream_v1_schema": {
+    "revision": "f12f6b39d1a09af407c4f076b073c894f0da43f1",
+    "source": "https://github.com/agentclientprotocol/agent-client-protocol/blob/f12f6b39d1a09af407c4f076b073c894f0da43f1/schema/v1/schema.json",
+    "sha256": "caf62ff962ada396878372ced11efb2c6764e59d90919a38583c319948931a42"
+  },
+  "extension": {
+    "name": "pablo/v1",
+    "revision": "c1.3",
+    "schema": "docs/pablo-acp-v1.schema.json"
+  }
+}

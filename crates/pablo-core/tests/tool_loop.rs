@@ -438,8 +438,8 @@ async fn empty_catalog_denies_tools_and_budgets_prevent_unnecessary_effects() {
             ToolRegistry::with_shell().unwrap()
         };
         match mode {
-            1 => spec.limits.max_tool_calls = 0,
-            2 => spec.limits.max_model_calls = 1,
+            1 => spec.limits.max_tool_calls = Some(0),
+            2 => spec.limits.max_model_calls = Some(1),
             3 => spec.limits.max_tool_input_bytes = 2,
             4 => spec.limits.max_context_bytes = 1,
             _ => {}

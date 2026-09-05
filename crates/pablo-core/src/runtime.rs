@@ -189,11 +189,18 @@ where
             text: spec.input.clone(),
         }];
         let mut ids = HashSet::new();
-        let mut tool_count = 0;
+        let mut remaining_tools = spec.limits.max_tool_calls;
+        let mut remaining_models = spec.limits.max_model_calls;
         let mut usage = None;
-        for step in 0..spec.limits.max_model_calls {
+        loop {
             if let Some(outcome) = execution.stop() {
                 return outcome;
+            }
+            if let Some(remaining) = &mut remaining_models {
+                if *remaining == 0 {
+                    return limit(LimitKind::ModelCalls);
+                }
+                *remaining -= 1;
             }
             let context_bytes =
                 serde_json::to_vec(&(&spec.instructions, &history, execution.tools.descriptors()))
@@ -203,8 +210,14 @@ where
                 return limit(LimitKind::ContextBytes);
             }
             let mut progress = ModelProgress::default();
+            let input = ModelInput {
+                history: &history,
+                allow_tool_calls: remaining_tools != Some(0)
+                    && remaining_models != Some(0)
+                    && !execution.tools.descriptors().is_empty(),
+            };
             if let Err(outcome) = self
-                .model(execution, lifecycle, &history, &mut progress, &mut ids)
+                .model(execution, lifecycle, &input, &mut progress, &mut ids)
                 .await
             {
                 return outcome;
@@ -220,11 +233,13 @@ where
                     usage: usage.unwrap_or_default(),
                 };
             }
-            if progress.tool_calls.len() > (spec.limits.max_tool_calls - tool_count) as usize {
+            if remaining_tools
+                .is_some_and(|remaining| progress.tool_calls.len() > remaining as usize)
+            {
                 return limit(LimitKind::ToolCalls);
             }
             // Do not perform an effectful tool call without budget to consume its result.
-            if step + 1 == spec.limits.max_model_calls {
+            if remaining_models == Some(0) {
                 return limit(LimitKind::ModelCalls);
             }
             history.push(Message::Assistant {
@@ -239,7 +254,9 @@ where
                     Ok(result) => result,
                     Err(outcome) => return outcome,
                 };
-                tool_count += 1;
+                if let Some(remaining) = &mut remaining_tools {
+                    *remaining -= 1;
+                }
                 history.push(Message::Tool {
                     call_id: call.id,
                     name: call.name,
@@ -247,14 +264,13 @@ where
                 });
             }
         }
-        limit(LimitKind::ModelCalls)
     }
 
     async fn model(
         &self,
         execution: &Execution<'_>,
         lifecycle: &mut Lifecycle<'_>,
-        history: &[Message],
+        input: &ModelInput<'_>,
         progress: &mut ModelProgress,
         ids: &mut HashSet<String>,
     ) -> Result<(), RunOutcome> {
@@ -294,7 +310,7 @@ where
             false,
         ) {
             Err(outcome) => Err(outcome),
-            Ok(()) => consume(execution, &model, lifecycle, history, progress, ids).await,
+            Ok(()) => consume(execution, &model, lifecycle, input, progress, ids).await,
         };
         let finished = telemetry::now();
         let finish_event = EventKind::ModelFinished {
@@ -461,11 +477,16 @@ struct PendingCall {
     arguments: String,
 }
 
+struct ModelInput<'a> {
+    history: &'a [Message],
+    allow_tool_calls: bool,
+}
+
 async fn consume(
     execution: &Execution<'_>,
     model: &Context,
     lifecycle: &mut Lifecycle<'_>,
-    history: &[Message],
+    input: &ModelInput<'_>,
     progress: &mut ModelProgress,
     ids: &mut HashSet<String>,
 ) -> Result<(), RunOutcome> {
@@ -475,8 +496,9 @@ async fn consume(
         model: &spec.model,
         input: &spec.input,
         instructions: &spec.instructions,
-        messages: history,
+        messages: input.history,
         tools: execution.tools.descriptors(),
+        allow_tool_calls: input.allow_tool_calls,
         max_output_tokens: spec.limits.max_output_tokens,
         deadline: execution.deadline,
         context: model.clone(),
@@ -555,7 +577,11 @@ async fn consume(
                 {
                     return Err(malformed());
                 }
-                if ids.len() >= spec.limits.max_tool_calls as usize {
+                if spec
+                    .limits
+                    .max_tool_calls
+                    .is_some_and(|max| ids.len() >= max as usize)
+                {
                     return Err(limit(LimitKind::ToolCalls));
                 }
                 ids.insert(id.clone());

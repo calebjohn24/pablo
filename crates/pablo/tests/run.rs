@@ -96,7 +96,9 @@ fn serve(mut stream: TcpStream, body: &str, status: &str, content_type: &str) {
     if stream.write_all(header.as_bytes()).is_err() {
         return;
     }
-    for chunk in body.as_bytes().chunks(7) {
+    // Keep ordinary responses fragmented; oversized fixtures need not issue millions of writes.
+    let chunk_bytes = if body.len() > 1024 * 1024 { 4096 } else { 7 };
+    for chunk in body.as_bytes().chunks(chunk_bytes) {
         if stream.write_all(chunk).is_err() {
             break;
         }
@@ -149,7 +151,7 @@ fn end_user_executable_reads_real_evidence_over_fragmented_http() {
         assert!(headers.contains("Bearer pablo-local-fixture"));
         assert!(!headers.contains("synthetic-private"));
         assert_eq!(body["stream"], true);
-        assert_eq!(body["model"], "openai/gpt-4.1-mini");
+        assert_eq!(body["model"], "google/gemini-3.8-flash");
         assert_eq!(body["parallel_tool_calls"], false);
         assert_eq!(body["tools"][0]["function"]["name"], "shell_run");
         serve(
@@ -295,7 +297,7 @@ fn malformed_oversized_rejected_and_redirect_responses_are_safe() {
         (
             "200 OK",
             "text/event-stream",
-            "data: ".to_owned() + &"x".repeat(128 * 1024),
+            "data: ".to_owned() + &"x".repeat(32 * 1024 * 1024),
             "MalformedStream",
         ),
         (

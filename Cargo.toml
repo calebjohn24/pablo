@@ -9,6 +9,10 @@ rust-version = "1.98.1"
 publish = false
 
 [workspace.dependencies]
+agent-client-protocol = { version = "=2.1.0", default-features = false }
+futures = "=0.3.34"
+async-channel = "=2.5.0"
+async-io = "=2.6.0"
 futures-util = { version = "=0.3.34", default-features = false, features = ["std", "async-await"] }
 opentelemetry = { version = "=0.32.0", default-features = false, features = ["trace"] }
 opentelemetry_sdk = { version = "=0.32.1", default-features = false, features = ["trace"] }

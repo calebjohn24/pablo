@@ -35,7 +35,7 @@ try {
   const summary = {
     result: 'passed', timestamp: new Date().toISOString(), binary: relative(root, binary),
     elapsed_seconds: Number(((performance.now() - started) / 1000).toFixed(2)),
-    model: 'openai/gpt-4.1-mini', trace: relative(root, trace),
+    model: events.find((e) => e.type === 'model.started').model, trace: relative(root, trace),
     model_calls: events.filter((e) => e.type === 'model.started').length,
     shell_calls: events.filter((e) => e.type === 'shell.started').length,
     usage: last.outcome.usage,
