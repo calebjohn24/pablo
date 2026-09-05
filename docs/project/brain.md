@@ -71,7 +71,7 @@ The selected SDK has unbounded internal channels. Enforce connection/frame limit
 
 ### D014 — Use the user-selected Gemini Flash default
 
-The user selected `google/gemini-3.8-flash` for both CLI and ACP. The exact identifier was verified in the [official Vercel catalog](https://vercel.com/ai-gateway/models/gemini-3.8-flash). Preserve `--model` overrides and the existing direct HTTP adapter. Prior GPT-4.1 mini evidence remains historical; live Gemini acceptance still belongs to C1.4.
+The user selected `google/gemini-3.8-flash` for both CLI and ACP. The exact identifier was verified in the [official Vercel catalog](https://vercel.com/ai-gateway/models/gemini-3.8-flash). Preserve `--model` overrides and the existing direct HTTP adapter. Prior GPT-4.1 mini evidence remains historical; [C1.4 evidence](evidence/c1.4.md) verifies the live Gemini ACP model/shell/model path and reported usage. Repeat it explicitly with `npm run smoke:live:acp`; the fixture privately selects the root credential file and uses small opt-in caps to keep acceptance bounded.
 
 ### D015 — Call-count budgets are opt-in
 

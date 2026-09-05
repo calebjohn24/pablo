@@ -28,7 +28,7 @@ SSE is parsed incrementally with a 4 KiB read buffer, LF/CRLF/CR line support, c
 
 Exactly one choice is supported. Function-name and argument fragments are assembled, indices and identities validated, and unsupported/malformed content fails with a closed error. A finish reason is held until `[DONE]` so a trailing usage chunk is included. `[DONE]` ends the response; HTTP EOF before it is an error. Missing usage/cache fields remain unknown; reported values are not inferred from text. The ordinary core handles length finishes and reported output-token limits.
 
-Redirects, automatic HTTP retries, proxies, and response decompression are disabled. Non-success HTTP responses and streamed provider errors are rejected without exposing their bodies. Opening errors distinguish not-sent from uncertain delivery; response errors record response-received. The runtime cancels opening/streaming work by dropping it at cancellation or its absolute deadline, with a 15-second connection timeout as an additional bound. This preview does not implement every model's optional modalities, reasoning parameters, fallback behavior, or structured outputs.
+Redirects, automatic HTTP retries, proxies, and response decompression are disabled. Non-success HTTP responses and streamed provider errors are rejected without exposing their bodies. Opening errors distinguish not-sent from uncertain delivery; response errors record response-received. The runtime cancels opening/streaming work by dropping it at cancellation or its absolute deadline, with a 60-second connection timeout as an additional bound. This preview does not implement every model's optional modalities, reasoning parameters, fallback behavior, or structured outputs.
 
 For offline executable fixtures only, the host may set `PABLO_FIXTURE_ENDPOINT` in the process environment. It accepts literal loopback HTTP (`127.0.0.1` or `::1`) without userinfo, query, or fragment. This path bypasses credential loading and uses a synthetic key. The model and `.env` cannot set the endpoint. The same adapter/parser handles fixtures and live traffic.
 
@@ -49,6 +49,8 @@ node scripts/smoke-live.mjs
 ```
 
 An optional argument selects a previously built binary, for example `node scripts/smoke-live.mjs target/release/pablo`. This is not part of ordinary automated tests. Live CLI evidence does not mark ACP, Collector, Linux, or the full cycle accepted.
+
+For the formal C1.4 live ACP model/shell/model check, run `npm run smoke:live:acp`. It uses the same gateway transport; see [live ACP acceptance](acp.md#live-acceptance) for its bounds, credential selection and evidence.
 
 The request format follows Vercel's [REST API](https://vercel.com/docs/ai-gateway/sdks-and-apis/openai-chat-completions/rest-api), [streaming](https://vercel.com/docs/ai-gateway/sdks-and-apis/openai-chat-completions/streaming), and [tool calling](https://vercel.com/docs/ai-gateway/sdks-and-apis/openai-chat-completions/tool-calling) documentation, inspected on 2026-09-05. The transport uses the pinned [reqwest API](https://docs.rs/reqwest/0.13.4/reqwest/).
 

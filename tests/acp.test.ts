@@ -189,6 +189,74 @@ test('provider errors and deadlines preserve typed terminal failure without fals
   }
 });
 
+test('gateway rejection bodies and streamed errors stay private across ACP and native traces', { timeout: 20000 }, async t => {
+  for (const scenario of [401, 429, 500, 'sse-error', 'eof'] as const) await t.test(String(scenario), async t => {
+    const sensitive = 'synthetic-provider-body-do-not-serialize';
+    const f = await fixture(t, async (_body, res) => {
+      if (typeof scenario === 'number') {
+        res.writeHead(scenario, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ error: { message: sensitive } }));
+      } else if (scenario === 'sse-error') {
+        await sse(res, `data: ${JSON.stringify({ error: { message: sensitive } })}\n\n`);
+      } else {
+        // A finish chunk is insufficient: missing [DONE] must remain a failure.
+        await sse(res, frame({}, 'stop'));
+      }
+    });
+    const path = join(f.cwd, 'trace.jsonl'); let raw = ''; let stderr = '';
+    await withPablo({ env: f.env, args: ['--trace', path, '--capture-content'],
+      onSpawn: c => c.stdout.on('data', data => { raw += data; }),
+      onDiagnostic: text => { stderr += text; },
+    }, async cx => {
+      const id = await setup(cx, f.cwd);
+      await assert.rejects(prompt(cx, id), (error: any) => {
+        assert(error instanceof RequestError);
+        assert.equal(error.code, -32603);
+        const meta = (error.data as any)['pablo/v1'];
+        validateExtension(meta);
+        assert.deepEqual(meta.outcome, {
+          status: 'failed', code: scenario === 'eof' ? 'malformed_stream' : 'provider_rejected',
+          delivery: 'response_received',
+        });
+        return true;
+      });
+    });
+    const records = await trace(path);
+    assert.equal(records.filter(e => e.type === 'run.finished').length, 1);
+    assert.equal(records.at(-1).outcome.status, 'failed');
+    assert.equal(records.filter(e => e.type === 'shell.started').length, 0);
+    assert.equal(f.requests.length, 1, 'no automatic retry');
+    const serialized = raw + stderr + await readFile(path, 'utf8');
+    for (const secret of [sensitive, 'synthetic-secret', 'pablo-local-fixture']) assert(!serialized.includes(secret));
+    assert(raw.trim().split('\n').every(line => JSON.parse(line).jsonrpc === '2.0'));
+  });
+});
+
+test('ACP live-shaped usage chunks accumulate reported counters and preserve unknown cache usage', { timeout: 15000 }, async t => {
+  const f = await fixture(t, async (body, res, call) => {
+    assert.deepEqual(body.stream_options, { include_usage: true });
+    let response: string;
+    if (call === 1) response = tool('cat evidence.txt').replace('data: [DONE]\n\n', '');
+    else {
+      assert.equal(JSON.parse(body.messages.at(-1).content).shell.stdout, 'usage-evidence\n');
+      response = frame({ content: 'usage-evidence' }) + frame({}, 'stop');
+    }
+    await sse(res, response + `data: ${JSON.stringify({ choices: [], usage: {
+      prompt_tokens: call * 100, completion_tokens: call * 10,
+      prompt_tokens_details: { cached_tokens: call * 5 },
+    } })}\n\ndata: [DONE]\n\n`);
+  });
+  await writeFile(join(f.cwd, 'evidence.txt'), 'usage-evidence\n');
+  const path = join(f.cwd, 'trace.jsonl');
+  const response = await withPablo({ env: f.env, args: ['--trace', path] }, async cx => prompt(cx, await setup(cx, f.cwd)));
+  const outcome = outcomeOf(response); assert(outcome.status === 'completed');
+  assert.deepEqual(outcome.usage, { input_tokens: 300, output_tokens: 30, cache_read_input_tokens: 15, cache_write_input_tokens: null });
+  const records = await trace(path);
+  assert.equal(records.filter(e => e.type === 'model.finished').length, 2);
+  assert.deepEqual(records.at(-1).outcome.usage, outcome.usage);
+  assert.equal(f.requests.length, 2);
+});
+
 class RawPeer {
   child: ChildProcessWithoutNullStreams;
   exited: Promise<unknown[]>;
@@ -336,6 +404,35 @@ test('host setup failures respond safely; ACP initialization never requires cred
     await assert.rejects(prompt(cx, id), (e: any) => e.code === -32603 && !JSON.stringify(e).includes('synthetic-secret'));
   });
   assert.equal(f.requests.length, 0);
+});
+
+test('missing or invalid credential files fail ACP prompt safely after successful initialization', { timeout: 15000 }, async t => {
+  const cwd = await realpath(await mkdtemp(join(tmpdir(), 'pablo-acp-config-')));
+  t.after(() => rm(cwd, { recursive: true, force: true }));
+  const env = { ...process.env };
+  delete env.PABLO_FIXTURE_ENDPOINT;
+  delete env.AI_GATEWAY_API_KEY;
+  delete env.VERCEL_AI_GATEWAY;
+  for (const scenario of ['missing', 'invalid'] as const) await t.test(scenario, async () => {
+    const path = join(cwd, `${scenario}.env`);
+    if (scenario === 'invalid') await writeFile(path, 'AI_GATEWAY_API_KEY="synthetic invalid credential"\n');
+    const updates: SessionNotification[] = []; let raw = ''; let stderr = '';
+    await withPablo({ env, args: ['--env-file', path],
+      onSpawn: c => c.stdout.on('data', data => { raw += data; }),
+      onDiagnostic: text => { stderr += text; }, onUpdate: n => { updates.push(n); },
+    }, async cx => {
+      const id = await setup(cx, cwd);
+      await assert.rejects(prompt(cx, id), (error: any) => {
+        assert(error instanceof RequestError);
+        assert.equal(error.code, -32603);
+        assert.equal(error.data, 'runtime setup or execution failed');
+        return true;
+      });
+    });
+    assert.equal(updates.length, 0);
+    assert(!(raw + stderr).includes('synthetic invalid credential'));
+    assert(!raw.includes('end_turn'));
+  });
 });
 
 test('SIGTERM cancels active shell ownership even when the client keeps stdin open', { timeout: 15000 }, async t => {

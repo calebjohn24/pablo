@@ -11,7 +11,8 @@
     "project:check": "node scripts/project.mjs check",
     "test": "node --test scripts/project.test.mjs",
     "typecheck": "tsc --noEmit",
-    "test:acp": "cargo build --locked -p pablo && node --test tests/acp.test.ts"
+    "test:acp": "cargo build --locked -p pablo && node --test tests/acp.test.ts",
+    "smoke:live:acp": "cargo build --locked -p pablo && node scripts/smoke-live-acp.ts"
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "1.4.0"

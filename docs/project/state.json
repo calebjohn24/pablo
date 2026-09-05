@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-05T03:59:10.168Z",
+  "updated_at": "2026-09-05T04:21:44.021Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C1.4",
-  "next_action": "Start C1.4: explicitly verify live ACP model/shell/model with google/gemini-3.8-flash, synthetic evidence, usage, safe failures and cleanup. D015/D016 define unlimited call counts and generous capacities; use explicit caps/timeouts where a fixture needs smaller bounds. Keep native traces private and summarize actual live evidence. Collector work remains C1.5.",
-  "latest_log_entry": "LOG-0022",
+  "next_checkpoint": "C1.5",
+  "next_action": "Start C1.5: add OTLP/HTTP Protobuf export and a pinned local Collector fixture. Prove incoming W3C propagation, native/span identity correlation, metadata-only export and bounded cleanup during Collector failure. Live ACP C1.4 passed; repeat explicitly with npm run smoke:live:acp when needed. Linux acceptance and performance measurements remain C1.6.",
+  "latest_log_entry": "LOG-0026",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -93,9 +93,11 @@
       "depends_on": [
         "C1.3"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0026"
+      ]
     },
     {
       "id": "C1.5",

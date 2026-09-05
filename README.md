@@ -73,7 +73,7 @@ npm run test:acp
 cargo build --release --locked -p pablo
 ```
 
-See [the runtime contracts and telemetry mapping](docs/runtime.md) for embedding and limits. The core supports streamed model/tool turns, bounded shell execution, and cancellation. See [the shell contract](docs/shell.md). The `run` command uses the live gateway; `demo` remains an offline text fixture. The ACP command drives the same runtime; live ACP acceptance is the next checkpoint.
+See [the runtime contracts and telemetry mapping](docs/runtime.md) for embedding and limits. The core supports streamed model/tool turns, bounded shell execution, and cancellation. See [the shell contract](docs/shell.md). The `run` command uses the live gateway; `demo` remains an offline text fixture. The ACP command drives the same runtime, with [verified live Vercel acceptance](docs/project/evidence/c1.4.md). Run `npm run smoke:live:acp` to repeat the explicit paid fixture. Collector export is the next checkpoint.
 
 Run the real shell round-trip fixture with:
 

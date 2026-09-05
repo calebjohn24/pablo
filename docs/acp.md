@@ -64,7 +64,27 @@ cargo test --locked -p pablo --test acp
 
 The TypeScript suite starts the actual executable against local fragmented HTTP/SSE fixtures through `PABLO_FIXTURE_ENDPOINT`. It verifies model/shell/model evidence, standard schemas, negotiated metadata, streaming before completion, cancellation, stdout purity, native trace correlation/redaction, slow output, input bounds, disconnects, host errors and signals. The Rust test additionally uses the official typed client over actual Unix pipes. Fixture mode uses its synthetic credential and never loads the root `.env`.
 
-C1.4 still requires the explicit live ACP gateway acceptance. C1.5 owns incoming context and Collector export; C1.6 owns both-platform acceptance and performance measurements.
+## Live acceptance
+
+Run the explicit paid C1.4 fixture from the project directory:
+
+```sh
+npm run smoke:live:acp
+```
+
+This builds the executable and runs the official TypeScript client through initialize/session/prompt against Vercel. The fixture removes inherited gateway keys and `PABLO_FIXTURE_ENDPOINT` from the child environment and passes the absolute root `.env` path to Pablo. Only the executable reads that file, with the usual canonical key/alias support. The harness never reads or sources credentials.
+
+The default profile is `google/gemini-3.8-flash`. To select a previously built binary and optionally override the model:
+
+```sh
+node scripts/smoke-live-acp.ts target/release/pablo google/gemini-3.8-flash
+```
+
+The fixture creates a random evidence file in a temporary workspace, then requires one successful shell read followed by a second model call whose answer contains that evidence. It verifies streamed text against the typed outcome, reported usage totals against both model events, ordered ACP/native identities, one terminal response, protocol-only stdout, private redacted trace permissions, shell process/group disappearance and clean ACP exit. It deletes the workspace and writes only a redacted summary plus the native trace under ignored `.pablo/traces`. Assertion and SDK errors are never dumped to the terminal.
+
+This small fixture explicitly caps tools/models at 1/2, the run at 90 seconds and the shell at 10 seconds; normal runtime defaults remain unchanged. Its outer process watchdog sends SIGTERM at 100 seconds and SIGKILL at 110 seconds if needed; a forced exit fails acceptance. Missing credentials, absent usage, a failed assertion or an unrun live check cannot pass this gate. There are no automatic live retries.
+
+[C1.4 evidence](project/evidence/c1.4.md) records the observed live result. Deterministic offline tests cover missing/invalid keys, HTTP 401/429/500, streamed errors, incomplete SSE, cancellation and disconnect cleanup; they do not claim those failures were induced at Vercel. C1.5 owns incoming context and Collector export; C1.6 owns both-platform acceptance and performance measurements.
 
 ## Upstream references
 
