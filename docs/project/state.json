@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-09T22:07:52.523Z",
+  "updated_at": "2026-09-09T22:10:33.919Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.4",
-  "next_action": "Merge the exact verified PR #4 head for completed C3.3, then activate C3.4 on a new branch and implement literal command/argument policy with Q01 acceptance and matched performance. Continue the remaining cycle under the standing authorization; preserve D038 unlimited filesystem defaults.",
-  "latest_log_entry": "LOG-0058",
+  "next_action": "Activate C3.4 on feat/c3-shell-command-policy (based on merged C3.3 acfb371). Implement and verify literal shell command/argument rules under Q01, preserve unrestricted legacy behavior and D038 filesystem defaults, and measure performance before opening/merging the next PR. Continue the remaining cycle under the standing authorization.",
+  "latest_log_entry": "LOG-0059",
   "checkpoints": [
     {
       "id": "C1.0",
