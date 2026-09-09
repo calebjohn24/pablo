@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "checkpoint": "C2.5",
-  "scope": "Native macOS arm64; Linux x86_64 gate unrun. C1.7 saved binaries rerun on the same harness.",
+  "scope": "Historical 2026-09-05 native macOS arm64 comparison. C1.7 saved binaries rerun on the same harness; completed Linux x86_64 reports are in c2.5-linux-x64-measurements.json.",
   "reports": {
     "baseline": {
       "schema_version": 1,

@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-09T18:02:39.195Z",
-  "active_checkpoint": "C2.5",
+  "updated_at": "2026-09-09T18:21:29.017Z",
+  "active_checkpoint": null,
   "next_checkpoint": null,
-  "next_action": "Execute C2.5 on the authorized private GitHub repository Ubuntu x64 runner; verify full offline acceptance, Collector correlation and matched C1.7/C2 release measurements before closing the cycle.",
-  "latest_log_entry": "LOG-0045",
+  "next_action": "C2.5 and cycle C2 are complete. Review docs/project/evidence/c2.5-linux-x64.md for native Linux acceptance and matched release measurements. Select and specify the next extensibility cycle before implementation; OpenRouter is eligible. Publishing and broader release-hardening gates remain deferred.",
+  "latest_log_entry": "LOG-0046",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -210,12 +210,10 @@
       "depends_on": [
         "C2.4"
       ],
-      "status": "in_progress",
+      "status": "done",
       "blockers": [],
       "verification": [
-        "LOG-0041",
-        "LOG-0042",
-        "LOG-0045"
+        "LOG-0046"
       ]
     }
   ]
