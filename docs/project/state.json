@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-09T22:40:46.285Z",
+  "updated_at": "2026-09-09T22:43:01.900Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.5",
-  "next_action": "Merge the verified C3.4 PR, then activate C3.5 on a new branch for provider selection/shared transport, P01 and an officially verified OpenRouter candidate. Continue the full cycle; no paid call is required by C3.5.",
-  "latest_log_entry": "LOG-0062",
+  "next_action": "Activate C3.5 on feat/c3-provider-transport (merged C3.4 base 721dcfa). Freeze provider selection/credential/endpoint/availability contracts, verify an official OpenRouter candidate and implement the required shared transport seam with P01 and matched performance. Preserve Vercel behavior and unlimited filesystem defaults; continue remaining C3 checkpoints.",
+  "latest_log_entry": "LOG-0063",
   "checkpoints": [
     {
       "id": "C1.0",
