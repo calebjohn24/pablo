@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:pablo:deployment:1:c3.1",
-  "title": "Pablo deployment v1 — C3.1 contract, not implemented",
+  "title": "Pablo deployment v1 — C3.1 configuration contract",
   "description": "TOML-to-JSON shape. See c3-deployment-config.md for semantic checks and implementation availability.",
   "type": "object",
   "additionalProperties": false,

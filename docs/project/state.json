@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-09T19:38:47.886Z",
+  "updated_at": "2026-09-09T20:43:17.335Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.2",
-  "next_action": "Activate C3.2 and implement the bounded local TOML loader and deterministic resolver against the C3.1 schema, inventory, production golden and G02 cases. Resolve no secret bytes and activate no agents/providers/tools. Preserve C2 defaults; CLI/ACP/Rust integration and config validate/explain/render are C3.3. Complete only C3.2 and its verification/handoff this session.",
-  "latest_log_entry": "LOG-0051",
+  "next_checkpoint": "C3.3",
+  "next_action": "Implement only C3.3: project the verified deployment snapshot into existing CLI/ACP/Rust admission; add offline config validate/explain/render, private credential use and binding identity, actual containment and independent policy ceilings. Prove all G03 cases and preserve legacy no-config behavior.",
+  "latest_log_entry": "LOG-0053",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -250,9 +250,11 @@
       "depends_on": [
         "C3.1"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0053"
+      ]
     },
     {
       "id": "C3.3",

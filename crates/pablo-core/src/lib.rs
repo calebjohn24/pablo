@@ -4,6 +4,7 @@
 //! providers, network exporters, environment files, or worker tasks are installed.
 
 pub mod contracts;
+pub mod deployment;
 pub mod events;
 pub mod filesystem;
 pub mod gateway;

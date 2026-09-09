@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "base_commit": "7a3a4bd2735f6b3ac43826cb9769db4396b69553",
+  "encoding": "UTF-8 lines: SHA-256, two spaces, repository-relative path, LF; paths sorted",
+  "fingerprint": "sha256:f18be6a6bf0b2abeb7286cbf88c03ddc77805280f3e3abdfdee6d4d7ccf83d70",
+  "files": [
+    {
+      "path": "Cargo.lock",
+      "sha256": "ba4ebbfda2aebeccc41adafa1a55df776ba32e3040cbb3c1eb9d7813ce1707dc"
+    },
+    {
+      "path": "Cargo.toml",
+      "sha256": "8f86d7b0b789f3e1a35c706e9da5efc9c7407f286ab20c02a7b7b1e29e005978"
+    },
+    {
+      "path": "crates/pablo-core/Cargo.toml",
+      "sha256": "36b568318b63ccb50bd89c67a74045d433994e5ef4ad8d3ffaa47742c83cc89e"
+    },
+    {
+      "path": "crates/pablo-core/src/deployment/canonical.rs",
+      "sha256": "8710059bd661509ce780b1d797e79882ad41d5e3b93c8efb395dd5188d444c98"
+    },
+    {
+      "path": "crates/pablo-core/src/deployment/input.rs",
+      "sha256": "f12daf879f74cfb9af57e4c81f32e12b66b37772040e6912b207fce2e4befef1"
+    },
+    {
+      "path": "crates/pablo-core/src/deployment/mod.rs",
+      "sha256": "21f99cdf33f51b346973295042a1fd2a31201f96ba4dc69299b0def6b94ed51e"
+    },
+    {
+      "path": "crates/pablo-core/src/deployment/resolve.rs",
+      "sha256": "e84a41777e3322ca4bf7e7daa6e95931cdb36048346d89e05388e136fbbc41c0"
+    },
+    {
+      "path": "crates/pablo-core/src/deployment/validate.rs",
+      "sha256": "4efd55111932f3e32448a8cafb56309b98a8a5a7332b6145947dedd1fe1df6c5"
+    },
+    {
+      "path": "crates/pablo-core/src/lib.rs",
+      "sha256": "33c31fa8025d0bfe7d07b54fe8be94179d4c41dd7f8b45696d4a3a48b792b6c0"
+    },
+    {
+      "path": "crates/pablo-core/tests/deployment_config.rs",
+      "sha256": "dadc869d360725935312349ed3ad7a5f76afc7155cf7b5a2c5ca8cf773e07e0a"
+    },
+    {
+      "path": "docs/project/fixtures/c3-deployment/audit.py",
+      "sha256": "bac9bb8e677f9452ef3da1d7502736612130b02e772ce4313ebbd3486303a07c"
+    },
+    {
+      "path": "docs/project/fixtures/c3-deployment/canonical-vectors.json",
+      "sha256": "3b36568482db948be16cbf70978a3739d45afb3b7144c42b9a8314956687ab97"
+    },
+    {
+      "path": "docs/project/fixtures/c3-deployment/cases.json",
+      "sha256": "53a5f9723e3e69eb0f5e5832a29b612cf40462e69ffcb68ee92918b877ced6c0"
+    },
+    {
+      "path": "docs/project/fixtures/c3-deployment/credential-sources.toml",
+      "sha256": "05f6e15694c6fe303193ac1e46e34fbef3d1b650f3e62b06da3678bb700e264a"
+    },
+    {
+      "path": "docs/project/fixtures/c3-deployment/development.toml",
+      "sha256": "20e9f969e0b0027b3123ebac8fef2fd8ee393048eebfea695885ab60a339cb67"
+    },
+    {
+      "path": "docs/project/fixtures/c3-deployment/invalid/count.toml",
+      "sha256": "b691e471970951646128f5af4b37c9f47cb6578767ca41d671fdbf01da7c9e31"
+    },
+    {
+      "path": "docs/project/fixtures/c3-deployment/invalid/date.toml",
+      "sha256": "bf5d3c33cabacc38e624a3b92838505f542b5177575007054c10e744feffd739"
+    },
+    {
+      "path": "docs/project/fixtures/c3-deployment/invalid/duplicate-key.toml",
+      "sha256": "6c9088ecf36586f127add4520d15f4f8c78d602ab7d022bc9ea17c5bf1d2cf97"
+    },
+    {
+      "path": "docs/project/fixtures/c3-deployment/invalid/float.toml",
+      "sha256": "80ad68c77f32b788841b97fd70876001710c59ddc5137d353690e3d65259a2f1"
+    },
+    {
+      "path": "docs/project/fixtures/c3-deployment/invalid/future-feature.toml",
+      "sha256": "3d5fa279b6aa660a9627e423f1fe5749feee3043510c412a45f93c5120dd5771"
+    },
+    {
+      "path": "docs/project/fixtures/c3-deployment/invalid/future-provider.toml",
+      "sha256": "f87378556c86f2401fee696e7261a6205aeefdf6dc1fbde898b31ce8ac2dd4eb"
+    },
+    {
+      "path": "docs/project/fixtures/c3-deployment/invalid/inline-secret.toml",
+      "sha256": "6ca6ac59e075f473fe1fb3bb3ea2421db6b76216c10bf3c4c3c33962d3d2e42e"
+    },
+    {
+      "path": "docs/project/fixtures/c3-deployment/invalid/list-operation.toml",
+      "sha256": "1e15e562a75e24db5e4b1138ced8620da99ba0bcce3771fcf9a1fe3061cd31f3"
+    },
+    {
+      "path": "docs/project/fixtures/c3-deployment/invalid/old-proposal.toml",
+      "sha256": "7cec0d348e7e7201e380d06158aa96d6075a921c939111d64d69143ba4af4dfb"
+    },
+    {
+      "path": "docs/project/fixtures/c3-deployment/invalid/override-permission.toml",
+      "sha256": "a022134f626ed31372108d1fd074363cee72233b6f29006b668783928b7aeaa7"
+    },
+    {
+      "path": "docs/project/fixtures/c3-deployment/invalid/secret-destination.toml",
+      "sha256": "4be570075c5e07ba4cc5cc65d3a005df4c42d0d8f26fb93fbf3a16fb4fc58cc2"
+    },
+    {
+      "path": "docs/project/fixtures/c3-deployment/invalid/type.toml",
+      "sha256": "2fb31e7859aeb21848120d8b4195fa49a27970baae2d47a92910791860c97cf7"
+    },
+    {
+      "path": "docs/project/fixtures/c3-deployment/invalid/unknown-option.toml",
+      "sha256": "7958ba164e04f7b150201f72b68c336f7f635216666f6fcb50d1c8258ba0005d"
+    },
+    {
+      "path": "docs/project/fixtures/c3-deployment/invalid/version.toml",
+      "sha256": "a2e85c3a3d4a7038836629ac100a3c647449e093309387e04b1c7c7e5151ca29"
+    },
+    {
+      "path": "docs/project/fixtures/c3-deployment/modules/base.toml",
+      "sha256": "b1af25db9957e24a1fa268833efe725503e97715fb518d71314b47528c3f0e92"
+    },
+    {
+      "path": "docs/project/fixtures/c3-deployment/production.resolved.json",
+      "sha256": "a76182d91f14b92be93cc1bff73c3d9e48b28ba09b3c78f2756c8e9921cbdef9"
+    },
+    {
+      "path": "docs/project/fixtures/c3-deployment/production.toml",
+      "sha256": "04bc3732dd312bf363980a1652d38c3addc57c48d47a411d84be6ae3b1f8e9f2"
+    },
+    {
+      "path": "docs/project/schemas/deployment-defaults-v1.json",
+      "sha256": "66f6108490e50bd090b2ef2a370ff9b1414ca72634dcca1471ce002ab9ea28ee"
+    },
+    {
+      "path": "docs/project/schemas/deployment-v1.schema.json",
+      "sha256": "4668a94231a7ce018902f8e5823ed64ad9370c0c5fed53995253f2859ba4589f"
+    },
+    {
+      "path": "docs/project/schemas/resolved-deployment-v1.schema.json",
+      "sha256": "a990e497ecd5398d3019c67bb557face4e4666de79c5c717da578d25301f6300"
+    }
+  ]
+}

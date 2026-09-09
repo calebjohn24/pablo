@@ -26,6 +26,7 @@ aws-lc-rs = { version = "=1.18.1", default-features = false, features = ["non-fi
 jsonschema = { version = "=0.53.0", default-features = false }
 rustix = { version = "=1.1.4", features = ["process", "fs"] }
 uuid = { version = "=1.26.0", features = ["v4"] }
+toml = { version = "=0.8.23", default-features = false, features = ["parse"] }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
