@@ -187,3 +187,7 @@ Pinned SDK builders read ambient detectors before setters, and OTLP merges ambie
 ## How to resume
 
 Read [working instructions](../../AGENTS.md), run `node scripts/project.mjs context`, and inspect the working tree. The selected checkpoint and next action come from state. Read only the corresponding cycle section and relevant design sections before making changes.
+
+### D040 — Match literal executable identity and argv before shell launch
+
+C3.4 keeps the fixed launcher but passes checked canonical executable/arguments through a constant positional-argument wrapper. Optional command, canonical cwd and environment-name rules intersect with every authority layer; missing command rules retain legacy shell interpretation. This prevents quoting/operator/alias bypass without claiming an OS sandbox or script digest trust. Schema v1 advances to contract revision c3.4; old presets retain behavior while rendered identities change. See the [contract](contracts/c3-shell-commands.md).

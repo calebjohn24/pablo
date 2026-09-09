@@ -59,6 +59,9 @@ fn limits(values: &Value, ceiling: Option<&Value>, path: &str) -> Result<(), Con
 // Validate intrinsic scalar ranges even in inactive or subsequently overridden
 // declarations. Cross-option relationships are checked on the composed config.
 pub(crate) fn declarations(value: &Value, path: &str) -> Result<(), ConfigError> {
+    if let Some(shell) = value.pointer("/options/shell") {
+        super::shell::declaration(shell)?;
+    }
     if let Some(values) = value.pointer("/options/limits") {
         limits(values, None, &format!("{path}/options/limits"))?;
     }
@@ -70,6 +73,9 @@ pub(crate) fn declarations(value: &Value, path: &str) -> Result<(), ConfigError>
     }
     if let Some(layers) = value.get("authority").and_then(Value::as_array) {
         for (index, layer) in layers.iter().enumerate() {
+            if let Some(shell) = layer.get("shell") {
+                super::shell::authority(shell)?;
+            }
             if let Some(values) = layer.get("limits") {
                 limits(values, None, &format!("{path}/authority/{index}/limits"))?;
             }
@@ -297,6 +303,20 @@ pub(crate) fn config(config: &Value, request: &ResolveRequest) -> Result<(), Con
             return Err(error("config_conflict", "/config/authority"));
         }
         let result = (|| {
+            if let Some(names) = layer
+                .pointer("/shell/environment/allowed_names")
+                .and_then(Value::as_array)
+                && options["shell"]["environment"]["values"]
+                    .as_object()
+                    .unwrap()
+                    .keys()
+                    .any(|name| !names.iter().any(|allowed| allowed.as_str() == Some(name)))
+            {
+                return Err(error(
+                    "config_authority_violation",
+                    "/config/options/shell/environment/values",
+                ));
+            }
             if let Some(roots) = layer.get("workspace_roots").and_then(Value::as_array) {
                 let roots = roots
                     .iter()
@@ -370,6 +390,7 @@ pub(crate) fn config(config: &Value, request: &ResolveRequest) -> Result<(), Con
             e
         })?;
     }
+    super::shell::validate(config, &mut rule_ids)?;
     Ok(())
 }
 fn validate_paths(

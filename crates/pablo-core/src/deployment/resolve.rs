@@ -688,6 +688,37 @@ impl Resolver {
                 self.mark(&path, &source, "default")?;
             }
         }
+        let shell_locations =
+            std::iter::once(("/options/shell".to_owned(), "source-0000".to_owned()))
+                .chain(
+                    self.authority_sources
+                        .iter()
+                        .enumerate()
+                        .map(|(i, source)| (format!("/authority/{i}/shell"), source.clone())),
+                )
+                .collect::<Vec<_>>();
+        for (path, source) in shell_locations {
+            for dimension in ["commands", "cwd_roots"] {
+                let root = format!("{path}/{dimension}");
+                let Some(rules) = self
+                    .config
+                    .pointer_mut(&root)
+                    .and_then(Value::as_object_mut)
+                else {
+                    continue;
+                };
+                let mut added = Vec::new();
+                for list in ["allow", "deny"] {
+                    if !rules.contains_key(list) {
+                        rules.insert(list.into(), json!([]));
+                        added.push(format!("/config{root}/{list}"));
+                    }
+                }
+                for path in added {
+                    self.mark(&path, &source, "default")?;
+                }
+            }
+        }
         Ok(())
     }
     fn complete_aliases(&mut self) -> Result<(), ConfigError> {
@@ -909,7 +940,8 @@ fn merge(
     count: &mut usize,
 ) -> Result<(), ConfigError> {
     let operation = if path == "/config/options/otel/propagators"
-        || path.contains("/policy/") && (path.ends_with("/allow") || path.ends_with("/deny"))
+        || (path.contains("/policy/") || path.contains("/shell/cwd_roots/"))
+            && (path.ends_with("/allow") || path.ends_with("/deny"))
     {
         patch.get("mode").and_then(Value::as_str)
     } else {

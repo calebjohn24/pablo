@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:pablo:deployment:1:c3.1",
-  "title": "Pablo deployment v1 \u2014 C3.1 configuration contract",
+  "$id": "urn:pablo:deployment:1:c3.4",
+  "title": "Pablo deployment v1 \u2014 C3.4 configuration contract",
   "description": "TOML-to-JSON shape. See c3-deployment-config.md for semantic checks and implementation availability.",
   "type": "object",
   "additionalProperties": false,
@@ -763,6 +763,15 @@
           "properties": {
             "enabled": {
               "type": "boolean"
+            },
+            "commands": {
+              "$ref": "#/$defs/CommandRules"
+            },
+            "environment": {
+              "$ref": "#/$defs/ShellEnvironment"
+            },
+            "cwd_roots": {
+              "$ref": "#/$defs/Rules"
             }
           }
         },
@@ -1146,6 +1155,9 @@
         },
         "policy": {
           "$ref": "#/$defs/Policy"
+        },
+        "shell": {
+          "$ref": "#/$defs/ShellRestriction"
         }
       },
       "required": [
@@ -1207,10 +1219,20 @@
           "properties": {
             "enabled": {
               "type": "boolean"
+            },
+            "commands": {
+              "$ref": "#/$defs/resolvedCommandRules"
+            },
+            "environment": {
+              "$ref": "#/$defs/resolvedShellEnvironment"
+            },
+            "cwd_roots": {
+              "$ref": "#/$defs/resolvedRules"
             }
           },
           "required": [
-            "enabled"
+            "enabled",
+            "environment"
           ]
         },
         "filesystem": {
@@ -1603,6 +1625,9 @@
         },
         "policy": {
           "$ref": "#/$defs/resolvedPolicy"
+        },
+        "shell": {
+          "$ref": "#/$defs/resolvedShellRestriction"
         }
       },
       "required": [
@@ -1806,6 +1831,224 @@
         "credentials",
         "authority"
       ]
+    },
+    "CommandRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "executable": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096,
+          "pattern": "^/"
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 8192
+          },
+          "maxItems": 256
+        },
+        "match": {
+          "enum": [
+            "exact",
+            "prefix"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "executable",
+        "args",
+        "match"
+      ]
+    },
+    "CommandRules": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "default": {
+          "enum": [
+            "allow",
+            "deny"
+          ]
+        },
+        "allow": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CommandRule"
+          },
+          "maxItems": 128
+        },
+        "deny": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CommandRule"
+          },
+          "maxItems": 128
+        }
+      },
+      "required": [
+        "default"
+      ]
+    },
+    "resolvedCommandRules": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "default": {
+          "enum": [
+            "allow",
+            "deny"
+          ]
+        },
+        "allow": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CommandRule"
+          },
+          "maxItems": 128
+        },
+        "deny": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CommandRule"
+          },
+          "maxItems": 128
+        }
+      },
+      "required": [
+        "default",
+        "allow",
+        "deny"
+      ]
+    },
+    "ShellEnvironment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "values": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 128,
+            "pattern": "^PABLO_TASK_[A-Za-z0-9_]+$"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "maxLength": 8192
+          },
+          "maxProperties": 32
+        },
+        "allowed_names": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 128,
+            "pattern": "^PABLO_TASK_[A-Za-z0-9_]+$"
+          },
+          "maxItems": 32,
+          "uniqueItems": true
+        }
+      }
+    },
+    "resolvedShellEnvironment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "values": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 128,
+            "pattern": "^PABLO_TASK_[A-Za-z0-9_]+$"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "maxLength": 8192
+          },
+          "maxProperties": 32
+        },
+        "allowed_names": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 128,
+            "pattern": "^PABLO_TASK_[A-Za-z0-9_]+$"
+          },
+          "maxItems": 32,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "values"
+      ]
+    },
+    "ShellRestriction": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "commands": {
+          "$ref": "#/$defs/CommandRules"
+        },
+        "environment": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "allowed_names": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 12,
+                "maxLength": 128,
+                "pattern": "^PABLO_TASK_[A-Za-z0-9_]+$"
+              },
+              "maxItems": 32,
+              "uniqueItems": true
+            }
+          }
+        },
+        "cwd_roots": {
+          "$ref": "#/$defs/Rules"
+        }
+      }
+    },
+    "resolvedShellRestriction": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "commands": {
+          "$ref": "#/$defs/resolvedCommandRules"
+        },
+        "environment": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "allowed_names": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 12,
+                "maxLength": 128,
+                "pattern": "^PABLO_TASK_[A-Za-z0-9_]+$"
+              },
+              "maxItems": 32,
+              "uniqueItems": true
+            }
+          }
+        },
+        "cwd_roots": {
+          "$ref": "#/$defs/resolvedRules"
+        }
+      }
     }
   }
 }

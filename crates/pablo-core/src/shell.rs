@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 pub struct ShellTool {
     schema: Value,
     validator: jsonschema::Validator,
+    policy: crate::shell_policy::ShellPolicy,
 }
 
 impl ShellTool {
@@ -28,7 +29,20 @@ impl ShellTool {
             }
         });
         let validator = compile_schema(&schema)?;
-        Ok(Self { schema, validator })
+        Ok(Self {
+            schema,
+            validator,
+            policy: Default::default(),
+        })
+    }
+    pub(crate) fn configure(
+        &mut self,
+        settings: crate::shell_policy::ShellSettings,
+        ceilings: Vec<crate::shell_policy::ShellRestriction>,
+    ) -> Result<(), ToolSetupError> {
+        self.policy = crate::shell_policy::ShellPolicy::new(settings, ceilings)
+            .map_err(|_| ToolSetupError)?;
+        Ok(())
     }
 }
 
@@ -45,9 +59,15 @@ struct Arguments {
 
 impl Tool for ShellTool {
     fn descriptor(&self) -> ToolDescriptor {
-        ToolDescriptor { name: "shell.run".into(),
-            description: "Run a bounded noninteractive /bin/sh command in an explicit workspace cwd. Environment additions must use PABLO_TASK_ names.".into(),
-            input_schema: self.schema.clone() }
+        ToolDescriptor {
+            name: "shell.run".into(),
+            description: if self.policy.restricted() {
+                "Run one literal command in an explicit workspace cwd. Command policy checks the resolved executable and exact arguments; use quoting for literal arguments. Pipelines, substitutions, expansions and redirections are unsupported. Environment additions must use PABLO_TASK_ names.".into()
+            } else {
+                "Run a bounded noninteractive /bin/sh command in an explicit workspace cwd. Environment additions must use PABLO_TASK_ names.".into()
+            },
+            input_schema: self.schema.clone(),
+        }
     }
 
     fn execute<'a>(
@@ -59,7 +79,7 @@ impl Tool for ShellTool {
             if !self.validator.is_valid(&arguments) {
                 return ToolResult::status(ToolStatus::InvalidArguments);
             }
-            let Ok(args) = serde_json::from_value::<Arguments>(arguments) else {
+            let Ok(mut args) = serde_json::from_value::<Arguments>(arguments) else {
                 return ToolResult::status(ToolStatus::InvalidArguments);
             };
             if args.command.contains('\0')
@@ -89,7 +109,22 @@ impl Tool for ShellTool {
             }
             #[cfg(any(target_os = "macos", target_os = "linux"))]
             {
-                unix::execute(args, cwd, context).await
+                let admission = match self.policy.admit(
+                    &args.command,
+                    cwd.strip_prefix(&workspace).expect("contained cwd"),
+                    &mut args.env,
+                    context.policy_decisions,
+                ) {
+                    Ok(admission) => admission,
+                    Err(denial) => {
+                        let mut result = ToolResult::denied(denial.rule);
+                        result.policy_decisions = denial.decisions.into_boxed_slice();
+                        return result;
+                    }
+                };
+                let mut result = unix::execute(args, cwd, context, admission.invocation).await;
+                result.policy_decisions = admission.decisions.into_boxed_slice();
+                result
             }
             #[cfg(not(any(target_os = "macos", target_os = "linux")))]
             {
@@ -189,6 +224,7 @@ mod unix {
         args: Arguments,
         cwd: PathBuf,
         context: ToolContext<'_>,
+        invocation: Option<crate::shell_policy::Invocation>,
     ) -> ToolResult {
         let tool_duration = Duration::from_millis(
             args.timeout_ms
@@ -210,9 +246,17 @@ mod unix {
             .unwrap_or(context.limits.max_tool_output_bytes)
             .min(context.limits.max_tool_output_bytes);
         let mut command = Command::new("/bin/sh");
+        command.arg("-c");
+        if let Some(invocation) = invocation {
+            command
+                .arg("exec \"$@\"")
+                .arg("pablo-literal")
+                .arg(invocation.program)
+                .args(invocation.args);
+        } else {
+            command.arg(&args.command);
+        }
         command
-            .arg("-c")
-            .arg(&args.command)
             .current_dir(cwd)
             .env_clear()
             .env("PATH", "/usr/bin:/bin")

@@ -35,7 +35,10 @@
     }
   },
   "shell": {
-    "enabled": true
+    "enabled": true,
+    "environment": {
+      "values": {}
+    }
   },
   "filesystem": {
     "enabled": true,

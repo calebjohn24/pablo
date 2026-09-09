@@ -25,7 +25,7 @@ Each row inherits owner C3.3, availability `c3.1` contract / C3.2 resolver / C3.
 | `limits.max_events` | `u64str`, `"1000000"`, minimum 4 | Includes terminal/lifecycle slots |
 | `limits.filesystem.max_file_bytes`, `max_scan_bytes` | `positive` or `"unlimited"`; `"unlimited"` each | Optional `FilesystemLimits` host quotas; UTF-8 reads/mutations/search |
 | `limits.filesystem.max_entries`, `max_depth` | `positive` or `"unlimited"`; `"unlimited"` each | Optional traversal quotas; not import-parser limits |
-| `shell.enabled` | Boolean, true | Tool registry enables `shell.run`; command policy is reserved C3.4 |
+| `shell.enabled` | Boolean, true | Tool registry enables `shell.run`; C3.4 command policy below is independently optional |
 | `filesystem.enabled`, `filesystem.write` | Boolean; true / false | Tool registry enables read/list/search and explicit write/edit opt-in; write with disabled filesystem rejects |
 | `policy.tools`, `executables`, `read_roots`, `write_roots` | Optional rule dimension, omitted by default | Exact C2 `Policy`; each supplied dimension requires `default = "allow"` or `"deny"`, with ordered `allow`/`deny` lists default `[]`; ordinary list replace/append/prepend supported |
 | Policy list item | `{id, value}` | IDs are unique across effective and authority rules; 128 total allow+deny per dimension; executable values absolute, roots workspace-relative without traversal, tool names exact. Deny precedes allowlist precedes default |
@@ -46,13 +46,24 @@ Policy omission preserves C2: tools/launcher/read roots default allow; write-roo
 
 Top-level ownership: `schema_version`, `imports`, `profile`, `profiles`, `deployment`, `environment`, credential **references**, `authority` and path binding names belong to C3.2 resolution and C3.3 admission. The shared schema and defaults are the single specification of those values. The eventual Rust inventory must drive validation, defaults, explain/render and adapters; do not build independent CLI/ACP default tables.
 
+## C3.4 shell options
+
+Available at contract revision `c3.4`, owned by C3.4/Q01. The [literal shell contract](c3-shell-commands.md) defines parser/dispatch, byte bounds, authority intersections and metadata privacy. `commands` and `cwd_roots` are absent by default; `environment.values` defaults to `{}`. Legacy invocation remains unrestricted by command rules.
+
+| Surface | Shape, composition and authority |
+| --- | --- |
+| `shell.commands` | Explicit default plus allow/deny `{id, executable, args, match}` rules; exact or whole-argument prefix; lists replace. Any supplied layer enables literal parsing. Immutable authority command layers intersect. |
+| `shell.environment` | Non-secret `values` map merges by key; task values override defaults. Optional `allowed_names` lists replace and intersect with each authority name restriction. Authority values are forbidden. Only `PABLO_TASK_` additions, at most 32 effective names and 8,192 bytes/value. |
+| `shell.cwd_roots` | Existing relative-root rules against canonical cwd/workspace; allow/deny lists accept existing replace/append/prepend operations. All authority cwd dimensions intersect. |
+
+These dimensions do not accept `unset`: omission inherits, rule/name arrays replace (empty arrays clear), and a supplied command object continues to require literal parsing even with no rules. Ordinary replacement never removes an immutable authority dimension. They are not added to the locked per-run override allowlist. Provider/exporter credentials remain unavailable to shell. Old presets need no source conversion; render/fingerprints identify the new revision and empty environment default.
+
 ## Selected extension ownership
 
 These namespaces are reserved and rejected by the baseline schema. The listed owner must add exact typed keys, numeric defaults/bounds, merge/clear behavior, redaction, authority intersections, availability revision, resolved schema and file/direct equivalence fixtures **before** making the feature usable. Later checkpoints own their detailed protocol semantics; C3.1 does not guess them. The inventory reservation includes all selected subsystem settings, not just an `enabled` flag.
 
 | Reserved surface | Owner and availability gate | Required options and authority coverage |
 | --- | --- | --- |
-| `shell.commands`, `shell.environment`, `shell.cwd_roots` | C3.4 / Q01 | Literal executable/argv allow/deny/prefix rules, deciding IDs/defaults; explicit non-secret environment defaults/restrictions and cwd roots; preserve fixed launcher/cleared-env invariants unless separately evidenced |
 | New `model.provider` variants / endpoint options | C3.5 selection; OpenRouter C3.6; Open Responses C3.8–C3.9 | Provider endpoint/credential scope, supported model parameters/capabilities, bounded shared transport; no unchecked arbitrary provider option bag |
 | `models`, `routes`, `model_route` | C3.10 contracts, C3.11 execution / F01–F03 | Named exact profiles and ordered route, attempt/deadline policy, transient classes/uncertain-delivery opt-in, one retry owner, compatible continuation, child subset rules and accounting |
 | `output` | C3.13 validation; C3.14 repair | Local schema reference/digest, supported Draft 2020-12 subset and work bounds, output mode, one-repair choice/feedback budget; envelope stdout remains separate |

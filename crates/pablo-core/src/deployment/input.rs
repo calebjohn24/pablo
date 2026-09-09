@@ -90,9 +90,6 @@ fn unsupported(value: &Value, path: &str) -> Result<(), ConfigError> {
             }
         }
         for (section, key, owner) in [
-            ("shell", "commands", "C3.4"),
-            ("shell", "environment", "C3.4"),
-            ("shell", "cwd_roots", "C3.4"),
             ("interfaces", "tui", "C3.29"),
             ("interfaces", "acp", "C3.33"),
         ] {
