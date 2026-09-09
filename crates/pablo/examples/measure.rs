@@ -143,9 +143,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let endpoint = args.next().ok_or("fixture endpoint required")?;
         // Reuse the actual CLI configuration, including instructions and caps.
         let options = config::Options::parse("run".into(), args.map(Into::into))?;
-        let spec = options.spec()?;
+        let prepared = options.prepare_run(None, None, Some(uuid::Uuid::new_v4().to_string()))?;
+        let spec = match &prepared {
+            Some(prepared) => prepared.spec().clone(),
+            None => options.spec()?,
+        };
         let provider = GatewayProvider::local_fixture(&endpoint)?;
-        let tools = options.tools()?;
+        let tools = match &prepared {
+            Some(prepared) => prepared.tools()?,
+            None => options.tools()?,
+        };
+        let runtime = match &prepared {
+            Some(prepared) => runtime.with_deployment(prepared.deployment()),
+            None => runtime,
+        };
+        pablo_core::runtime::validate_run(&spec, &provider, &tools)?;
+        let mut trace = prepared
+            .as_ref()
+            .map(|p| p.create_trace_file())
+            .transpose()?
+            .flatten()
+            .map(|file| JsonlSink::new(BufWriter::new(file), &spec))
+            .transpose()?;
         let mut count = 0;
         let mut first_ms = None;
         let start = Instant::now();
@@ -156,6 +175,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 &tools,
                 &CancellationToken::new(),
                 &mut |event: &RunEvent| -> Result<(), SinkError> {
+                    if let Some(trace) = &mut trace {
+                        trace.emit(event)?;
+                    }
                     count += 1;
                     if first_ms.is_none() && matches!(event.kind, EventKind::TextDelta { .. }) {
                         first_ms = Some(start.elapsed().as_secs_f64() * 1000.0);
@@ -168,7 +190,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         assert!(outcome.is_completed());
         println!(
             "{}",
-            json!({"mode":"http", "run_ms":elapsed, "first_text_ms":first_ms, "events":count, "outcome":outcome})
+            json!({"mode":"http", "run_ms":elapsed, "first_text_ms":first_ms, "events":count, "outcome":outcome,
+                "deployment":prepared.as_ref().map(|p| p.deployment().identity())})
         );
     } else {
         return Err("unknown measurement mode".into());

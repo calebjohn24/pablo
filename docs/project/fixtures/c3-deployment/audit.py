@@ -144,11 +144,12 @@ def main():
             assert case["status"] == "passed" and case["tests"]
             assert case["evidence"] == "docs/project/evidence/c3.2.md"
         else:
-            assert case["status"] == "not_run"
+            assert case["status"] == "passed" and case["tests"]
+            assert case["evidence"] == "docs/project/evidence/c3.3.md"
     assert all(case["input"] and case["expected"] for case in semantic)
     print(f"G01: 2 schemas, baseline defaults, {len(cases['shape_cases'])} TOML shape cases, "
           f"3 canonical vectors and one resolved/provenance example passed artifact audit.")
-    print("G02: 21 cases map to C3.2 Rust verification; G03: 9 cases remain NOT RUN. "
+    print("G02: 21 cases map to C3.2 Rust verification; G03: 9 cases map to C3.3 interface/runtime verification. "
           "This artifact audit does not execute the resolver or runtime interfaces.")
 
 

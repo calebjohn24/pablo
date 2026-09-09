@@ -245,12 +245,19 @@ fn read_file(_: &Path, _: &Path) -> Result<Option<Vec<u8>>, CredentialReadError>
 // A deliberately non-evaluating, single-line dotenv grammar. Parse the whole
 // bounded file so duplicate keys and malformed unrelated assignments reject.
 fn dotenv(text: &str, wanted: &str) -> Result<String, CredentialReadError> {
-    if text.starts_with('\u{feff}') || text.contains('\0') {
+    if text.starts_with('\u{feff}')
+        || text
+            .chars()
+            .any(|c| c.is_control() && !matches!(c, '\n' | '\r' | '\t'))
+    {
         return Err(CredentialReadError);
     }
     let mut keys = HashSet::new();
     let mut selected = None;
     for line in text.lines() {
+        if line.contains('\r') {
+            return Err(CredentialReadError);
+        }
         let line = line.trim();
         if line.is_empty() || line.starts_with('#') {
             continue;

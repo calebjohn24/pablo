@@ -160,6 +160,8 @@ fn credential_token_and_dotenv_files_are_bounded_literal_and_private() {
     }
     for content in [
         "TOKEN=one\nTOKEN=two\n",
+        "OTHER=bad\u{7}value\nTOKEN=valid\n",
+        "OTHER=bad\rvalue\nTOKEN=valid\n",
         "TOKEN=\"unclosed",
         "OTHER=value\n",
         "TOKEN=\n",
@@ -1032,6 +1034,16 @@ fn locked_overrides_narrow_and_forbidden_equal_assignments_reject() {
             json!("production"),
             Some("config_override_forbidden"),
         ),
+        (
+            "profile",
+            json!("development"),
+            Some("config_override_forbidden"),
+        ),
+        (
+            "credentials.gateway",
+            json!("other"),
+            Some("config_override_forbidden"),
+        ),
     ] {
         let mut request = f.request("production.toml");
         request.overrides.insert(option.into(), value);
@@ -1657,5 +1669,45 @@ fn environment_child_probe() {
     assert_eq!(
         result.input_fingerprint(),
         std::env::var("PABLO_CONFIG_TEST_INPUT").unwrap()
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn prepared_trace_creation_rejects_parent_swaps_and_existing_targets() {
+    use std::os::unix::fs::{PermissionsExt, symlink};
+    let f = Fixture::new();
+    let outside = Fixture::new();
+    fs::create_dir(f.0.join("traces")).unwrap();
+    let resolved = f.resolve(
+        json!({"options":{"trace":{"path":{"base":"config","path":"traces/trace.jsonl"}}}}),
+    );
+    let prepared = resolved
+        .prepare_run(deployment::RunInput {
+            input: "synthetic".into(),
+            session_id: None,
+            workspace: None,
+        })
+        .unwrap();
+    fs::rename(f.0.join("traces"), f.0.join("saved")).unwrap();
+    symlink(&outside.0, f.0.join("traces")).unwrap();
+    assert_eq!(
+        prepared.create_trace_file().unwrap_err().code,
+        "config_path_unavailable"
+    );
+    assert!(!outside.0.join("trace.jsonl").exists());
+    fs::remove_file(f.0.join("traces")).unwrap();
+    fs::rename(f.0.join("saved"), f.0.join("traces")).unwrap();
+    let file = prepared.create_trace_file().unwrap().unwrap();
+    assert_eq!(file.metadata().unwrap().permissions().mode() & 0o777, 0o600);
+    drop(file);
+    fs::write(f.0.join("traces/trace.jsonl"), "existing evidence").unwrap();
+    assert_eq!(
+        prepared.create_trace_file().unwrap_err().code,
+        "config_path_unavailable"
+    );
+    assert_eq!(
+        fs::read_to_string(f.0.join("traces/trace.jsonl")).unwrap(),
+        "existing evidence"
     );
 }

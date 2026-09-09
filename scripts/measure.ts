@@ -21,6 +21,7 @@ assert(Number.isInteger(count) && count >= 10 && count <= 1000, 'sample count mu
 const binary = resolve(process.env.PABLO_MEASURE_BINARY ?? join(root, 'target/release/pablo'));
 const direct = resolve(process.env.PABLO_MEASURE_DIRECT ?? join(root, 'target/release/examples/measure'));
 const reuse = process.env.PABLO_MEASURE_REUSE !== '0';
+const configured = process.env.PABLO_MEASURE_CONFIGURED === '1';
 const destination = resolve(process.argv[3] ?? join(root, `.pablo/measurements/c2.5-${process.platform}-${process.arch}.json`));
 const cwd = await realpath(await mkdtemp(join(tmpdir(), 'pablo-measure-')));
 const env = cleanEnv();
@@ -69,8 +70,19 @@ const gateway = await server(async (req, res) => {
 });
 const endpoint = `${gateway.url}/v1/chat/completions`;
 const task = 'Run the fixed measurement task.';
-const options = ['--model', 'fixture/measure', '--max-model-calls', '2', '--max-tool-calls', '1'];
+const entry=join(cwd,'deployment.toml');
+const options = configured ? ['--config',entry,'--bind',`workspace=${cwd}`,'--fixture-endpoint',endpoint] : ['--model', 'fixture/measure', '--max-model-calls', '2', '--max-tool-calls', '1'];
 try {
+  if(configured) await writeFile(entry,`schema_version=1
+[credentials.gateway]
+consumer="provider.vercel"
+sources=[{kind="environment",name="UNREAD_FIXTURE_KEY"}]
+[options.model]
+id="fixture/measure"
+[options.limits]
+max_model_calls=2
+max_tool_calls=1
+`);
   const measurements: Record<string, number[]> = Object.fromEntries([
     'version_process_ms', 'cli_provider_ready_ms', 'cli_total_ms', 'core_run_ms', 'core_host_total_ms',
     'acp_initialize_ms', 'acp_prompt_ms', 'acp_total_ms', 'acp_first_text_ms', 'idle_rss_kib', 'acp_first_delta_delivery_ms',
@@ -176,7 +188,7 @@ try {
       environment: process.env.PABLO_MEASURE_ENVIRONMENT ?? 'local host' },
     build: { profile: process.env.PABLO_MEASURE_BUILD ?? (await readFile(join(root, 'Cargo.toml'), 'utf8')).split('[profile.release]')[1].trim(), binary_bytes: (await stat(binary)).size, stripped_binary_bytes: (await stat(stripped)).size, strip_method: 'platform strip on a copy; timings use original release executable',
       binary_sha256: createHash('sha256').update(await readFile(binary)).digest('hex') },
-    method: { samples: count, warmup: 5, cache: 'warm filesystem; no forced cache eviction',
+    method: { configuration: configured ? 'explicit deployment file; re-resolved per admitted task' : 'legacy invocation', samples: count, warmup: 5, cache: 'warm filesystem; no forced cache eviction',
       workload: 'two local HTTP/SSE calls, one real printf shell, 32 x 16-byte output deltas',
       startup: 'Node monotonic spawn to first loopback provider request arrival; separate --version process wall time',
       baseline: 'direct core run_with_tools in measurement host; SDK/provider/tool construction excluded from core_run_ms',

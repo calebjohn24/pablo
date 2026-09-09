@@ -11,6 +11,7 @@ import { body, cleanEnv, server } from '../tests/fixtures/telemetry.ts';
 import { sourceFingerprint } from './lib/source-fingerprint.mjs';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const binary=resolve(process.env.PABLO_MEASURE_BINARY ?? join(root,'target/release/pablo'));
+const configured=process.env.PABLO_MEASURE_CONFIGURED==='1';
 const destination=resolve(process.argv[2] ?? join(root,`.pablo/measurements/c2.5-filesystem-${process.platform}-${process.arch}.json`));
 const cwd=await realpath(await mkdtemp(join(tmpdir(),'pablo-fs-measure-')));
 const content='a'.repeat(128*1024-1)+'\n';const hash=(s:string)=>createHash('sha256').update(s).digest('hex');
@@ -34,6 +35,22 @@ const gateway=await server(async(req,res)=>{
 });
 const stats=(values:number[])=>{const s=values.toSorted((a,b)=>a-b);return {n:s.length,p50:s[Math.ceil(s.length*.5)-1],p95:s[Math.ceil(s.length*.95)-1],p99:s.at(-1),min:s[0],max:s.at(-1)};};
 try {
+  const entry=join(cwd,'deployment.toml');
+  if(configured)await writeFile(entry,`schema_version=1
+[credentials.gateway]
+consumer="provider.vercel"
+sources=[{kind="environment",name="UNREAD_FIXTURE_KEY"}]
+[options.shell]
+enabled=false
+[options.filesystem]
+write=true
+[options.model]
+id="fixture/filesystem"
+[options.limits]
+max_model_calls=2
+max_tool_calls=1
+`);
+  const options=configured?['--config',entry,'--bind',`workspace=${cwd}`,'--fixture-endpoint',gateway.url+'/v1/chat/completions']:['--no-shell','--allow-write','--model','fixture/filesystem','--max-model-calls','2','--max-tool-calls','1'];
   await writeFile(join(cwd,'read.txt'),content);await writeFile(join(cwd,'write.txt'),content);await writeFile(join(cwd,'edit.txt'),'needle'+content);
   await mkdir(join(cwd,'listing'));await mkdir(join(cwd,'search'));
   for(let i=0;i<1000;i++) await writeFile(join(cwd,'listing',String(i).padStart(4,'0')),'');
@@ -41,7 +58,7 @@ try {
   const measurements:Record<string,unknown>={};
   for(const workload of workloads) {
     current=workload;const promptMs:number[]=[];const toolMs:number[]=[];let start=0;let toolElapsed=0;
-    await withPablo({binary,args:['--no-shell','--allow-write','--model','fixture/filesystem','--max-model-calls','2','--max-tool-calls','1'],env:{...cleanEnv(),PABLO_FIXTURE_ENDPOINT:gateway.url+'/v1/chat/completions'},onUpdate:n=>{
+    await withPablo({binary,args:options,env:{...cleanEnv(),PABLO_FIXTURE_ENDPOINT:gateway.url+'/v1/chat/completions'},onUpdate:n=>{
       const meta=n._meta?.['pablo/v1'] as any;
       if(n.update.sessionUpdate==='tool_call') start=meta.timestamp_unix_micros;
       if(n.update.sessionUpdate==='tool_call_update' && n.update.status==='completed') toolElapsed=(meta.timestamp_unix_micros-start)/1000;
@@ -56,6 +73,6 @@ try {
     });
     measurements[workload.name]={prompt_ms:stats(promptMs),tool_ms:stats(toolMs),prompt_samples_ms:promptMs,tool_samples_ms:toolMs};
   }
-  const report={checkpoint:process.env.PABLO_MEASURE_CHECKPOINT ?? 'C2.5',timestamp:new Date().toISOString(),platform:`${process.platform}/${process.arch}`,source_sha256:process.env.PABLO_MEASURE_SOURCE_SHA256 ?? await sourceFingerprint(root),binary_sha256:createHash('sha256').update(await readFile(binary)).digest('hex'),method:{samples:30,warmup:5,cache:'warm filesystem; no forced eviction',prompt:'two loopback HTTP/SSE calls plus one real filesystem tool and ACP envelope delivery; fresh sessions in reused process',tool:'native tool.started to tool.finished timestamps; includes joined worker and filesystem work',search_bytes:1048700,setup:'fixture construction and process/catalog/SDK setup excluded from measured warm samples',baseline:'new capability workload; no equivalent C1 native filesystem tool'},measurements};
+  const report={checkpoint:process.env.PABLO_MEASURE_CHECKPOINT ?? 'C2.5',timestamp:new Date().toISOString(),platform:`${process.platform}/${process.arch}`,source_sha256:process.env.PABLO_MEASURE_SOURCE_SHA256 ?? await sourceFingerprint(root),binary_sha256:createHash('sha256').update(await readFile(binary)).digest('hex'),method:{configuration:configured?'explicit deployment file; re-resolved per task':'legacy invocation',samples:30,warmup:5,cache:'warm filesystem; no forced eviction',prompt:'two loopback HTTP/SSE calls plus one real filesystem tool and ACP envelope delivery; fresh sessions in reused process',tool:'native tool.started to tool.finished timestamps; includes joined worker and filesystem work',search_bytes:1048700,setup:'fixture construction and process/catalog/SDK setup excluded from measured warm samples',baseline:'new capability workload; no equivalent C1 native filesystem tool'},measurements};
   await mkdir(dirname(destination),{recursive:true});await writeFile(destination,JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify({destination,measurements:Object.fromEntries(Object.entries(measurements).map(([k,v])=>[k,{prompt_ms:(v as any).prompt_ms,tool_ms:(v as any).tool_ms}]))}));
 } finally {await gateway.close();await rm(cwd,{recursive:true,force:true});}

@@ -299,11 +299,20 @@ impl Options {
                         .collect(),
                 )
                 .map_err(|e| e.to_string())?;
-            overrides.insert(
-                "policy".into(),
-                serde_json::to_value(self.policy()?)
+            let mut policy = serde_json::to_value(
+                self.policy()
                     .map_err(|_| "config_invalid_value at /options/policy")?,
-            );
+            )
+            .map_err(|_| "config_invalid_value at /options/policy")?;
+            // --policy replaces the ordinary policy. Explicit allow defaults
+            // clear omitted dimensions through normal map/list composition;
+            // immutable authority policies remain separate intersections.
+            for dimension in policy.as_object_mut().unwrap().values_mut() {
+                if dimension.is_null() {
+                    *dimension = serde_json::json!({"default":"allow","allow":[],"deny":[]});
+                }
+            }
+            overrides.insert("policy".into(), policy);
         }
         if overrides.is_empty() {
             return Ok(Some(resolved));

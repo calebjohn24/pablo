@@ -29,6 +29,7 @@ headers after the supplied header map. These patches avoid process-global
 variable mutation and allow concurrent embedded deployments with separate inputs.
 
 Workspace tests exercise the consumed APIs; they do not claim the entire upstream
-feature matrix. Full configured exporter and resource-rotation acceptance remains
-part of C3.3 before PR #4 can merge. Remove these patches when a pinned upstream
+feature matrix. Configured exporter, hostile-environment, resource-rotation and private header-use
+acceptance is exercised by `tests/deployment-telemetry.test.ts`; C3.3 evidence
+records the executed commands and remaining platform gates. Remove these patches when a pinned upstream
 release provides equivalent explicit construction and passes those fixtures.

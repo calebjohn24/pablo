@@ -700,7 +700,7 @@
     {
       "id": "G03-01",
       "owner": "C3.3",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "entry": "production.toml",
         "per_task_variants": [
@@ -734,12 +734,17 @@
           "config_override_forbidden"
         ],
         "rule": "No run/provider/tool/trace-file side effect on rejection"
-      }
+      },
+      "tests": [
+        "crates/pablo-core/tests/deployment_config.rs::locked_overrides_narrow_and_forbidden_equal_assignments_reject",
+        "tests/deployment.test.ts::production preset admits equivalent CLI ACP and Rust core runs, and rejects forbidden overrides before delivery"
+      ],
+      "evidence": "docs/project/evidence/c3.3.md"
     },
     {
       "id": "G03-02",
       "owner": "C3.3",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "authority_layers": [
           {
@@ -771,12 +776,17 @@
           "fs.search"
         ],
         "rule": "Intersection of independently evaluated allowlists, never union; all deciding IDs retained. Deny wins in any layer."
-      }
+      },
+      "tests": [
+        "crates/pablo-core/tests/filesystem.rs::authority_policy_allowlists_intersect_and_all_deciding_ids_survive",
+        "tests/deployment.test.ts::CLI policy replacement keeps independent authority allowlists and deciding rule identities"
+      ],
+      "evidence": "docs/project/evidence/c3.3.md"
     },
     {
       "id": "G03-03",
       "owner": "C3.3",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "entry": "production.toml",
         "equivalent_surfaces": [
@@ -789,12 +799,19 @@
       },
       "expected": {
         "rule": "Equal admitted provider/model/tools/policy/limits/output/trace config and fingerprint; source/input fingerprints may differ; one existing runtime lifecycle and no new ACP method"
-      }
+      },
+      "tests": [
+        "tests/deployment.test.ts::production preset admits equivalent CLI ACP and Rust core runs, and rejects forbidden overrides before delivery",
+        "tests/deployment.test.ts::configured CLI and ACP use one lifecycle, identical identity and synthetic-only fixture credentials",
+        "crates/pablo-core/tests/deployment_config.rs::prepared_runs_project_limits_catalog_and_private_binding_identity",
+        "crates/pablo-core/tests/deployment_config.rs::typed_and_file_inputs_have_equal_effective_identity"
+      ],
+      "evidence": "docs/project/evidence/c3.3.md"
     },
     {
       "id": "G03-04",
       "owner": "C3.3",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "entry": "production.toml",
         "commands": [
@@ -806,12 +823,17 @@
       },
       "expected": {
         "rule": "Validate/explain/render perform no model/MCP/network/secret work; explain matches resolved schema; rendered file has no imports/profiles/environment/list operations; effective fingerprint equal, input fingerprint differs."
-      }
+      },
+      "tests": [
+        "tests/deployment.test.ts::offline inspection preserves the golden config, renders deployably and ignores ambient secrets/exporters",
+        "crates/pablo-core/tests/deployment_config.rs::rendered_presets_reload_without_profiles_environment_or_secret_access"
+      ],
+      "evidence": "docs/project/evidence/c3.3.md"
     },
     {
       "id": "G03-05",
       "owner": "C3.3",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "no_config_variants": [
           "default CLI run",
@@ -824,12 +846,20 @@
       },
       "expected": {
         "rule": "C2 defaults, caller input, tool enablement, credential precedence, native/task framing and legacy diagnostics preserved. Default model/tool calls remain unlimited."
-      }
+      },
+      "tests": [
+        "crates/pablo/tests/run.rs",
+        "crates/pablo-core/tests/lifecycle.rs",
+        "tests/acp.test.ts",
+        "tests/telemetry.test.ts",
+        "tests/deployment.test.ts::legacy and configured CLI and ACP read beyond the former filesystem file cap"
+      ],
+      "evidence": "docs/project/evidence/c3.3.md"
     },
     {
       "id": "G03-06",
       "owner": "C3.3",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "entry": "production.toml",
         "mutations": [
@@ -841,12 +871,19 @@
       },
       "expected": {
         "rule": "First run retains admitted config; subsequent admission re-resolves, reconstructs changed process setup as needed. Rotation preserves config identity but requires private credential use checks; changed root alters host bindings fingerprint, not portable config fingerprint."
-      }
+      },
+      "tests": [
+        "tests/deployment.test.ts::ACP keeps active policy snapshot and applies edits only to later tasks",
+        "tests/deployment.test.ts::ACP refreshes physical workspace bindings without changing portable deployment identity",
+        "tests/deployment-telemetry.test.ts::ACP refreshes exporter settings and privately rotated headers without changing portable identity",
+        "crates/pablo-core/tests/deployment_config.rs::prepared_runs_project_limits_catalog_and_private_binding_identity"
+      ],
+      "evidence": "docs/project/evidence/c3.3.md"
     },
     {
       "id": "G03-07",
       "owner": "C3.3",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "credential_variants": [
           "first source absent, second valid",
@@ -860,12 +897,21 @@
       },
       "expected": {
         "rule": "Only absence falls through. Other cases reject without leaked values/hashes or redirected credentials. Prove synthetic sentinels absent from shell env, native/OTel, ACP, errors and render."
-      }
+      },
+      "tests": [
+        "crates/pablo-core/tests/deployment_config.rs::credential_fallback_only_uses_absent_sources_and_never_hashes_or_serializes_values",
+        "crates/pablo-core/tests/deployment_config.rs::credential_token_and_dotenv_files_are_bounded_literal_and_private",
+        "crates/pablo-core/tests/deployment_config.rs::credential_files_reject_symlinks_directories_fifos_and_unreadable_sources",
+        "tests/deployment-telemetry.test.ts::configured credentials stay out of shell environment, native events and exported spans",
+        "tests/deployment-telemetry.test.ts::configured exporter errors respect explicit timeout and never redirect private headers",
+        "tests/deployment.test.ts::configured CLI and ACP use one lifecycle, identical identity and synthetic-only fixture credentials"
+      ],
+      "evidence": "docs/project/evidence/c3.3.md"
     },
     {
       "id": "G03-08",
       "owner": "C3.3",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "authority": {
           "workspace_roots": [
@@ -891,12 +937,20 @@
       },
       "expected": {
         "rule": "Contained permitted workspace only; all ceilings retained after policy loading and CLI/ACP/Rust overrides; stable error/constraint IDs and no unauthorized admission."
-      }
+      },
+      "tests": [
+        "tests/deployment.test.ts::configured startup and session errors are bounded and do not admit a run",
+        "tests/deployment.test.ts::CLI policy replacement keeps independent authority allowlists and deciding rule identities",
+        "tests/deployment.test.ts::production preset admits equivalent CLI ACP and Rust core runs, and rejects forbidden overrides before delivery",
+        "crates/pablo-core/tests/deployment_config.rs::child_workspace_admission_keeps_ceilings_and_updates_effective_identity",
+        "crates/pablo-core/tests/deployment_config.rs::workspace_authority_stays_anchored_when_later_layers_change_workspace"
+      ],
+      "evidence": "docs/project/evidence/c3.3.md"
     },
     {
       "id": "G03-09",
       "owner": "C3.3",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "transport_errors": [
           "invalid explicit CLI config with --json",
@@ -907,7 +961,14 @@
       },
       "expected": {
         "rule": "CLI exit 2/stdout empty; ACP startup no protocol service, per-session invalid params/no run; Rust typed diagnostic/no handle. Bounded metadata-only errors contain no source excerpts."
-      }
+      },
+      "tests": [
+        "tests/deployment.test.ts::inspection errors are bounded exit 2 diagnostics with empty stdout including --json",
+        "tests/deployment.test.ts::configured startup and session errors are bounded and do not admit a run",
+        "crates/pablo-core/tests/deployment_config.rs::prepared_run_rejects_endpoint_and_unavailable_paths_without_creating_trace",
+        "crates/pablo-core/tests/deployment_config.rs::prepared_trace_creation_rejects_parent_swaps_and_existing_targets"
+      ],
+      "evidence": "docs/project/evidence/c3.3.md"
     }
   ]
 }

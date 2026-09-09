@@ -96,9 +96,11 @@ async fn serve_streams(
     input: impl futures::AsyncRead + Unpin + Send + 'static,
     output: impl futures::AsyncWrite + Unpin + Send + 'static,
 ) -> Result<ExitCode, String> {
-    if let Some(prepared) =
-        options.prepare_run(Some(String::new()), None, Some("startup".into()))?
-    {
+    if let Some(prepared) = options.prepare_run(
+        Some(String::new()),
+        None,
+        Some(uuid::Uuid::new_v4().to_string()),
+    )? {
         let secrets =
             crate::deployment::Secrets::read(&prepared, options.deployment.as_ref().unwrap())?;
         let provider = secrets.provider(options.deployment.as_ref().unwrap())?;

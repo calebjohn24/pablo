@@ -171,6 +171,10 @@ C3.3 exposes load-then-resolve so hosts capture only declared non-secret environ
 
 The user reported ordinary runs failing with `FilesystemWork` and requested removal of that limit. Default file bytes, visited entries, depth and scan bytes are now unlimited in Rust, CLI, ACP and deployment presets; explicit host quotas remain enforceable. Preserve bounded responses, cancellation, deadlines, policy and mutation preconditions. Iterative traversal avoids replacing the removed depth quota with stack recursion. This deliberately supersedes the numerical C2 defaults and changes the C3 golden identities; the product context is unchanged.
 
+### D039 — Explicit OTel construction needs pinned upstream patches
+
+Pinned SDK builders read ambient detectors before setters, and OTLP merges ambient headers after explicit headers. Narrow vendored constructors avoid those reads without process-global environment mutation, while preserving legacy defaults. Provenance hashes, exact versions, licenses and hostile-environment/rotation tests make the patch reviewable; remove it when pinned upstream supports equivalent explicit construction. See [vendor notes](../../vendor/README.md).
+
 ## Working constraints
 
 - Keep `docs/context.md` as the detailed design source; review deliberate changes using the state file's stored SHA-256.
