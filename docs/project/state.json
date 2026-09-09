@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-05T19:53:37.111Z",
+  "updated_at": "2026-09-09T02:48:49.509Z",
   "active_checkpoint": null,
   "next_checkpoint": null,
-  "next_action": "Unblock C2.5 with an authorized native Linux x86_64 runner. Copy source without credentials, run full Rust/Node/TypeScript/Collector acceptance and comparable release measurements, append evidence and close the cycle only after that gate passes.",
-  "latest_log_entry": "LOG-0042",
+  "next_action": "Finish the authorized private calebjohn24/pablo remote setup after GitHub authentication: verify privacy, push main and verify remote HEAD. Then resume C2.5 native Linux x86_64 acceptance; that gate remains blocked on runner access.",
+  "latest_log_entry": "LOG-0043",
   "checkpoints": [
     {
       "id": "C1.0",
