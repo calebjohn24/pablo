@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-09T18:21:29.017Z",
+  "updated_at": "2026-09-09T18:24:31.420Z",
   "active_checkpoint": null,
   "next_checkpoint": null,
-  "next_action": "C2.5 and cycle C2 are complete. Review docs/project/evidence/c2.5-linux-x64.md for native Linux acceptance and matched release measurements. Select and specify the next extensibility cycle before implementation; OpenRouter is eligible. Publishing and broader release-hardening gates remain deferred.",
-  "latest_log_entry": "LOG-0046",
+  "next_action": "PR #1 is merged into main; C2.5 and cycle C2 are complete. Select and specify the next extensibility cycle before implementation; OpenRouter is eligible. Publishing and broader release-hardening gates remain deferred.",
+  "latest_log_entry": "LOG-0047",
   "checkpoints": [
     {
       "id": "C1.0",
