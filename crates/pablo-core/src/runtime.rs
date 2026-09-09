@@ -45,6 +45,7 @@ impl std::error::Error for RunError {}
 
 /// The caller drives one future; tools complete cleanup before it settles.
 pub struct Runtime<T> {
+    deployment: Option<crate::deployment::DeploymentIdentity>,
     tracer: T,
     parent: Context,
 }
@@ -77,6 +78,7 @@ where
 {
     pub fn new(tracer: T) -> Self {
         Self {
+            deployment: None,
             tracer,
             parent: Context::new(),
         }
@@ -86,6 +88,11 @@ where
     /// Protocol hosts must extract remote context before crossing this boundary.
     pub fn with_parent_context(mut self, parent: Context) -> Self {
         self.parent = parent;
+        self
+    }
+
+    pub fn with_deployment(mut self, deployment: &crate::deployment::ResolvedDeployment) -> Self {
+        self.deployment = Some(deployment.identity());
         self
     }
 
@@ -158,7 +165,21 @@ where
             root.span().end();
             return Err(RunError::InvalidTracer);
         }
+        if let Some(identity) = &self.deployment {
+            let identity = serde_json::to_value(identity).expect("bounded deployment identity");
+            root.span().set_attribute(KeyValue::new(
+                "pablo.config.fingerprint",
+                identity["fingerprint"].as_str().unwrap().to_owned(),
+            ));
+            root.span()
+                .set_attribute(KeyValue::new("pablo.config.schema_version", 1_i64));
+            root.span().set_attribute(KeyValue::new(
+                "pablo.config.contract_revision",
+                crate::deployment::CONTRACT_REVISION,
+            ));
+        }
         let mut lifecycle = Lifecycle {
+            deployment: self.deployment.clone(),
             sink,
             run_id,
             session_id,
@@ -830,7 +851,30 @@ fn validate(spec: &RunSpec, provider: &dyn Provider) -> Result<(), RunError> {
     Ok(())
 }
 
+/// Host preflight before creating trace files or starting an exporter. Uses the
+/// same runtime/accounting/capability checks and emits no events or requests.
+pub fn validate_run(
+    spec: &RunSpec,
+    provider: &dyn Provider,
+    tools: &ToolRegistry,
+) -> Result<(), RunError> {
+    validate(spec, provider)?;
+    crate::task::Ledger::new(spec, provider).map_err(RunError::InvalidSpec)?;
+    #[cfg(unix)]
+    if tools.has_filesystem() {
+        crate::filesystem::Workspace::new(&spec.workspace, tools.policy())
+            .map_err(RunError::InvalidSpec)?;
+    }
+    Instant::now()
+        .checked_add(Duration::from_millis(spec.limits.max_run_duration_ms))
+        .ok_or(RunError::InvalidSpec(
+            "run duration overflows the monotonic clock",
+        ))?;
+    Ok(())
+}
+
 struct Lifecycle<'a> {
+    deployment: Option<crate::deployment::DeploymentIdentity>,
     sink: &'a mut dyn EventSink,
     run_id: String,
     session_id: String,
@@ -854,6 +898,9 @@ impl Lifecycle<'_> {
         let span = context.span();
         let identity = span.span_context();
         RunEvent {
+            deployment: matches!(kind, EventKind::RunStarted | EventKind::RunFinished { .. })
+                .then(|| self.deployment.clone())
+                .flatten(),
             accounting: matches!(kind, EventKind::RunFinished { .. })
                 .then(|| Box::new(self.accounting.clone())),
             schema_version: SCHEMA_VERSION.into(),

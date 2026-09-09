@@ -18,6 +18,8 @@ pub struct RunInput {
 /// credential handle or network client. Hosts complete scoped credential and
 /// exporter setup before passing this spec/catalog to the existing runtime.
 pub struct PreparedRun {
+    pub(super) config_root: PathBuf,
+    pub(super) path_bindings: BTreeMap<String, PathBuf>,
     deployment: ResolvedDeployment,
     spec: RunSpec,
     policy: PolicySet,
@@ -32,6 +34,49 @@ impl std::fmt::Debug for PreparedRun {
     }
 }
 impl PreparedRun {
+    /// Exclusive no-follow creation after all other admission checks succeed.
+    #[cfg(unix)]
+    pub fn create_trace_file(&self) -> Result<Option<std::fs::File>, ConfigError> {
+        use rustix::fs::{Mode, OFlags, open, openat};
+        let Some(path) = &self.trace_path else {
+            return Ok(None);
+        };
+        let diagnostic = || error("config_path_unavailable", "/options/trace/path");
+        let flags = OFlags::NOFOLLOW | OFlags::CLOEXEC;
+        let mut parent = open(
+            "/",
+            flags | OFlags::RDONLY | OFlags::DIRECTORY,
+            Mode::empty(),
+        )
+        .map_err(|_| diagnostic())?;
+        let components: Vec<_> = path
+            .components()
+            .filter(|c| !matches!(c, Component::RootDir | Component::CurDir))
+            .collect();
+        for (index, component) in components.iter().enumerate() {
+            let Component::Normal(name) = component else {
+                return Err(diagnostic());
+            };
+            let last = index + 1 == components.len();
+            let next = openat(
+                &parent,
+                *name,
+                flags
+                    | if last {
+                        OFlags::WRONLY | OFlags::CREATE | OFlags::EXCL
+                    } else {
+                        OFlags::RDONLY | OFlags::DIRECTORY
+                    },
+                Mode::from_bits_truncate(0o600),
+            )
+            .map_err(|_| diagnostic())?;
+            if last {
+                return Ok(Some(std::fs::File::from(next)));
+            }
+            parent = next;
+        }
+        Err(diagnostic())
+    }
     pub fn spec(&self) -> &RunSpec {
         &self.spec
     }
@@ -264,7 +309,13 @@ impl ResolvedDeployment {
             }
             Some(path)
         };
+        if trace_path.is_some() {
+            crate::JsonlSink::new(std::io::sink(), &spec)
+                .map_err(|_| error("config_invalid_value", "/options/trace/max_bytes"))?;
+        }
         Ok(PreparedRun {
+            config_root,
+            path_bindings: roots,
             deployment: self.clone(),
             spec,
             policy,

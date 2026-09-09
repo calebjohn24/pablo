@@ -11,6 +11,8 @@ use std::{
 pub const HELP: &str = "\nOffline deployment inspection:\n  pablo config validate|explain|render --config PATH [--profile NAME]\n    [--config-root PATH] [--bind NAME=PATH ...] [--locked]\n    [--user-config PATH] [--workspace-config PATH]\nPaths are anchored at invocation; config-root defaults to the entry directory.\nBind workspace explicitly, for example --bind workspace=./project.\nInspection reads only config files and declared non-secret environment values.\n";
 
 pub struct Bootstrap {
+    invocation: PathBuf,
+    pub fixture_endpoint: Option<String>,
     entry: PathBuf,
     root: PathBuf,
     profile: Option<String>,
@@ -18,6 +20,67 @@ pub struct Bootstrap {
     user: Option<PathBuf>,
     workspace: Option<PathBuf>,
     locked: bool,
+}
+
+pub struct Secrets {
+    provider: Option<deployment::ScopedCredential>,
+    pub headers: Option<deployment::ScopedCredential>,
+}
+impl Secrets {
+    pub fn read(prepared: &deployment::PreparedRun, bootstrap: &Bootstrap) -> Result<Self, String> {
+        let provider = if bootstrap.fixture_endpoint.is_some() {
+            None
+        } else {
+            prepared
+                .credential(
+                    deployment::CredentialConsumer::Vercel,
+                    &deployment::ProcessCredentials,
+                )
+                .map_err(|e| e.to_string())?
+        };
+        let otel = &prepared.deployment().options()["otel"];
+        let headers = if otel["sdk_disabled"] != true && otel["exporter"] == "otlp" {
+            prepared
+                .credential(
+                    deployment::CredentialConsumer::OtelHeaders,
+                    &deployment::ProcessCredentials,
+                )
+                .map_err(|e| e.to_string())?
+        } else {
+            None
+        };
+        Ok(Self { provider, headers })
+    }
+    pub fn provider(
+        &self,
+        bootstrap: &Bootstrap,
+    ) -> Result<pablo_core::gateway::GatewayProvider, String> {
+        if let Some(endpoint) = &bootstrap.fixture_endpoint {
+            return pablo_core::gateway::GatewayProvider::local_fixture(endpoint)
+                .map_err(|_| "config_invalid_value at /fixture_endpoint".into());
+        }
+        let secret = self
+            .provider
+            .as_ref()
+            .ok_or("config_credential_missing at /options/model/credential")?;
+        let value = secret
+            .expose_for(
+                deployment::CredentialConsumer::Vercel,
+                pablo_core::gateway::VERCEL_ENDPOINT,
+            )
+            .map_err(|e| e.to_string())?;
+        pablo_core::gateway::GatewayProvider::vercel(value)
+            .map_err(|_| "config_credential_invalid at /options/model/credential".into())
+    }
+    pub fn same_private_values(&self, other: &Self) -> bool {
+        let same = |a: &Option<deployment::ScopedCredential>,
+                    b: &Option<deployment::ScopedCredential>| match (a, b) {
+            (None, None) => true,
+            (Some(a), Some(b)) => a.same_private_value(b),
+            _ => false,
+        };
+        same(&self.provider, &other.provider) && same(&self.headers, &other.headers)
+    }
 }
 
 fn invalid() -> String {
@@ -51,6 +114,23 @@ fn absolute(cwd: &Path, path: &Path) -> Result<PathBuf, String> {
 impl Bootstrap {
     /// Remove host bootstrap flags, leaving ordinary task flags untouched.
     pub fn extract(arguments: &mut Vec<OsString>) -> Result<Option<Self>, String> {
+        if !arguments.iter().take_while(|arg| *arg != "--").any(|arg| {
+            matches!(
+                arg.to_str(),
+                Some(
+                    "--config"
+                        | "--config-root"
+                        | "--profile"
+                        | "--bind"
+                        | "--locked"
+                        | "--user-config"
+                        | "--workspace-config"
+                        | "--fixture-endpoint"
+                )
+            )
+        }) {
+            return Ok(None);
+        }
         let cwd = std::env::current_dir().map_err(|_| invalid())?;
         let mut entry = None;
         let mut root = None;
@@ -59,6 +139,7 @@ impl Bootstrap {
         let mut user = None;
         let mut workspace = None;
         let mut locked = false;
+        let mut fixture_endpoint = None;
         let mut seen = HashSet::new();
         let mut rest = Vec::new();
         let mut args = std::mem::take(arguments).into_iter();
@@ -78,6 +159,7 @@ impl Bootstrap {
                     | "--user-config"
                     | "--workspace-config"
                     | "--locked"
+                    | "--fixture-endpoint"
             ) {
                 rest.push(argument);
                 continue;
@@ -98,6 +180,7 @@ impl Bootstrap {
                 "--config" => entry = Some(absolute(&cwd, Path::new(value))?),
                 "--config-root" => root = Some(absolute(&cwd, Path::new(value))?),
                 "--profile" => profile = Some(value.to_owned()),
+                "--fixture-endpoint" => fixture_endpoint = Some(value.to_owned()),
                 "--user-config" => user = Some(absolute(&cwd, Path::new(value))?),
                 "--workspace-config" => workspace = Some(absolute(&cwd, Path::new(value))?),
                 "--bind" => {
@@ -124,6 +207,8 @@ impl Bootstrap {
         };
         let root = root.unwrap_or_else(|| entry.parent().unwrap().to_path_buf());
         Ok(Some(Self {
+            invocation: cwd,
+            fixture_endpoint,
             entry,
             root,
             profile,
@@ -158,6 +243,19 @@ impl Bootstrap {
             .with_environment(environment)
             .and_then(|loaded| loaded.resolve())
             .map_err(|e| e.to_string())
+    }
+
+    pub fn path_reference(&self, path: &Path) -> Result<serde_json::Value, String> {
+        let path = absolute(&self.invocation, path)?;
+        let mut choices: Vec<_>=self.bindings.iter().filter_map(|(name,root)| path.strip_prefix(root).ok().map(|relative|(root.components().count(),serde_json::json!({"base":"binding","name":name,"path":if relative.as_os_str().is_empty(){"."}else{relative.to_str().unwrap()}})))).collect();
+        if let Ok(relative) = path.strip_prefix(&self.root) {
+            choices.push((self.root.components().count(),serde_json::json!({"base":"config","path":if relative.as_os_str().is_empty(){"."}else{relative.to_str().unwrap()}})));
+        }
+        choices.sort_by_key(|(depth, _)| *depth);
+        choices
+            .pop()
+            .map(|(_, value)| value)
+            .ok_or_else(|| "config_authority_violation at /path".into())
     }
 }
 

@@ -37,6 +37,8 @@ cargo build --release --locked -p pablo
 ./target/release/pablo run "Read README.md and summarize it."
 ```
 
+Filesystem work has no default file-size, entry-count, search-depth or scanned-byte quota. Tool responses remain bounded and paginated; cancellation, deadlines and workspace policy still apply. Deployments and Rust hosts can explicitly set filesystem quotas when needed.
+
 Shorthand and machine output use the same runtime:
 
 ```sh

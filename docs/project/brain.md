@@ -167,6 +167,10 @@ The user now authorizes finishing the remaining C3 cycle, measuring performance 
 
 C3.3 exposes load-then-resolve so hosts capture only declared non-secret environment values without rereading files. Per-task overrides retain provenance and immutable ceilings; policy allowlists intersect as separate layers. Offline rendering stays within the entry-file bound so successful output can reload. [Adapter details](contracts/c3-deployment-config.md#c33-adapter-details) define bootstrap spelling and distinguish non-secret preparation from complete runtime admission.
 
+### D038 — Filesystem work quotas are opt-in
+
+The user reported ordinary runs failing with `FilesystemWork` and requested removal of that limit. Default file bytes, visited entries, depth and scan bytes are now unlimited in Rust, CLI, ACP and deployment presets; explicit host quotas remain enforceable. Preserve bounded responses, cancellation, deadlines, policy and mutation preconditions. Iterative traversal avoids replacing the removed depth quota with stack recursion. This deliberately supersedes the numerical C2 defaults and changes the C3 golden identities; the product context is unchanged.
+
 ## Working constraints
 
 - Keep `docs/context.md` as the detailed design source; review deliberate changes using the state file's stored SHA-256.

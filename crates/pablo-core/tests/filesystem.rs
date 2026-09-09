@@ -577,26 +577,97 @@ async fn absolute_parent_and_symlink_paths_cannot_escape() {
     );
 }
 #[tokio::test]
+async fn default_read_edit_and_search_cross_former_file_and_scan_caps() {
+    let f = Fixture::new();
+    let mut text = "padding\n".repeat(9 * 1024 * 1024);
+    text.push_str("unique needle\n");
+    fs::write(f.root.join("large.txt"), &text).unwrap();
+    let read = call(&f, "fs.read", json!({"path":"large.txt","max_bytes":8})).await;
+    assert!(read.outcome.is_completed(), "{:?}", read.outcome);
+    assert_eq!(payload(&read)["text"], "padding\n");
+    assert_eq!(payload(&read)["size_bytes"], text.len());
+    assert_eq!(payload(&read)["truncated"], true);
+    let edit = mutation(
+        &f,
+        "fs.edit",
+        json!({
+            "path":"large.txt", "expected_revision":payload(&read)["revision"],
+            "old_text":"unique needle", "new_text":"changed needle"
+        }),
+    )
+    .await;
+    assert!(edit.outcome.is_completed(), "{:?}", edit.outcome);
+    assert_eq!(payload(&edit)["committed"], true);
+    text = text.replace("unique needle", "changed needle");
+    assert_eq!(fs::read_to_string(f.root.join("large.txt")).unwrap(), text);
+    let search = call(
+        &f,
+        "fs.search",
+        json!({"path":".","query":"changed needle"}),
+    )
+    .await;
+    assert!(search.outcome.is_completed(), "{:?}", search.outcome);
+    assert_eq!(payload(&search)["matches"][0]["text"], "changed needle");
+    assert_eq!(payload(&search)["truncated"], false);
+}
+
+#[tokio::test]
+async fn default_listing_pages_past_ten_thousand_entries() {
+    let f = Fixture::new();
+    let directory = f.root.join("wide");
+    fs::create_dir(&directory).unwrap();
+    for i in 0..10_001 {
+        fs::write(directory.join(format!("{i:05}")), "").unwrap();
+    }
+    let result = call(
+        &f,
+        "fs.list",
+        json!({"path":"wide","offset":10000,"max_entries":1}),
+    )
+    .await;
+    assert!(result.outcome.is_completed(), "{:?}", result.outcome);
+    assert_eq!(payload(&result)["entries"][0]["path"], "wide/10000");
+    assert_eq!(payload(&result)["truncated"], false);
+}
+
+#[tokio::test]
+async fn default_search_crosses_thirty_two_levels_in_sorted_depth_first_order() {
+    let f = Fixture::new();
+    let mut nested = f.root.join("deep");
+    for _ in 0..40 {
+        nested.push("a");
+    }
+    fs::create_dir_all(&nested).unwrap();
+    fs::write(nested.join("first.txt"), "needle first").unwrap();
+    fs::write(f.root.join("deep/z.txt"), "needle last").unwrap();
+    let result = call(&f, "fs.search", json!({"path":"deep","query":"needle"})).await;
+    assert!(result.outcome.is_completed(), "{:?}", result.outcome);
+    assert_eq!(payload(&result)["matches"][0]["text"], "needle first");
+    assert_eq!(payload(&result)["matches"][1]["text"], "needle last");
+    assert_eq!(payload(&result)["truncated"], false);
+}
+
+#[tokio::test]
 async fn hard_file_directory_scan_depth_and_serialized_limits_stop_the_run() {
     let f = Fixture::new();
     for kind in 0..5 {
         let mut s = f.spec();
         let (name, args) = match kind {
             0 => {
-                s.limits.filesystem.max_file_bytes = 16;
+                s.limits.filesystem.max_file_bytes = Some(16);
                 ("fs.read", json!({"path":"a.txt"}))
             }
             1 => {
-                s.limits.filesystem.max_entries = 2;
+                s.limits.filesystem.max_entries = Some(2);
                 ("fs.list", json!({"path":"."}))
             }
             2 => {
-                s.limits.filesystem.max_scan_bytes = 1;
+                s.limits.filesystem.max_scan_bytes = Some(1);
                 ("fs.search", json!({"path":".","query":"alpha"}))
             }
             3 => {
                 fs::create_dir_all(f.root.join("nested/deep/too-deep")).unwrap();
-                s.limits.filesystem.max_depth = 1;
+                s.limits.filesystem.max_depth = Some(1);
                 ("fs.search", json!({"path":"nested","query":"alpha"}))
             }
             _ => {
@@ -998,7 +1069,7 @@ async fn replacement_size_limit_never_truncates_original_and_long_text_is_suppor
     let f = Fixture::new();
     let revision = file_revision(&f, "a.txt").await;
     let mut s = f.spec();
-    s.limits.filesystem.max_file_bytes = 17;
+    s.limits.filesystem.max_file_bytes = Some(17);
     let o = run_configured(
         s,
         "fs.write",

@@ -4,6 +4,7 @@
 
 mod admission;
 mod canonical;
+mod credentials;
 mod input;
 mod render;
 mod resolve;
@@ -15,6 +16,9 @@ use std::{collections::BTreeMap, fmt, path::PathBuf};
 
 pub use admission::{PreparedRun, RunInput};
 pub use canonical::fingerprint;
+pub use credentials::{
+    CredentialConsumer, CredentialInputs, CredentialReadError, ProcessCredentials, ScopedCredential,
+};
 pub use resolve::{LoadedDeployment, load, resolve};
 
 pub const CONTRACT_REVISION: &str = "c3.1";
@@ -178,7 +182,23 @@ pub struct ResolvedDeployment {
     provenance: BTreeMap<String, Vec<Origin>>,
     input_fingerprint: String,
 }
+
+/// Safe run metadata. It intentionally excludes sources, paths, task content,
+/// credential presence and the private host-bindings fingerprint.
+#[derive(Clone, Debug, Serialize, serde::Deserialize, PartialEq, Eq)]
+pub struct DeploymentIdentity {
+    schema_version: u32,
+    contract_revision: String,
+    fingerprint: String,
+}
 impl ResolvedDeployment {
+    pub fn identity(&self) -> DeploymentIdentity {
+        DeploymentIdentity {
+            schema_version: self.schema_version,
+            contract_revision: self.contract_revision.into(),
+            fingerprint: self.fingerprint.clone(),
+        }
+    }
     /// Canonical, portable TOML with all defaults and secret references retained.
     /// This is explicit local inspection and may contain operator-authored text.
     pub fn render(&self) -> Result<String, ConfigError> {

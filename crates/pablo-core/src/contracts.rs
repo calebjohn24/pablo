@@ -230,6 +230,8 @@ pub enum Message {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RunEvent {
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deployment: Option<crate::deployment::DeploymentIdentity>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub accounting: Option<Box<crate::task::Accounting>>,
     pub schema_version: String,
     pub seq: u64,

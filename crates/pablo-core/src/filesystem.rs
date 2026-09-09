@@ -16,32 +16,26 @@ use std::{
 };
 use tokio::time::Instant;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+/// Optional host work quotas. `None` leaves repository size unrestricted;
+/// deadlines, cancellation, policy and serialized tool-output bounds still apply.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct FilesystemLimits {
-    pub max_file_bytes: usize,
-    pub max_entries: usize,
-    pub max_depth: usize,
-    pub max_scan_bytes: usize,
-}
-impl Default for FilesystemLimits {
-    fn default() -> Self {
-        Self {
-            max_file_bytes: 8 * 1024 * 1024,
-            max_entries: 10_000,
-            max_depth: 32,
-            max_scan_bytes: 64 * 1024 * 1024,
-        }
-    }
+    pub max_file_bytes: Option<usize>,
+    pub max_entries: Option<usize>,
+    pub max_depth: Option<usize>,
+    pub max_scan_bytes: Option<usize>,
 }
 impl FilesystemLimits {
     pub(crate) fn valid(&self) -> bool {
-        self.max_file_bytes > 0
-            && self.max_entries > 0
-            && self.max_depth > 0
-            && self.max_scan_bytes > 0
-            && self.max_file_bytes < usize::MAX
-            && self.max_scan_bytes < usize::MAX
+        [
+            self.max_file_bytes,
+            self.max_entries,
+            self.max_depth,
+            self.max_scan_bytes,
+        ]
+        .into_iter()
+        .all(|limit| limit.is_none_or(|n| n > 0))
     }
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -725,7 +719,12 @@ mod unix {
                     .len()
                     .checked_sub(old.len())
                     .and_then(|n| n.checked_add(new.len()))
-                    .filter(|n| *n <= self.limits.filesystem.max_file_bytes)
+                    .filter(|n| {
+                        self.limits
+                            .filesystem
+                            .max_file_bytes
+                            .is_none_or(|cap| *n <= cap)
+                    })
                     .ok_or_else(|| stop(ToolStatus::WorkLimit))?;
                 let mut text = String::with_capacity(size);
                 text.push_str(&original[..offset]);
@@ -735,7 +734,12 @@ mod unix {
             } else {
                 args["text"].as_str().unwrap().to_owned()
             };
-            if text.len() > self.limits.filesystem.max_file_bytes {
+            if self
+                .limits
+                .filesystem
+                .max_file_bytes
+                .is_some_and(|cap| text.len() > cap)
+            {
                 return Err(stop(ToolStatus::WorkLimit));
             }
             let mut result = success(FilesystemResult::Mutation {
@@ -866,12 +870,12 @@ mod unix {
                     .limits
                     .filesystem
                     .max_file_bytes
-                    .saturating_sub(bytes.len());
+                    .map_or(usize::MAX, |cap| cap.saturating_sub(bytes.len()));
                 let scan_remaining = if scan {
                     self.limits
                         .filesystem
                         .max_scan_bytes
-                        .saturating_sub(self.scanned)
+                        .map_or(usize::MAX, |cap| cap.saturating_sub(self.scanned))
                 } else {
                     usize::MAX
                 };
@@ -888,7 +892,7 @@ mod unix {
                     return Err(stop(ToolStatus::WorkLimit));
                 }
                 if scan {
-                    self.scanned += n;
+                    self.scanned = self.scanned.saturating_add(n);
                 }
                 bytes.extend_from_slice(&buf[..n]);
                 #[cfg(test)]
@@ -937,16 +941,18 @@ mod unix {
                 if name == b"." || name == b".." {
                     continue;
                 }
-                if self.visited >= self.limits.filesystem.max_entries {
+                if self
+                    .limits
+                    .filesystem
+                    .max_entries
+                    .is_some_and(|cap| self.visited >= cap)
+                {
                     return Err(stop(ToolStatus::WorkLimit));
                 }
-                self.visited += 1;
+                self.visited = self.visited.saturating_add(1);
                 let name =
                     std::str::from_utf8(name).map_err(|_| recover(FsError::UnsupportedEncoding))?;
                 let child = path.join(name);
-                if child.as_os_str().len() > 4096 {
-                    return Err(stop(ToolStatus::WorkLimit));
-                }
                 if self.allow(&child).is_err() {
                     continue;
                 }
@@ -1012,17 +1018,28 @@ mod unix {
             cap: usize,
             matches: &mut Vec<SearchMatch>,
         ) -> Result<bool, Box<ToolResult>> {
-            for entry in self.entries(path)? {
+            // Explicit frames preserve sorted depth-first order without a Rust
+            // call-stack limit when the host leaves traversal depth unrestricted.
+            let mut stack = vec![(depth, self.entries(path)?.into_iter())];
+            while let Some((depth, entries)) = stack.last_mut() {
                 self.check()?;
+                let Some(entry) = entries.next() else {
+                    stack.pop();
+                    continue;
+                };
+                let depth = *depth;
                 let child = Path::new(&entry.path);
                 match entry.r#type {
                     EntryType::Directory => {
-                        if depth >= self.limits.filesystem.max_depth {
+                        if self
+                            .limits
+                            .filesystem
+                            .max_depth
+                            .is_some_and(|cap| depth >= cap)
+                        {
                             return Err(stop(ToolStatus::WorkLimit));
                         }
-                        if self.walk(child, query, max, depth + 1, cap, matches)? {
-                            return Ok(true);
-                        }
+                        stack.push((depth + 1, self.entries(child)?.into_iter()));
                     }
                     EntryType::File => {
                         let text = match self.text(child, true) {
@@ -1283,7 +1300,7 @@ mod unix {
             let path = f.0.join("root/a");
             std::fs::write(&path, vec![b'x'; 8192]).unwrap();
             let mut w = f.worker();
-            w.limits.filesystem.max_file_bytes = 8192;
+            w.limits.filesystem.max_file_bytes = Some(8192);
             w.after_chunk = Some(Box::new(move || {
                 std::fs::OpenOptions::new()
                     .append(true)

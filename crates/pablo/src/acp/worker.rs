@@ -12,6 +12,7 @@ use std::{
 use tokio::sync::oneshot;
 
 pub(super) struct Task {
+    pub prepared: Option<pablo_core::deployment::PreparedRun>,
     pub spec: RunSpec,
     pub parent: opentelemetry::Context,
     pub cancel: CancellationToken,
@@ -69,6 +70,7 @@ impl Worker {
 }
 
 struct Resources {
+    configuration: Option<(String, String, crate::deployment::Secrets)>,
     provider: GatewayProvider,
     tools: ToolRegistry,
     telemetry: crate::otel::Telemetry,
@@ -82,6 +84,7 @@ impl Resources {
         };
         let tools = options.tools()?;
         Ok(Self {
+            configuration: None,
             provider,
             tools,
             telemetry: crate::otel::Telemetry::new(),
@@ -115,7 +118,49 @@ fn run(options: Arc<Options>, tasks: async_channel::Receiver<Task>) -> Result<()
                 }
             };
             let outcome = async {
-                if resources.is_none() {
+                if let Some(prepared) = &task.prepared {
+                    let bootstrap = options.deployment.as_ref().unwrap();
+                    let secrets = crate::deployment::Secrets::read(prepared, bootstrap)?;
+                    let reuse = resources
+                        .as_ref()
+                        .and_then(|r: &Resources| r.configuration.as_ref())
+                        .is_some_and(|(config, bindings, prior)| {
+                            config == prepared.deployment().fingerprint()
+                                && bindings == prepared.bindings_fingerprint()
+                                && prior.same_private_values(&secrets)
+                        });
+                    if !reuse {
+                        let provider = secrets.provider(bootstrap)?;
+                        let tools = prepared.tools().map_err(|e| e.to_string())?;
+                        pablo_core::runtime::validate_run(prepared.spec(), &provider, &tools)
+                            .map_err(|_| "config_invalid_value at /run")?;
+                        crate::otel::Telemetry::check_configured(
+                            prepared,
+                            secrets.headers.as_ref(),
+                        )?;
+                        if let Some(prior) = resources.take() {
+                            prior.telemetry.shutdown().await;
+                        }
+                        let telemetry =
+                            crate::otel::Telemetry::configured(prepared, secrets.headers.as_ref())?;
+                        resources = Some(Resources {
+                            provider,
+                            tools,
+                            telemetry,
+                            configuration: Some((
+                                prepared.deployment().fingerprint().into(),
+                                prepared.bindings_fingerprint().into(),
+                                secrets,
+                            )),
+                        });
+                    }
+                    pablo_core::runtime::validate_run(
+                        prepared.spec(),
+                        &resources.as_ref().unwrap().provider,
+                        &resources.as_ref().unwrap().tools,
+                    )
+                    .map_err(|_| "config_invalid_value at /run")?;
+                } else if resources.is_none() {
                     resources = Some(Resources::new(&options)?);
                 }
                 execute(&options, resources.as_ref().unwrap(), &task).await
@@ -139,7 +184,16 @@ async fn execute(
     task: &Task,
 ) -> Result<RunOutcome, String> {
     let spec = &task.spec;
-    let mut trace = if let Some(path) = &options.trace_path {
+    let mut trace = if let Some(prepared) = &task.prepared {
+        prepared
+            .create_trace_file()
+            .map_err(|e| e.to_string())?
+            .map(|file| {
+                JsonlSink::new(BufWriter::new(file), spec)
+                    .map_err(|_| "config_invalid_value at /options/trace")
+            })
+            .transpose()?
+    } else if let Some(path) = &options.trace_path {
         // A fixed path keeps exclusive creation; hosts running several sessions
         // can select a unique file for each with the generated session ID.
         let path = path
@@ -163,8 +217,11 @@ async fn execute(
     } else {
         None
     };
-    let runtime = Runtime::new(telemetry::tracer(&resources.telemetry.sdk))
+    let mut runtime = Runtime::new(telemetry::tracer(&resources.telemetry.sdk))
         .with_parent_context(task.parent.clone());
+    if let Some(prepared) = &task.prepared {
+        runtime = runtime.with_deployment(prepared.deployment());
+    }
     let mut slow_reported = false;
     let mut sink = |event: &RunEvent| -> Result<(), SinkError> {
         if let Some(trace) = trace.as_mut() {
@@ -242,6 +299,7 @@ mod tests {
     #[test]
     fn event_capacity_admits_large_plain_text_but_rejects_its_escaped_expansion() {
         let mut event = RunEvent {
+            deployment: None,
             accounting: None,
             schema_version: "c1.2".into(),
             seq: 1,

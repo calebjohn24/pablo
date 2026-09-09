@@ -2,6 +2,9 @@
 #[allow(dead_code)]
 #[path = "../src/config.rs"]
 mod config;
+#[allow(dead_code)]
+#[path = "../src/deployment.rs"]
+mod deployment;
 
 use futures::{StreamExt, future::BoxFuture, stream};
 use opentelemetry_sdk::trace::SdkTracerProvider;

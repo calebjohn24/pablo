@@ -7,6 +7,252 @@ use std::{
 };
 
 struct Fixture(PathBuf);
+
+#[derive(Default)]
+struct PrivateInputs {
+    environment: Option<Vec<u8>>,
+    host: Option<Vec<u8>>,
+    host_calls: std::sync::atomic::AtomicUsize,
+}
+impl deployment::CredentialInputs for PrivateInputs {
+    fn environment(&self, _: &str) -> Result<Option<Vec<u8>>, deployment::CredentialReadError> {
+        Ok(self.environment.clone())
+    }
+    fn host(&self, _: &str) -> Result<Option<Vec<u8>>, deployment::CredentialReadError> {
+        self.host_calls
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        Ok(self.host.clone())
+    }
+}
+
+fn prepared_credential(f: &Fixture, sources: Value) -> deployment::PreparedRun {
+    f.resolve(json!({"credentials":{"gateway":{"consumer":"provider.vercel","sources":sources}}}))
+        .prepare_run(deployment::RunInput {
+            input: "synthetic task".into(),
+            session_id: None,
+            workspace: None,
+        })
+        .unwrap()
+}
+
+#[test]
+fn credential_fallback_only_uses_absent_sources_and_never_hashes_or_serializes_values() {
+    use deployment::CredentialConsumer::Vercel;
+    let f = Fixture::new();
+    let prepared = prepared_credential(
+        &f,
+        json!([
+            {"kind":"environment","name":"SYNTHETIC_PRIVATE"},
+            {"kind":"file","path":{"base":"config","path":"missing.token"},"encoding":"utf8"},
+            {"kind":"host","name":"synthetic-host"}
+        ]),
+    );
+    let mut inputs = PrivateInputs {
+        host: Some(b"synthetic-private-first".to_vec()),
+        ..Default::default()
+    };
+    let first = prepared.credential(Vercel, &inputs).unwrap().unwrap();
+    assert_eq!(
+        inputs.host_calls.load(std::sync::atomic::Ordering::SeqCst),
+        1
+    );
+    assert_eq!(
+        first
+            .expose_for(Vercel, pablo_core::gateway::VERCEL_ENDPOINT)
+            .unwrap(),
+        "synthetic-private-first"
+    );
+    assert!(
+        first
+            .expose_for(
+                deployment::CredentialConsumer::OtelHeaders,
+                pablo_core::gateway::VERCEL_ENDPOINT
+            )
+            .is_err()
+    );
+    assert!(
+        first
+            .expose_for(Vercel, "http://127.0.0.1:1234/fixture")
+            .is_err()
+    );
+    inputs.host = Some(b"synthetic-private-second".to_vec());
+    let second = prepared.credential(Vercel, &inputs).unwrap().unwrap();
+    assert!(!first.same_private_value(&second));
+    assert!(second.same_private_value(&second));
+    assert!(!format!("{first:?} {prepared:?}").contains("synthetic-private"));
+    assert!(
+        !serde_json::to_string(prepared.deployment())
+            .unwrap()
+            .contains("synthetic-private")
+    );
+    assert!(
+        !prepared
+            .deployment()
+            .render()
+            .unwrap()
+            .contains("synthetic-private")
+    );
+    for bad in [
+        vec![],
+        b" \t".to_vec(),
+        vec![255],
+        b"private\n".to_vec(),
+        vec![b'x'; 65_537],
+        vec![b'x'; 8193],
+    ] {
+        inputs.environment = Some(bad);
+        let before = inputs.host_calls.load(std::sync::atomic::Ordering::SeqCst);
+        let error = prepared.credential(Vercel, &inputs).unwrap_err();
+        assert_eq!(error.code, "config_credential_invalid");
+        assert!(!format!("{error:?}").contains("private"));
+        assert_eq!(
+            inputs.host_calls.load(std::sync::atomic::Ordering::SeqCst),
+            before
+        );
+    }
+    inputs.environment = None;
+    inputs.host = None;
+    assert_eq!(
+        prepared.credential(Vercel, &inputs).unwrap_err().code,
+        "config_credential_missing"
+    );
+}
+
+#[test]
+fn credential_token_and_dotenv_files_are_bounded_literal_and_private() {
+    use deployment::CredentialConsumer::Vercel;
+    let f = Fixture::new();
+    let inputs = PrivateInputs {
+        host: Some(b"fallback-must-not-run".to_vec()),
+        ..Default::default()
+    };
+    for (encoding, content, expected) in [
+        ("utf8", "synthetic-token\r\n", "synthetic-token"),
+        (
+            "dotenv",
+            "# comment\r\nexport TOKEN = 'literal-${NOT_EXPANDED}' # comment\r\nOTHER=ignored\n",
+            "literal-${NOT_EXPANDED}",
+        ),
+        (
+            "dotenv",
+            "TOKEN=literal-$NOT_EXPANDED # comment\n",
+            "literal-$NOT_EXPANDED",
+        ),
+        (
+            "dotenv",
+            "TOKEN=\"literal-\\$NOT_EXPANDED\"\n",
+            "literal-$NOT_EXPANDED",
+        ),
+    ] {
+        f.write("private.token", content);
+        let mut source = json!({"kind":"file","path":{"base":"config","path":"private.token"},"encoding":encoding});
+        if encoding == "dotenv" {
+            source["key"] = "TOKEN".into();
+        }
+        let prepared = prepared_credential(&f, json!([source]));
+        let credential = prepared.credential(Vercel, &inputs).unwrap().unwrap();
+        assert_eq!(
+            credential
+                .expose_for(Vercel, pablo_core::gateway::VERCEL_ENDPOINT)
+                .unwrap(),
+            expected
+        );
+    }
+    for content in [
+        "TOKEN=one\nTOKEN=two\n",
+        "TOKEN=\"unclosed",
+        "OTHER=value\n",
+        "TOKEN=\n",
+        "malformed private bytes",
+        "TOKEN=\"escaped\\nnewline\"\n",
+        "TOKEN=valid\nOTHER=one\nOTHER=two\n",
+    ] {
+        f.write("private.token", content);
+        let prepared = prepared_credential(
+            &f,
+            json!([
+                {"kind":"file","path":{"base":"config","path":"private.token"},"encoding":"dotenv","key":"TOKEN"},
+                {"kind":"host","name":"fallback"}
+            ]),
+        );
+        assert_eq!(
+            prepared.credential(Vercel, &inputs).unwrap_err().code,
+            "config_credential_invalid"
+        );
+    }
+    let prepared = prepared_credential(
+        &f,
+        json!([
+            {"kind":"file","path":{"base":"config","path":"private.token"},"encoding":"utf8"},
+            {"kind":"host","name":"fallback"}
+        ]),
+    );
+    for bytes in [
+        vec![0xff],
+        vec![b'x'; 65_537],
+        b"two\nnewlines\n".to_vec(),
+        vec![],
+    ] {
+        fs::write(f.0.join("private.token"), bytes).unwrap();
+        assert_eq!(
+            prepared.credential(Vercel, &inputs).unwrap_err().code,
+            "config_credential_invalid"
+        );
+    }
+    assert_eq!(
+        inputs.host_calls.load(std::sync::atomic::Ordering::SeqCst),
+        0
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn credential_files_reject_symlinks_directories_fifos_and_unreadable_sources() {
+    use deployment::CredentialConsumer::Vercel;
+    use std::os::unix::fs::{PermissionsExt, symlink};
+    let f = Fixture::new();
+    f.write("actual.token", "synthetic-private-token");
+    symlink("actual.token", f.0.join("symlink.token")).unwrap();
+    symlink("absent.token", f.0.join("dangling.token")).unwrap();
+    fs::create_dir(f.0.join("directory.token")).unwrap();
+    assert!(
+        Command::new("mkfifo")
+            .arg(f.0.join("fifo.token"))
+            .status()
+            .unwrap()
+            .success()
+    );
+    fs::set_permissions(f.0.join("actual.token"), fs::Permissions::from_mode(0o0)).unwrap();
+    let inputs = PrivateInputs {
+        host: Some(b"fallback".to_vec()),
+        ..Default::default()
+    };
+    for name in [
+        "symlink.token",
+        "dangling.token",
+        "directory.token",
+        "fifo.token",
+        "actual.token",
+    ] {
+        let prepared = prepared_credential(
+            &f,
+            json!([
+                {"kind":"file","path":{"base":"config","path":name},"encoding":"utf8"},
+                {"kind":"host","name":"fallback"}
+            ]),
+        );
+        assert_eq!(
+            prepared.credential(Vercel, &inputs).unwrap_err().code,
+            "config_credential_invalid",
+            "{name}"
+        );
+    }
+    assert_eq!(
+        inputs.host_calls.load(std::sync::atomic::Ordering::SeqCst),
+        0
+    );
+    fs::set_permissions(f.0.join("actual.token"), fs::Permissions::from_mode(0o600)).unwrap();
+}
 impl Fixture {
     fn new() -> Self {
         let path = std::env::temp_dir().join(format!("pablo-deployment-{}", uuid::Uuid::new_v4()));
@@ -174,6 +420,46 @@ fn secret_environment_names_cannot_be_reclassified_as_inspection_options() {
 }
 
 #[test]
+fn filesystem_work_quotas_are_optional_but_explicit_authority_still_applies() {
+    let f = Fixture::new();
+    for field in [
+        "max_file_bytes",
+        "max_entries",
+        "max_depth",
+        "max_scan_bytes",
+    ] {
+        for value in [json!("unlimited"), json!(17)] {
+            let resolved = deployment::resolve(f.document(json!({
+                "options":{"limits":{"filesystem":{field:value}}}
+            })))
+            .unwrap();
+            let prepared = resolved
+                .prepare_run(deployment::RunInput {
+                    input: "synthetic".into(),
+                    workspace: Some(f.0.clone()),
+                    session_id: None,
+                })
+                .unwrap();
+            let limits = serde_json::to_value(&prepared.spec().limits.filesystem).unwrap();
+            assert_eq!(
+                limits[field],
+                if value.is_string() {
+                    Value::Null
+                } else {
+                    value
+                }
+            );
+        }
+        let error = deployment::resolve(f.document(json!({
+            "options":{"limits":{"filesystem":{field:"unlimited"}}},
+            "authority":[{"id":"host","limits":{"filesystem":{field:17}}}]
+        })))
+        .unwrap_err();
+        assert_eq!(error.code, "config_authority_violation");
+    }
+}
+
+#[test]
 fn prepared_runs_project_limits_catalog_and_private_binding_identity() {
     let f = Fixture::new();
     f.corpus();
@@ -186,6 +472,11 @@ fn prepared_runs_project_limits_catalog_and_private_binding_identity() {
         })
         .unwrap();
     assert_eq!(prepared.spec().workspace, f.0);
+    let filesystem = &prepared.spec().limits.filesystem;
+    assert_eq!(filesystem.max_file_bytes, None);
+    assert_eq!(filesystem.max_entries, None);
+    assert_eq!(filesystem.max_depth, None);
+    assert_eq!(filesystem.max_scan_bytes, None);
     assert_eq!(prepared.spec().limits.max_model_calls, Some(4));
     assert_eq!(prepared.spec().limits.max_tool_calls, Some(8));
     assert_eq!(prepared.spec().limits.max_run_duration_ms, 600000);

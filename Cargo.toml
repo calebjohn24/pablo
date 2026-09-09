@@ -1,5 +1,6 @@
 [workspace]
 members = ["crates/pablo-core", "crates/pablo"]
+exclude = ["vendor/opentelemetry_sdk-0.32.1", "vendor/opentelemetry-otlp-0.32.0"]
 resolver = "3"
 
 [workspace.package]
@@ -30,6 +31,10 @@ toml = { version = "=0.8.23", default-features = false, features = ["parse"] }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
+
+[patch.crates-io]
+opentelemetry_sdk = { path = "vendor/opentelemetry_sdk-0.32.1" }
+opentelemetry-otlp = { path = "vendor/opentelemetry-otlp-0.32.0" }
 
 [workspace.lints.clippy]
 all = "warn"

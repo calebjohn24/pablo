@@ -1543,8 +1543,6 @@ dependencies = [
 [[package]]
 name = "opentelemetry-otlp"
 version = "0.32.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9966929966d17620d7c316c643ba62631826e10021409357772d5eea84f62c35"
 dependencies = [
  "flate2",
  "http",
@@ -1573,8 +1571,6 @@ dependencies = [
 [[package]]
 name = "opentelemetry_sdk"
 version = "0.32.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b59f80e1ac4d5ff7a2db8fb6c80badb7f0f3f858211fba08dd9aaec750894f9"
 dependencies = [
  "futures-channel",
  "futures-executor",
