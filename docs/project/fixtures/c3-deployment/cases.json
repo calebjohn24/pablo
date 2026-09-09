@@ -78,7 +78,7 @@
     {
       "id": "G02-01",
       "owner": "C3.2",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "entry": "production.toml",
         "bindings": {
@@ -88,12 +88,16 @@
       "expected": {
         "resolved": "production.resolved.json",
         "compare": "Complete config and fingerprint equal golden; deterministic origins and source digests match. No secret lookup or agent work."
-      }
+      },
+      "tests": [
+        "production_matches_frozen_config_sources_and_fingerprints"
+      ],
+      "evidence": "docs/project/evidence/c3.2.md"
     },
     {
       "id": "G02-02",
       "owner": "C3.2",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "entry": "development.toml",
         "bindings": {
@@ -114,12 +118,16 @@
           "base": "workspace",
           "path": "trace-{session_id}.jsonl"
         }
-      }
+      },
+      "tests": [
+        "modules_profiles_lists_and_environment_keep_order_and_origins"
+      ],
+      "evidence": "docs/project/evidence/c3.2.md"
     },
     {
       "id": "G02-03",
       "owner": "C3.2",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "entry": "development.toml",
         "environment": {
@@ -138,12 +146,17 @@
           "override:limits.max_tool_calls"
         ],
         "rule": "File/profile then environment then explicit override; every contribution retained."
-      }
+      },
+      "tests": [
+        "modules_profiles_lists_and_environment_keep_order_and_origins",
+        "ordinary_user_workspace_entry_environment_and_host_precedence"
+      ],
+      "evidence": "docs/project/evidence/c3.2.md"
     },
     {
       "id": "G02-04",
       "owner": "C3.2",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "base": {
           "otel.resource_attributes": {
@@ -171,12 +184,17 @@
         },
         "policy.read_roots.allow": [],
         "rule": "Missing leaves inherit; maps merge; unset clears optional leaves; empty arrays replace."
-      }
+      },
+      "tests": [
+        "metadata_with_operation_keys_is_data_and_maps_merge",
+        "lists_clear_optionals_unset_and_trace_creation_is_deferred"
+      ],
+      "evidence": "docs/project/evidence/c3.2.md"
     },
     {
       "id": "G02-05",
       "owner": "C3.2",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "entry": "production.toml",
         "variants": [
@@ -189,12 +207,17 @@
         "identical": "Both fingerprints equal",
         "comment": "Config fingerprint equal, input fingerprint differs",
         "value": "Both fingerprints differ; origin names edited file"
-      }
+      },
+      "tests": [
+        "source_changes_and_effective_changes_have_distinct_identities",
+        "production_matches_frozen_config_sources_and_fingerprints"
+      ],
+      "evidence": "docs/project/evidence/c3.2.md"
     },
     {
       "id": "G02-06",
       "owner": "C3.2",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "entry": "nested/entry.toml",
         "imports": [
@@ -215,12 +238,17 @@
           "path": "modules/output/trace.jsonl"
         },
         "rule": "Same explicit root/inputs yield same config, regardless of invocation cwd. No output directory is created."
-      }
+      },
+      "tests": [
+        "relative_import_and_source_paths_use_declaring_file_and_explicit_root",
+        "ambient_process_state_cannot_change_locked_resolution"
+      ],
+      "evidence": "docs/project/evidence/c3.2.md"
     },
     {
       "id": "G02-07",
       "owner": "C3.2",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "graph": {
           "entry": [
@@ -234,12 +262,16 @@
       "expected": {
         "code": "config_import_cycle",
         "safe_diagnostic": "Bounded root-relative import chain; no partial config"
-      }
+      },
+      "tests": [
+        "import_cycles_repeated_files_and_diamonds_reject"
+      ],
+      "evidence": "docs/project/evidence/c3.2.md"
     },
     {
       "id": "G02-08",
       "owner": "C3.2",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "graphs": [
           {
@@ -265,12 +297,17 @@
       "expected": {
         "code": "config_duplicate_import",
         "rule": "Do not silently deduplicate or double-apply lists"
-      }
+      },
+      "tests": [
+        "import_cycles_repeated_files_and_diamonds_reject",
+        "file_depth_hardlink_and_format_boundaries"
+      ],
+      "evidence": "docs/project/evidence/c3.2.md"
     },
     {
       "id": "G02-09",
       "owner": "C3.2",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "imports": [
           "https://example.invalid/a.toml",
@@ -284,12 +321,16 @@
       "expected": {
         "code": "config_import_path",
         "rule": "Each separate variant rejects before opening outside roots, blocking on a FIFO or doing network I/O"
-      }
+      },
+      "tests": [
+        "imports_cannot_escape_or_follow_symlinks_or_block_on_fifo"
+      ],
+      "evidence": "docs/project/evidence/c3.2.md"
     },
     {
       "id": "G02-10",
       "owner": "C3.2",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "profiles": [
           {
@@ -337,12 +378,16 @@
           "config_unknown_profile",
           "config_duplicate_profile_ancestor"
         ]
-      }
+      },
+      "tests": [
+        "profile_cycles_missing_parents_and_diamond_ancestors_reject"
+      ],
+      "evidence": "docs/project/evidence/c3.2.md"
     },
     {
       "id": "G02-11",
       "owner": "C3.2",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "imports": [
           "a.toml",
@@ -357,12 +402,17 @@
       "expected": {
         "code": "config_conflict",
         "identical_variant": "Equal normalized atomic records may coalesce with both origins; do not field-merge identities"
-      }
+      },
+      "tests": [
+        "named_definitions_conflict_and_equal_definitions_coalesce",
+        "coalesced_profiles_apply_ordered_lists_once_and_keep_each_origin"
+      ],
+      "evidence": "docs/project/evidence/c3.2.md"
     },
     {
       "id": "G02-12",
       "owner": "C3.2",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "policy_variants": [
           "duplicate ID after append",
@@ -379,12 +429,16 @@
           "config_limit"
         ],
         "rule": "No sorting/deduplication or loss of deciding IDs"
-      }
+      },
+      "tests": [
+        "policy_identity_conflicts_survive_list_operations_and_authority_layers"
+      ],
+      "evidence": "docs/project/evidence/c3.2.md"
     },
     {
       "id": "G02-13",
       "owner": "C3.2",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "boundaries": {
           "single_file_bytes": 1048576,
@@ -411,12 +465,26 @@
       "expected": {
         "at_bound": "No limit rejection",
         "one_over": "config_limit before next allocation/read; no silently skipped sources"
-      }
+      },
+      "tests": [
+        "limits_on_file_bytes_depth_and_profile_expansion_are_real",
+        "aggregate_file_bytes_and_file_count_accept_exact_bounds",
+        "profile_depth_and_total_expansion_accept_exact_bounds",
+        "credential_binding_authority_and_rule_budgets_are_enforced",
+        "file_depth_hardlink_and_format_boundaries",
+        "resource_attribute_limits_apply_after_map_composition",
+        "deployment::input::tests::parser_data_budgets_accept_bound_and_reject_next_node",
+        "deployment::input::tests::environment_declaration_bound_is_independent_of_target_conflicts",
+        "deployment::resolve::tests::import_edge_budget_is_independent_of_file_identity_admission",
+        "deployment::resolve::tests::origin_budget_rejects_before_growing_the_next_contribution",
+        "deployment::canonical::tests::config_and_inspection_encoding_stop_at_the_output_bound"
+      ],
+      "evidence": "docs/project/evidence/c3.2.md"
     },
     {
       "id": "G02-14",
       "owner": "C3.2",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "entry": "production.toml",
         "hostile_ambient": [
@@ -431,12 +499,17 @@
       },
       "expected": {
         "rule": "None read/applied; config and both fingerprints equal clean golden. No credential or SDK detector runs."
-      }
+      },
+      "tests": [
+        "locked_resolution_ignores_untrusted_files_and_undeclared_values",
+        "ambient_process_state_cannot_change_locked_resolution"
+      ],
+      "evidence": "docs/project/evidence/c3.2.md"
     },
     {
       "id": "G02-15",
       "owner": "C3.2",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "binding": "PABLO_CONFIG_TOOL_CALLS",
         "variants": [
@@ -464,12 +537,16 @@
           7
         ],
         "rule": "No value/parser snippet in failures; no dotenv or general environment expansion"
-      }
+      },
+      "tests": [
+        "environment_scalar_parsing_preserves_zero_unlimited_and_errors"
+      ],
+      "evidence": "docs/project/evidence/c3.2.md"
     },
     {
       "id": "G02-16",
       "owner": "C3.2",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "entry": "credential-sources.toml",
         "bindings": [
@@ -484,12 +561,16 @@
       },
       "expected": {
         "rule": "Only references enter config; none of these values or their hashes are read. Host callback invocation count, secret-file open count and network count remain zero."
-      }
+      },
+      "tests": [
+        "private_file_and_host_sources_are_references_only"
+      ],
+      "evidence": "docs/project/evidence/c3.2.md"
     },
     {
       "id": "G02-17",
       "owner": "C3.2",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "variants": [
           "missing credential ID",
@@ -505,12 +586,17 @@
       "expected": {
         "code": "config_invalid_value",
         "rule": "Reject before credential resolution or activation, even if a conflicting default would otherwise mask it"
-      }
+      },
+      "tests": [
+        "semantic_combinations_and_references_reject_before_activation",
+        "inactive_and_overridden_invalid_declarations_are_not_hidden"
+      ],
+      "evidence": "docs/project/evidence/c3.2.md"
     },
     {
       "id": "G02-18",
       "owner": "C3.2",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "counter_variants": [
           "18446744073709551615",
@@ -535,12 +621,16 @@
           "accept",
           "config_invalid_value"
         ]
-      }
+      },
+      "tests": [
+        "exact_u64_ceiling_and_event_ranges"
+      ],
+      "evidence": "docs/project/evidence/c3.2.md"
     },
     {
       "id": "G02-19",
       "owner": "C3.2",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "variants": [
           "missing version",
@@ -553,12 +643,17 @@
       },
       "expected": {
         "rule": "Version variants reject as config_schema_version before imports; old proposal has no implicit migration; inactive MCP reports config_unsupported_feature and C3.15 owner."
-      }
+      },
+      "tests": [
+        "unknown_unsupported_and_schema_versions_are_explicit_and_redacted",
+        "frozen_toml_corpus_is_accepted_or_rejected_by_the_real_loader"
+      ],
+      "evidence": "docs/project/evidence/c3.2.md"
     },
     {
       "id": "G02-20",
       "owner": "C3.2",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "authority": {
           "limits.max_tool_calls": 8
@@ -575,12 +670,17 @@
       "expected": {
         "code": "config_authority_violation",
         "rule": "Profiles and environment have ordinary precedence only; requested limit is not silently clamped."
-      }
+      },
+      "tests": [
+        "authority_ceiling_cannot_be_widened_by_profile_or_environment",
+        "workspace_authority_stays_anchored_when_later_layers_change_workspace"
+      ],
+      "evidence": "docs/project/evidence/c3.2.md"
     },
     {
       "id": "G02-21",
       "owner": "C3.2",
-      "status": "not_run",
+      "status": "passed",
       "input": {
         "file_read": "Mutate an opened config file while its bounded read is paused; separately replace entry via symlink component."
       },
@@ -590,7 +690,12 @@
           "config_import_path"
         ],
         "rule": "No mixed snapshot or outside-root read; host still owns independent-writer isolation."
-      }
+      },
+      "tests": [
+        "deployment::input::tests::changed_open_file_is_rejected_without_diagnostic_content",
+        "imports_cannot_escape_or_follow_symlinks_or_block_on_fifo"
+      ],
+      "evidence": "docs/project/evidence/c3.2.md"
     },
     {
       "id": "G03-01",

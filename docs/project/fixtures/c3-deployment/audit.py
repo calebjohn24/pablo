@@ -133,16 +133,23 @@ def main():
             declared = tomllib.loads((HERE / file).read_text(encoding="utf-8"))["profiles"][name]
             assert source["digest"] == digest({"name": name, "profile": declared})
 
-    # Check semantic input descriptions, not their future resolver outcomes.
+    # Check coverage metadata; only the owning Rust/integration suites execute
+    # semantic acceptance. State and its evidence remain authoritative.
     semantic = cases["resolution_cases"]
     ids = [case["id"] for case in semantic]
     assert len(ids) == len(set(ids))
-    assert all(case["owner"] in ("C3.2", "C3.3") and case["status"] == "not_run" for case in semantic)
+    assert all(case["owner"] in ("C3.2", "C3.3") for case in semantic)
+    for case in semantic:
+        if case["owner"] == "C3.2":
+            assert case["status"] == "passed" and case["tests"]
+            assert case["evidence"] == "docs/project/evidence/c3.2.md"
+        else:
+            assert case["status"] == "not_run"
     assert all(case["input"] and case["expected"] for case in semantic)
     print(f"G01: 2 schemas, baseline defaults, {len(cases['shape_cases'])} TOML shape cases, "
           f"3 canonical vectors and one resolved/provenance example passed artifact audit.")
-    print(f"G02/G03: {len(semantic)} specified semantic cases remain NOT RUN; no loader, "
-          "authority enforcement, credentials, live providers or runtime interfaces were executed.")
+    print("G02: 21 cases map to C3.2 Rust verification; G03: 9 cases remain NOT RUN. "
+          "This artifact audit does not execute the resolver or runtime interfaces.")
 
 
 if __name__ == "__main__":

@@ -155,6 +155,10 @@ C3.1 uses an `options` envelope, TOML 1.0.0, exact typed defaults, ordered impor
 
 Hash canonical defaulted config with secret references and authority, preserving list order and exact counters. Keep source/provenance identity separate so comments and rendering do not change effective identity; physical root bindings remain host-only and secret bytes are never hashed. This supports portable presets without claiming identical workspaces, secret-rotation identity or live reproducibility. The [resolved contract](contracts/c3-deployment-config.md#resolved-identity-provenance-and-inspection) and canonical vectors freeze the encoding and hand off real cross-interface proof to C3.3.
 
+### D035 — Make offline resolution preserve authority and source identity
+
+C3.2 exposes one pure configuration resolver with bounded no-follow local reads and explicit host inputs; activation, credentials and CLI/ACP adapters stay in C3.3. Workspace-relative ceilings become fixed portable references when declared so later workspace overrides cannot move them. Equal named profiles expand once while retaining each origin. Precisely define scalar/list/unset provenance and typed-bootstrap source digests; the C3.1 production config and both fingerprints stay unchanged. See the [deployment contract](contracts/c3-deployment-config.md) and [C3.2 evidence](evidence/c3.2.md).
+
 ## Working constraints
 
 - Keep `docs/context.md` as the detailed design source; review deliberate changes using the state file's stored SHA-256.

@@ -170,6 +170,12 @@
     }
   ],
   "provenance": {
+    "/config/authority": [
+      {
+        "source": "source-0000",
+        "operation": "default"
+      }
+    ],
     "/config/authority/0": [
       {
         "source": "source-0002",
@@ -177,6 +183,12 @@
       }
     ],
     "/config/authority/0/capture_content": [
+      {
+        "source": "source-0002",
+        "operation": "constrain"
+      }
+    ],
+    "/config/authority/0/credential_ids": [
       {
         "source": "source-0002",
         "operation": "constrain"
@@ -212,6 +224,12 @@
         "operation": "constrain"
       }
     ],
+    "/config/authority/0/model_ids": [
+      {
+        "source": "source-0002",
+        "operation": "constrain"
+      }
+    ],
     "/config/authority/0/model_ids/0": [
       {
         "source": "source-0002",
@@ -236,7 +254,19 @@
         "operation": "default"
       }
     ],
+    "/config/authority/0/provider_endpoints": [
+      {
+        "source": "source-0002",
+        "operation": "constrain"
+      }
+    ],
     "/config/authority/0/provider_endpoints/0": [
+      {
+        "source": "source-0002",
+        "operation": "constrain"
+      }
+    ],
+    "/config/authority/0/tool_names": [
       {
         "source": "source-0002",
         "operation": "constrain"
@@ -255,6 +285,12 @@
       }
     ],
     "/config/authority/0/tool_names/2": [
+      {
+        "source": "source-0002",
+        "operation": "constrain"
+      }
+    ],
+    "/config/authority/0/workspace_roots": [
       {
         "source": "source-0002",
         "operation": "constrain"
@@ -284,7 +320,19 @@
         "operation": "constrain"
       }
     ],
+    "/config/credentials": [
+      {
+        "source": "source-0000",
+        "operation": "default"
+      }
+    ],
     "/config/credentials/gateway/consumer": [
+      {
+        "source": "source-0001",
+        "operation": "set"
+      }
+    ],
+    "/config/credentials/gateway/sources": [
       {
         "source": "source-0001",
         "operation": "set"
@@ -308,11 +356,17 @@
         "operation": "set"
       }
     ],
-    "/config/deployment/allowed_run_overrides/0": [
+    "/config/deployment/allowed_run_overrides": [
       {
         "source": "source-0000",
         "operation": "default"
       },
+      {
+        "source": "source-0002",
+        "operation": "replace"
+      }
+    ],
+    "/config/deployment/allowed_run_overrides/0": [
       {
         "source": "source-0002",
         "operation": "replace"
@@ -331,7 +385,7 @@
       },
       {
         "source": "source-0002",
-        "operation": "replace"
+        "operation": "set"
       }
     ],
     "/config/options/filesystem/enabled": [
@@ -415,7 +469,7 @@
       },
       {
         "source": "source-0002",
-        "operation": "replace"
+        "operation": "set"
       }
     ],
     "/config/options/limits/max_output_bytes": [
@@ -437,7 +491,7 @@
       },
       {
         "source": "source-0002",
-        "operation": "replace"
+        "operation": "set"
       }
     ],
     "/config/options/limits/max_tool_calls": [
@@ -447,7 +501,7 @@
       },
       {
         "source": "source-0002",
-        "operation": "replace"
+        "operation": "set"
       }
     ],
     "/config/options/limits/max_tool_duration_ms": [
@@ -534,6 +588,12 @@
         "operation": "default"
       }
     ],
+    "/config/options/otel/headers": [
+      {
+        "source": "source-0000",
+        "operation": "default"
+      }
+    ],
     "/config/options/otel/headers/unset": [
       {
         "source": "source-0000",
@@ -547,6 +607,12 @@
       }
     ],
     "/config/options/otel/max_queue_size": [
+      {
+        "source": "source-0000",
+        "operation": "default"
+      }
+    ],
+    "/config/options/otel/propagators": [
       {
         "source": "source-0000",
         "operation": "default"
@@ -606,10 +672,16 @@
         "operation": "default"
       }
     ],
+    "/config/options/policy": [
+      {
+        "source": "source-0000",
+        "operation": "default"
+      }
+    ],
     "/config/options/policy/read_roots/allow": [
       {
         "source": "source-0001",
-        "operation": "set"
+        "operation": "replace"
       },
       {
         "source": "source-0003",
@@ -623,7 +695,7 @@
       },
       {
         "source": "source-0003",
-        "operation": "replace"
+        "operation": "set"
       }
     ],
     "/config/options/policy/read_roots/deny": [
@@ -636,6 +708,16 @@
       {
         "source": "source-0000",
         "operation": "default"
+      }
+    ],
+    "/config/options/run/workspace": [
+      {
+        "source": "source-0000",
+        "operation": "default"
+      },
+      {
+        "source": "source-0001",
+        "operation": "set"
       }
     ],
     "/config/options/run/workspace/base": [
@@ -685,6 +767,12 @@
       }
     ],
     "/config/options/trace/max_bytes": [
+      {
+        "source": "source-0000",
+        "operation": "default"
+      }
+    ],
+    "/config/options/trace/path": [
       {
         "source": "source-0000",
         "operation": "default"

@@ -1,0 +1,1107 @@
+use pablo_core::deployment::{self, ConfigInput, ResolveRequest, ResolvedDeployment};
+use serde_json::{Value, json};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    process::Command,
+};
+
+struct Fixture(PathBuf);
+impl Fixture {
+    fn new() -> Self {
+        let path = std::env::temp_dir().join(format!("pablo-deployment-{}", uuid::Uuid::new_v4()));
+        fs::create_dir(&path).unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&path, fs::Permissions::from_mode(0o700)).unwrap();
+        }
+        Self(path.canonicalize().unwrap())
+    }
+    fn write(&self, name: &str, content: &str) {
+        let path = self.0.join(name);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, content).unwrap();
+    }
+    fn corpus(&self) {
+        for (name, text) in [
+            (
+                "modules/base.toml",
+                include_str!("../../../docs/project/fixtures/c3-deployment/modules/base.toml"),
+            ),
+            (
+                "development.toml",
+                include_str!("../../../docs/project/fixtures/c3-deployment/development.toml"),
+            ),
+            (
+                "production.toml",
+                include_str!("../../../docs/project/fixtures/c3-deployment/production.toml"),
+            ),
+            (
+                "credential-sources.toml",
+                include_str!(
+                    "../../../docs/project/fixtures/c3-deployment/credential-sources.toml"
+                ),
+            ),
+        ] {
+            self.write(name, text);
+        }
+    }
+    fn request(&self, entry: &str) -> ResolveRequest {
+        let mut request = ResolveRequest::new(self.0.clone(), entry);
+        request
+            .path_bindings
+            .insert("workspace".into(), self.0.clone());
+        request
+    }
+    fn document(&self, mut document: Value) -> ResolveRequest {
+        document["schema_version"] = 1.into();
+        if document.get("credentials").is_none() {
+            document["credentials"] = json!({"gateway":{"consumer":"provider.vercel","sources":[{"kind":"environment","name":"SYNTHETIC_KEY"}]}});
+        }
+        let mut request = self.request("unused.toml");
+        request.entry = ConfigInput::Document(document);
+        request
+    }
+    fn resolve(&self, document: Value) -> ResolvedDeployment {
+        deployment::resolve(self.document(document)).unwrap()
+    }
+}
+impl Drop for Fixture {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
+    }
+}
+fn error(request: ResolveRequest, code: &str) {
+    let e = deployment::resolve(request).unwrap_err();
+    assert_eq!(e.code, code, "{e}");
+}
+
+#[test]
+fn production_matches_frozen_config_sources_and_fingerprints() {
+    let f = Fixture::new();
+    f.corpus();
+    let result = deployment::resolve(f.request("production.toml")).unwrap();
+    let golden: Value = serde_json::from_str(include_str!(
+        "../../../docs/project/fixtures/c3-deployment/production.resolved.json"
+    ))
+    .unwrap();
+    assert_eq!(result.config(), &golden["config"]);
+    assert_eq!(result.fingerprint(), golden["fingerprint"]);
+    assert_eq!(result.input_fingerprint(), golden["input_fingerprint"]);
+    assert_eq!(
+        serde_json::to_value(result.sources()).unwrap(),
+        golden["sources"]
+    );
+    assert_eq!(serde_json::to_value(&result).unwrap(), golden);
+    for (path, origins) in result.provenance() {
+        assert!(
+            result
+                .config()
+                .pointer(path.strip_prefix("/config").unwrap())
+                .is_some(),
+            "{path}"
+        );
+        for origin in origins {
+            assert!(result.sources().iter().any(|s| s.id == origin.source));
+        }
+    }
+    for path in golden["provenance"].as_object().unwrap().keys() {
+        assert!(result.provenance().contains_key(path), "{path}");
+    }
+    let again = deployment::resolve(f.request("production.toml")).unwrap();
+    assert_eq!(
+        serde_json::to_value(&result).unwrap(),
+        serde_json::to_value(again).unwrap()
+    );
+}
+
+#[test]
+fn modules_profiles_lists_and_environment_keep_order_and_origins() {
+    let f = Fixture::new();
+    f.corpus();
+    let result = deployment::resolve(f.request("development.toml")).unwrap();
+    assert_eq!(result.options()["limits"]["max_model_calls"], "unlimited");
+    assert_eq!(result.options()["limits"]["max_tool_calls"], 20);
+    assert_eq!(result.options()["filesystem"]["write"], true);
+    let rules = result.options()["policy"]["read_roots"]["allow"]
+        .as_array()
+        .unwrap();
+    assert_eq!(
+        rules
+            .iter()
+            .map(|r| r["id"].as_str().unwrap())
+            .collect::<Vec<_>>(),
+        ["read.workspace", "read.shared", "read.docs"]
+    );
+    let origins = result.provenance();
+    for (index, operation) in [(0, "prepend"), (1, "replace"), (2, "append")] {
+        assert_eq!(
+            origins[&format!("/config/options/policy/read_roots/allow/{index}/id")]
+                .last()
+                .unwrap()
+                .operation,
+            operation
+        );
+    }
+    let mut request = f.request("development.toml");
+    request
+        .environment
+        .insert("PABLO_CONFIG_TOOL_CALLS".into(), "7".into());
+    request
+        .overrides
+        .insert("limits.max_tool_calls".into(), 5.into());
+    let result = deployment::resolve(request).unwrap();
+    assert_eq!(result.options()["limits"]["max_tool_calls"], 5);
+    let origins = &result.provenance()["/config/options/limits/max_tool_calls"];
+    assert_eq!(origins.len(), 4);
+    assert_eq!(result.sources().last().unwrap().kind, "override");
+}
+
+#[test]
+fn ordinary_user_workspace_entry_environment_and_host_precedence() {
+    let f = Fixture::new();
+    f.corpus();
+    f.write(
+        "user.toml",
+        "schema_version=1\n[options.limits]\nmax_tool_calls=100\n",
+    );
+    f.write(
+        "workspace.toml",
+        "schema_version=1\n[options.limits]\nmax_tool_calls=50\n",
+    );
+    let mut request = f.request("development.toml");
+    request.user_config = Some(ConfigInput::File("user.toml".into()));
+    request.workspace_config = Some(ConfigInput::File("workspace.toml".into()));
+    request
+        .environment
+        .insert("PABLO_CONFIG_TOOL_CALLS".into(), "7".into());
+    request
+        .overrides
+        .insert("limits.max_tool_calls".into(), 5.into());
+    let result = deployment::resolve(request).unwrap();
+    assert_eq!(result.options()["limits"]["max_tool_calls"], 5);
+    assert_eq!(
+        result.provenance()["/config/options/limits/max_tool_calls"].len(),
+        6
+    );
+}
+
+#[test]
+fn metadata_with_operation_keys_is_data_and_maps_merge() {
+    let f = Fixture::new();
+    f.write("base.toml","schema_version=1\n[options.otel.resource_attributes]\nstage='base'\nregion='fixture'\nmode='append'\nitems='literal'\nbase='source'\npath='literal'\n");
+    let result=f.resolve(json!({"imports":["base.toml"],"options":{"otel":{"resource_attributes":{"stage":"entry"}}}}));
+    assert_eq!(
+        result.options()["otel"]["resource_attributes"],
+        json!({"stage":"entry","region":"fixture","mode":"append","items":"literal","base":"source","path":"literal"})
+    );
+}
+
+#[test]
+fn resource_attribute_limits_apply_after_map_composition() {
+    let f = Fixture::new();
+    let attrs: serde_json::Map<_, _> = (0..64)
+        .map(|i| (format!("key{i}"), json!("value")))
+        .collect();
+    assert!(
+        deployment::resolve(f.document(json!({"options":{"otel":{"resource_attributes":attrs}}})))
+            .is_ok()
+    );
+    let mut request = f.document(json!({"options":{"otel":{"resource_attributes":attrs}}}));
+    request
+        .overrides
+        .insert("otel.resource_attributes".into(), json!({"extra":"value"}));
+    error(request, "config_limit");
+    error(
+        f.document(
+            json!({"options":{"otel":{"resource_attributes":{"multibyte":"é".repeat(2049)}}}}),
+        ),
+        "config_invalid_value",
+    );
+}
+
+#[test]
+fn lists_clear_optionals_unset_and_trace_creation_is_deferred() {
+    let f = Fixture::new();
+    f.corpus();
+    let mut request = f.request("development.toml");
+    request
+        .overrides
+        .insert("trace.path".into(), json!({"unset":true}));
+    request.overrides.insert(
+        "policy.read_roots".into(),
+        json!({"default":"allow","allow":[]}),
+    );
+    let result = deployment::resolve(request).unwrap();
+    assert_eq!(result.options()["trace"]["path"], json!({"unset":true}));
+    assert_eq!(result.options()["policy"]["read_roots"]["allow"], json!([]));
+    assert_eq!(fs::read_dir(&f.0).unwrap().count(), 4);
+    assert!(
+        result
+            .provenance()
+            .keys()
+            .all(|p| !p.ends_with("/trace/path/base"))
+    );
+}
+
+#[test]
+fn source_changes_and_effective_changes_have_distinct_identities() {
+    let f = Fixture::new();
+    f.corpus();
+    let before = deployment::resolve(f.request("production.toml")).unwrap();
+    let path = f.0.join("modules/base.toml");
+    let mut text = fs::read_to_string(&path).unwrap();
+    text.push_str("\n# operator comment\n");
+    fs::write(path, text).unwrap();
+    let comment = deployment::resolve(f.request("production.toml")).unwrap();
+    assert_eq!(before.fingerprint(), comment.fingerprint());
+    assert_ne!(before.input_fingerprint(), comment.input_fingerprint());
+    let path = f.0.join("production.toml");
+    fs::write(
+        &path,
+        fs::read_to_string(&path)
+            .unwrap()
+            .replace("max_tool_calls = 8", "max_tool_calls = 7"),
+    )
+    .unwrap();
+    let changed = deployment::resolve(f.request("production.toml")).unwrap();
+    assert_ne!(comment.fingerprint(), changed.fingerprint());
+}
+
+#[test]
+fn relative_import_and_source_paths_use_declaring_file_and_explicit_root() {
+    let f = Fixture::new();
+    f.corpus();
+    f.write(
+        "nested/entry.toml",
+        "schema_version=1\nimports=['../modules/base.toml','../modules/trace.toml']\n",
+    );
+    f.write(
+        "modules/trace.toml",
+        "schema_version=1\n[options.trace]\npath={base='source',path='output/trace.jsonl'}\n",
+    );
+    let result = deployment::resolve(f.request("nested/entry.toml")).unwrap();
+    assert_eq!(
+        result.options()["trace"]["path"],
+        json!({"base":"config","path":"modules/output/trace.jsonl"})
+    );
+    assert!(!f.0.join("modules/output").exists());
+}
+
+#[test]
+fn import_cycles_repeated_files_and_diamonds_reject() {
+    let f = Fixture::new();
+    for (entry, a, b, expected) in [
+        ("['a.toml']", "['entry.toml']", "[]", "config_import_cycle"),
+        ("['a.toml','a.toml']", "[]", "[]", "config_duplicate_import"),
+        (
+            "['a.toml','b.toml']",
+            "['shared.toml']",
+            "['shared.toml']",
+            "config_duplicate_import",
+        ),
+    ] {
+        for (name, imports) in [
+            ("entry.toml", entry),
+            ("a.toml", a),
+            ("b.toml", b),
+            ("shared.toml", "[]"),
+        ] {
+            f.write(name, &format!("schema_version=1\nimports={imports}\n"));
+        }
+        error(f.request("entry.toml"), expected);
+    }
+}
+
+#[test]
+fn profile_cycles_missing_parents_and_diamond_ancestors_reject() {
+    let f = Fixture::new();
+    for (profiles, code) in [
+        (
+            json!({"a":{"extends":["b"]},"b":{"extends":["a"]}}),
+            "config_profile_cycle",
+        ),
+        (
+            json!({"a":{"extends":["missing"]}}),
+            "config_unknown_profile",
+        ),
+        (
+            json!({"a":{"extends":["b","c"]},"b":{"extends":["d"]},"c":{"extends":["d"]},"d":{}}),
+            "config_duplicate_profile_ancestor",
+        ),
+    ] {
+        error(f.document(json!({"profile":"a","profiles":profiles})), code);
+    }
+}
+
+#[test]
+fn named_definitions_conflict_and_equal_definitions_coalesce() {
+    let f = Fixture::new();
+    f.corpus();
+    let base = fs::read_to_string(f.0.join("modules/base.toml")).unwrap();
+    f.write("same.toml", &base);
+    assert!(
+        deployment::resolve(
+            f.document(json!({"imports":["modules/base.toml","same.toml"],"credentials":{}}))
+        )
+        .is_ok()
+    );
+    f.write(
+        "same.toml",
+        &base.replace("AI_GATEWAY_API_KEY", "DIFFERENT_KEY"),
+    );
+    error(
+        f.document(json!({"imports":["modules/base.toml","same.toml"],"credentials":{}})),
+        "config_conflict",
+    );
+    f.write(
+        "same.toml",
+        "schema_version=1\n[profiles.inspection.options.filesystem]\nwrite=true\n",
+    );
+    error(
+        f.document(json!({"imports":["modules/base.toml","same.toml"],"credentials":{}})),
+        "config_conflict",
+    );
+    f.write(
+        "env_a.toml",
+        "schema_version=1\n[environment.CAP]\noption='limits.max_tool_calls'\n",
+    );
+    f.write(
+        "env_b.toml",
+        "schema_version=1\n[environment.CAP]\noption='limits.max_model_calls'\n",
+    );
+    error(
+        f.document(json!({"imports":["env_a.toml","env_b.toml"]})),
+        "config_conflict",
+    );
+}
+
+#[test]
+fn coalesced_profiles_apply_ordered_lists_once_and_keep_each_origin() {
+    let f = Fixture::new();
+    let profile = "schema_version=1\n[profiles.shared.options.policy.tools]\ndefault='allow'\nallow={mode='append',items=[{id='one.rule',value='fs.read'}]}\n";
+    f.write("a.toml", profile);
+    f.write("b.toml", profile);
+    let result = f.resolve(json!({"imports":["a.toml","b.toml"],"profile":"shared"}));
+    assert_eq!(
+        result.options()["policy"]["tools"]["allow"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    let origins = &result.provenance()["/config/options/policy/tools/allow/0/id"];
+    assert_eq!(origins.len(), 2);
+    let locators: Vec<_> = origins
+        .iter()
+        .map(|origin| {
+            result
+                .sources()
+                .iter()
+                .find(|s| s.id == origin.source)
+                .unwrap()
+                .locator
+                .as_str()
+        })
+        .collect();
+    assert_eq!(locators, ["a.toml#shared", "b.toml#shared"]);
+}
+
+#[test]
+fn policy_identity_conflicts_survive_list_operations_and_authority_layers() {
+    let f = Fixture::new();
+    let rule = json!({"id":"same","value":"fs.read"});
+    let options = json!({"policy":{"tools":{"default":"allow","allow":[rule]}}});
+    error(f.document(json!({"options":options,"authority":[{"id":"host","policy":{"tools":{"default":"deny","allow":[rule]}}}]})),"config_conflict");
+    error(f.document(json!({"options":{"policy":{"tools":{"default":"allow","allow":[rule],"deny":[rule]}}}})), "config_conflict");
+    f.write("policy.toml", "schema_version=1\n[options.policy.tools]\ndefault='allow'\nallow=[{id='same',value='fs.read'}]\n");
+    error(f.document(json!({"imports":["policy.toml"],"options":{"policy":{"tools":{"default":"allow","allow":{"mode":"append","items":[rule]}}}}})), "config_conflict");
+    let allows: Vec<_> = (0..65)
+        .map(|i| json!({"id":format!("allow.{i}"),"value":"fs.read"}))
+        .collect();
+    let denies: Vec<_> = (0..64)
+        .map(|i| json!({"id":format!("deny.{i}"),"value":"fs.write"}))
+        .collect();
+    error(f.document(json!({"options":{"policy":{"tools":{"default":"allow","allow":allows,"deny":denies}}}})),"config_limit");
+}
+
+#[test]
+fn locked_resolution_ignores_untrusted_files_and_undeclared_values() {
+    let f = Fixture::new();
+    f.corpus();
+    let before = deployment::resolve(f.request("production.toml")).unwrap();
+    let mut request = f.request("production.toml");
+    request.user_config = Some(ConfigInput::File("/not-an-approved-root/user.toml".into()));
+    request.workspace_config = Some(ConfigInput::Document(
+        json!({"options":{"filesystem":{"write":true}}}),
+    ));
+    for name in [
+        "OTEL_TRACES_EXPORTER",
+        "OTEL_EXPORTER_OTLP_ENDPOINT",
+        "AI_GATEWAY_API_KEY",
+        "HOME",
+        "XDG_CONFIG_HOME",
+        "PABLO_TASK_SECRET",
+    ] {
+        request
+            .environment
+            .insert(name.into(), "PRIVATE-SENTINEL".into());
+    }
+    let after = deployment::resolve(request).unwrap();
+    assert_eq!(
+        serde_json::to_value(before).unwrap(),
+        serde_json::to_value(&after).unwrap()
+    );
+    assert!(!format!("{after:?}").contains("PRIVATE-SENTINEL"));
+}
+
+#[test]
+fn locked_overrides_narrow_and_forbidden_equal_assignments_reject() {
+    let f = Fixture::new();
+    f.corpus();
+    for (option, value, expected) in [
+        ("limits.max_run_duration_ms", json!(300000), None),
+        ("input", json!("DYNAMIC-TASK-SENTINEL"), None),
+        (
+            "limits.max_run_duration_ms",
+            json!(600001),
+            Some("config_authority_violation"),
+        ),
+        (
+            "shell.enabled",
+            json!(false),
+            Some("config_override_forbidden"),
+        ),
+        (
+            "profile",
+            json!("production"),
+            Some("config_override_forbidden"),
+        ),
+    ] {
+        let mut request = f.request("production.toml");
+        request.overrides.insert(option.into(), value);
+        if let Some(code) = expected {
+            error(request, code);
+        } else {
+            let result = deployment::resolve(request).unwrap();
+            assert!(
+                !serde_json::to_string(&result)
+                    .unwrap()
+                    .contains("DYNAMIC-TASK-SENTINEL")
+            );
+        }
+    }
+}
+
+#[test]
+fn authority_ceiling_cannot_be_widened_by_profile_or_environment() {
+    let f = Fixture::new();
+    let document = json!({"profile":"selected","profiles":{"selected":{"options":{"limits":{"max_tool_calls":9}}}},"environment":{"TOOL_CAP":{"option":"limits.max_tool_calls"}},"authority":[{"id":"ceiling","limits":{"max_tool_calls":8}}]});
+    let mut request = f.document(document);
+    request.environment.insert("TOOL_CAP".into(), "10".into());
+    let e = deployment::resolve(request).unwrap_err();
+    assert_eq!(e.code, "config_authority_violation");
+    assert_eq!(e.authority_id.as_deref(), Some("ceiling"));
+}
+
+#[test]
+fn workspace_authority_stays_anchored_when_later_layers_change_workspace() {
+    let f = Fixture::new();
+    let document = json!({"options":{"run":{"workspace":{"base":"binding","name":"workspace","path":"approved"}}},"authority":[{"id":"fixed","workspace_roots":[{"base":"workspace","path":"."}]}]});
+    let result = f.resolve(document.clone());
+    assert_eq!(
+        result.config()["authority"][0]["workspace_roots"][0],
+        json!({"base":"binding","name":"workspace","path":"approved"})
+    );
+    for path in ["approved/child", "sibling"] {
+        let mut request = f.document(document.clone());
+        request.overrides.insert(
+            "run.workspace".into(),
+            json!({"base":"binding","name":"workspace","path":path}),
+        );
+        if path == "sibling" {
+            let e = deployment::resolve(request).unwrap_err();
+            assert_eq!(e.code, "config_authority_violation");
+            assert_eq!(e.authority_id.as_deref(), Some("fixed"));
+        } else {
+            assert!(deployment::resolve(request).is_ok());
+        }
+    }
+    let mut request = f.document(
+        json!({"options":{"run":{"workspace":{"base":"binding","name":"elsewhere","path":"."}}}}),
+    );
+    request
+        .path_bindings
+        .insert("elsewhere".into(), f.0.with_file_name("other-workspace"));
+    request
+        .host_authority
+        .push(json!({"id":"host","workspace_roots":[{"base":"workspace","path":"."}]}));
+    error(request, "config_authority_violation");
+}
+
+#[test]
+fn inactive_and_overridden_invalid_declarations_are_not_hidden() {
+    let f = Fixture::new();
+    for body in [
+        json!({"options":{"limits":{"max_total_tokens":"18446744073709551616"}}}),
+        json!({"options":{"limits":{"max_events":"3"}}}),
+        json!({"options":{"run":{"workspace":{"base":"workspace","path":"."}}}}),
+        json!({"options":{"trace":{"path":{"base":"binding","name":"workspace","path":"../escape"}}}}),
+    ] {
+        error(
+            f.document(json!({"profiles":{"unused":body}})),
+            "config_invalid_value",
+        );
+    }
+    let mut request =
+        f.document(json!({"options":{"limits":{"max_total_tokens":"18446744073709551616"}}}));
+    request
+        .overrides
+        .insert("limits.max_total_tokens".into(), "4".into());
+    error(request, "config_invalid_value");
+}
+
+#[test]
+fn private_file_and_host_sources_are_references_only() {
+    let f = Fixture::new();
+    f.corpus();
+    fs::create_dir(f.0.join("secrets")).unwrap();
+    let mut request = f.request("credential-sources.toml");
+    request
+        .path_bindings
+        .insert("secrets".into(), f.0.join("secrets"));
+    let before = deployment::resolve(request).unwrap();
+    f.write("secrets/gateway.token", "PRIVATE-GATEWAY-SENTINEL");
+    f.write("secrets/collector.env", "PRIVATE-EXPORTER-SENTINEL");
+    let mut request = f.request("credential-sources.toml");
+    request
+        .path_bindings
+        .insert("secrets".into(), f.0.join("secrets"));
+    request.environment.insert(
+        "SYNTHETIC_GATEWAY_KEY".into(),
+        "PRIVATE-ENV-SENTINEL".into(),
+    );
+    let after = deployment::resolve(request).unwrap();
+    assert_eq!(
+        serde_json::to_value(before).unwrap(),
+        serde_json::to_value(&after).unwrap()
+    );
+    let serialized = serde_json::to_string(&after).unwrap();
+    for sentinel in [
+        "PRIVATE-GATEWAY-SENTINEL",
+        "PRIVATE-EXPORTER-SENTINEL",
+        "PRIVATE-ENV-SENTINEL",
+    ] {
+        assert!(!serialized.contains(sentinel));
+    }
+}
+
+#[test]
+fn environment_scalar_parsing_preserves_zero_unlimited_and_errors() {
+    let f = Fixture::new();
+    f.corpus();
+    for (text, result) in [
+        ("0", Some(json!(0))),
+        ("unlimited", Some(json!("unlimited"))),
+        ("7", Some(json!(7))),
+        ("", None),
+        ("1.0", None),
+        ("-1", None),
+        ("4294967296", None),
+    ] {
+        let mut request = f.request("development.toml");
+        request
+            .environment
+            .insert("PABLO_CONFIG_TOOL_CALLS".into(), text.into());
+        match result {
+            Some(value) => assert_eq!(
+                deployment::resolve(request).unwrap().options()["limits"]["max_tool_calls"],
+                value
+            ),
+            None => error(request, "config_environment_value"),
+        };
+    }
+    let request = f.document(
+        json!({"environment":{"REQUIRED":{"option":"limits.max_tool_calls","required":true}}}),
+    );
+    error(request, "config_environment_missing");
+    error(f.document(json!({"environment":{"A":{"option":"limits.max_tool_calls"},"B":{"option":"limits.max_tool_calls"}}})),"config_conflict");
+}
+
+#[test]
+fn exact_u64_ceiling_and_event_ranges() {
+    let f = Fixture::new();
+    assert_eq!(
+        f.resolve(json!({"options":{"limits":{"max_total_tokens":"18446744073709551615"}}}))
+            .options()["limits"]["max_total_tokens"],
+        "18446744073709551615"
+    );
+    for value in ["18446744073709551616", "01", "-1"] {
+        error(
+            f.document(json!({"options":{"limits":{"max_total_tokens":value}}})),
+            "config_invalid_value",
+        );
+    }
+    assert_eq!(
+        f.resolve(json!({"options":{"limits":{"max_events":"4"}}}))
+            .options()["limits"]["max_events"],
+        "4"
+    );
+    error(
+        f.document(json!({"options":{"limits":{"max_events":"3"}}})),
+        "config_invalid_value",
+    );
+}
+
+#[test]
+fn unknown_unsupported_and_schema_versions_are_explicit_and_redacted() {
+    let f = Fixture::new();
+    error(
+        f.document(json!({"options":{"filesystem":{"wrtie":true}}})),
+        "config_unknown_option",
+    );
+    let e = deployment::resolve(
+        f.document(json!({"profiles":{"unused":{"options":{"mcp":{"enabled":false}}}}})),
+    )
+    .unwrap_err();
+    assert_eq!(e.code, "config_unsupported_feature");
+    assert_eq!(e.owner, Some("C3.15"));
+    error(
+        f.document(json!({"options":{"model":{"provider":"openrouter"}}})),
+        "config_unsupported_feature",
+    );
+    for version in [Value::Null, json!(0), json!(2), json!("1")] {
+        let mut request = f.document(json!({}));
+        if let ConfigInput::Document(document) = &mut request.entry {
+            document["schema_version"] = version;
+            document["imports"] = json!(["never-opened.toml"]);
+        }
+        error(request, "config_schema_version");
+    }
+    f.write(
+        "private.toml",
+        "schema_version=1\npassword = \"PRIVATE-SENTINEL\n",
+    );
+    let e = deployment::resolve(f.request("private.toml")).unwrap_err();
+    assert_eq!(e.code, "config_parse");
+    assert!(e.line.is_some());
+    assert!(!format!("{e:?}").contains("PRIVATE-SENTINEL"));
+    assert!(e.to_string().len() < 1024);
+}
+
+#[test]
+fn frozen_toml_corpus_is_accepted_or_rejected_by_the_real_loader() {
+    let f = Fixture::new();
+    f.corpus();
+    let corpus = Path::new(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../docs/project/fixtures/c3-deployment"
+    ));
+    let cases: Value = serde_json::from_str(include_str!(
+        "../../../docs/project/fixtures/c3-deployment/cases.json"
+    ))
+    .unwrap();
+    for case in cases["shape_cases"].as_array().unwrap() {
+        let file = case["file"].as_str().unwrap();
+        f.write(file, &fs::read_to_string(corpus.join(file)).unwrap());
+        let mut request = f.request(file);
+        request
+            .path_bindings
+            .insert("secrets".into(), f.0.join("unopened-secrets"));
+        let result = deployment::resolve(request);
+        match case["expected"].as_str().unwrap() {
+            "accepted_shape" => {
+                result.unwrap();
+            }
+            "parse_error" => assert_eq!(result.unwrap_err().code, "config_parse", "{file}"),
+            "type_error" => assert_eq!(result.unwrap_err().code, "config_invalid_value", "{file}"),
+            "schema_error" => {
+                assert!(result.is_err(), "{file}");
+            }
+            other => panic!("unknown corpus expectation {other}"),
+        }
+    }
+}
+
+#[test]
+fn semantic_combinations_and_references_reject_before_activation() {
+    let f = Fixture::new();
+    for options in [
+        json!({"model":{"credential":"missing"}}),
+        json!({"filesystem":{"enabled":false,"write":true}}),
+        json!({"trace":{"capture_content":true}}),
+        json!({"otel":{"max_queue_size":1,"max_export_batch_size":2}}),
+        json!({"run":{"workspace":{"base":"workspace","path":"."}}}),
+        json!({"trace":{"path":{"base":"binding","name":"unknown","path":"."}}}),
+        json!({"trace":{"path":{"base":"binding","name":"workspace","path":"../escape"}}}),
+        json!({"otel":{"endpoint":"http://[invalid"}}),
+    ] {
+        error(
+            f.document(json!({"options":options})),
+            "config_invalid_value",
+        );
+    }
+    error(f.document(json!({"credentials":{"gateway":{"consumer":"otel.headers","sources":[{"kind":"host","name":"synthetic"}]}}})), "config_invalid_value");
+}
+
+#[test]
+fn canonical_encoding_matches_independent_frozen_vectors() {
+    let vectors: Vec<Value> = serde_json::from_str(include_str!(
+        "../../../docs/project/fixtures/c3-deployment/canonical-vectors.json"
+    ))
+    .unwrap();
+    for vector in vectors {
+        assert_eq!(
+            deployment::fingerprint(&vector["value"]).unwrap(),
+            vector["sha256"]
+        );
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn imports_cannot_escape_or_follow_symlinks_or_block_on_fifo() {
+    use std::os::unix::fs::symlink;
+    let f = Fixture::new();
+    let outside = Fixture::new();
+    outside.write("outside.toml", "schema_version=1\n");
+    symlink(outside.0.join("outside.toml"), f.0.join("link.toml")).unwrap();
+    symlink(&outside.0, f.0.join("linked-dir")).unwrap();
+    assert!(
+        Command::new("mkfifo")
+            .arg(f.0.join("fifo.toml"))
+            .status()
+            .unwrap()
+            .success()
+    );
+    for name in [
+        "https://example.invalid/a.toml",
+        "/outside/a.toml",
+        "../outside.toml",
+        "*.toml",
+        "link.toml",
+        "linked-dir/outside.toml",
+        "fifo.toml",
+    ] {
+        error(f.document(json!({"imports":[name]})), "config_import_path");
+    }
+    let mut request = f.request("link.toml");
+    request
+        .path_bindings
+        .insert("workspace".into(), f.0.clone());
+    error(request, "config_import_path");
+}
+
+#[test]
+fn limits_on_file_bytes_depth_and_profile_expansion_are_real() {
+    let f = Fixture::new();
+    let mut content = "schema_version=1\n#".to_owned();
+    content.push_str(&"x".repeat(deployment::MAX_FILE_BYTES - content.len()));
+    f.write("max.toml", &content);
+    assert!(deployment::resolve(f.document(json!({"imports":["max.toml"]}))).is_ok());
+    content.push('x');
+    f.write("max.toml", &content);
+    error(f.document(json!({"imports":["max.toml"]})), "config_limit");
+    for i in 0..17 {
+        f.write(
+            &format!("depth{i}.toml"),
+            &format!(
+                "schema_version=1\n{}",
+                if i < 16 {
+                    format!("imports=['depth{}.toml']\n", i + 1)
+                } else {
+                    String::new()
+                }
+            ),
+        );
+    }
+    error(f.request("depth0.toml"), "config_limit");
+    let mut profiles = serde_json::Map::new();
+    for i in 0..17 {
+        profiles.insert(
+            format!("p{i}"),
+            if i < 16 {
+                json!({"extends":[format!("p{}",i+1)]})
+            } else {
+                json!({})
+            },
+        );
+    }
+    error(
+        f.document(json!({"profile":"p0","profiles":profiles})),
+        "config_limit",
+    );
+}
+
+#[test]
+fn aggregate_file_bytes_and_file_count_accept_exact_bounds() {
+    let f = Fixture::new();
+    let credentials = "[credentials.gateway]\nconsumer='provider.vercel'\nsources=[{kind='host',name='synthetic'}]\n";
+    // Nine individually smaller files isolate the aggregate byte bound.
+    let imports: Vec<_> = (1..9).map(|i| format!("bytes{i}.toml")).collect();
+    for i in 0..9 {
+        let mut text = if i == 0 {
+            format!(
+                "schema_version=1\nimports={}\n{credentials}#",
+                serde_json::to_string(&imports).unwrap()
+            )
+        } else {
+            "schema_version=1\n#".into()
+        };
+        let size =
+            deployment::MAX_INPUT_BYTES / 9 + usize::from(i < deployment::MAX_INPUT_BYTES % 9);
+        text.push_str(&"x".repeat(size - text.len()));
+        f.write(&format!("bytes{i}.toml"), &text);
+    }
+    assert!(deployment::resolve(f.request("bytes0.toml")).is_ok());
+    let path = f.0.join("bytes8.toml");
+    fs::write(&path, format!("{}x", fs::read_to_string(&path).unwrap())).unwrap();
+    error(f.request("bytes0.toml"), "config_limit");
+
+    for i in 0..62 {
+        f.write(&format!("leaf{i}.toml"), "schema_version=1\n");
+    }
+    for (group, range) in [(0, 0..31), (1, 31..61)] {
+        let imports: Vec<_> = range.map(|i| format!("leaf{i}.toml")).collect();
+        f.write(
+            &format!("group{group}.toml"),
+            &format!(
+                "schema_version=1\nimports={}\n",
+                serde_json::to_string(&imports).unwrap()
+            ),
+        );
+    }
+    f.write(
+        "files.toml",
+        &format!("schema_version=1\nimports=['group0.toml','group1.toml']\n{credentials}"),
+    );
+    assert_eq!(
+        deployment::resolve(f.request("files.toml"))
+            .unwrap()
+            .sources()
+            .iter()
+            .filter(|s| s.kind == "file")
+            .count(),
+        64
+    );
+    let imports: Vec<_> = (31..62).map(|i| format!("leaf{i}.toml")).collect();
+    f.write(
+        "group1.toml",
+        &format!(
+            "schema_version=1\nimports={}\n",
+            serde_json::to_string(&imports).unwrap()
+        ),
+    );
+    error(f.request("files.toml"), "config_limit");
+    for count in [32, 33] {
+        let imports: Vec<_> = (0..count).map(|i| format!("leaf{i}.toml")).collect();
+        let request = f.document(json!({"imports":imports}));
+        if count == 32 {
+            assert!(deployment::resolve(request).is_ok());
+        } else {
+            error(request, "config_limit");
+        }
+    }
+}
+
+#[test]
+fn profile_depth_and_total_expansion_accept_exact_bounds() {
+    let f = Fixture::new();
+    for depth in [16, 17] {
+        let profiles: serde_json::Map<_, _> = (0..depth)
+            .map(|i| {
+                (
+                    format!("p{i}"),
+                    if i + 1 < depth {
+                        json!({"extends":[format!("p{}",i+1)]})
+                    } else {
+                        json!({})
+                    },
+                )
+            })
+            .collect();
+        let request = f.document(json!({"profile":"p0","profiles":profiles}));
+        if depth == 16 {
+            assert!(deployment::resolve(request).is_ok());
+        } else {
+            error(request, "config_limit");
+        }
+    }
+    let mut profiles = serde_json::Map::new();
+    let branches: Vec<_> = (0..7).map(|i| format!("branch{i}")).collect();
+    profiles.insert("selected".into(), json!({"extends":branches}));
+    for i in 0..7 {
+        let leaves: Vec<_> = (0..8).map(|j| format!("leaf{i}_{j}")).collect();
+        profiles.insert(format!("branch{i}"), json!({"extends":leaves}));
+        for name in leaves {
+            profiles.insert(name, json!({}));
+        }
+    }
+    assert_eq!(
+        deployment::resolve(f.document(json!({"profile":"selected","profiles":profiles})))
+            .unwrap()
+            .sources()
+            .iter()
+            .filter(|s| s.kind == "profile")
+            .count(),
+        64
+    );
+    profiles.insert("one_more".into(), json!({}));
+    error(f.document(json!({"profiles":profiles})), "config_limit");
+}
+
+#[test]
+fn credential_binding_authority_and_rule_budgets_are_enforced() {
+    let f = Fixture::new();
+    for count in [64, 65] {
+        let credentials: serde_json::Map<_, _> = (0..count).map(|i| (if i == 0 {"gateway".into()} else {format!("key{i}")}, json!({"consumer":"provider.vercel","sources":[{"kind":"host","name":"synthetic"}]}))).collect();
+        let request = f.document(json!({"credentials":credentials}));
+        if count == 64 {
+            assert!(deployment::resolve(request).is_ok());
+        } else {
+            error(request, "config_limit");
+        }
+        let mut request = f.document(json!({}));
+        for i in 1..count {
+            request
+                .path_bindings
+                .insert(format!("binding{i}"), f.0.clone());
+        }
+        if count == 64 {
+            assert!(deployment::resolve(request).is_ok());
+        } else {
+            error(request, "config_limit");
+        }
+        let authority: Vec<_> = (0..count)
+            .map(|i| json!({"id":format!("ceiling.{i}")}))
+            .collect();
+        let request = f.document(json!({"authority":authority}));
+        if count == 64 {
+            assert!(deployment::resolve(request).is_ok());
+        } else {
+            error(request, "config_limit");
+        }
+    }
+    for count in [8, 9] {
+        let sources: Vec<_> = (0..count)
+            .map(|i| json!({"kind":"host","name":format!("source{i}")}))
+            .collect();
+        let request = f.document(
+            json!({"credentials":{"gateway":{"consumer":"provider.vercel","sources":sources}}}),
+        );
+        if count == 8 {
+            assert!(deployment::resolve(request).is_ok());
+        } else {
+            error(request, "config_limit");
+        }
+    }
+    let mut authority: Vec<_> = (0..8)
+        .map(|i| {
+            let deny: Vec<_> = (0..128)
+                .map(|j| json!({"id":format!("rule.{i}.{j}"),"value":"fs.write"}))
+                .collect();
+            json!({"id":format!("ceiling.{i}"),"policy":{"tools":{"default":"allow","deny":deny}}})
+        })
+        .collect();
+    assert!(deployment::resolve(f.document(json!({"authority":authority}))).is_ok());
+    authority.push(json!({"id":"extra","policy":{"tools":{"default":"allow","deny":[{"id":"extra.rule","value":"fs.write"}]}}}));
+    error(f.document(json!({"authority":authority})), "config_limit");
+}
+
+#[test]
+fn file_depth_hardlink_and_format_boundaries() {
+    let f = Fixture::new();
+    f.corpus();
+    for depth in [16, 17] {
+        for i in 0..depth {
+            f.write(&format!("d{i}.toml"), &format!("schema_version=1\n{}{}", if i + 1 < depth {format!("imports=['d{}.toml']\n",i+1)} else {String::new()}, if i == 0 {"[credentials.gateway]\nconsumer='provider.vercel'\nsources=[{kind='host',name='synthetic'}]\n"} else {""}));
+        }
+        if depth == 16 {
+            assert!(deployment::resolve(f.request("d0.toml")).is_ok());
+        } else {
+            error(f.request("d0.toml"), "config_limit");
+        }
+    }
+    fs::hard_link(f.0.join("modules/base.toml"), f.0.join("hard.toml")).unwrap();
+    error(
+        f.document(json!({"imports":["modules/base.toml","hard.toml"],"credentials":{}})),
+        "config_duplicate_import",
+    );
+    let lf = deployment::resolve(f.request("production.toml")).unwrap();
+    let text = fs::read_to_string(f.0.join("production.toml")).unwrap();
+    f.write("production.toml", &text.replace('\n', "\r\n"));
+    let crlf = deployment::resolve(f.request("production.toml")).unwrap();
+    assert_eq!(lf.fingerprint(), crlf.fingerprint());
+    assert_ne!(lf.input_fingerprint(), crlf.input_fingerprint());
+    for text in ["\u{feff}schema_version=1", "schema_version=1\n#\0"] {
+        f.write("invalid.toml", text);
+        error(f.request("invalid.toml"), "config_parse");
+    }
+    fs::write(f.0.join("invalid.toml"), [0xff, 0xfe]).unwrap();
+    error(f.request("invalid.toml"), "config_parse");
+}
+
+#[test]
+fn typed_and_file_inputs_have_equal_effective_identity() {
+    let f = Fixture::new();
+    f.corpus();
+    let file = deployment::resolve(f.request("production.toml")).unwrap();
+    let mut request=f.document(json!({"deployment":file.config()["deployment"],"options":file.config()["options"],"authority":file.config()["authority"],"credentials":file.config()["credentials"]}));
+    request.locked = true;
+    let typed = deployment::resolve(request).unwrap();
+    assert_eq!(file.config(), typed.config());
+    assert_eq!(file.fingerprint(), typed.fingerprint());
+    assert_ne!(file.input_fingerprint(), typed.input_fingerprint());
+}
+
+#[test]
+fn ambient_process_state_cannot_change_locked_resolution() {
+    let f = Fixture::new();
+    f.corpus();
+    let expected = deployment::resolve(f.request("production.toml")).unwrap();
+    let outside = Fixture::new();
+    outside.write(".env", "PRIVATE-UNREAD-AMBIENT");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(outside.0.join(".env"), fs::Permissions::from_mode(0o0)).unwrap();
+    }
+    outside.write("user.toml", "not toml");
+    let output = Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", "environment_child_probe", "--nocapture"])
+        .current_dir(&outside.0)
+        .env("PABLO_CONFIG_TEST_ROOT", &f.0)
+        .env("PABLO_CONFIG_TEST_EXPECTED", expected.fingerprint())
+        .env("PABLO_CONFIG_TEST_INPUT", expected.input_fingerprint())
+        .env("HOME", &outside.0)
+        .env("XDG_CONFIG_HOME", &outside.0)
+        .env("OTEL_TRACES_EXPORTER", "otlp")
+        .env("AI_GATEWAY_API_KEY", "PRIVATE-UNREAD-PROCESS")
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+}
+#[test]
+fn environment_child_probe() {
+    let Ok(root) = std::env::var("PABLO_CONFIG_TEST_ROOT") else {
+        return;
+    };
+    let mut request = ResolveRequest::new(Path::new(&root).to_path_buf(), "production.toml");
+    request
+        .path_bindings
+        .insert("workspace".into(), root.into());
+    let result = deployment::resolve(request).unwrap();
+    assert_eq!(
+        result.fingerprint(),
+        std::env::var("PABLO_CONFIG_TEST_EXPECTED").unwrap()
+    );
+    assert_eq!(
+        result.input_fingerprint(),
+        std::env::var("PABLO_CONFIG_TEST_INPUT").unwrap()
+    );
+}
