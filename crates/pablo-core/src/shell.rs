@@ -322,6 +322,8 @@ mod unix {
                 status,
                 policy_rule: None,
                 shell: Some(capture.finish(exit)),
+                filesystem: None,
+                policy_decisions: context.policy_decisions.into(),
             },
             context.limits.max_tool_output_bytes,
         )

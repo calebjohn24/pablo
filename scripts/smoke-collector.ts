@@ -8,6 +8,7 @@ import { body, cleanEnv, content, exercise, exporterSecret, parentId, server, tr
 // @ts-expect-error Dependency-free Node helper is JavaScript.
 import { collectorBinary, lock } from './lib/collector.mjs';
 
+const filesystem = process.argv.includes("--filesystem");
 const binary = await collectorBinary();
 const received: any[] = [];
 const proof = await server(async (req, res) => {
@@ -37,7 +38,7 @@ try {
   const result = await exercise({ OTEL_TRACES_EXPORTER: 'otlp', OTEL_EXPORTER_OTLP_ENDPOINT: `http://${listen}`,
     OTEL_EXPORTER_OTLP_HEADERS: `authorization=Bearer%20${exporterSecret}`,
     OTEL_RESOURCE_ATTRIBUTES: 'service.name=lower-precedence,deployment.environment.name=fixture', OTEL_SERVICE_NAME: 'pablo-collector-proof',
-  });
+  }, {filesystem});
   for (let i = 0; received.length === 0 && i < 100; i++) await delay(20);
   const resources = received.flatMap(r => r.resourceSpans);
   assert(resources.length > 0, 'real Collector must forward accepted spans');
@@ -47,7 +48,7 @@ try {
   assert.equal(root.parentSpanId, parentId); assert.equal(root.traceId, traceId); assert.equal(root.traceState, traceState);
   assert.equal(root.flags & 0x300, 0x300, 'parent is known and remote');
   assert.equal(spans.filter(s => s.name.startsWith('chat ')).length, 2);
-  assert.equal(spans.filter(s => s.name === 'execute_tool shell.run').length, 1);
+  assert.equal(spans.filter(s => s.name === (filesystem ? 'execute_tool fs.read' : 'execute_tool shell.run')).length, 1);
   const events = result.events;
   for (const span of spans) {
     assert.equal(span.traceId, traceId); assert.equal(span.traceState, traceState);
@@ -71,7 +72,7 @@ try {
   const serialized = JSON.stringify(received) + diagnostics;
   for (const secret of [content, exporterSecret, 'synthetic-provider', 'printf', 'synthetic-baggage']) assert(!serialized.includes(secret));
   assert(!result.stderr.includes('telemetry'));
-  console.log(JSON.stringify({ collector: lock.version, platform: `${process.platform}/${process.arch}`, spans: spans.length,
+  console.log(JSON.stringify({ collector: lock.version, filesystem, platform: `${process.platform}/${process.arch}`, spans: spans.length,
     nativeEvents: events.length, remoteParent: true, exactIdsAndTimestamps: true, metadataOnly: true, elapsedMs: Math.round(result.elapsedMs) }));
 } finally {
   child.kill('SIGTERM');

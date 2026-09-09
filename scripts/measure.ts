@@ -21,7 +21,7 @@ assert(Number.isInteger(count) && count >= 10 && count <= 1000, 'sample count mu
 const binary = resolve(process.env.PABLO_MEASURE_BINARY ?? join(root, 'target/release/pablo'));
 const direct = resolve(process.env.PABLO_MEASURE_DIRECT ?? join(root, 'target/release/examples/measure'));
 const reuse = process.env.PABLO_MEASURE_REUSE !== '0';
-const destination = resolve(process.argv[3] ?? join(root, `.pablo/measurements/c1.7-${process.platform}-${process.arch}.json`));
+const destination = resolve(process.argv[3] ?? join(root, `.pablo/measurements/c2.5-${process.platform}-${process.arch}.json`));
 const cwd = await realpath(await mkdtemp(join(tmpdir(), 'pablo-measure-')));
 const env = cleanEnv();
 const exec = promisify(execFile);
@@ -169,7 +169,7 @@ try {
   await copyFile(binary, stripped);
   await exec("strip", [stripped], { env });
   const report = {
-    schema_version: 1, checkpoint: 'C1.7', timestamp: new Date().toISOString(), source_sha256: process.env.PABLO_MEASURE_SOURCE_SHA256 ?? await sourceFingerprint(root),
+    schema_version: 1, checkpoint: process.env.PABLO_MEASURE_CHECKPOINT ?? 'C2.5', timestamp: new Date().toISOString(), source_sha256: process.env.PABLO_MEASURE_SOURCE_SHA256 ?? await sourceFingerprint(root),
     harness_sha256: createHash('sha256').update(await readFile(fileURLToPath(import.meta.url))).digest('hex'),
     platform: { os: process.platform, arch: process.arch, kernel: release(), cpu: cpus()[0].model, logical_cpus: cpus().length, memory_bytes: totalmem(),
       node: process.version, rust: (await exec('rustc', ['--version'])).stdout.trim(),

@@ -33,6 +33,7 @@ const WRITE_TIMEOUT: Duration = Duration::from_secs(30);
 struct State {
     initialized: bool,
     extended: bool,
+    task_extended: bool,
     session: Option<(wire::SessionId, std::path::PathBuf)>,
     prompted: bool,
     prompt_active: bool,
@@ -182,7 +183,16 @@ async fn serve_streams(
                         .as_ref()
                         .and_then(|m| m.get(EXTENSION))
                         == Some(&json!(true));
-                    let caps = wire::AgentCapabilities::new().meta(meta(json!(true)));
+                    state.task_extended = state.extended
+                        && request
+                            .client_capabilities
+                            .meta
+                            .as_ref()
+                            .and_then(|m| m.get("pablo/task-v1"))
+                            == Some(&json!(true));
+                    let mut capabilities = meta(json!(true));
+                    capabilities.insert("pablo/task-v1".into(), json!(true));
+                    let caps = wire::AgentCapabilities::new().meta(capabilities);
                     responder.respond(
                         wire::InitializeResponse::new(
                             agent_client_protocol::schema::ProtocolVersion::V1,
@@ -268,7 +278,7 @@ async fn serve_streams(
                         Ok(input) => input,
                         Err(error) => return responder.respond_with_error(error),
                     };
-                    let (cwd, extended) = {
+                    let (cwd, extended, task_extended) = {
                         let mut s = state.lock().unwrap();
                         let Some((id, cwd)) = &s.session else {
                             return responder.respond_with_error(invalid("create a session first"));
@@ -283,7 +293,7 @@ async fn serve_streams(
                         }
                         let cwd = cwd.clone();
                         s.prompted = true;
-                        (cwd, s.extended)
+                        (cwd, s.extended, s.task_extended)
                     };
                     let mut spec = match options.spec() {
                         Ok(spec) => spec,
@@ -364,6 +374,7 @@ async fn serve_streams(
                             outcome,
                             terminal,
                             extended,
+                            task_extended,
                             cancel.is_cancelled(),
                         ))
                     })
@@ -536,8 +547,14 @@ fn project(event: &RunEvent) -> Result<Option<wire::SessionUpdate>, Error> {
             wire::ContentChunk::new(wire::ContentBlock::Text(wire::TextContent::new(text))),
         ),
         EventKind::ToolStarted { call } => wire::SessionUpdate::ToolCall(
-            wire::ToolCall::new(call.id.clone(), "shell.run")
-                .kind(wire::ToolKind::Execute)
+            wire::ToolCall::new(call.id.clone(), call.name.clone())
+                .kind(if matches!(call.name.as_str(), "fs.write" | "fs.edit") {
+                    wire::ToolKind::Edit
+                } else if call.name.starts_with("fs.") {
+                    wire::ToolKind::Read
+                } else {
+                    wire::ToolKind::Execute
+                })
                 .status(wire::ToolCallStatus::Pending)
                 .raw_input(call.arguments.clone()),
         ),
@@ -571,6 +588,7 @@ fn prompt_response(
     outcome: Result<RunOutcome, String>,
     terminal: Option<RunEvent>,
     extended: bool,
+    task_extended: bool,
     cancelled: bool,
 ) -> Result<wire::PromptResponse, Error> {
     let outcome =
@@ -578,7 +596,14 @@ fn prompt_response(
     let terminal =
         terminal.ok_or_else(|| Error::internal_error().data("terminal event unavailable"))?;
     let mut details = correlation(&terminal, terminal.seq);
-    details["outcome"] = serde_json::to_value(&outcome).map_err(|_| Error::internal_error())?;
+    if task_extended {
+        details["task"] = serde_json::to_value(
+            pablo_core::TaskResult::from_terminal(&terminal).ok_or_else(Error::internal_error)?,
+        )
+        .map_err(|_| Error::internal_error())?;
+    } else {
+        details["outcome"] = serde_json::to_value(&outcome).map_err(|_| Error::internal_error())?;
+    }
     // ACP cancellation remains meaningful while queued updates drain, even if
     // the core has already settled. Preserve that immutable native outcome in
     // metadata; the standard stop reason describes the cancelled prompt turn.
@@ -618,6 +643,7 @@ mod tests {
 
     fn event(seq: u64, kind: EventKind) -> RunEvent {
         RunEvent {
+            accounting: None,
             schema_version: "c1.2".into(),
             seq,
             timestamp_unix_micros: seq,

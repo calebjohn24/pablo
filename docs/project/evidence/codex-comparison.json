@@ -1,0 +1,170 @@
+{
+  "timestamp": "2026-09-05T10:27:57.134Z",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "kernel": "25.6.0",
+    "cpu": "Apple M4",
+    "node": "v24.20.0"
+  },
+  "method": {
+    "samples": 30,
+    "warmup": 5,
+    "workload": "one loopback model request returning fixed text; no inference, tool call, network model latency or quality evaluation",
+    "protocols": {
+      "pablo": "Chat Completions SSE; CLI task JSON and ACP server",
+      "codex": "Responses SSE; exec JSONL and App Server"
+    },
+    "configuration": "fresh temporary workspace, isolated Codex home with no auth/plugins/MCP/user config; Codex read-only, ephemeral threads; Pablo default capabilities; neither asked to execute a tool",
+    "timers": "CLI includes process lifetime; server idle RSS after initialize and 50 ms; warm turn excludes thread/session creation, new_task includes it; completion uses protocol notification receipt, without polling",
+    "scope": "root process RSS only; installed main executable bytes, not complete distribution or peak memory; warm Codex threads remain loaded until process exit"
+  },
+  "stats": {
+    "pablo": {
+      "version_process_ms": {
+        "n": 30,
+        "min": 4.274041000000125,
+        "p50": 4.733291000000008,
+        "p95": 5.061499999999796,
+        "max": 5.252875000000131
+      },
+      "cli_provider_ready_ms": {
+        "n": 30,
+        "min": 6.343667000000096,
+        "p50": 7.3061250000000655,
+        "p95": 7.841750000000502,
+        "max": 8.041334000000006
+      },
+      "cli_total_ms": {
+        "n": 30,
+        "min": 6.900500000000648,
+        "p50": 7.926457999999911,
+        "p95": 8.448457999999846,
+        "max": 8.643333999999868
+      },
+      "cli_request_bytes": {
+        "n": 30,
+        "min": 3352,
+        "p50": 3352,
+        "p95": 3352,
+        "max": 3352
+      },
+      "server_initialize_ms": {
+        "n": 30,
+        "min": 3.526832999999897,
+        "p50": 3.8892500000001746,
+        "p95": 4.262249999999767,
+        "max": 4.758124999999836
+      },
+      "server_idle_rss_kib": {
+        "n": 30,
+        "min": 8128,
+        "p50": 8144,
+        "p95": 8176,
+        "max": 8176
+      },
+      "warm_turn_ms": {
+        "n": 30,
+        "min": 0.223084000000199,
+        "p50": 0.2463340000003882,
+        "p95": 0.30691699999988487,
+        "max": 0.3157920000003287
+      },
+      "warm_new_task_ms": {
+        "n": 30,
+        "min": 0.26633399999991525,
+        "p50": 0.29950000000008004,
+        "p95": 0.3655000000007931,
+        "max": 0.36849999999958527
+      },
+      "warm_request_bytes": {
+        "n": 30,
+        "min": 3352,
+        "p50": 3352,
+        "p95": 3352,
+        "max": 3352
+      }
+    },
+    "codex": {
+      "version_process_ms": {
+        "n": 30,
+        "min": 7.698875000000044,
+        "p50": 8.133749999999964,
+        "p95": 11.625958999999966,
+        "max": 11.811208000000079
+      },
+      "cli_provider_ready_ms": {
+        "n": 30,
+        "min": 28.183124999999905,
+        "p50": 29.974958000000015,
+        "p95": 35.0532919999996,
+        "max": 35.44383300000004
+      },
+      "cli_total_ms": {
+        "n": 30,
+        "min": 31.652500000000032,
+        "p50": 36.447167000000036,
+        "p95": 41.429541999999856,
+        "max": 42.36616700000013
+      },
+      "cli_request_bytes": {
+        "n": 30,
+        "min": 28759,
+        "p50": 28759,
+        "p95": 28759,
+        "max": 28759
+      },
+      "server_initialize_ms": {
+        "n": 30,
+        "min": 14.11304199999995,
+        "p50": 15.044291000000158,
+        "p95": 19.310375000000022,
+        "max": 19.94220800000039
+      },
+      "server_idle_rss_kib": {
+        "n": 30,
+        "min": 49040,
+        "p50": 50816,
+        "p95": 51056,
+        "max": 51072
+      },
+      "warm_turn_ms": {
+        "n": 30,
+        "min": 11.822041999999783,
+        "p50": 16.74041699999725,
+        "p95": 172.58745799999815,
+        "max": 189.44766699999673
+      },
+      "warm_new_task_ms": {
+        "n": 30,
+        "min": 19.956083000000945,
+        "p50": 31.04820800000016,
+        "p95": 255.43716700000004,
+        "max": 460.62212499999805
+      },
+      "warm_request_bytes": {
+        "n": 30,
+        "min": 28732,
+        "p50": 28732,
+        "p95": 28732,
+        "max": 28732
+      }
+    }
+  },
+  "builds": {
+    "pablo": {
+      "version": "pablo 0.1.0-dev.1 (OTel mapping c1.2; GenAI fee465db333bdd6a7d2faa320edab5cf3101a4f4)",
+      "bytes": 10464624,
+      "sha256": "9cb6d1f2c04e8f2906bf05ab80638fe4798e565cefa89249c960840aef1b245c"
+    },
+    "codex": {
+      "version": "codex-cli 0.153.3",
+      "bytes": 220584480,
+      "sha256": "0e1f892695844ad0798dab8895955846450a9e7663476ebf24615814dd377216"
+    }
+  },
+  "harness": {
+    "path": "scripts/compare-codex.mjs",
+    "sha256": "d6713e5490f3afc43ccb7802bcd372f8f19b3fcb8e3261f48e3b9e9c86c150d0"
+  }
+}

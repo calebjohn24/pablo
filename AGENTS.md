@@ -12,7 +12,7 @@ Use one checkpoint per implementation session, as requested by the user. Finish 
 ## Records and authority
 
 - `docs/context.md` holds the product design. Preserve its rationale and release cut line.
-- `docs/project/cycles/001-first-spike.md` holds checkpoint specifications and acceptance criteria. It does not maintain status checklists.
+- The cycle specification selected by `docs/project/state.json` holds checkpoint specifications and acceptance criteria. Plans live under `docs/project/cycles/` and do not maintain status checklists; retain prior plans and checkpoint records when adopting a new cycle.
 - `docs/project/state.json` is the only authoritative current task state. Readiness is derived from completed dependencies.
 - `docs/project/brain.md` holds durable decisions and orientation, within 200 lines. Use stable `D001`-style decision IDs and explain why each decision exists. Link detailed design instead of copying the brief.
 - `docs/project/log.jsonl` is append-only history. Correct a historical error in a new entry; do not rewrite old entries.

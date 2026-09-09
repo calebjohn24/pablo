@@ -22,8 +22,9 @@ tokio = { version = "=1.53.1", default-features = false, features = ["rt", "macr
 tokio-util = { version = "=0.7.19", default-features = false, features = ["rt", "io"] }
 reqwest = { version = "=0.13.4", default-features = false, features = ["rustls", "json", "stream"] }
 dotenvy = "=0.15.7"
+aws-lc-rs = { version = "=1.18.1", default-features = false, features = ["non-fips"] }
 jsonschema = { version = "=0.53.0", default-features = false }
-rustix = { version = "=1.1.4", features = ["process"] }
+rustix = { version = "=1.1.4", features = ["process", "fs"] }
 uuid = { version = "=1.26.0", features = ["v4"] }
 
 [workspace.lints.rust]

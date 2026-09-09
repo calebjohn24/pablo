@@ -255,6 +255,7 @@ fn text_only_has_no_tools_and_flushes_before_response_finishes() {
             "run",
             "Say hello",
             "--no-shell",
+            "--no-filesystem",
             "--model",
             "fixture/test",
             "--timeout",
@@ -420,7 +421,15 @@ fn ctrl_c_waits_for_shell_cleanup_and_reports_cancelled() {
     });
     let mut child = fixture
         .command()
-        .args(["run", "Wait", "--timeout", "5", "--trace", "trace.jsonl"])
+        .args([
+            "run",
+            "Wait",
+            "--json",
+            "--timeout",
+            "5",
+            "--trace",
+            "trace.jsonl",
+        ])
         .env("PABLO_FIXTURE_ENDPOINT", endpoint)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -458,6 +467,13 @@ fn ctrl_c_waits_for_shell_cleanup_and_reports_cancelled() {
         Some(130),
         "{}",
         String::from_utf8_lossy(&output.stderr)
+    );
+    let task: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(task["outcome"]["status"], "cancelled");
+    assert_eq!(task["accounting"]["tool_calls"], "1");
+    assert_eq!(
+        task["accounting"],
+        events(&fixture).last().unwrap()["accounting"]
     );
     assert!(
         !Command::new("/bin/kill")
@@ -510,4 +526,172 @@ fn run_deadline_stops_a_stalled_http_response() {
         events(&fixture).last().unwrap()["outcome"]["status"],
         "timed_out"
     );
+}
+
+#[test]
+fn json_and_shorthand_preserve_exact_accounting_and_terminal_truth() {
+    for shorthand in [false, true] {
+        let fixture = Fixture::new();
+        let (listener, endpoint) = server();
+        let worker = thread::spawn(move || {
+            let mut stream = accept(&listener);
+            request(&mut stream);
+            let response = frame(json!({"content":"line\n\"🙂\" {\"ok\":true}"}), Value::Null)
+                + &frame(json!({}), json!("stop"))
+                + "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":9007199254740993,\"completion_tokens\":2}}\n\ndata: [DONE]\n\n";
+            serve(stream, &response, "200 OK", "text/event-stream");
+        });
+        let mut command = fixture.command();
+        if !shorthand {
+            command.arg("run");
+        }
+        let output = command
+            .args([
+                "Hello",
+                "--json",
+                "--trace",
+                "trace.jsonl",
+                "--capture-content",
+            ])
+            .env("PABLO_FIXTURE_ENDPOINT", endpoint)
+            .output()
+            .unwrap();
+        worker.join().unwrap();
+        assert_eq!(
+            output.status.code(),
+            Some(0),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(output.stderr.is_empty());
+        let raw = String::from_utf8(output.stdout).unwrap();
+        assert_eq!(raw.lines().count(), 1);
+        assert!(raw.ends_with('\n'));
+        let task: Value = serde_json::from_str(&raw).unwrap();
+        assert_eq!(task["outcome"]["output"], "line\n\"🙂\" {\"ok\":true}");
+        assert_eq!(
+            task["accounting"]["usage"]["input_tokens"],
+            "9007199254740993"
+        );
+        assert_eq!(task["accounting"]["usage"]["output_tokens"], "2");
+        assert_eq!(
+            task["accounting"]["usage"]["cache_read_input_tokens"],
+            Value::Null
+        );
+        assert_eq!(task["accounting"]["model_calls"], "1");
+        assert_eq!(task["accounting"]["tool_calls"], "0");
+        let records = events(&fixture);
+        let terminal = records.last().unwrap();
+        for key in ["run_id", "session_id", "trace_id", "accounting", "outcome"] {
+            assert_eq!(task[key], terminal[key]);
+        }
+    }
+}
+
+#[test]
+fn json_pre_admission_errors_are_closed_and_do_not_dispatch() {
+    for (args, code, endpoint) in [
+        (
+            vec!["run", "private-task", "--json", "--bad"],
+            "invalid_arguments",
+            false,
+        ),
+        (
+            vec![
+                "run",
+                "private-task",
+                "--json",
+                "--workspace",
+                "/nonexistent-pablo-workspace",
+            ],
+            "invalid_configuration",
+            false,
+        ),
+        (
+            vec!["run", "private-task", "--json"],
+            "credential_unavailable",
+            false,
+        ),
+        (
+            vec!["run", "private-task", "--json", "--trace", "absent/trace"],
+            "trace_setup_failed",
+            true,
+        ),
+    ] {
+        let fixture = Fixture::new();
+        let mut command = fixture.command();
+        command.args(args);
+        if endpoint {
+            command.env(
+                "PABLO_FIXTURE_ENDPOINT",
+                "http://127.0.0.1:1/v1/chat/completions",
+            );
+        }
+        let output = command.output().unwrap();
+        assert_eq!(output.status.code(), Some(2));
+        let text = String::from_utf8(output.stdout).unwrap();
+        assert_eq!(text.lines().count(), 1);
+        assert!(!text.contains("private-task"));
+        let task: Value = serde_json::from_str(&text).unwrap();
+        assert_eq!(task["error"]["code"], code);
+        for key in ["run_id", "session_id", "trace_id", "accounting", "outcome"] {
+            assert!(task[key].is_null());
+        }
+    }
+}
+
+#[test]
+fn json_failure_and_zero_limit_retain_native_accounting() {
+    for fail in [false, true] {
+        let fixture = Fixture::new();
+        let (listener, endpoint) = server();
+        let worker = fail.then(|| {
+            thread::spawn(move || {
+                let mut stream = accept(&listener);
+                request(&mut stream);
+                serve(stream, "data: invalid\n\n", "200 OK", "text/event-stream");
+            })
+        });
+        let mut command = fixture.command();
+        command.args(["run", "Hello", "--json", "--trace", "trace.jsonl"]);
+        if !fail {
+            command.args(["--max-model-calls", "0"]);
+        }
+        let output = command
+            .env("PABLO_FIXTURE_ENDPOINT", endpoint)
+            .output()
+            .unwrap();
+        if let Some(worker) = worker {
+            worker.join().unwrap();
+        }
+        assert_eq!(output.status.code(), Some(1));
+        let task: Value = serde_json::from_slice(&output.stdout).unwrap();
+        let records = events(&fixture);
+        assert_eq!(task["accounting"], records.last().unwrap()["accounting"]);
+        assert_eq!(task["outcome"], records.last().unwrap()["outcome"]);
+        assert_eq!(
+            task["accounting"]["model_calls"],
+            if fail { "1" } else { "0" }
+        );
+        assert_eq!(
+            task["accounting"]["usage"]["input_tokens"],
+            if fail { Value::Null } else { json!("0") }
+        );
+    }
+}
+
+#[test]
+fn invalid_host_policy_is_rejected_before_provider_delivery() {
+    for policy in [
+        r#"{"unknown":{}}"#.to_owned(),
+        r#"{"read_roots":{"default":"allow","allow":[{"id":"outside","value":"../outside"}]}}"#.into(),
+        r#"{"tools":{"default":"allow","allow":[{"id":"duplicate","value":"fs.read"},{"id":"duplicate","value":"fs.list"}]}}"#.into(),
+        " ".repeat(1024*1024+1),
+    ] {
+        let fixture=Fixture::new();fs::write(fixture.0.join("policy.json"),policy).unwrap();
+        let output=fixture.command().args(["run","fixture","--json","--policy","policy.json"])
+            .env("PABLO_FIXTURE_ENDPOINT","http://127.0.0.1:1/v1/chat/completions").output().unwrap();
+        assert_eq!(output.status.code(),Some(2));let task:Value=serde_json::from_slice(&output.stdout).unwrap();
+        assert_eq!(task["error"]["code"],"invalid_configuration");assert!(task["run_id"].is_null());
+    }
 }

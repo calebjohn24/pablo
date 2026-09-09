@@ -4,7 +4,7 @@
 
 Pablo is a small headless Rust agent runtime for applications doing arbitrary work. Hosts own their sandboxes, business state, approvals, and user experience. CLI and protocol clients share one runtime lifecycle.
 
-This file holds durable context. [State](state.json) reports current progress, [the log](log.jsonl) records history, and [the cycle plan](cycles/001-first-spike.md) defines the work. Run `node scripts/project.mjs context` for a focused handoff.
+This file holds durable context. [State](state.json) reports current progress, [the log](log.jsonl) records history, and [cycle C2](cycles/002-single-agent-completion.md) defines the selected work. [Cycle C1](cycles/001-first-spike.md) and its evidence remain historical. Run `node scripts/project.mjs context` for a focused handoff.
 
 ## Read the design selectively
 
@@ -87,7 +87,7 @@ C1.5 shares one standalone SDK setup across CLI/ACP, using the pinned OTLP 0.32.
 
 ### D018 — C1 acceptance establishes scoped baselines, not release ceilings
 
-C1.6 verifies the focused fixtures on native macOS arm64 and an isolated Ubuntu 24.04 arm64 VM, plus a fresh explicit live Vercel ACP run on macOS and real Collector proof on both systems. Release measurements use 30 samples after five warm-ups; event latency uses 30,000 deltas. Report timing boundaries, virtualization and source fingerprints so setup costs are not mistaken for pure protocol overhead. C1 is complete, while native Linux x86_64 measurements and broader alpha.1/0.1 gates remain unclaimed. No provisional performance number becomes a CI failure threshold. See [acceptance](evidence/c1.6.md), [methods](../measurements.md), and [the proposed next cycle](proposals/002-single-agent-completion.md); adopting C2 is the next session's work.
+C1.6 verifies the focused fixtures on native macOS arm64 and an isolated Ubuntu 24.04 arm64 VM, plus a fresh explicit live Vercel ACP run on macOS and real Collector proof on both systems. Release measurements use 30 samples after five warm-ups; event latency uses 30,000 deltas. Report timing boundaries, virtualization and source fingerprints so setup costs are not mistaken for pure protocol overhead. C1 is complete, while native Linux x86_64 measurements and broader alpha.1/0.1 gates remain unclaimed. No provisional performance number becomes a CI failure threshold. See [acceptance](evidence/c1.6.md), [methods](../measurements.md), and [the original C2 proposal](proposals/002-single-agent-completion.md), adopted by D021.
 
 ### D019 — Optimize Pablo without changing model behavior
 
@@ -96,6 +96,34 @@ The user requested a C1.7 performance follow-up and explicitly excluded provider
 ### D020 — Prefer the measured speed/size balance of thin LTO
 
 Use thin LTO, one codegen unit and stripped symbols for release builds. Full LTO makes the binary smaller but repeated alternating comparisons show slower trace encoding; the selected profile already fits the provisional 10 MiB headless target on measured macOS and Linux arm64 systems. Preserve unwinding and portable target defaults. The [C1.7 report](evidence/c1.7.md) retains all candidate measurements, workload boundaries and remaining performance limits.
+
+### D021 — Adopt the bounded single-agent completion cycle
+
+C2 follows the verified C1.7 foundation and selects filesystem tools, one-task JSON output, exact static policy and conservative accounting before extensibility. [The cycle](cycles/002-single-agent-completion.md), [contracts](contracts/c2-single-agent.md) and [fixtures](fixtures/c2-single-agent.md) freeze behavior without advertising it as implemented. Preserve C1 checkpoint records and log history in the existing version-1 state model; the selected cycle changes, while helper progress remains cumulative. This keeps historical verification valid without adding another status authority. General model structured-output repair remains alpha.2.
+
+### D022 — Make filesystem behavior explicit and bounded
+
+Use no-follow workspace-relative operations, bounded UTF-8 snapshots, deterministic listing/literal search and explicit read/write capabilities. Mutations require revision preconditions and atomic replacement; hosts own isolation from independent writers. This prevents accidental traversal and silent truncation while avoiding a false filesystem compare-and-swap or sandbox promise. [The filesystem contract](contracts/c2-single-agent.md#shared-filesystem-contract) defines limits, errors, cancellation and trace privacy; implementation starts at C2.1.
+
+### D023 — Separate actual usage from conservative budget charges
+
+Return accounting on every admitted outcome and keep missing provider usage/cost unknown. Optional aggregate ceilings require an attested per-call upper bound reserved before delivery; unsupported profiles fail before sending. Retain the reservation after uncertain delivery instead of inventing zero cost. This makes budget claims reviewable while preserving D015's unlimited default counts. [The accounting contract](contracts/c2-single-agent.md#accounting-admission-and-settlement) defines settlement and explicitly defers unevidenced live ceiling profiles.
+
+### D024 — Reserve enough filesystem result capacity for truthful errors
+
+C2.1 requires requested filesystem results to have at least 1,024 bytes, matching the existing host minimum. Smaller requests cannot hold bounded failure metadata and are rejected before I/O; the 8 MiB default is unchanged. Workers retain bounded data, may read one extra byte to detect growth, and are joined before settlement. [Read evidence](evidence/c2.1.md) records actual path-race, cancellation, privacy and transport proof and the macOS invalid-filename limitation.
+
+### D025 — Preserve committed mutation truth through cancellation
+
+C2.2 admits the complete mutation result before touching a target and installs complete bytes atomically with revision rechecks. Before commit, failures preserve the target; after commit, tool metadata retains `committed:true` even if cancellation or cleanup failure follows. This prevents a terminal cancellation from implying rollback. Hosts own isolation from external writers and crash durability. See [mutation evidence](evidence/c2.2.md).
+
+### D026 — Exact task accounting and negotiated envelope
+
+Project the native terminal event into CLI JSON and opt-in ACP task metadata; use decimal-string u64 values so JavaScript cannot round them. Negotiated task metadata replaces the legacy outcome field to keep large escaped output within the existing frame bound; old peers retain their shape. See [C2.3 evidence](evidence/c2.3.md).
+
+### D027 — Keep policy identity complete without breaking native built-ins
+
+C2.5 records one deciding ID for every applicable allowed tool/launcher/root dimension, including defaults and recoverable filesystem errors. The decisive denial ID appears in native metadata and OTel. Mandatory built-in denials retain C1 enum wire values, mapped explicitly to logical `builtin.*` identities; changing them would break existing clients without improving enforcement. See the [policy contract](contracts/c2-single-agent.md#static-policy).
 
 ## Working constraints
 

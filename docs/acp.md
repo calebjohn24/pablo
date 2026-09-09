@@ -20,14 +20,14 @@ A process admits successive independent in-memory sessions, with one prompt per 
 
 Prompts accept text and ACP's baseline resource links. Links become bounded textual references in the task; the adapter does not retrieve their URIs. Images, audio, and embedded context are rejected and their capabilities are false. Prompt text, including rendered links, is limited to 1020 KiB, reserving 4 KiB for the runtime's fixed instructions under its 1 MiB combined input limit. Provider, model, shell capability, deadlines, credential paths, and fixture endpoints come from host configuration, not prompt metadata.
 
-No filesystem/terminal callbacks, permission requests, MCP servers, modes, authentication methods, session management, or other optional ACP behavior is advertised. The shell is the existing explicitly enabled local tool, reported through standard ACP tool updates; `--no-shell` removes it from the provider catalog. Unsupported methods return the SDK's `-32601` error; invalid supported requests use `-32602`. Unknown future fields are tolerated by the pinned SDK.
+No filesystem/terminal callbacks, permission requests, MCP servers, modes, authentication methods, session management, or other optional ACP behavior is advertised. Shell and [filesystem reads](filesystem.md) are local tools reported through standard ACP tool updates; `--no-shell` and `--no-filesystem` independently remove them from the provider catalog. Unsupported methods return the SDK's `-32601` error; invalid supported requests use `-32602`. Unknown future fields are tolerated by the pinned SDK.
 
 ## Events and terminal outcomes
 
 | Native event | ACP projection |
 | --- | --- |
 | `assistant.text.delta` | `agent_message_chunk` with text content |
-| `tool.started` | `tool_call`, kind `execute`, raw input, default `pending` status |
+| `tool.started` | `tool_call`, kind `execute` for shell or `read`/`edit` for filesystem, raw input, default `pending` status |
 | `shell.started` | `tool_call_update`, status `in_progress` |
 | `tool.finished` | `tool_call_update`, `completed` or `failed`, typed raw output |
 | `run.finished` | `session/prompt` response or error after all pending updates and cleanup |
@@ -36,7 +36,7 @@ Nonzero shell exits and unsuccessful tools have ACP status `failed`. The runtime
 
 Negotiate the checkpoint-local `pablo/v1` extension by sending `clientCapabilities._meta["pablo/v1"] = true` in `initialize`. The agent advertises the same capability in `agentCapabilities._meta`. [The extension schema](pablo-acp-v1.schema.json) describes its values. This short namespace is a spike contract; a project-controlled URI and release-stable extension naming remain a deliberate release decision.
 
-For negotiated clients, each `session/update` carries `params._meta["pablo/v1"]` containing the native run/session IDs, inclusive `seq_start`/`seq_end`, timestamp, and OTel trace/span identities. Sequence numbers refer to native publication order; gaps are expected for native events without an ACP projection. Coalescing changes neither the native sequence nor its stored trace. Native contract revision `c1.2` remains unchanged.
+For negotiated clients, each `session/update` carries `params._meta["pablo/v1"]` containing the native run/session IDs, inclusive `seq_start`/`seq_end`, timestamp, and OTel trace/span identities. Sequence numbers refer to native publication order; gaps are expected for native events without an ACP projection. Coalescing changes neither the native sequence nor its stored trace. Native contract revision `c2.4` includes filesystem results, configured policy and all-outcome accounting; the extension schema retains historical `c1.2` acceptance.
 
 Terminal metadata adds the exact typed native `outcome`. Completed, cancelled, policy-denied, output-token-limit, and model/tool-call-limit outcomes map to `end_turn`, `cancelled`, `refusal`, `max_tokens`, and `max_turn_requests`. Timeouts, other limits, and failures use JSON-RPC `-32603` with the same terminal metadata at `error.data["pablo/v1"]`; they never pretend to be `end_turn`. Setup errors occur before run admission and have safe errors without invented run IDs. Generic clients receive standard updates, stop reasons and errors, with no Pablo update/terminal metadata. Usage stays unknown (`null`) when the provider omits it.
 
@@ -96,3 +96,17 @@ This small fixture explicitly caps tools/models at 1/2, the run at 90 seconds an
 The reference client shows each shell command/cwd and terminal status with exit code and output byte counts. Final diagnostics include the exact limit, policy rule, or provider failure code, including outcomes carried in JSON-RPC errors. Tool/model call counts are unlimited by default, shared with the Rust CLI; explicit caps use the forwarded options above. Timeouts and byte/event/transport bounds still apply.
 
 Default run/shell deadlines are one hour/15 minutes. ACP accepts up to 1020 KiB of combined prompt text/resource references, reserving 4 KiB of the core’s 1 MiB input limit for instructions. Larger tool results and terminal answers fit the 32 MiB wire frame, including worst-case JSON escaping of the default 4 MiB model output. Trace capacity is 256 MiB. The short process cleanup and SDK shutdown allowances are independent of task execution deadlines.
+
+C2.3 adds optional `pablo/task-v1: true` alongside `pablo/v1: true` in capability metadata. When both are negotiated, terminal `pablo/v1` metadata contains `task` ([schema](pablo-task.schema.json)) in place of `outcome`; its outcome comes from the same native terminal event. This avoids duplicating potentially 24 MiB of escaped output in the 32 MiB transport frame. Peers negotiating only `pablo/v1` retain `outcome`; generic peers retain standard stop reasons and safe errors. The reference client's `taskOf` validates canonical decimal accounting through u64 and exposes strings for exact `BigInt` conversion. Legacy numeric usage remains for compatibility; the task accounting strings are the exact representation above JavaScript's safe integer range. The envelope version is `c2.3`, independently of native event revision.
+
+
+## C2 extension compatibility review
+
+| Name / capability | Schema and version | Bound and visibility | Generic fallback |
+| --- | --- | --- | --- |
+| `pablo/v1` | Local Draft 2020-12 metadata schema; native `c2.4`, historical revisions accepted | Correlation contains IDs/timestamps; native outcome contains task output. All share the 32 MiB frame limit. Incoming W3C fields are limited to 512 characters each and exclude baggage. | Standard ACP updates, stop reasons and safe errors; no project metadata and no remote parent extraction. |
+| `pablo/task-v1` (requires `pablo/v1`) | Shared task schema `c2.3`; exact u64 accounting strings | Terminal `task` replaces `outcome`, avoiding output duplication; six-times-output plus 8 KiB task bound within the transport frame. Output is client-visible content; counters/IDs are metadata. Native content remains opt-in; OTel stays content-free. | Existing `pablo/v1` peers retain the legacy `outcome`; generic peers retain standard ACP. |
+
+There are no custom methods or alternate lifecycle. The pinned ACP SDK/schema remains authoritative; both legacy and task-negotiated shapes, generic fallback and maximum escaping-heavy output have executable tests. Decimal schemas enforce canonical syntax; the core and reference client additionally enforce the u64 numerical maximum. JSON Schema `format` is annotation-only in the fixture validator, and no network schema resolution is enabled.
+
+The existing short project-prefixed names are retained for development compatibility. No project-controlled DNS URI is claimed. Final namespace ownership/release stability and `pablo doctor` remain explicit release-hardening decisions; C2 acceptance does not silently ratify them or publish a release.

@@ -2,7 +2,7 @@
 
 A small, headless Rust agent runtime for applications doing arbitrary work.
 
-Development starts with the focused spike in [the cycle plan](docs/project/cycles/001-first-spike.md). The [architecture brief](docs/context.md) describes the larger product; section 29.1 defines the 0.1 release contract. The project-state command reports what is actually implemented.
+The focused [C1 spike](docs/project/cycles/001-first-spike.md) is complete. The adopted [C2 cycle](docs/project/cycles/002-single-agent-completion.md) now implements bounded filesystem tools, machine-readable task output, static policy and accounting. Final acceptance still requires native Linux x86_64 verification; this is not a published release. The [architecture brief](docs/context.md) describes the larger product; section 29.1 defines the 0.1 release contract. The project-state command reports checkpoint progress across retained cycles.
 
 ## Run a real task
 
@@ -20,7 +20,7 @@ To work in a different folder while keeping credentials in this project:
 cargo run --locked -p pablo -- run "List the files here and explain the project." --workspace /path/to/project
 ```
 
-Press **Ctrl-C** to cancel and wait for shell cleanup. Each invocation is a fresh task. Tool and model call counts are unlimited by default; the default deadline is one hour per run and 15 minutes per shell call. Shell runs on your machine with your user permissions; the workspace selects its working directory, not an OS sandbox. Use `--no-shell` for text-only tasks. There is no persistent chat or TUI yet.
+Press **Ctrl-C** to cancel and wait for shell cleanup. Each invocation is a fresh task. Tool and model call counts are unlimited by default; the default deadline is one hour per run and 15 minutes per shell call. Shell runs on your machine with your user permissions; the workspace selects its working directory, not an OS sandbox. Filesystem read/list/search tools are also enabled; `--allow-write` opts in to revision-checked write/edit; use `--no-shell --no-filesystem` for text-only tasks. See [filesystem behavior](docs/filesystem.md). There is no persistent chat or TUI yet.
 
 Set `--max-tool-calls N` or `--max-model-calls N` to opt into call-count limits (zero disables the corresponding calls). Omit these options for unlimited call counts. These options work with both `run` and `acp --stdio`, including through the reference client.
 
@@ -34,6 +34,14 @@ For a built executable:
 cargo build --release --locked -p pablo
 ./target/release/pablo run "Read README.md and summarize it."
 ```
+
+Shorthand and machine output use the same runtime:
+
+```sh
+./target/release/pablo "Summarize README.md" --json --no-shell
+```
+
+`--json` emits one [task envelope](docs/pablo-task.schema.json) with the native outcome and exact decimal-string accounting. `--policy PATH` sets host tool, launcher and filesystem-root rules. Optional `--max-total-tokens` and `--max-cost-microusd` require attested provider bounds; the live gateway currently rejects these before delivery. See [runtime contracts](docs/runtime.md).
 
 See [the gateway and CLI contract](docs/gateway.md) for transport details, trace options, and the explicit live smoke check.
 

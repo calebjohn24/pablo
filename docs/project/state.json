@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "cycle": {
-    "id": "C1",
-    "title": "Focused first spike",
-    "spec": "docs/project/cycles/001-first-spike.md"
+    "id": "C2",
+    "title": "Single-agent completion",
+    "spec": "docs/project/cycles/002-single-agent-completion.md"
   },
   "source_context": {
     "path": "docs/context.md",
@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-05T06:12:30.685Z",
+  "updated_at": "2026-09-05T19:53:37.111Z",
   "active_checkpoint": null,
   "next_checkpoint": null,
-  "next_action": "C1.7 performance follow-up is complete. In the next session, review/adopt docs/project/proposals/002-single-agent-completion.md starting with C2.0 contracts and scope; initialize C2 state while preserving C1 history before implementing bounded filesystem read/list/search. Retain C1.7 measurement methods and behavior. Routing stays deferred; the local Linux VM is stopped.",
-  "latest_log_entry": "LOG-0033",
+  "next_action": "Unblock C2.5 with an authorized native Linux x86_64 runner. Copy source without credentials, run full Rust/Node/TypeScript/Collector acceptance and comparable release measurements, append evidence and close the cycle only after that gate passes.",
+  "latest_log_entry": "LOG-0042",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -136,6 +136,87 @@
       "blockers": [],
       "verification": [
         "LOG-0033"
+      ]
+    },
+    {
+      "id": "C2.0",
+      "title": "Adopt contracts and scope",
+      "spec": "docs/project/cycles/002-single-agent-completion.md#c20-adopt-contracts-and-scope",
+      "depends_on": [
+        "C1.7"
+      ],
+      "status": "done",
+      "blockers": [],
+      "verification": [
+        "LOG-0034"
+      ]
+    },
+    {
+      "id": "C2.1",
+      "title": "Bounded filesystem reads",
+      "spec": "docs/project/cycles/002-single-agent-completion.md#c21-bounded-filesystem-reads",
+      "depends_on": [
+        "C2.0"
+      ],
+      "status": "done",
+      "blockers": [],
+      "verification": [
+        "LOG-0036"
+      ]
+    },
+    {
+      "id": "C2.2",
+      "title": "Safe file mutations",
+      "spec": "docs/project/cycles/002-single-agent-completion.md#c22-safe-file-mutations",
+      "depends_on": [
+        "C2.1"
+      ],
+      "status": "done",
+      "blockers": [],
+      "verification": [
+        "LOG-0037"
+      ]
+    },
+    {
+      "id": "C2.3",
+      "title": "Single-task machine output",
+      "spec": "docs/project/cycles/002-single-agent-completion.md#c23-single-task-machine-output",
+      "depends_on": [
+        "C2.2"
+      ],
+      "status": "done",
+      "blockers": [],
+      "verification": [
+        "LOG-0038"
+      ]
+    },
+    {
+      "id": "C2.4",
+      "title": "Policy and accounting",
+      "spec": "docs/project/cycles/002-single-agent-completion.md#c24-policy-and-accounting",
+      "depends_on": [
+        "C2.3"
+      ],
+      "status": "done",
+      "blockers": [],
+      "verification": [
+        "LOG-0040"
+      ]
+    },
+    {
+      "id": "C2.5",
+      "title": "Acceptance and compatibility",
+      "spec": "docs/project/cycles/002-single-agent-completion.md#c25-acceptance-and-compatibility",
+      "depends_on": [
+        "C2.4"
+      ],
+      "status": "blocked",
+      "blockers": [
+        "Native Linux x86_64 runner unavailable. Unblock when an authorized native x86_64 SSH host or CI runner is provided, then execute full C2 acceptance and comparable release measurements. macOS and supplemental Linux arm64 checks pass."
+      ],
+      "verification": [
+        "LOG-0041",
+        "LOG-0042"
       ]
     }
   ]

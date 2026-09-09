@@ -30,3 +30,10 @@ The local report includes platform/kernel/CPU/memory, Node/Rust versions, enviro
 C1 requires baseline measurements, not satisfaction of every provisional budget in the broader design brief. Eight-agent concurrency, TUI/A2A/children, real model/TLS/network delay and the full release target matrix are outside this harness. A virtual Linux arm64 result proves that platform's behavior and provides a VM-specific baseline; it does not substitute for the brief's native Linux x86_64 release measurements.
 
 See the [C1 acceptance report](project/evidence/c1.6.md) for the original platform acceptance and the [C1.7 performance report](project/evidence/c1.7.md) for optimization results, profile comparisons and remaining limits.
+
+
+C2 retains these methods. [C2.5 acceptance](project/evidence/c2.5.md) and its [sanitized reports](project/evidence/c2.5-measurements.json) compare saved C1.7 executables with the implemented single-agent additions. The direct measurement host now uses the actual CLI registry configuration; timer boundaries remain unchanged. `PABLO_MEASURE_CHECKPOINT` labels saved-build reports, without changing their workload. Default report paths now use C2.5.
+
+For the new filesystem baseline, build the release binary and run `node scripts/measure-filesystem.ts`. It verifies read/list/search/replacement/edit results using two offline HTTP calls and fresh sessions in a reused ACP process. Each workload has five warm-ups and 30 measured samples. Reports separate native tool duration from whole prompt duration and exclude fixture/setup time; there is no fabricated C1 native-filesystem comparison. Raw reports stay under ignored `.pablo/measurements`.
+
+The C2 event follow-up alternates saved baseline and final `measure events TEMP_DIRECTORY 30` processes for ten pairs, reversing order each pair. Each process already alternates 30 trace/no-trace samples after five warm-up pairs. Compare medians of their per-process p50s; keep the VM stopped and do not run builds/tests concurrently. This checks sensitivity to a single process's scheduler/cache sample without inventing a regression ceiling.

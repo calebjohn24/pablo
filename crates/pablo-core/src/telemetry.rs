@@ -39,6 +39,12 @@ pub(crate) fn micros(time: SystemTime) -> u64 {
 pub(crate) fn outcome(context: &Context, outcome: &RunOutcome) {
     let span = context.span();
     span.set_attribute(KeyValue::new("pablo.run.outcome", outcome.label()));
+    if let RunOutcome::PolicyDenied {
+        rule: crate::PolicyRule::Configured { id },
+    } = outcome
+    {
+        span.set_attribute(KeyValue::new("pablo.policy.rule_id", id.to_string()));
+    }
     if !outcome.is_completed() && !matches!(outcome, RunOutcome::Cancelled) {
         let error = match outcome {
             RunOutcome::TimedOut => "timeout",
@@ -61,6 +67,7 @@ pub(crate) fn outcome(context: &Context, outcome: &RunOutcome) {
                     crate::FailureCode::InvalidToolArguments => "invalid_tool_arguments",
                     crate::FailureCode::ToolExecution => "tool_execution",
                     crate::FailureCode::ToolCleanup => "tool_cleanup",
+                    crate::FailureCode::AccountingBoundViolated => "accounting_bound_violated",
                 }
             }
             RunOutcome::Completed { .. } | RunOutcome::Cancelled => unreachable!(),

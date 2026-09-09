@@ -170,6 +170,9 @@ impl Serialize for RedactedEvent<'_> {
         map.serialize_entry("span_id", &e.span_id)?;
         map.serialize_entry("parent_span_id", &e.parent_span_id)?;
         map.serialize_entry("trace_flags", &e.trace_flags)?;
+        if let Some(accounting) = &e.accounting {
+            map.serialize_entry("accounting", accounting)?;
+        }
         match &e.kind {
             EventKind::RunStarted => map.serialize_entry("type", "run.started")?,
             EventKind::ModelStarted { provider, model } => {
@@ -231,6 +234,10 @@ impl Serialize for RedactedEvent<'_> {
                     status: crate::tool::ToolStatus,
                     policy_rule: &'a Option<crate::PolicyRule>,
                     shell: Option<RedactedShell<'a>>,
+                    #[serde(skip_serializing_if = "Option::is_none")]
+                    filesystem: Option<crate::filesystem::RedactedFilesystem>,
+                    #[serde(skip_serializing_if = "<[_]>::is_empty")]
+                    policy_decisions: &'a [String],
                 }
                 map.serialize_entry("type", "tool.finished")?;
                 map.serialize_entry("call_id", call_id)?;
@@ -241,6 +248,8 @@ impl Serialize for RedactedEvent<'_> {
                         status: result.status,
                         policy_rule: &result.policy_rule,
                         shell: result.shell.as_ref().map(RedactedShell),
+                        filesystem: result.filesystem.as_ref().map(|f| f.redacted()),
+                        policy_decisions: &result.policy_decisions,
                     },
                 )?;
                 map.serialize_entry("content_redacted", &true)?;

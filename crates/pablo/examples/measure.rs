@@ -7,7 +7,7 @@ use futures::{StreamExt, future::BoxFuture, stream};
 use opentelemetry_sdk::trace::SdkTracerProvider;
 use pablo_core::{
     CancellationToken, EventKind, EventSink, FinishReason, JsonlSink, Provider, RunEvent, RunSpec,
-    Runtime, SinkError, ToolRegistry, Usage,
+    Runtime, SinkError, Usage,
     gateway::GatewayProvider,
     provider::{ModelRequest, ProviderError, ProviderEvent, ProviderStream},
     telemetry,
@@ -142,7 +142,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let options = config::Options::parse("run".into(), args.map(Into::into))?;
         let spec = options.spec()?;
         let provider = GatewayProvider::local_fixture(&endpoint)?;
-        let tools = ToolRegistry::with_shell().map_err(|_| "shell setup failed")?;
+        let tools = options.tools()?;
         let mut count = 0;
         let mut first_ms = None;
         let start = Instant::now();

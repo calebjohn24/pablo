@@ -9,13 +9,14 @@ import { RequestError, type SessionNotification } from '@agentclientprotocol/sdk
 import { withPablo, outcomeOf } from '../examples/acp-client.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const [binaryArg = 'target/debug/pablo', model, ...extra] = process.argv.slice(2);
+const filesystem = process.argv.includes('--filesystem');
+const [binaryArg = 'target/debug/pablo', model, ...extra] = process.argv.slice(2).filter(a=>a!=='--filesystem');
 if (extra.length || (model !== undefined && !/^[\w.-]+\/[\w./:-]+$/.test(model))) {
   console.error('Usage: node scripts/smoke-live-acp.ts [BINARY] [PROVIDER/MODEL]');
   process.exit(2);
 }
 const binary = resolve(root, binaryArg);
-const trace = join(root, '.pablo', 'traces', `c1.4-live-acp-${randomUUID()}.jsonl`);
+const trace = join(root, '.pablo', 'traces', `${filesystem ? 'c2.5' : 'c1.4'}-live-acp-${randomUUID()}.jsonl`);
 const env = { ...process.env };
 // Only Pablo reads the root credential file, privately. Never source it or let
 // an inherited fixture endpoint/environment key substitute for live acceptance.
@@ -36,7 +37,7 @@ try {
   stage = 'live ACP request';
   const response = await withPablo({
     binary, env,
-    args: ['--env-file', join(root, '.env'), '--trace', trace,
+    args: [...(filesystem ? ['--no-shell'] : []), '--env-file', join(root, '.env'), '--trace', trace,
       '--timeout', '90', '--tool-timeout', '10', '--max-tool-calls', '1', '--max-model-calls', '2',
       ...(model ? ['--model', model] : [])],
     onUpdate: notification => { updates.push(notification); },
@@ -65,7 +66,7 @@ try {
     const { sessionId } = await cx.request('session/new', { cwd: workspace!, mcpServers: [] });
     return cx.request('session/prompt', {
       sessionId, prompt: [{ type: 'text', text:
-        'Use exactly one shell call to run cat evidence.txt with cwd \".\". Then return the exact file contents and nothing else. Do not read any other files.' }],
+        filesystem ? 'Use exactly one fs.read call to read evidence.txt. Then return the exact file contents and nothing else. Do not read any other files.' : 'Use exactly one shell call to run cat evidence.txt with cwd \".\". Then return the exact file contents and nothing else. Do not read any other files.' }],
     });
   });
   stage = 'live outcome and tool evidence';
@@ -84,8 +85,8 @@ try {
   const results = updates.flatMap(({ update }) => update.sessionUpdate === 'tool_call_update'
     && update.status === 'completed' ? [update.rawOutput as any] : []);
   assert.equal(results.length, 1);
-  assert.equal(results[0].shell.stdout, `${marker}\n`);
-  assert.equal(results[0].shell.exit_code, 0);
+  if (filesystem) assert.equal(results[0].filesystem.text, `${marker}\n`);
+  else { assert.equal(results[0].shell.stdout, `${marker}\n`); assert.equal(results[0].shell.exit_code, 0); }
 
   stage = 'native trace, usage and cleanup';
   const traceRaw = await readFile(trace, 'utf8');
@@ -99,9 +100,11 @@ try {
   const shells = records.filter(e => e.type === 'shell.started');
   assert.equal(models.length, 2);
   assert.equal(finished.length, 2);
-  assert.equal(shells.length, 1);
+  assert.equal(shells.length, filesystem ? 0 : 1);
   assert(models.every(e => e.provider === 'vercel' && e.model === (model ?? 'google/gemini-3.8-flash')));
-  assert(models[0].seq < shells[0].seq && shells[0].seq < models[1].seq);
+  const tools = records.filter(e=>e.type === "tool.started");
+  assert.equal(tools.length,1);assert.equal(tools[0].call.name, filesystem ? "fs.read" : "shell.run");
+  assert(models[0].seq < tools[0].seq && tools[0].seq < models[1].seq);
   for (const shell of shells) {
     assert.throws(() => process.kill(shell.process_id, 0), { code: 'ESRCH' });
     assert.throws(() => process.kill(-shell.process_id, 0), { code: 'ESRCH' });
@@ -138,16 +141,16 @@ try {
   workspace = undefined;
 
   const summary = {
-    result: 'passed', checkpoint: 'C1.4', timestamp: new Date().toISOString(),
+    result: 'passed', checkpoint: filesystem ? 'C2.5' : 'C1.4', timestamp: new Date().toISOString(),
     binary: relative(root, binary), model: models[0].model, provider: models[0].provider,
     credential_source: 'root .env parsed privately by executable',
     elapsed_seconds: Number(((performance.now() - started) / 1000).toFixed(2)),
-    trace: relative(root, trace), model_calls: models.length, shell_calls: shells.length,
+    trace: relative(root, trace), model_calls: models.length, shell_calls: shells.length, filesystem,
     usage: outcome.usage, per_call_usage: finished.map(e => e.usage),
-    checks: ['ACP v1 negotiation', 'model/shell/model with actual temporary evidence',
+    checks: ['ACP v1 negotiation', filesystem ? 'model/fs.read/model with actual temporary evidence' : 'model/shell/model with actual temporary evidence',
       'streamed answer matches typed outcome', 'reported usage sums across calls',
       'ordered ACP/native correlation', 'one completed outcome and protocol-only stdout',
-      'private redacted trace', 'shell process and group gone', 'ACP process exited cleanly', 'workspace removed'],
+      'private redacted trace', filesystem ? 'no shell process created' : 'shell process and group gone', 'ACP process exited cleanly', 'workspace removed'],
   };
   await writeFile(`${trace}.summary.json`, `${JSON.stringify(summary, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
   console.log(JSON.stringify(summary, null, 2));

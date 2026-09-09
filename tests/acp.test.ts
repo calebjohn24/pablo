@@ -11,7 +11,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { Ajv2020 } from 'ajv/dist/2020.js';
 import { RequestError, type ClientContext, type SessionNotification } from '@agentclientprotocol/sdk';
-import { withPablo, outcomeOf } from '../examples/acp-client.ts';
+import { withPablo, outcomeOf, taskOf } from '../examples/acp-client.ts';
 
 const binary = fileURLToPath(new URL('../target/debug/pablo', import.meta.url));
 const sdkSchema = JSON.parse(await readFile(new URL('../node_modules/@agentclientprotocol/sdk/schema/schema.json', import.meta.url), 'utf8'));
@@ -383,7 +383,7 @@ test('busy prompts, idle cancellation, future fields and version negotiation kee
   });
   let streamed!: () => void;
   const first = new Promise<void>(resolve => { streamed = resolve; });
-  await withPablo({ env: f.env, args: ['--no-shell'], onUpdate: () => streamed() }, async cx => {
+  await withPablo({ env: f.env, args: ['--no-shell', '--no-filesystem'], onUpdate: () => streamed() }, async cx => {
     const response = await cx.request('initialize', { protocolVersion: 2, clientCapabilities: {} });
     assert.equal(response.protocolVersion, 1);
     await assert.rejects(cx.request('session/new', { cwd: '.', mcpServers: [] }), (e: any) => e.code === -32602);
@@ -636,4 +636,206 @@ test('sequential independent sessions reuse HTTP setup and recover after cancell
   assert.equal(new Set(ids).size, 3);
   assert.equal(f.requests.length, 5);
   assert.equal(f.connections.size, 1, 'completed model responses return one shared HTTP connection to the pool across tasks');
+});
+
+test('filesystem reads use the real gateway mapping and ACP/native lifecycle with a reusable catalog', { timeout: 15000 }, async t => {
+  const f = await fixture(t, async (body, res, call) => {
+    if (call === 1) {
+      assert.deepEqual(body.tools.map((x: any) => x.function.name), ['fs_read', 'fs_list', 'fs_search']);
+      await sse(res, frame({tool_calls: [{index: 0, id: 'fs-read', type: 'function', function: {name: 'fs_read', arguments: JSON.stringify({path: 'evidence.txt'})}}]}) + end('tool_calls'));
+    } else {
+      const result = JSON.parse(body.messages.at(-1).content);
+      assert.equal(result.filesystem.text, 'filesystem-marker-🟣\n');
+      assert.equal(result.filesystem.kind, 'read');
+      assert.equal(result.shell, null);
+      assert.deepEqual(body.tools, f.requests[0].tools);
+      await sse(res, frame({content: 'Read verified.'}) + end());
+    }
+  });
+  await writeFile(join(f.cwd, 'evidence.txt'), 'filesystem-marker-🟣\n');
+  const path = join(f.cwd, 'native.jsonl'); const updates: SessionNotification[] = [];
+  await withPablo({env: f.env, args: ['--no-shell', '--trace', path], onUpdate: n => { validate('SessionNotification', n); updates.push(n); }}, async cx => {
+    const id = await setup(cx, f.cwd); const result = await prompt(cx, id); assert.equal(outcomeOf(result).status, 'completed');
+  });
+  const records = await trace(path); const start = records.find(e => e.type === 'tool.started'); const finish = records.find(e => e.type === 'tool.finished');
+  assert.equal(start.call.name, 'fs.read'); assert.equal(start.span_id, finish.span_id);
+  assert.equal(finish.result.filesystem.kind, 'read'); assert.equal(finish.result.filesystem.bytes, Buffer.byteLength('filesystem-marker-🟣\n'));
+  assert(!records.some(e => e.type === 'shell.started'));
+  assert(!(await readFile(path, 'utf8')).includes('filesystem-marker'));
+  const toolUpdate = updates.find(n => n.update.sessionUpdate === 'tool_call')!;
+  assert.equal((toolUpdate.update as any).title, 'fs.read'); assert.equal((toolUpdate.update as any).kind, 'read');
+  for (const n of updates) { const m = n._meta?.['pablo/v1'] as any; validateExtension(m); assert.equal(m.span_id, records.find(e => e.seq === m.seq_end).span_id); }
+});
+
+test('filesystem policy denial carries its rule and performs no second model request', { timeout: 15000 }, async t => {
+  const f = await fixture(t, async (_body, res, call) => {
+    assert.equal(call, 1);
+    await sse(res, frame({tool_calls: [{index: 0, id: 'fs-denied', type: 'function', function: {name: 'fs_read', arguments: JSON.stringify({path: 'private/evidence.txt'})}}]}) + end('tool_calls'));
+  });
+  await mkdir(join(f.cwd, 'private')); await writeFile(join(f.cwd, 'private/evidence.txt'), 'denied synthetic marker');
+  const policy = join(f.cwd, 'policy.json'); await writeFile(policy, JSON.stringify({read_roots: {default: 'allow', deny: [{id: 'deny.private', value: 'private'}]}}));
+  await withPablo({env: f.env, args: ['--no-shell', '--policy', policy]}, async cx => {
+    const id = await setup(cx, f.cwd); const result = await prompt(cx, id);
+    assert.equal(result.stopReason, 'refusal'); assert.deepEqual(outcomeOf(result), {status: 'policy_denied', rule: {configured: {id: 'deny.private'}}});
+  });
+  assert.equal(f.requests.length, 1);
+});
+
+test('successive filesystem tasks keep workspace handles and content separate', { timeout: 15000 }, async t => {
+  const f = await fixture(t, async (body, res, call) => {
+    if (call % 2 === 1) await sse(res, frame({tool_calls: [{index: 0, id: `read-${call}`, type: 'function', function: {name: 'fs_read', arguments: '{"path":"evidence.txt"}'}}]}) + end('tool_calls'));
+    else {
+      const expected = call === 2 ? 'first workspace' : 'second workspace';
+      assert.equal(JSON.parse(body.messages.at(-1).content).filesystem.text, expected);
+      if (call === 4) assert(!JSON.stringify(body).includes('first workspace'));
+      await sse(res, frame({content: expected}) + end());
+    }
+  });
+  const second = join(f.cwd, 'second'); await mkdir(second);
+  await writeFile(join(f.cwd, 'evidence.txt'), 'first workspace'); await writeFile(join(second, 'evidence.txt'), 'second workspace');
+  await withPablo({env: f.env, args: ['--no-shell', '--trace', join(f.cwd, '{session_id}.jsonl')]}, async cx => {
+    const first = await setup(cx, f.cwd); assert.equal((outcomeOf(await prompt(cx, first)) as any).output, 'first workspace');
+    const {sessionId} = await cx.request('session/new', {cwd: second, mcpServers: []});
+    assert.equal((outcomeOf(await prompt(cx, sessionId)) as any).output, 'second workspace');
+    const a = await trace(join(f.cwd, `${first}.jsonl`)); const b = await trace(join(f.cwd, `${sessionId}.jsonl`));
+    assert.notEqual(a[0].trace_id, b[0].trace_id);
+  });
+  assert.equal(f.requests.length, 4); assert.equal(f.connections.size, 1);
+});
+
+test('CLI and ACP perform revision-checked edits and atomic creates through the same lifecycle', { timeout: 20000 }, async t => {
+  for (const mode of ['run', 'acp'] as const) await t.test(mode, async t => {
+    const toolFrame = (name: string, args: object, call: number) => frame({tool_calls: [{index: 0, id: `mutation-${call}`, type: 'function', function: {name, arguments: JSON.stringify(args)}}]}) + end('tool_calls');
+    const f = await fixture(t, async (body, res, call) => {
+      assert.deepEqual(body.tools.map((x: any) => x.function.name), ['fs_read', 'fs_list', 'fs_search', 'fs_write', 'fs_edit']);
+      if (call === 1) await sse(res, toolFrame('fs_read', {path: 'evidence.txt'}, call));
+      else if (call === 2) {
+        const read = JSON.parse(body.messages.at(-1).content).filesystem;
+        assert.equal(read.text, 'before\n'); assert.equal(read.revision, createHash('sha256').update('before\n').digest('hex'));
+        await sse(res, toolFrame('fs_edit', {path: 'evidence.txt', expected_revision: read.revision, old_text: 'before', new_text: 'after'}, call));
+      } else if (call === 3) {
+        const edited = JSON.parse(body.messages.at(-1).content).filesystem; assert.equal(edited.committed, true); assert.equal(edited.created, false);
+        await sse(res, toolFrame('fs_write', {path: 'artifact.txt', text: 'created\n', expected_revision: null}, call));
+      } else {
+        assert.equal(call, 4); const written = JSON.parse(body.messages.at(-1).content).filesystem; assert.equal(written.committed, true); assert.equal(written.created, true);
+        await sse(res, frame({content: 'edited and wrote'}) + end());
+      }
+    });
+    await writeFile(join(f.cwd, 'evidence.txt'), 'before\n'); const path = join(f.cwd, 'trace.jsonl');
+    if (mode === 'run') {
+      const child = spawn(binary, ['run', 'Edit synthetic evidence', '--workspace', f.cwd, '--no-shell', '--allow-write', '--trace', path], {env: f.env});
+      let stdout = ''; let stderr = ''; child.stdout.on('data', b => {stdout += b;}); child.stderr.on('data', b => {stderr += b;});
+      const [code] = await once(child, 'exit'); assert.equal(code, 0, stderr); assert.equal(stdout.trim(), 'edited and wrote');
+    } else {
+      const updates: SessionNotification[] = [];
+      await withPablo({env: f.env, args: ['--no-shell', '--allow-write', '--trace', path], onUpdate: n => {validate('SessionNotification', n); updates.push(n);}}, async cx => {
+        const id = await setup(cx, f.cwd); assert.equal(outcomeOf(await prompt(cx, id)).status, 'completed');
+      });
+      assert.deepEqual(updates.filter(n => n.update.sessionUpdate === 'tool_call').map(n => (n.update as any).kind), ['read', 'edit', 'edit']);
+    }
+    assert.equal(await readFile(join(f.cwd, 'evidence.txt'), 'utf8'), 'after\n'); assert.equal(await readFile(join(f.cwd, 'artifact.txt'), 'utf8'), 'created\n');
+    const native = await trace(path); const mutations = native.filter(e => e.type === 'tool.finished' && e.result.filesystem.kind === 'mutation');
+    assert.equal(mutations.length, 2); assert(mutations.every(e => e.result.filesystem.committed === true));
+    assert(!(await readFile(path, 'utf8')).includes('before')); assert(!mutations.some(e => e.result.filesystem.revision));
+  });
+});
+
+test('write opt-in cannot override an explicit host denial', { timeout: 15000 }, async t => {
+  for (const configuredDeny of [false, true]) await t.test(configuredDeny ? 'host deny' : 'no capability', async t => {
+    const f = await fixture(t, async (_body, res, call) => {
+      assert.equal(call, 1); await sse(res, frame({tool_calls: [{index: 0, id: 'write-denied', type: 'function', function: {name: 'fs_write', arguments: '{"path":"new.txt","text":"new","expected_revision":null}'}}]}) + end('tool_calls'));
+    });
+    const args = ['--no-shell'];
+    if (configuredDeny) {const path = join(f.cwd, 'policy.json'); await writeFile(path, JSON.stringify({write_roots: {default: 'deny'}})); args.push('--allow-write', '--policy', path);}
+    await withPablo({env: f.env, args}, async cx => {
+      const id = await setup(cx, f.cwd); const result = await prompt(cx, id); assert.equal(result.stopReason, 'refusal');
+      assert.equal(outcomeOf(result).status, 'policy_denied');
+    });
+    await assert.rejects(readFile(join(f.cwd, 'new.txt')), {code: 'ENOENT'}); assert.equal(f.requests.length, 1);
+  });
+});
+
+test('negotiated task envelopes preserve exact accounting across independent ACP sessions', async t => {
+  const f = await fixture(t, async (_body, res) => {
+    await sse(res, frame({content: 'line\n"🙂" {"ok":true}'}) + frame({}, 'stop') + 'data: {"choices":[],"usage":{"prompt_tokens":9007199254740993,"completion_tokens":2}}\n\ndata: [DONE]\n\n');
+  });
+  await withPablo({env:f.env, args:['--trace', join(f.cwd, '{session_id}.jsonl'), '--capture-content']}, async cx => {
+    const init = await cx.request('initialize', {protocolVersion:1, clientCapabilities:{_meta:{'pablo/v1':true,'pablo/task-v1':true}}});
+    assert.equal(init.agentCapabilities?._meta?.['pablo/task-v1'], true);
+    for (let i=0;i<2;i++) {
+      const {sessionId} = await cx.request('session/new', {cwd:f.cwd,mcpServers:[]});
+      const response = await prompt(cx, sessionId); const meta = response._meta?.['pablo/v1'] as any;
+      validateExtension(meta); assert.equal(meta.outcome, undefined);
+      const task = taskOf(response); assert.equal(task.accounting.model_calls, '1');
+      assert.equal(task.accounting.usage.input_tokens, '9007199254740993');
+      assert.equal(task.accounting.usage.output_tokens, '2');
+      const terminal = (await trace(join(f.cwd, `${sessionId}.jsonl`))).at(-1);
+      for (const key of ['run_id','session_id','trace_id','accounting','outcome']) assert.deepEqual((task as any)[key], terminal[key]);
+    }
+  });
+});
+
+test('host executable policy prevents shell creation and exact allow rules reach CLI and ACP results', async t => {
+  for (const surface of ['cli','acp']) for (const deny of [true,false]) await t.test(`${surface}-${deny ? 'deny':'allow'}`, async t => {
+    const f=await fixture(t,async (_body,res,call)=>{ await sse(res,call===1 ? tool('printf policy-proof > marker') : frame({content:'done'})+end()); });
+    const policy=join(f.cwd,'policy.json'); await writeFile(policy,JSON.stringify({executables:{default:'deny', [deny?'deny':'allow']:[{id:deny?'deny.launcher':'allow.launcher',value:'/bin/sh'}]}}));
+    const path=join(f.cwd,'trace.jsonl'); const args=['--policy',policy,'--trace',path];
+    let outcome:any;
+    if(surface==='acp') await withPablo({env:f.env,args},async cx=>{outcome=outcomeOf(await prompt(cx,await setup(cx,f.cwd)));});
+    else {
+      const child=spawn(binary,['run','fixture','--json','--workspace',f.cwd,...args],{env:f.env});let stdout='';child.stdout.on('data',b=>stdout+=b);const [code]=await once(child,'exit');assert.equal(code,deny?1:0);outcome=JSON.parse(stdout).outcome;
+    }
+    const records=await trace(path);
+    if(deny) {assert.deepEqual(outcome,{status:'policy_denied',rule:{configured:{id:'deny.launcher'}}});assert.equal(f.requests.length,1);await assert.rejects(stat(join(f.cwd,'marker')));assert(!records.some(e=>e.type==='shell.started'));}
+    else {assert.equal(outcome.status,'completed');assert.equal(await readFile(join(f.cwd,'marker'),'utf8'),'policy-proof');assert(records.find(e=>e.type==='tool.finished').result.policy_decisions.includes('allow.launcher'));}
+  });
+});
+
+test('unsupported hard accounting ceilings reject CLI and ACP before provider delivery', async t => {
+  const f=await fixture(t,async()=>{throw new Error('must not send');});
+  for(const flag of ['--max-total-tokens','--max-cost-microusd']) {
+    const child=spawn(binary,['run','fixture','--json','--workspace',f.cwd,flag,'0'],{env:f.env});let stdout='';child.stdout.on('data',b=>stdout+=b);const [code]=await once(child,'exit');assert.equal(code,2);assert.equal(JSON.parse(stdout).error.code,'invalid_configuration');
+    await withPablo({env:f.env,args:[flag,'0']},async cx=>{const id=await setup(cx,f.cwd);await assert.rejects(prompt(cx,id));});
+  }
+  assert.equal(f.requests.length,0);
+});
+
+test('task envelope fits maximum escaping-heavy output without duplicating legacy outcome', {timeout:30000}, async t=>{
+  const output='\0'.repeat(4*1024*1024);
+  const f=await fixture(t,async(_body,res)=>{res.writeHead(200,{'content-type':'text/event-stream'});res.end(frame({content:output})+end());});
+  await withPablo({env:f.env,args:['--no-shell','--no-filesystem']},async cx=>{
+    await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true,'pablo/task-v1':true}}});
+    const {sessionId}=await cx.request('session/new',{cwd:f.cwd,mcpServers:[]});const response=await prompt(cx,sessionId);const task=taskOf(response);
+    assert(task.outcome.status==='completed');assert.equal(task.outcome.output,output);validateExtension(response._meta?.['pablo/v1']);
+    assert(Buffer.byteLength(JSON.stringify(response))<32*1024*1024);assert.equal((response._meta?.['pablo/v1'] as any).outcome,undefined);
+  });
+});
+
+test('filesystem result backpressure cancels cleanly on resume or disconnect and permits a fresh session', {timeout:20000}, async t=>{
+  for(const disconnect of [false,true]) await t.test(disconnect?'disconnect':'resume and reuse',async t=>{
+    const text='q'.repeat(1024*1024);
+    const f=await fixture(t,async(body,res)=>{
+      if(body.messages.at(-1).role==='tool') {
+        const result=JSON.parse(body.messages.at(-1).content);assert.equal(result.filesystem.text,text);
+        if(body.messages.find((m:any)=>m.role==='user').content==='Second task') await sse(res,frame({content:'second complete'})+end());
+        // Hold the first model continuation open until actual cancellation.
+      } else await sse(res,frame({tool_calls:[{index:0,id:'fs-backpressure',type:'function',function:{name:'fs_read',arguments:JSON.stringify({path:'evidence.txt',max_bytes:text.length})}}]})+end('tool_calls'));
+    });
+    await writeFile(join(f.cwd,'evidence.txt'),text);const pattern=join(f.cwd,'{session_id}.jsonl');
+    const peer=new RawPeer(t,f.env,['--no-shell','--trace',pattern,'--capture-content']);const id=await peer.setup(f.cwd);
+    peer.child.stdout.pause();const pending=peer.prompt(id);
+    await waitUntil(async()=>{try{return (await trace(join(f.cwd,`${id}.jsonl`))).some(e=>e.type==='tool.finished');}catch{return false;}});
+    if(disconnect) peer.child.stdout.destroy();
+    peer.child.stdin.write(JSON.stringify({jsonrpc:'2.0',method:'session/cancel',params:{sessionId:id}})+'\n');
+    if(disconnect) await peer.exited;
+    else {
+      await waitUntil(()=>peer.stderr.includes('ACP cancellation requested'));peer.child.stdout.resume();
+      assert.equal((await pending).stopReason,'cancelled');
+      const {sessionId}=await peer.request('session/new',{cwd:f.cwd,mcpServers:[]});
+      const next=await peer.request('session/prompt',{sessionId,prompt:[{type:'text',text:'Second task'}]});assert.equal((outcomeOf(next) as any).output,'second complete');
+      const terminal=(await trace(join(f.cwd,`${sessionId}.jsonl`))).at(-1);assert.equal(terminal.accounting.model_calls,'2');assert.equal(terminal.accounting.tool_calls,'1');
+    }
+    const records=await trace(join(f.cwd,`${id}.jsonl`));assert.equal(records.at(-1).outcome.status,'cancelled');assert.equal(records.filter(e=>e.type==='run.finished').length,1);assert(!records.some(e=>e.type==='shell.started'));
+    const files=records.filter(e=>e.type==='tool.finished');assert.equal(files.length,1);assert.equal(files[0].result.status,'completed');
+  });
 });

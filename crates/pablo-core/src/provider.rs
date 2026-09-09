@@ -28,6 +28,10 @@ pub struct ModelRequest<'a> {
 
 #[derive(Clone, Debug)]
 pub enum ProviderEvent {
+    /// Trusted adapter-reported actual charge, once per call before Finished.
+    Cost {
+        microusd: u64,
+    },
     TextDelta(String),
     ToolCallStart {
         id: String,
@@ -53,9 +57,23 @@ pub struct ProviderError {
 
 pub type ProviderStream<'a> = BoxStream<'a, Result<ProviderEvent, ProviderError>>;
 
+/// Enforced per-call ceilings attested by an adapter, never inferred prices.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct AccountingBounds {
+    pub tokens: Option<u64>,
+    pub cost_microusd: Option<u64>,
+}
+
 /// Futures and streams must yield promptly; dropping them cancels owned work.
 /// Adapters must bound frame allocation before creating normalized deltas.
 pub trait Provider: Send + Sync {
+    /// An adapter attests enforcement for this model/request shape, including
+    /// all delivery paths. Observed usage or estimated pricing is insufficient.
+    /// The default deliberately cannot support hard aggregate ceilings.
+    fn accounting_bounds(&self, _model: &str, _max_output_tokens: u32) -> AccountingBounds {
+        AccountingBounds::default()
+    }
+
     fn name(&self) -> &'static str;
     fn stream<'a>(
         &'a self,

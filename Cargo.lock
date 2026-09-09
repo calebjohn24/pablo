@@ -1622,6 +1622,7 @@ dependencies = [
 name = "pablo-core"
 version = "0.1.0-dev.1"
 dependencies = [
+ "aws-lc-rs",
  "futures-util",
  "jsonschema",
  "opentelemetry",

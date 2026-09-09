@@ -162,7 +162,24 @@ impl Provider for GatewayProvider {
 fn wire_name(name: &str) -> Result<&'static str, ProviderError> {
     match name {
         "shell.run" => Ok("shell_run"),
+        "fs.read" => Ok("fs_read"),
+        "fs.list" => Ok("fs_list"),
+        "fs.search" => Ok("fs_search"),
+        "fs.write" => Ok("fs_write"),
+        "fs.edit" => Ok("fs_edit"),
         _ => Err(not_sent()),
+    }
+}
+
+fn native_name(name: &str) -> Option<&'static str> {
+    match name {
+        "shell_run" => Some("shell.run"),
+        "fs_read" => Some("fs.read"),
+        "fs_list" => Some("fs.list"),
+        "fs_search" => Some("fs.search"),
+        "fs_write" => Some("fs.write"),
+        "fs_edit" => Some("fs.edit"),
+        _ => None,
     }
 }
 
@@ -453,13 +470,13 @@ impl Completion {
             let delta = arguments.as_str().ok_or_else(malformed)?;
             if !delta.is_empty() {
                 if !call.started {
-                    if call.id.is_empty() || call.name != "shell_run" {
+                    if call.id.is_empty() {
                         return Err(malformed());
                     }
                     call.started = true;
                     self.pending.push_back(ProviderEvent::ToolCallStart {
                         id: call.id.clone(),
-                        name: "shell.run".into(),
+                        name: native_name(&call.name).ok_or_else(malformed)?.into(),
                     });
                 }
                 self.pending

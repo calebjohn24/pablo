@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { once } from 'node:events';
-import { mkdtemp, readFile, realpath, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { withPablo, outcomeOf } from '../../examples/acp-client.ts';
@@ -32,9 +32,10 @@ export async function body(req: IncomingMessage) {
 }
 const frame = (delta: object, finish: string | null = null) => `data: ${JSON.stringify({ choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`;
 
-export async function exercise(env: NodeJS.ProcessEnv, options: { parent?: string; state?: string; extended?: boolean; cancel?: boolean } = {}) {
+export async function exercise(env: NodeJS.ProcessEnv, options: { parent?: string; state?: string; extended?: boolean; cancel?: boolean; filesystem?: boolean } = {}) {
   const cwd = await realpath(await mkdtemp(join(tmpdir(), 'pablo-collector-')));
   const path = join(cwd, 'trace.jsonl');
+  if (options.filesystem) await writeFile(join(cwd, 'evidence.txt'), content);
   const requests: any[] = []; let stdout = ''; let stderr = ''; let calls = 0;
   let childExit: { code: number | null; signal: NodeJS.Signals | null } | undefined;
   const gateway = await server(async (req, res) => {
@@ -45,13 +46,15 @@ export async function exercise(env: NodeJS.ProcessEnv, options: { parent?: strin
     if (calls === 1) {
       const command = options.cancel ? 'sleep 30' : `printf '${content}'; env`;
       res.end(frame({ tool_calls: [{ index: 0, id: 'call_c15', type: 'function', function: {
-        name: 'shell_run', arguments: JSON.stringify({ command, cwd: '.' }),
+        name: options.filesystem ? 'fs_read' : 'shell_run', arguments: JSON.stringify(options.filesystem ? {path:'evidence.txt'} : { command, cwd: '.' }),
       } }] }, 'tool_calls') + 'data: [DONE]\n\n');
     } else {
       const tool = JSON.parse(request.messages.at(-1).content);
+      if (options.filesystem) { assert.equal(tool.filesystem.text,content); } else {
       assert.equal(tool.shell.exit_code, 0);
       assert(tool.shell.stdout.includes(content));
       for (const forbidden of ['OTEL_', providerSecret, exporterSecret, traceId, traceState, 'synthetic-baggage']) assert(!tool.shell.stdout.includes(forbidden));
+      }
       res.end(frame({ content }) + frame({}, 'stop') + 'data: [DONE]\n\n');
     }
   });
@@ -59,7 +62,7 @@ export async function exercise(env: NodeJS.ProcessEnv, options: { parent?: strin
   try {
     let terminal: any;
     await withPablo({ env: { ...cleanEnv(), ...env, AI_GATEWAY_API_KEY: providerSecret, PABLO_FIXTURE_ENDPOINT: `${gateway.url}/v1/chat/completions` },
-      args: ['--model', 'fixture/collector', '--trace', path, '--capture-content', '--max-model-calls', '2', '--max-tool-calls', '1'],
+      args: ['--model', 'fixture/collector', '--trace', path, ...(options.filesystem ? ['--no-shell'] : ['--capture-content']), '--max-model-calls', '2', '--max-tool-calls', '1'],
       onSpawn: child => {
         child.stdout.on('data', chunk => { stdout += chunk; });
         child.on('exit', (code, signal) => { childExit = { code, signal }; });
@@ -90,6 +93,7 @@ export async function exercise(env: NodeJS.ProcessEnv, options: { parent?: strin
     }
     assert(!JSON.stringify(requests).includes(traceId));
     assert(!JSON.stringify(requests).includes(traceState));
+    if (options.filesystem) { assert(!native.includes(content)); assert(!events.some(e=>e.type==='shell.started')); }
     return { events, stdout, stderr, terminal, elapsedMs: performance.now() - start };
   } finally { await gateway.close(); await rm(cwd, { recursive: true, force: true }); }
 }

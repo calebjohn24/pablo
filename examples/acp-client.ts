@@ -12,7 +12,7 @@ export type RunOutcome =
       cache_read_input_tokens: number | null; cache_write_input_tokens: number | null;
     } }
   | { status: 'cancelled' | 'timed_out' }
-  | { status: 'policy_denied'; rule: string }
+  | { status: 'policy_denied'; rule: string | { configured: { id: string } } }
   | { status: 'limit_exceeded'; limit: string }
   | { status: 'failed'; code: string; delivery: string };
 
@@ -20,20 +20,46 @@ export function outcomeOf(response: PromptResponse): RunOutcome {
   return parseOutcome(response._meta?.['pablo/v1']);
 }
 
+export interface TaskResult {
+  schema_version: 'c2.3'; run_id: string; session_id: string; trace_id: string;
+  outcome: RunOutcome; error: null;
+  accounting: { model_calls: string; tool_calls: string;
+    usage: Record<'input_tokens' | 'output_tokens' | 'cache_read_input_tokens' | 'cache_write_input_tokens', string | null>;
+    cost_microusd: string | null; charged_tokens: string | null; charged_cost_microusd: string | null };
+}
+function parseTask(value: unknown): TaskResult {
+  const t = value as TaskResult;
+  const decimal = (v: unknown): boolean => typeof v === 'string' && /^(0|[1-9][0-9]{0,19})$/.test(v) && BigInt(v) <= 18446744073709551615n;
+  const nullable = (v: unknown): boolean => v === null || decimal(v);
+  if (!t || t.schema_version !== 'c2.3' || t.error !== null ||
+      ![t.run_id, t.session_id, t.trace_id].every(v => typeof v === 'string' && v.length > 0) ||
+      !t.accounting || !decimal(t.accounting.model_calls) || !decimal(t.accounting.tool_calls) ||
+      !t.accounting.usage || !['input_tokens','output_tokens','cache_read_input_tokens','cache_write_input_tokens'].every(k => nullable((t.accounting.usage as Record<string, unknown>)[k])) ||
+      !['cost_microusd','charged_tokens','charged_cost_microusd'].every(k => nullable((t.accounting as unknown as Record<string, unknown>)[k]))) throw new Error('Invalid Pablo task accounting');
+  return t;
+}
+/** Exact counts are decimal strings; use BigInt when arithmetic is needed. */
+export function taskOf(response: PromptResponse): TaskResult {
+  const task = parseTask((response._meta?.['pablo/v1'] as Record<string, unknown>)?.task);
+  parseOutcome(response._meta?.['pablo/v1']);
+  return task;
+}
+
 function parseOutcome(value: unknown): RunOutcome {
   const meta = value as Record<string, unknown> | undefined;
-  const outcome = meta?.outcome as RunOutcome | undefined;
+  const task = meta?.task ? parseTask(meta.task) : undefined;
+  const outcome = (task?.outcome ?? meta?.outcome) as RunOutcome | undefined;
   if (!outcome || typeof outcome !== 'object') throw new Error('Missing negotiated Pablo outcome');
   switch (outcome.status) {
     case 'completed':
       if (typeof outcome.output !== 'string' || outcome.finish_reason !== 'stop' || !outcome.usage ||
           !['input_tokens', 'output_tokens', 'cache_read_input_tokens', 'cache_write_input_tokens'].every(key => {
             const value = (outcome.usage as Record<string, unknown>)[key];
-            return value === null || (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0);
+            return value === null || (typeof value === 'number' && (task ? Number.isInteger(value) : Number.isSafeInteger(value)) && value >= 0);
           })) throw new Error('Invalid completed outcome');
       return outcome;
     case 'cancelled': case 'timed_out': return outcome;
-    case 'policy_denied': if (typeof outcome.rule === 'string') return outcome; break;
+    case 'policy_denied': if (typeof outcome.rule === 'string' || (outcome.rule && typeof outcome.rule.configured?.id === 'string' && /^[A-Za-z0-9_.-]{1,64}$/.test(outcome.rule.configured.id))) return outcome; break;
     case 'limit_exceeded': if (typeof outcome.limit === 'string') return outcome; break;
     case 'failed': if (typeof outcome.code === 'string' && typeof outcome.delivery === 'string') return outcome; break;
   }
@@ -43,7 +69,7 @@ function parseOutcome(value: unknown): RunOutcome {
 function describeOutcome(outcome: RunOutcome): string {
   switch (outcome.status) {
     case 'limit_exceeded': return `${outcome.status}: ${outcome.limit}`;
-    case 'policy_denied': return `${outcome.status}: ${outcome.rule}`;
+    case 'policy_denied': return `${outcome.status}: ${typeof outcome.rule === 'string' ? outcome.rule : outcome.rule.configured.id}`;
     case 'failed': return `${outcome.status}: ${outcome.code} (${outcome.delivery})`;
     default: return outcome.status;
   }
@@ -110,7 +136,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
         },
       }, async cx => {
         const init = await cx.request('initialize', {
-          protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v1': true } },
+          protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v1': true, 'pablo/task-v1': true } },
           clientInfo: { name: 'pablo-reference', version: 'c1.3' },
         });
         if (init.protocolVersion !== 1 || init.agentCapabilities?._meta?.['pablo/v1'] !== true) throw new Error('Pablo v1 negotiation failed');

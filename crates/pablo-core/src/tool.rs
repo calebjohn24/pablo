@@ -20,6 +20,8 @@ pub struct ToolDescriptor {
 #[serde(rename_all = "snake_case")]
 pub enum ToolStatus {
     Completed,
+    RecoverableError,
+    WorkLimit,
     Cancelled,
     TimedOut,
     OutputLimit,
@@ -48,6 +50,10 @@ pub struct ToolResult {
     pub status: ToolStatus,
     pub policy_rule: Option<PolicyRule>,
     pub shell: Option<ShellResult>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub filesystem: Option<Box<crate::filesystem::FilesystemResult>>,
+    #[serde(default, skip_serializing_if = "<[_]>::is_empty")]
+    pub policy_decisions: Box<[String]>,
 }
 
 impl ToolResult {
@@ -56,6 +62,8 @@ impl ToolResult {
             status,
             policy_rule: None,
             shell: None,
+            filesystem: None,
+            policy_decisions: Box::default(),
         }
     }
     pub fn denied(rule: PolicyRule) -> Self {
@@ -63,12 +71,16 @@ impl ToolResult {
             status: ToolStatus::PolicyDenied,
             policy_rule: Some(rule),
             shell: None,
+            filesystem: None,
+            policy_decisions: Box::default(),
         }
     }
 }
 
 pub struct ToolContext<'a> {
+    pub policy_decisions: &'a [String],
     pub workspace: &'a Path,
+    pub filesystem: Option<&'a crate::filesystem::Workspace>,
     pub deadline: Instant,
     pub limits: &'a RunLimits,
     pub cancellation: &'a CancellationToken,
@@ -100,6 +112,8 @@ impl std::error::Error for ToolSetupError {}
 #[derive(Default)]
 pub struct ToolRegistry {
     shell: Option<crate::shell::ShellTool>,
+    filesystem: Vec<crate::filesystem::FilesystemTool>,
+    policy: std::sync::Arc<crate::policy::Policy>,
     descriptors: Vec<ToolDescriptor>,
 }
 
@@ -110,15 +124,74 @@ impl ToolRegistry {
         Ok(Self {
             descriptors: vec![shell.descriptor()],
             shell: Some(shell),
+            ..Self::default()
         })
+    }
+    /// Compile the explicit built-in catalog once; empty options grant no tools.
+    pub fn configured(
+        shell: bool,
+        filesystem: bool,
+        policy: crate::policy::Policy,
+    ) -> Result<Self, ToolSetupError> {
+        Self::configured_with_writes(shell, filesystem, false, policy)
+    }
+    pub fn configured_with_writes(
+        shell: bool,
+        filesystem: bool,
+        writes: bool,
+        policy: crate::policy::Policy,
+    ) -> Result<Self, ToolSetupError> {
+        if writes && !filesystem {
+            return Err(ToolSetupError);
+        }
+        policy.validate().map_err(|_| ToolSetupError)?;
+        let policy = std::sync::Arc::new(policy);
+        let mut registry = Self {
+            policy: policy.clone(),
+            ..Self::default()
+        };
+        if shell {
+            let tool = crate::shell::ShellTool::new()?;
+            registry.descriptors.push(tool.descriptor());
+            registry.shell = Some(tool);
+        }
+        if filesystem {
+            use crate::filesystem::{FilesystemTool, Operation};
+            let mut operations = vec![Operation::Read, Operation::List, Operation::Search];
+            if writes {
+                operations.extend([Operation::Write, Operation::Edit]);
+            }
+            for operation in operations {
+                let tool = FilesystemTool::new(operation, policy.clone())?;
+                registry.descriptors.push(tool.descriptor());
+                registry.filesystem.push(tool);
+            }
+        }
+        Ok(registry)
+    }
+    pub fn with_filesystem_reads() -> Result<Self, ToolSetupError> {
+        Self::configured(false, true, crate::policy::Policy::default())
     }
     pub fn descriptors(&self) -> &[ToolDescriptor] {
         &self.descriptors
     }
+    pub(crate) fn has_filesystem(&self) -> bool {
+        !self.filesystem.is_empty()
+    }
+    pub(crate) fn policy(&self) -> &crate::policy::Policy {
+        &self.policy
+    }
     pub(crate) fn get(&self, name: &str) -> Option<&dyn Tool> {
-        self.shell
-            .as_ref()
-            .filter(|_| name == "shell.run")
+        if name == "shell.run" {
+            return self.shell.as_ref().map(|tool| tool as &dyn Tool);
+        }
+        self.descriptors
+            .iter()
+            .position(|d| d.name == name)
+            .and_then(|index| {
+                self.filesystem
+                    .get(index - usize::from(self.shell.is_some()))
+            })
             .map(|tool| tool as &dyn Tool)
     }
 }

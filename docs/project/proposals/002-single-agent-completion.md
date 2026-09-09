@@ -1,6 +1,6 @@
 # Proposed C2: finish the single-agent foundation
 
-This is a proposal, not an active cycle or a status checklist. Adopt it in `state.json` only in a new planning/implementation session. C1 proves the shell/provider/ACP/telemetry path; it does not finish alpha.1 or the 0.1 release contract.
+This proposal was adopted at C2.0 as [cycle C2](../cycles/002-single-agent-completion.md). The candidate table below preserves the planning input; the adopted plan defines acceptance and [state](../state.json) alone records progress. C1 proves the shell/provider/ACP/telemetry path; it does not finish alpha.1 or the 0.1 release contract.
 
 The next bounded step should complete the single-agent surface before the broader extensibility slice. This follows [section 30](../../context.md#30-suggested-implementation-sequence) and the [alpha.1 backlog entry](../backlog.md): applications need predictable file operations, machine-readable task results and explicit policy/accounting before adding more sources of work.
 

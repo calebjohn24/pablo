@@ -80,11 +80,7 @@ impl Resources {
         } else {
             GatewayProvider::vercel(&crate::config::gateway_key(options.env_file.as_deref())?)?
         };
-        let tools = if options.no_shell {
-            ToolRegistry::default()
-        } else {
-            ToolRegistry::with_shell().map_err(|_| "cannot initialize shell tool")?
-        };
+        let tools = options.tools()?;
         Ok(Self {
             provider,
             tools,
@@ -246,6 +242,7 @@ mod tests {
     #[test]
     fn event_capacity_admits_large_plain_text_but_rejects_its_escaped_expansion() {
         let mut event = RunEvent {
+            accounting: None,
             schema_version: "c1.2".into(),
             seq: 1,
             timestamp_unix_micros: 0,

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 /// Checkpoint-local contract revision; not the full 0.1 protocol contract.
-pub const SCHEMA_VERSION: &str = "c1.2";
+pub const SCHEMA_VERSION: &str = "c2.4";
 
 /// Model-visible configuration never contains provider or exporter credentials.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -35,6 +35,12 @@ impl RunSpec {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct RunLimits {
+    #[serde(default)]
+    pub max_total_tokens: Option<u64>,
+    #[serde(default)]
+    pub max_cost_microusd: Option<u64>,
+    #[serde(default)]
+    pub filesystem: crate::filesystem::FilesystemLimits,
     /// None means no call-count limit; Some(0) disables model calls.
     pub max_model_calls: Option<u32>,
     /// None means no call-count limit; Some(0) disables tool calls.
@@ -56,6 +62,9 @@ pub struct RunLimits {
 impl Default for RunLimits {
     fn default() -> Self {
         Self {
+            max_total_tokens: None,
+            max_cost_microusd: None,
+            filesystem: crate::filesystem::FilesystemLimits::default(),
             max_model_calls: None,
             max_tool_calls: None,
             max_tool_duration_ms: 15 * 60 * 1000,
@@ -122,6 +131,7 @@ pub enum FailureCode {
     InvalidToolArguments,
     ToolExecution,
     ToolCleanup,
+    AccountingBoundViolated,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -137,6 +147,9 @@ pub enum LimitKind {
     ToolInputBytes,
     ToolOutputBytes,
     ContextBytes,
+    FilesystemWork,
+    TotalTokens,
+    Cost,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -178,10 +191,12 @@ impl RunOutcome {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PolicyRule {
     ToolUnavailable,
+    Symlink,
+    Configured { id: Box<str> },
     Workspace,
     Environment,
     UnsupportedPlatform,
@@ -214,6 +229,8 @@ pub enum Message {
 /// Live events contain content. JsonlSink applies its independent capture policy.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RunEvent {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub accounting: Option<Box<crate::task::Accounting>>,
     pub schema_version: String,
     pub seq: u64,
     /// UTC Unix microseconds, shared exactly with OTel lifecycle timestamps.

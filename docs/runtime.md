@@ -1,8 +1,8 @@
 # Rust runtime foundation
 
-The C1.2 implementation runs a bounded, sequential model/tool loop through two crates. `pablo-core` owns contracts, provider normalization, lifecycle transitions, event delivery, and OTel instrumentation. `pablo` owns the standalone SDK and terminal commands. C1.2a adds the direct HTTP gateway adapter and live `run` command through this same lifecycle; `demo` remains offline. See [the gateway contract](gateway.md). Network telemetry export remains deferred.
+The implementation runs a bounded, sequential model/tool loop through two crates. `pablo-core` owns contracts, provider normalization, lifecycle transitions, event delivery, and OTel instrumentation. `pablo` owns the standalone SDK and terminal commands. C1.2a added the direct HTTP gateway adapter and live `run` command through this same lifecycle; `demo` remains offline. See [the gateway contract](gateway.md). C1.5 added opt-in [network telemetry export](telemetry.md).
 
-The contract revision is `c1.2`, not a frozen 0.1 API. [The cycle plan](project/cycles/001-first-spike.md) defines the next extensions.
+The contract revision is `c2.2`, not a frozen 0.1 API. C2.2 implements [bounded filesystem reads and revision-checked mutations](filesystem.md); [cycle C2](project/cycles/002-single-agent-completion.md) defines the remaining JSON and accounting checkpoints.
 
 ## Embedding
 
@@ -43,7 +43,7 @@ Event count limits reserve two closing slots. JSONL defaults to 256 MiB, reservi
 
 ## Native trace format
 
-Each JSONL line contains the `c1.2` schema revision, sequence beginning at 1, UTC Unix microsecond timestamp, run/session IDs, lowercase hexadecimal OTel trace/span/parent IDs and flags, and a dotted `type` discriminator. Sequence order is authoritative; wall-clock timestamps may move with the system clock. Each run receives a new run ID and trace. A caller-supplied session ID can correlate independent turns.
+Each JSONL line contains the `c2.2` schema revision, sequence beginning at 1, UTC Unix microsecond timestamp, run/session IDs, lowercase hexadecimal OTel trace/span/parent IDs and flags, and a dotted `type` discriminator. Sequence order is authoritative; wall-clock timestamps may move with the system clock. Each run receives a new run ID and trace. A caller-supplied session ID can correlate independent turns.
 
 Content capture defaults off. Text and final output are replaced before serialization, projected as `null`, and accompanied by byte counts and `content_redacted: true`. Original run input and instructions are never written. Tool arguments, including commands, cwd, and environment additions, are redacted by default; shell stdout/stderr are replaced by null and byte counts while exit/truncation metadata remains. Opted-in tool arguments can contain workspace paths. With content capture enabled, the native events round-trip as `RunEvent`; the redacted JSONL projection intentionally differs at those content fields. Capture does not automatically scrub secrets from opted-in response text.
 
@@ -59,7 +59,7 @@ The scope is `pablo`, versioned with the Cargo package and carrying that schema 
 | --- | --- | --- | --- |
 | Run | `invoke_agent pablo` | INTERNAL | Explicit host parent, otherwise new root |
 | Streamed model call | `chat {model}` | CLIENT | Run |
-| Tool call | `execute_tool shell.run` | INTERNAL | Run |
+| Tool call | `execute_tool shell.run` or `execute_tool fs.*` | INTERNAL | Run |
 
 Spans start and end at the same transitions and exact microsecond timestamps as native lifecycle events. Native records copy SDK-generated identities directly. The provider receives an explicit model context; no context guard is held across an await. Sampling off preserves valid native identities and does not export spans. A no-op tracer with invalid IDs is rejected.
 
@@ -72,10 +72,16 @@ These provisional custom attributes are scoped to mapping `c1.2`:
 | `pablo.run.id` | String; generated UUID | Per run; operational identity |
 | `pablo.run.outcome` | String; completed, cancelled, timed_out, policy_denied, limit_exceeded, failed | Fixed set; no content |
 | `pablo.delivery.certainty` | String; not_sent, may_have_been_sent, response_received | Fixed set; failure metadata |
-| `pablo.trace.format.version` | String; c1.2 | Fixed; format revision |
+| `pablo.trace.format.version` | String; c2.2 | Fixed; format revision |
 | `pablo.otel.mapping.version` | String; c1.2 | Fixed; convention mapping |
 | `pablo.model.output.bytes` | Integer; accepted UTF-8 byte count | Numeric measurement; no content |
 | `pablo.model.output.chunks` | Integer; accepted delta count | Numeric measurement; no content |
 | `pablo.event.delivery_failed` | Boolean; true if terminal sink delivery fails | Fixed; diagnostic on run span |
 
 Model/provider/session names are bounded metadata supplied by the host and must not contain credentials or task content. CLI and ACP share an owned SDK with opt-in OTLP/HTTP Protobuf export, explicit incoming W3C context, and a two-second shutdown deadline. See [C1.5 telemetry](telemetry.md) for configuration, ownership, unsupported settings, and real Collector acceptance.
+
+`pablo "TASK"` is shorthand for `pablo run "TASK"`. `run --json` emits one bounded task object plus LF, with no streaming/progress stdout; model output stays a string. [The shared task schema](pablo-task.schema.json) includes native run/session/trace IDs, outcome and all-outcome accounting. Counters and micro-USD use canonical unsigned decimal strings (u64), unknown actuals remain null, and sums never wrap. No dispatch means known zero usage; a dispatched call with unavailable usage makes the corresponding total unknown. CLI exit codes are 0 for completion, 130 for cancellation, 1 for other admitted outcomes or delivery failure, and 2 for pre-admission errors. Pre-admission envelopes contain null IDs/outcome/accounting and a closed code (`invalid_arguments`, `invalid_configuration`, `credential_unavailable`, `trace_setup_failed`), without raw inputs or private diagnostics. A failed stdout write is never followed by a replacement envelope. The serialized bound is six times the configured output byte limit plus 8 KiB metadata; it is checked before writing without retaining an event transcript.
+
+C2.4 completes `--policy PATH` across exact tool names, the `/bin/sh` launcher, and filesystem roots. Deny rules win; nonempty allowlists deny unmatched values; absence from the registry cannot be overridden. Configured allowed rule IDs are included in bounded tool results and metadata-only spans. Rules constrain the launcher, not shell descendants; the host remains responsible for isolation.
+
+Optional `--max-total-tokens` and `--max-cost-microusd` are u64 ceilings shared by CLI and ACP host configuration. `Provider::accounting_bounds` must attest enforced per-call bounds for the requested model and output limit; its default is unsupported. The current live gateway has no such attestation and rejects requested ceilings before any provider delivery. A synthetic trusted fixture proves reservation behavior without claiming live spending guarantees. Each admitted run has a fresh ledger: reserve the complete bound before dispatch, settle known input+output tokens (cache counters are not added again) and adapter-reported integer micro-USD, retain reservations for unknown actuals/uncertain delivery, and release definitely-unsent attempts to zero while retaining their call count. If both budgets fail, tokens take precedence. A reported bound violation terminates with `accounting_bound_violated`, retains reservations and prevents further work. Integer sums never wrap. Default call counts remain unlimited and aggregate caps absent; no retry or fallback is introduced.

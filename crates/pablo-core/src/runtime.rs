@@ -50,12 +50,14 @@ pub struct Runtime<T> {
 }
 
 struct Execution<'a> {
+    ledger: crate::task::Ledger,
     spec: &'a RunSpec,
     provider: &'a dyn Provider,
     tools: &'a ToolRegistry,
     cancellation: &'a CancellationToken,
     deadline: Instant,
     root: &'a Context,
+    filesystem: Option<crate::filesystem::Workspace>,
 }
 impl Execution<'_> {
     fn stop(&self) -> Option<RunOutcome> {
@@ -113,6 +115,18 @@ where
         sink: &mut dyn EventSink,
     ) -> Result<RunOutcome, RunError> {
         validate(spec, provider)?;
+        let ledger = crate::task::Ledger::new(spec, provider).map_err(RunError::InvalidSpec)?;
+        #[cfg(unix)]
+        let filesystem = if tools.has_filesystem() {
+            Some(
+                crate::filesystem::Workspace::new(&spec.workspace, tools.policy())
+                    .map_err(RunError::InvalidSpec)?,
+            )
+        } else {
+            None
+        };
+        #[cfg(not(unix))]
+        let filesystem = None;
         let deadline = Instant::now()
             .checked_add(Duration::from_millis(spec.limits.max_run_duration_ms))
             .ok_or(RunError::InvalidSpec(
@@ -151,14 +165,18 @@ where
             seq: 0,
             max_events: spec.limits.max_events,
             delivery: DeliveryCertainty::NotSent,
+            accounting: crate::task::Accounting::default(),
         };
+        ledger.initialize(&mut lifecycle.accounting);
         let execution = Execution {
+            ledger,
             spec,
             provider,
             tools,
             cancellation,
             deadline,
             root: &root,
+            filesystem,
         };
         let parent_id = self
             .parent
@@ -214,7 +232,7 @@ where
         let mut ids = HashSet::new();
         let mut remaining_tools = spec.limits.max_tool_calls;
         let mut remaining_models = spec.limits.max_model_calls;
-        let mut usage = None;
+
         loop {
             if let Some(outcome) = execution.stop() {
                 return outcome;
@@ -245,7 +263,7 @@ where
             {
                 return outcome;
             }
-            add_usage(&mut usage, &progress.usage);
+
             if let Some(outcome) = execution.stop() {
                 return outcome;
             }
@@ -253,7 +271,7 @@ where
                 return RunOutcome::Completed {
                     output: progress.output,
                     finish_reason: FinishReason::Stop,
-                    usage: usage.unwrap_or_default(),
+                    usage: lifecycle.accounting.usage.clone(),
                 };
             }
             if remaining_tools
@@ -322,7 +340,7 @@ where
                 .start_with_context(&self.tracer, execution.root),
         );
         let parent = execution.root.span().span_context().span_id().to_string();
-        let result = match lifecycle.emit(
+        let mut result = match lifecycle.emit(
             EventKind::ModelStarted {
                 provider: execution.provider.name().into(),
                 model: spec.model.clone(),
@@ -335,6 +353,23 @@ where
             Err(outcome) => Err(outcome),
             Ok(()) => consume(execution, &model, lifecycle, input, progress, ids).await,
         };
+        if progress.dispatched {
+            let not_sent = matches!(
+                result,
+                Err(RunOutcome::Failed {
+                    delivery: DeliveryCertainty::NotSent,
+                    ..
+                })
+            );
+            if let Err(outcome) = execution.ledger.settle(
+                &mut lifecycle.accounting,
+                &progress.usage,
+                progress.cost_microusd,
+                not_sent,
+            ) {
+                result = Err(outcome);
+            }
+        }
         let finished = telemetry::now();
         let finish_event = EventKind::ModelFinished {
             status: result
@@ -388,6 +423,22 @@ where
                 rule: PolicyRule::ToolUnavailable,
             });
         };
+        let policy = execution.tools.policy();
+        let mut decisions = vec![
+            policy
+                .decide("tools", &call.name, false)
+                .map_err(|rule| RunOutcome::PolicyDenied { rule })?,
+        ];
+        if call.name == "shell.run" {
+            decisions.push(
+                policy
+                    .decide("executables", "/bin/sh", false)
+                    .map_err(|rule| RunOutcome::PolicyDenied { rule })?,
+            );
+        }
+        if let Some(outcome) = execution.stop() {
+            return Err(outcome);
+        }
         let started = telemetry::now();
         let context = execution.root.with_span(
             self.tracer
@@ -412,10 +463,15 @@ where
             started,
             false,
         );
-        let result = if let Err(outcome) = start {
+        let mut result = if let Err(outcome) = start {
             event_failure = Some(outcome);
             ToolResult::status(ToolStatus::EventSinkFailed)
         } else {
+            lifecycle.accounting.tool_calls = lifecycle
+                .accounting
+                .tool_calls
+                .checked_add(1)
+                .ok_or_else(|| limit(LimitKind::ToolCalls))?;
             let mut on_started = |process_id| match lifecycle.emit(
                 EventKind::ShellStarted {
                     call_id: call.id.clone(),
@@ -436,8 +492,10 @@ where
                 call.arguments.clone(),
                 ToolContext {
                     workspace: &execution.spec.workspace,
+                    filesystem: execution.filesystem.as_ref(),
                     deadline: execution.deadline,
                     limits: &execution.spec.limits,
+                    policy_decisions: &decisions,
                     cancellation: execution.cancellation,
                     context: context.clone(),
                     on_started: &mut on_started,
@@ -445,6 +503,22 @@ where
             )
             .await
         };
+        if result.policy_decisions.is_empty() && !decisions.is_empty() {
+            result.policy_decisions = decisions.into_boxed_slice();
+        }
+        if !result.policy_decisions.is_empty() {
+            context.span().set_attribute(KeyValue::new(
+                "pablo.policy.rule_ids",
+                opentelemetry::Value::Array(opentelemetry::Array::String(
+                    result
+                        .policy_decisions
+                        .iter()
+                        .cloned()
+                        .map(Into::into)
+                        .collect(),
+                )),
+            ));
+        }
         let finished = telemetry::now();
         let failure = if result.status == ToolStatus::CleanupFailed {
             tool_failure(&result)
@@ -465,6 +539,11 @@ where
         let failure = failure.or_else(|| closing.err());
         if let Some(outcome) = &failure {
             telemetry::outcome(&context, outcome);
+        } else if result.status == ToolStatus::RecoverableError {
+            context.span().set_status(Status::error("filesystem_error"));
+            context
+                .span()
+                .set_attribute(KeyValue::new("error.type", "filesystem_error"));
         } else if result
             .shell
             .as_ref()
@@ -487,6 +566,8 @@ where
 
 #[derive(Default)]
 struct ModelProgress {
+    cost_microusd: Option<u64>,
+    dispatched: bool,
     output: String,
     usage: Usage,
     finish_reason: Option<FinishReason>,
@@ -530,6 +611,13 @@ async fn consume(
     if let Some(outcome) = execution.stop() {
         return Err(outcome);
     }
+    execution.ledger.reserve(&mut lifecycle.accounting)?;
+    lifecycle.accounting.model_calls = lifecycle
+        .accounting
+        .model_calls
+        .checked_add(1)
+        .ok_or_else(|| limit(LimitKind::ModelCalls))?;
+    progress.dispatched = true;
     lifecycle.delivery = DeliveryCertainty::MayHaveBeenSent;
     let opened = tokio::select! {
         biased;
@@ -570,6 +658,11 @@ async fn consume(
                 });
             }
             Some(Ok(_)) if progress.finish_reason.is_some() => return Err(malformed()),
+            Some(Ok(ProviderEvent::Cost { microusd })) => {
+                if progress.cost_microusd.replace(microusd).is_some() {
+                    return Err(malformed());
+                }
+            }
             Some(Ok(ProviderEvent::TextDelta(text))) => {
                 if text.len()
                     > spec
@@ -674,38 +767,22 @@ fn malformed() -> RunOutcome {
 }
 fn tool_failure(result: &ToolResult) -> Option<RunOutcome> {
     Some(match result.status {
-        ToolStatus::Completed => return None,
+        ToolStatus::Completed | ToolStatus::RecoverableError => return None,
+        ToolStatus::WorkLimit => limit(LimitKind::FilesystemWork),
         ToolStatus::Cancelled => RunOutcome::Cancelled,
         ToolStatus::TimedOut => RunOutcome::TimedOut,
         ToolStatus::OutputLimit => limit(LimitKind::ToolOutputBytes),
         ToolStatus::InvalidArguments => failed(FailureCode::InvalidToolArguments),
         ToolStatus::PolicyDenied => RunOutcome::PolicyDenied {
-            rule: result.policy_rule.unwrap_or(PolicyRule::ToolUnavailable),
+            rule: result
+                .policy_rule
+                .clone()
+                .unwrap_or(PolicyRule::ToolUnavailable),
         },
         ToolStatus::CleanupFailed => failed(FailureCode::ToolCleanup),
         ToolStatus::EventSinkFailed => failed(FailureCode::EventSinkIo),
         ToolStatus::SpawnFailed | ToolStatus::IoFailed => failed(FailureCode::ToolExecution),
     })
-}
-fn add_usage(total: &mut Option<Usage>, usage: &Usage) {
-    let Some(total) = total.as_mut() else {
-        *total = Some(usage.clone());
-        return;
-    };
-    for (total, next) in [
-        (&mut total.input_tokens, usage.input_tokens),
-        (&mut total.output_tokens, usage.output_tokens),
-        (
-            &mut total.cache_read_input_tokens,
-            usage.cache_read_input_tokens,
-        ),
-        (
-            &mut total.cache_write_input_tokens,
-            usage.cache_write_input_tokens,
-        ),
-    ] {
-        *total = total.and_then(|old| next.and_then(|next| old.checked_add(next)));
-    }
 }
 
 fn validate(spec: &RunSpec, provider: &dyn Provider) -> Result<(), RunError> {
@@ -734,6 +811,11 @@ fn validate(spec: &RunSpec, provider: &dyn Provider) -> Result<(), RunError> {
     if !spec.workspace.is_absolute() {
         return Err(RunError::InvalidSpec("workspace must be absolute"));
     }
+    if !spec.limits.filesystem.valid() {
+        return Err(RunError::InvalidSpec(
+            "filesystem work limits must be positive and bounded",
+        ));
+    }
     if spec.limits.max_events < 4 {
         return Err(RunError::InvalidSpec(
             "at least four event slots are required",
@@ -757,6 +839,7 @@ struct Lifecycle<'a> {
     seq: u64,
     max_events: u64,
     delivery: DeliveryCertainty,
+    accounting: crate::task::Accounting,
 }
 
 impl Lifecycle<'_> {
@@ -773,6 +856,8 @@ impl Lifecycle<'_> {
         let span = context.span();
         let identity = span.span_context();
         RunEvent {
+            accounting: matches!(kind, EventKind::RunFinished { .. })
+                .then(|| Box::new(self.accounting.clone())),
             schema_version: SCHEMA_VERSION.into(),
             seq: self.seq + 1,
             timestamp_unix_micros: telemetry::micros(time),
