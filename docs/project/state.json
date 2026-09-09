@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-09T02:48:49.509Z",
+  "updated_at": "2026-09-09T02:51:13.374Z",
   "active_checkpoint": null,
   "next_checkpoint": null,
-  "next_action": "Finish the authorized private calebjohn24/pablo remote setup after GitHub authentication: verify privacy, push main and verify remote HEAD. Then resume C2.5 native Linux x86_64 acceptance; that gate remains blocked on runner access.",
-  "latest_log_entry": "LOG-0043",
+  "next_action": "Private origin is configured at https://github.com/calebjohn24/pablo.git and main is pushed. Resume C2.5 with an authorized native Linux x86_64 runner: execute full acceptance and comparable release measurements, append evidence, then close the cycle only after that gate passes.",
+  "latest_log_entry": "LOG-0044",
   "checkpoints": [
     {
       "id": "C1.0",

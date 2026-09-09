@@ -1,9 +1,11 @@
 # Private GitHub remote setup
 
-The user authorized creation of a private repository at calebjohn24/pablo and pushing the complete project on 2026-09-08.
+The user authorized creation of a private repository under calebjohn24 and pushing the complete project. Setup completed 2026-09-09T02:51:13.374Z.
 
-The C2 implementation, tests, contracts, project records and Codex comparison were committed locally as 82cba9c. GitHub CLI was installed through Homebrew. The machine has no authenticated GitHub CLI account; a browser device authorization flow was started and requires the user to sign in as calebjohn24. No repository creation or push has occurred yet, and no origin remote is configured.
+Repository: https://github.com/calebjohn24/pablo. GitHub reports PRIVATE visibility, owner calebjohn24 and default branch main. Local origin fetch/push URL is https://github.com/calebjohn24/pablo.git; main tracks origin/main.
 
-Checks passed: project consistency; staged diff whitespace; exclusion of credential/local-artifact paths from the index and existing history; common private-key/token-signature scan of staged contents; clean working tree after the implementation commit. The root credential file was not read. No runtime source was changed or runtime tests repeated during remote setup.
+The first session committed C2 implementation and evidence as 82cba9c, installed GitHub CLI and paused for browser authentication (LOG-0043). This session verified the authenticated calebjohn24 identity, confirmed the repository did not exist, and ran gh repo create calebjohn24/pablo --private --source=. --remote=origin --push successfully. The initial push's local and remote main commit IDs both equaled 5875d6d4939a08f83e1cbf7fdee1293ac7e97637, including the prior handoff record. This completion record is a subsequent documentation commit.
 
-Resume after authentication: verify the GitHub identity, check whether calebjohn24/pablo exists, create it with private visibility if absent, configure origin, push main with upstream tracking, and verify private visibility plus matching local/remote commit IDs. Append the actual result to the project log. C2.5 still requires native Linux x86_64 acceptance; creating a remote does not pass that gate.
+Verification: GitHub repository visibility/default branch, origin URLs, upstream tracking and matching local/remote commit IDs passed. Project consistency and diff whitespace checks passed. Credential, trace, cache, dependency and build-output paths remain ignored; their contents were not uploaded. No runtime source changed or runtime tests repeated for remote setup.
+
+Remote setup is complete. C2.5 still requires actual native Linux x86_64 acceptance and release measurements. No CI workflow, runner, tag or release was created by this action.

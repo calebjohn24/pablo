@@ -6,6 +6,8 @@ Pablo is a small headless Rust agent runtime for applications doing arbitrary wo
 
 This file holds durable context. [State](state.json) reports current progress, [the log](log.jsonl) records history, and [cycle C2](cycles/002-single-agent-completion.md) defines the selected work. [Cycle C1](cycles/001-first-spike.md) and its evidence remain historical. Run `node scripts/project.mjs context` for a focused handoff.
 
+Private source remote: [calebjohn24/pablo](https://github.com/calebjohn24/pablo), with `main` tracking `origin/main`. Repository creation is recorded in LOG-0044; native Linux acceptance remains a separate gate.
+
 ## Read the design selectively
 
 - [Architecture brief](../context.md), section 29.1: authoritative 0.1 release contract.
