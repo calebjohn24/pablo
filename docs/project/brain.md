@@ -159,6 +159,14 @@ Hash canonical defaulted config with secret references and authority, preserving
 
 C3.2 exposes one pure configuration resolver with bounded no-follow local reads and explicit host inputs; activation, credentials and CLI/ACP adapters stay in C3.3. Workspace-relative ceilings become fixed portable references when declared so later workspace overrides cannot move them. Equal named profiles expand once while retaining each origin. Precisely define scalar/list/unset provenance and typed-bootstrap source digests; the C3.1 production config and both fingerprints stay unchanged. See the [deployment contract](contracts/c3-deployment-config.md) and [C3.2 evidence](evidence/c3.2.md).
 
+### D036 — Continue C3 with verified merges and ongoing measurements
+
+The user now authorizes finishing the remaining C3 cycle, measuring performance throughout and merging completed PRs as work proceeds. This overrides the per-session stopping cadence while retaining one active checkpoint, dependency order and honest gate evidence. Preserve the full cycle scope, including live and native acceptance; missing external prerequisites remain incomplete rather than replaced by mocks. Use matched offline measurements at runtime changes and retain source/build identities.
+
+### D037 — Reuse pinned inputs and independent policies at admission
+
+C3.3 exposes load-then-resolve so hosts capture only declared non-secret environment values without rereading files. Per-task overrides retain provenance and immutable ceilings; policy allowlists intersect as separate layers. Offline rendering stays within the entry-file bound so successful output can reload. [Adapter details](contracts/c3-deployment-config.md#c33-adapter-details) define bootstrap spelling and distinguish non-secret preparation from complete runtime admission.
+
 ## Working constraints
 
 - Keep `docs/context.md` as the detailed design source; review deliberate changes using the state file's stored SHA-256.

@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-09T20:43:17.335Z",
-  "active_checkpoint": null,
-  "next_checkpoint": "C3.3",
-  "next_action": "Implement only C3.3: project the verified deployment snapshot into existing CLI/ACP/Rust admission; add offline config validate/explain/render, private credential use and binding identity, actual containment and independent policy ceilings. Prove all G03 cases and preserve legacy no-config behavior.",
-  "latest_log_entry": "LOG-0053",
+  "updated_at": "2026-09-09T21:19:12.419Z",
+  "active_checkpoint": "C3.3",
+  "next_checkpoint": null,
+  "next_action": "Keep C3.3 active on feat/c3-config-runtime. Implement credential readers and explicit OTel setup, wire Bootstrap/PreparedRun into CLI/ACP with per-task snapshots and safe identity, then prove all nine G03 cases and configured performance before merging. Continue C3.4 onward after the verified merge under the full-cycle goal.",
+  "latest_log_entry": "LOG-0055",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -263,7 +263,7 @@
       "depends_on": [
         "C3.2"
       ],
-      "status": "pending",
+      "status": "in_progress",
       "blockers": [],
       "verification": []
     },

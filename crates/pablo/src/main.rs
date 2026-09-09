@@ -1,5 +1,6 @@
 mod acp;
 mod config;
+mod deployment;
 mod otel;
 
 use std::{
@@ -19,13 +20,12 @@ const HELP: &str = "pablo — headless Rust runtime\n\nUsage:\n  pablo \"TASK\" 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> ExitCode {
     let args: Vec<_> = std::env::args_os().skip(1).collect();
-    let json = args
-        .first()
-        .is_none_or(|c| c != "acp" && c != "demo" && c != "--help" && c != "--version")
-        && args
-            .iter()
-            .take_while(|a| *a != "--")
-            .any(|a| a == "--json");
+    let json = args.first().is_none_or(|c| {
+        c != "config" && c != "acp" && c != "demo" && c != "--help" && c != "--version"
+    }) && args
+        .iter()
+        .take_while(|a| *a != "--")
+        .any(|a| a == "--json");
     let mut stage = TaskErrorCode::InvalidArguments;
     match execute(args, &mut stage).await {
         Ok(code) => code,
@@ -49,8 +49,12 @@ async fn execute(
 ) -> Result<ExitCode, String> {
     let mut args = args.into_iter();
     let command = args.next().unwrap_or_else(|| "--help".into());
+    if command == "config" {
+        deployment::inspect(args.collect())?;
+        return Ok(ExitCode::SUCCESS);
+    }
     if command == "--help" && args.len() == 0 {
-        print!("{HELP}");
+        print!("{HELP}{}", deployment::HELP);
         return Ok(ExitCode::SUCCESS);
     }
     if command == "--version" && args.len() == 0 {

@@ -424,13 +424,11 @@ where
             });
         };
         let policy = execution.tools.policy();
-        let mut decisions = vec![
-            policy
-                .decide("tools", &call.name, false)
-                .map_err(|rule| RunOutcome::PolicyDenied { rule })?,
-        ];
+        let mut decisions = policy
+            .decide("tools", &call.name, false)
+            .map_err(|rule| RunOutcome::PolicyDenied { rule })?;
         if call.name == "shell.run" {
-            decisions.push(
+            decisions.extend(
                 policy
                     .decide("executables", "/bin/sh", false)
                     .map_err(|rule| RunOutcome::PolicyDenied { rule })?,

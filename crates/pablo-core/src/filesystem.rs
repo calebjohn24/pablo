@@ -1,7 +1,7 @@
 //! Bounded explicit filesystem operations anchored to an admitted workspace.
 use crate::{
     PolicyRule, RunLimits,
-    policy::Policy,
+    policy::PolicySet,
     tool::{
         Tool, ToolContext, ToolDescriptor, ToolResult, ToolSetupError, ToolStatus, compile_schema,
     },
@@ -199,10 +199,13 @@ pub(crate) struct FilesystemTool {
     operation: Operation,
     descriptor: ToolDescriptor,
     validator: jsonschema::Validator,
-    policy: Arc<Policy>,
+    policy: Arc<PolicySet>,
 }
 impl FilesystemTool {
-    pub(crate) fn new(operation: Operation, policy: Arc<Policy>) -> Result<Self, ToolSetupError> {
+    pub(crate) fn new(
+        operation: Operation,
+        policy: Arc<PolicySet>,
+    ) -> Result<Self, ToolSetupError> {
         let mut props = json!({"path":{"type":"string","minLength":1,"maxLength":4096},"timeout_ms":{"type":"integer","minimum":1},"max_output_bytes":{"type":"integer","minimum":1024}});
         let mut required = vec!["path"];
         match operation {
@@ -425,7 +428,7 @@ mod unix {
         path: PathBuf,
     }
     impl Workspace {
-        pub(crate) fn new(path: &Path, policy: &Policy) -> Result<Self, &'static str> {
+        pub(crate) fn new(path: &Path, policy: &PolicySet) -> Result<Self, &'static str> {
             policy.validate()?;
             let path = path
                 .canonicalize()
@@ -597,7 +600,7 @@ mod unix {
         pub limits: RunLimits,
         pub deadline: Instant,
         pub cancellation: CancellationToken,
-        pub policy: Arc<Policy>,
+        pub policy: Arc<PolicySet>,
         pub visited: usize,
         pub scanned: usize,
         pub retained: usize,
@@ -616,7 +619,7 @@ mod unix {
                 Ok(())
             }
         }
-        fn allow(&self, path: &Path) -> Result<String, Box<ToolResult>> {
+        fn allow(&self, path: &Path) -> Result<Vec<String>, Box<ToolResult>> {
             self.policy
                 .decide("read_roots", path.to_str().unwrap_or(""), false)
                 .map_err(deny)
@@ -632,7 +635,7 @@ mod unix {
                     return self.mutate(&path, args, operation, cap);
                 }
                 let rule = self.allow(&path)?;
-                self.dispatch_decisions.push(rule);
+                self.dispatch_decisions.extend(rule);
                 let mut result = match operation {
                     Operation::Read => self.read(&path, args)?,
                     Operation::List => self.list(&path, args)?,
@@ -664,9 +667,9 @@ mod unix {
             let expected = args["expected_revision"].as_str();
             let mut decisions = Vec::new();
             if expected.is_some() {
-                decisions.push(self.allow(path)?);
+                decisions.extend(self.allow(path)?);
             }
-            decisions.push(
+            decisions.extend(
                 self.policy
                     .decide("write_roots", path.to_str().unwrap_or(""), true)
                     .map_err(deny)?,
@@ -1088,11 +1091,11 @@ mod unix {
             fn worker(&self) -> Worker {
                 Worker {
                     dispatch_decisions: Vec::new(),
-                    workspace: Workspace::new(&self.0.join("root"), &Policy::default()).unwrap(),
+                    workspace: Workspace::new(&self.0.join("root"), &PolicySet::default()).unwrap(),
                     limits: RunLimits::default(),
                     deadline: Instant::now() + Duration::from_secs(10),
                     cancellation: CancellationToken::new(),
-                    policy: Arc::new(Policy::default()),
+                    policy: Arc::new(PolicySet::default()),
                     visited: 0,
                     scanned: 0,
                     retained: 0,

@@ -78,6 +78,269 @@ fn error(request: ResolveRequest, code: &str) {
 }
 
 #[test]
+fn rendered_presets_reload_without_profiles_environment_or_secret_access() {
+    let f = Fixture::new();
+    f.corpus();
+    for entry in [
+        "production.toml",
+        "development.toml",
+        "credential-sources.toml",
+    ] {
+        let mut request = f.request(entry);
+        request.path_bindings.insert("secrets".into(), f.0.clone());
+        request
+            .environment
+            .insert("PABLO_DEV_MAX_TOOL_CALLS".into(), "3".into());
+        let original = deployment::resolve(request).unwrap();
+        let rendered = original.render().unwrap();
+        let document: toml::Value = toml::from_str(&rendered).unwrap();
+        for absent in ["imports", "profiles", "profile", "environment"] {
+            assert!(document.get(absent).is_none());
+        }
+        f.write("rendered.toml", &rendered);
+        let mut request = f.request("rendered.toml");
+        request.path_bindings.insert("secrets".into(), f.0.clone());
+        let reloaded = deployment::resolve(request).unwrap();
+        assert_eq!(original.config(), reloaded.config());
+        assert_eq!(original.fingerprint(), reloaded.fingerprint());
+        assert_ne!(original.input_fingerprint(), reloaded.input_fingerprint());
+        assert_eq!(rendered, reloaded.render().unwrap());
+    }
+}
+
+#[test]
+fn render_preserves_quoted_keys_controls_unicode_and_full_u64_strings() {
+    let f = Fixture::new();
+    let original = f.resolve(json!({"options": {
+        "run": {"instructions": "quote\" slash\\ newline\n tab\t DEL\u{7f} é🙂"},
+        "otel": {"resource_attributes": {"a.b\"c": "value"}},
+        "limits": {"max_total_tokens": "18446744073709551615"}
+    }}));
+    f.write("rendered.toml", &original.render().unwrap());
+    let reloaded = deployment::resolve(f.request("rendered.toml")).unwrap();
+    assert_eq!(original.fingerprint(), reloaded.fingerprint());
+}
+
+#[test]
+fn render_rejects_an_entry_that_cannot_reload_within_the_file_bound() {
+    let f = Fixture::new();
+    let result = f.resolve(
+        json!({"options":{"run":{"instructions":"x".repeat(deployment::MAX_FILE_BYTES - 300)}}}),
+    );
+    assert_eq!(result.render().unwrap_err().code, "config_limit");
+}
+
+#[test]
+fn environment_capture_finishes_the_same_loaded_files() {
+    let f = Fixture::new();
+    f.corpus();
+    let loaded = deployment::load(f.request("development.toml")).unwrap();
+    let names: Vec<_> = loaded.environment_names().map(str::to_owned).collect();
+    assert_eq!(names.len(), 1);
+    f.write("development.toml", "invalid replacement");
+    let result = loaded
+        .with_environment([(names[0].clone(), "3".into())].into())
+        .unwrap()
+        .resolve()
+        .unwrap();
+    assert_eq!(result.options()["limits"]["max_tool_calls"], 3);
+    assert_eq!(
+        deployment::resolve(f.request("development.toml"))
+            .unwrap_err()
+            .code,
+        "config_parse"
+    );
+    let loaded = deployment::load(f.request("production.toml")).unwrap();
+    assert!(
+        loaded
+            .with_environment([("UNDECLARED".into(), "private".into())].into())
+            .is_err()
+    );
+}
+
+#[test]
+fn secret_environment_names_cannot_be_reclassified_as_inspection_options() {
+    let f = Fixture::new();
+    for name in [
+        "SYNTHETIC_KEY",
+        "AI_GATEWAY_API_KEY",
+        "VERCEL_AI_GATEWAY",
+        "OTEL_EXPORTER_OTLP_HEADERS",
+        "OTEL_EXPORTER_OTLP_TRACES_HEADERS",
+    ] {
+        let request = f.document(json!({"environment":{name:{"option":"otel.service_name"}}}));
+        assert!(matches!(deployment::load(request), Err(e) if e.code == "config_invalid_value"));
+    }
+}
+
+#[test]
+fn prepared_runs_project_limits_catalog_and_private_binding_identity() {
+    let f = Fixture::new();
+    f.corpus();
+    let deployment = deployment::resolve(f.request("production.toml")).unwrap();
+    let prepared = deployment
+        .prepare_run(deployment::RunInput {
+            input: "synthetic task".into(),
+            session_id: Some("session-one".into()),
+            workspace: Some(f.0.clone()),
+        })
+        .unwrap();
+    assert_eq!(prepared.spec().workspace, f.0);
+    assert_eq!(prepared.spec().limits.max_model_calls, Some(4));
+    assert_eq!(prepared.spec().limits.max_tool_calls, Some(8));
+    assert_eq!(prepared.spec().limits.max_run_duration_ms, 600000);
+    assert!(!prepared.spec().trace.capture_content);
+    assert_eq!(
+        prepared
+            .tools()
+            .unwrap()
+            .descriptors()
+            .iter()
+            .map(|d| d.name.as_str())
+            .collect::<Vec<_>>(),
+        ["fs.read", "fs.list", "fs.search"]
+    );
+    assert_eq!(
+        prepared.deployment().fingerprint(),
+        deployment.fingerprint()
+    );
+    assert!(!format!("{prepared:?}").contains("synthetic task"));
+    let other = Fixture::new();
+    let mut request = f.request("production.toml");
+    request
+        .path_bindings
+        .insert("workspace".into(), other.0.clone());
+    let alternate = deployment::resolve(request)
+        .unwrap()
+        .prepare_run(deployment::RunInput {
+            input: "other".into(),
+            session_id: None,
+            workspace: None,
+        })
+        .unwrap();
+    assert_eq!(
+        prepared.deployment().fingerprint(),
+        alternate.deployment().fingerprint()
+    );
+    assert_ne!(
+        prepared.bindings_fingerprint(),
+        alternate.bindings_fingerprint()
+    );
+    assert!(
+        !serde_json::to_string(prepared.deployment())
+            .unwrap()
+            .contains(f.0.to_str().unwrap())
+    );
+}
+
+#[test]
+fn child_workspace_admission_keeps_ceilings_and_updates_effective_identity() {
+    let f = Fixture::new();
+    fs::create_dir(f.0.join("child")).unwrap();
+    let original = f.resolve(json!({"deployment":{"locked":true,"allowed_run_overrides":["input","run.workspace"]},
+        "authority":[{"id":"root.ceiling","workspace_roots":[{"base":"binding","name":"workspace","path":"."}]}]}));
+    let child = original
+        .prepare_run(deployment::RunInput {
+            input: "task".into(),
+            session_id: None,
+            workspace: Some(f.0.join("child")),
+        })
+        .unwrap();
+    assert_eq!(child.spec().workspace, f.0.join("child"));
+    assert_ne!(original.fingerprint(), child.deployment().fingerprint());
+    let direct = original
+        .with_overrides(
+            [(
+                "run.workspace".into(),
+                json!({"base":"binding","name":"workspace","path":"child"}),
+            )]
+            .into_iter()
+            .collect(),
+        )
+        .unwrap();
+    assert_eq!(child.deployment().fingerprint(), direct.fingerprint());
+    assert_eq!(
+        child.deployment().config()["authority"],
+        original.config()["authority"]
+    );
+    let other = Fixture::new();
+    let error = original
+        .prepare_run(deployment::RunInput {
+            input: "task".into(),
+            session_id: None,
+            workspace: Some(other.0.clone()),
+        })
+        .unwrap_err();
+    assert_eq!(error.code, "config_authority_violation");
+    let locked = f.resolve(json!({"deployment":{"locked":true}}));
+    assert_eq!(
+        locked
+            .prepare_run(deployment::RunInput {
+                input: "task".into(),
+                session_id: None,
+                workspace: Some(f.0.join("child"))
+            })
+            .unwrap_err()
+            .code,
+        "config_override_forbidden"
+    );
+}
+
+#[test]
+fn prepared_run_rejects_endpoint_and_unavailable_paths_without_creating_trace() {
+    let f = Fixture::new();
+    let input = || deployment::RunInput {
+        input: "task".into(),
+        session_id: Some("safe-session".into()),
+        workspace: None,
+    };
+    let trace = f.resolve(
+        json!({"options":{"trace":{"path":{"base":"workspace","path":"{session_id}.jsonl"}}}}),
+    );
+    let prepared = trace.prepare_run(input()).unwrap();
+    assert_eq!(
+        prepared.trace_path(),
+        Some(f.0.join("safe-session.jsonl").as_path())
+    );
+    assert!(!f.0.join("safe-session.jsonl").exists());
+    f.write("safe-session.jsonl", "existing sentinel");
+    assert_eq!(
+        trace.prepare_run(input()).unwrap_err().code,
+        "config_path_unavailable"
+    );
+    assert_eq!(
+        fs::read_to_string(f.0.join("safe-session.jsonl")).unwrap(),
+        "existing sentinel"
+    );
+    let wrong_endpoint = deployment::resolve(
+        f.document(json!({"options":{"model":{"endpoint":"https://example.invalid/steal"}}})),
+    );
+    assert_eq!(wrong_endpoint.unwrap_err().code, "config_invalid_value");
+    let missing = f.resolve(json!({"options":{"run":{"workspace":{"base":"binding","name":"workspace","path":"missing"}}}}));
+    assert_eq!(
+        missing.prepare_run(input()).unwrap_err().code,
+        "config_path_unavailable"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn workspace_symlinks_cannot_widen_physical_roots() {
+    let f = Fixture::new();
+    let outside = Fixture::new();
+    std::os::unix::fs::symlink(&outside.0, f.0.join("escape")).unwrap();
+    let config = f.resolve(json!({"options":{"run":{"workspace":{"base":"binding","name":"workspace","path":"escape"}}}}));
+    let e = config
+        .prepare_run(deployment::RunInput {
+            input: "task".into(),
+            session_id: None,
+            workspace: None,
+        })
+        .unwrap_err();
+    assert_eq!(e.code, "config_authority_violation");
+}
+
+#[test]
 fn production_matches_frozen_config_sources_and_fingerprints() {
     let f = Fixture::new();
     f.corpus();

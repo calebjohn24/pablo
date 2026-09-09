@@ -6,11 +6,53 @@ use serde_json::json;
 use std::{
     collections::{BTreeSet, HashSet},
     path::Path,
+    sync::Arc,
 };
 
 /// Resolve only declared data. No environment lookup, credential reader,
 /// provider, tool, runtime or telemetry setup is reachable from this entry point.
 pub fn resolve(request: ResolveRequest) -> Result<ResolvedDeployment, ConfigError> {
+    load(request)?.resolve()
+}
+
+impl ResolvedDeployment {
+    /// Apply explicit per-task values to this snapshot through the same
+    /// override/authority checks, preserving its source and provenance history.
+    pub fn with_overrides(&self, overrides: Map<String, Value>) -> Result<Self, ConfigError> {
+        if overrides.len() > 64 {
+            return Err(limit());
+        }
+        let mut request = ResolveRequest::new(self.config_root.clone(), "unused");
+        request.path_bindings = self.path_bindings.clone();
+        request.overrides = overrides;
+        let resolver = Resolver {
+            reader: Reader::new(&request.config_root)?,
+            request: Arc::new(request),
+            config: self.config.clone(),
+            sources: self.sources.clone(),
+            provenance: self.provenance.clone(),
+            origins: self.provenance.values().map(Vec::len).sum(),
+            environment: Map::new(),
+            active: Vec::new(),
+            edges: 0,
+            profiles: 0,
+            expanded_profiles: 0,
+            authority_sources: Vec::new(),
+            aliases: BTreeMap::new(),
+        };
+        LoadedDeployment {
+            resolver,
+            locked: self.config["deployment"]["locked"].as_bool().unwrap(),
+        }
+        .resolve()
+    }
+}
+
+/// Load and compose the selected file trees once, without consulting ambient
+/// environment. Hosts may then capture only `environment_names()` and finish
+/// resolution using these same pinned inputs, even if the files change.
+pub fn load(request: ResolveRequest) -> Result<LoadedDeployment, ConfigError> {
+    let request = Arc::new(request);
     if request.path_bindings.len() > 64
         || request.host_authority.len() > 64
         || request.overrides.len() > 64
@@ -39,7 +81,7 @@ pub fn resolve(request: ResolveRequest) -> Result<ResolvedDeployment, ConfigErro
     let defaults = json!({"options":input::defaults(),"deployment":{"locked":false,"allowed_run_overrides":["input"]}});
     let config = json!({"options":defaults["options"],"deployment":defaults["deployment"],"credentials":{},"authority":[]});
     let mut resolver = Resolver {
-        request: &request,
+        request: request.clone(),
         reader,
         config,
         sources: Vec::new(),
@@ -113,45 +155,110 @@ pub fn resolve(request: ResolveRequest) -> Result<ResolvedDeployment, ConfigErro
         &mut resolver.origins,
     )?;
     resolver.config["deployment"]["locked"] = locked.into();
-    resolver.apply_environment()?;
-    if request.locked {
-        let source = resolver.source(
-            "override",
-            "deployment.locked",
-            fingerprint(&json!({"option":"deployment.locked","value":true}))?,
-        )?;
-        resolver.mark("/config/deployment/locked", &source, "constrain")?;
+    // Reject overlapping secret/non-secret declarations before the host even
+    // receives the names to capture. Do not turn credential bytes into options,
+    // source digests or inspection output by way of an environment binding.
+    let mut secret_names: HashSet<&str> = [
+        "AI_GATEWAY_API_KEY",
+        "VERCEL_AI_GATEWAY",
+        "OTEL_EXPORTER_OTLP_HEADERS",
+        "OTEL_EXPORTER_OTLP_TRACES_HEADERS",
+    ]
+    .into();
+    for credential in resolver.config["credentials"].as_object().unwrap().values() {
+        for source in credential["sources"].as_array().unwrap() {
+            if source["kind"] == "environment" {
+                secret_names.insert(source["name"].as_str().unwrap());
+            }
+        }
     }
-    resolver.apply_overrides(locked)?;
-    resolver.complete_policies()?;
-    resolver.complete_aliases()?;
-    input::resolved_shape(&resolver.config)?;
-    validate::config(&resolver.config, &request)?;
-    resolver.provenance.retain(|path, _| {
-        resolver
-            .config
-            .pointer(path.strip_prefix("/config").unwrap())
-            .is_some()
-    });
-    let fingerprint = fingerprint(
-        &json!({"schema_version":1,"contract_revision":CONTRACT_REVISION,"config":resolver.config}),
-    )?;
-    let input_fingerprint = super::fingerprint(
-        &json!({"schema_version":1,"contract_revision":CONTRACT_REVISION,"sources":resolver.sources}),
-    )?;
-    let result = ResolvedDeployment {
-        schema_version: 1,
-        contract_revision: CONTRACT_REVISION,
-        config: resolver.config,
-        fingerprint,
-        sources: resolver.sources,
-        provenance: resolver.provenance,
-        input_fingerprint,
-    };
-    // Inspection is bounded independently of the effective config. Avoid an
-    // unbounded to_vec of the complete source/provenance envelope.
-    canonical::check_inspection_size(&result)?;
-    Ok(result)
+    if resolver
+        .environment
+        .keys()
+        .any(|name| secret_names.contains(name.as_str()))
+    {
+        return Err(error("config_invalid_value", "/environment"));
+    }
+    Ok(LoadedDeployment { resolver, locked })
+}
+
+/// Composed data awaiting an explicit non-secret environment snapshot. No
+/// credentials or runtime resources are read or created by this object.
+pub struct LoadedDeployment {
+    resolver: Resolver,
+    locked: bool,
+}
+impl LoadedDeployment {
+    pub fn environment_names(&self) -> impl Iterator<Item = &str> {
+        self.resolver.environment.keys().map(String::as_str)
+    }
+
+    /// Replace the approved snapshot. Unrelated process variables must not be
+    /// copied here; undeclared names reject instead of being retained.
+    pub fn with_environment(
+        mut self,
+        values: BTreeMap<String, String>,
+    ) -> Result<Self, ConfigError> {
+        if values.len() > 64
+            || values
+                .keys()
+                .any(|name| !self.resolver.environment.contains_key(name))
+        {
+            return Err(error("config_environment_value", "/environment"));
+        }
+        Arc::get_mut(&mut self.resolver.request)
+            .expect("loaded request is privately owned")
+            .environment = values;
+        Ok(self)
+    }
+
+    pub fn resolve(self) -> Result<ResolvedDeployment, ConfigError> {
+        let Self {
+            mut resolver,
+            locked,
+        } = self;
+        resolver.apply_environment()?;
+        if resolver.request.locked {
+            let source = resolver.source(
+                "override",
+                "deployment.locked",
+                fingerprint(&json!({"option":"deployment.locked","value":true}))?,
+            )?;
+            resolver.mark("/config/deployment/locked", &source, "constrain")?;
+        }
+        resolver.apply_overrides(locked)?;
+        resolver.complete_policies()?;
+        resolver.complete_aliases()?;
+        input::resolved_shape(&resolver.config)?;
+        validate::config(&resolver.config, &resolver.request)?;
+        resolver.provenance.retain(|path, _| {
+            resolver
+                .config
+                .pointer(path.strip_prefix("/config").unwrap())
+                .is_some()
+        });
+        let fingerprint = fingerprint(
+            &json!({"schema_version":1,"contract_revision":CONTRACT_REVISION,"config":resolver.config}),
+        )?;
+        let input_fingerprint = super::fingerprint(
+            &json!({"schema_version":1,"contract_revision":CONTRACT_REVISION,"sources":resolver.sources}),
+        )?;
+        let result = ResolvedDeployment {
+            config_root: resolver.request.config_root.clone(),
+            path_bindings: resolver.request.path_bindings.clone(),
+            schema_version: 1,
+            contract_revision: CONTRACT_REVISION,
+            config: resolver.config,
+            fingerprint,
+            sources: resolver.sources,
+            provenance: resolver.provenance,
+            input_fingerprint,
+        };
+        // Inspection is bounded independently of the effective config. Avoid an
+        // unbounded to_vec of the complete source/provenance envelope.
+        canonical::check_inspection_size(&result)?;
+        Ok(result)
+    }
 }
 
 fn prepare(
@@ -168,8 +275,8 @@ struct Profile {
     value: Value,
     locators: Vec<String>,
 }
-struct Resolver<'a> {
-    request: &'a ResolveRequest,
+struct Resolver {
+    request: Arc<ResolveRequest>,
     reader: Reader,
     config: Value,
     sources: Vec<Source>,
@@ -183,7 +290,7 @@ struct Resolver<'a> {
     authority_sources: Vec<String>,
     aliases: BTreeMap<String, Vec<String>>,
 }
-impl Resolver<'_> {
+impl Resolver {
     fn source(
         &mut self,
         kind: &'static str,
@@ -517,7 +624,8 @@ impl Resolver<'_> {
         Ok(())
     }
     fn apply_overrides(&mut self, locked: bool) -> Result<(), ConfigError> {
-        for (option, value) in &self.request.overrides {
+        let request = self.request.clone();
+        for (option, value) in &request.overrides {
             if locked
                 && !self.config["deployment"]["allowed_run_overrides"]
                     .as_array()
@@ -540,7 +648,7 @@ impl Resolver<'_> {
             normalize_paths(&mut document, "", None, &self.request.path_bindings)?;
             patch = document["options"].take();
             if locked {
-                validate::narrow(option, &patch, &self.config["options"], self.request)?;
+                validate::narrow(option, &patch, &self.config["options"], &self.request)?;
             }
             let source = self.source("override",option,fingerprint(&json!({"option":option,"value":patch.pointer(&option_pointer(option)?).unwrap()}))?)?;
             merge(

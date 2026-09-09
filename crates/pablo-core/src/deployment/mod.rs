@@ -2,8 +2,10 @@
 //! environment, credentials or workspace content and never activates a runtime.
 //! The checked-in schema/defaults are the option inventory for this revision.
 
+mod admission;
 mod canonical;
 mod input;
+mod render;
 mod resolve;
 mod validate;
 
@@ -11,8 +13,9 @@ use serde::Serialize;
 use serde_json::{Map, Value};
 use std::{collections::BTreeMap, fmt, path::PathBuf};
 
+pub use admission::{PreparedRun, RunInput};
 pub use canonical::fingerprint;
-pub use resolve::resolve;
+pub use resolve::{LoadedDeployment, load, resolve};
 
 pub const CONTRACT_REVISION: &str = "c3.1";
 pub const DOCUMENT_SCHEMA: &str =
@@ -163,6 +166,10 @@ pub struct Origin {
 /// inspection; Debug and runtime summaries must not dump operator content.
 #[derive(Clone, Serialize)]
 pub struct ResolvedDeployment {
+    #[serde(skip)]
+    config_root: PathBuf,
+    #[serde(skip)]
+    path_bindings: BTreeMap<String, PathBuf>,
     schema_version: u32,
     contract_revision: &'static str,
     config: Value,
@@ -172,6 +179,11 @@ pub struct ResolvedDeployment {
     input_fingerprint: String,
 }
 impl ResolvedDeployment {
+    /// Canonical, portable TOML with all defaults and secret references retained.
+    /// This is explicit local inspection and may contain operator-authored text.
+    pub fn render(&self) -> Result<String, ConfigError> {
+        render::render(&self.config)
+    }
     pub fn config(&self) -> &Value {
         &self.config
     }

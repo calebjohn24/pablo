@@ -3,7 +3,7 @@ use futures_util::{future::BoxFuture, stream};
 use opentelemetry_sdk::trace::{InMemorySpanExporter, SdkTracerProvider};
 use pablo_core::{
     filesystem::{FilesystemResult, FsError},
-    policy::{DefaultDecision, Policy, Rule, Rules},
+    policy::{DefaultDecision, Policy, PolicySet, Rule, Rules},
     provider::{ModelRequest, ProviderError, ProviderEvent, ProviderStream},
     tool::{ToolResult, ToolStatus},
     *,
@@ -166,11 +166,12 @@ async fn run_configured(
     spec: RunSpec,
     name: &str,
     args: Value,
-    policy: Policy,
+    policy: impl Into<PolicySet>,
     flags: Flags,
 ) -> Observed {
     let provider = RoundTrip::new(name, args);
-    let tools = ToolRegistry::configured_with_writes(false, true, flags.writes, policy).unwrap();
+    let tools =
+        ToolRegistry::configured_with_policy_set(false, true, flags.writes, policy.into()).unwrap();
     let exporter = InMemorySpanExporter::default();
     let sdk = SdkTracerProvider::builder()
         .with_simple_exporter(exporter.clone())
@@ -229,6 +230,113 @@ async fn run_configured(
 }
 async fn call(f: &Fixture, name: &str, args: Value) -> Observed {
     run(f.spec(), name, args, Policy::default(), false).await
+}
+
+#[tokio::test]
+async fn authority_policy_allowlists_intersect_and_all_deciding_ids_survive() {
+    let f = Fixture::new();
+    let policy = || {
+        let first: Policy = serde_json::from_value(json!({"tools": {
+            "default":"allow", "allow":[
+                {"id":"first.read","value":"fs.read"},
+                {"id":"first.list","value":"fs.list"}
+            ]
+        }, "read_roots": {"default":"deny", "allow":[{"id":"first.root","value":"."}]}}))
+        .unwrap();
+        let second: Policy = serde_json::from_value(json!({"tools": {
+            "default":"allow", "allow":[
+                {"id":"second.read","value":"fs.read"},
+                {"id":"second.search","value":"fs.search"}
+            ]
+        }, "read_roots": {"default":"deny", "allow":[{"id":"second.root","value":"nested"}]}}))
+        .unwrap();
+        PolicySet::new(Policy::default(), vec![first, second]).unwrap()
+    };
+    let observed = run_configured(
+        f.spec(),
+        "fs.read",
+        json!({"path":"nested/b.txt"}),
+        policy(),
+        Flags::default(),
+    )
+    .await;
+    assert!(observed.outcome.is_completed());
+    assert_eq!(
+        &*observed.result.unwrap().policy_decisions,
+        &[
+            "builtin.tools.default_allow",
+            "first.read",
+            "second.read",
+            "builtin.read_roots.default_allow",
+            "first.root",
+            "second.root"
+        ]
+    );
+    for (name, args) in [
+        ("fs.list", json!({"path":"nested"})),
+        ("fs.search", json!({"path":"nested","pattern":"alpha"})),
+    ] {
+        let observed = run_configured(f.spec(), name, args, policy(), Flags::default()).await;
+        assert!(matches!(observed.outcome, RunOutcome::PolicyDenied { .. }));
+        assert_eq!(observed.calls, 1);
+        assert!(
+            !observed
+                .events
+                .iter()
+                .any(|event| matches!(event.kind, EventKind::ToolStarted { .. }))
+        );
+    }
+    let observed = run_configured(
+        f.spec(),
+        "fs.read",
+        json!({"path":"a.txt"}),
+        policy(),
+        Flags::default(),
+    )
+    .await;
+    assert!(matches!(observed.outcome, RunOutcome::PolicyDenied { .. }));
+    assert!(!observed.native.contains("alpha\\nbeta"));
+}
+
+#[tokio::test]
+async fn authority_write_denial_survives_ordinary_allow_and_omission_adds_no_constraint() {
+    let f = Fixture::new();
+    let ceiling: Policy = serde_json::from_value(json!({"write_roots": {
+        "default":"allow", "deny":[{"id":"sealed.writes","value":"."}]
+    }}))
+    .unwrap();
+    let args = json!({"path":"new.txt","text":"synthetic mutation","expected_revision":null});
+    let observed = run_configured(
+        f.spec(),
+        "fs.write",
+        args.clone(),
+        PolicySet::new(Policy::default(), vec![ceiling]).unwrap(),
+        Flags {
+            writes: true,
+            ..Flags::default()
+        },
+    )
+    .await;
+    assert!(
+        matches!(observed.outcome, RunOutcome::PolicyDenied { rule: PolicyRule::Configured { ref id }} if &**id == "sealed.writes")
+    );
+    assert!(!f.root.join("new.txt").exists());
+    let observed = run_configured(
+        f.spec(),
+        "fs.write",
+        args,
+        PolicySet::new(Policy::default(), vec![Policy::default()]).unwrap(),
+        Flags {
+            writes: true,
+            ..Flags::default()
+        },
+    )
+    .await;
+    assert!(observed.outcome.is_completed());
+    assert_eq!(
+        fs::read_to_string(f.root.join("new.txt")).unwrap(),
+        "synthetic mutation"
+    );
 }
 fn payload(o: &Observed) -> Value {
     serde_json::to_value(o.result.as_ref().unwrap().filesystem.as_ref().unwrap()).unwrap()
