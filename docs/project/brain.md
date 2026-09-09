@@ -4,9 +4,9 @@
 
 Pablo is a small headless Rust agent runtime for applications doing arbitrary work. Hosts own their sandboxes, business state, approvals, and user experience. CLI and protocol clients share one runtime lifecycle.
 
-This file holds durable context. [State](state.json) reports current progress, [the log](log.jsonl) records history, and [cycle C2](cycles/002-single-agent-completion.md) defines the selected work. [Cycle C1](cycles/001-first-spike.md) and its evidence remain historical. Run `node scripts/project.mjs context` for a focused handoff.
+This file holds durable context. [State](state.json) reports current progress, [the log](log.jsonl) records history, and [cycle C3](cycles/003-extensibility-and-release.md) defines the selected work. Completed [C1](cycles/001-first-spike.md) and [C2](cycles/002-single-agent-completion.md) plans/evidence remain historical. Run `node scripts/project.mjs context` for a focused handoff.
 
-Private source remote: [calebjohn24/pablo](https://github.com/calebjohn24/pablo), with `main` tracking `origin/main`. Repository creation is recorded in LOG-0044; [native Linux acceptance](evidence/c2.5-linux-x64.md) closes C2.5. No next cycle is selected.
+Private source remote: [calebjohn24/pablo](https://github.com/calebjohn24/pablo), with `main` tracking `origin/main`. Repository creation is recorded in LOG-0044; [native Linux acceptance](evidence/c2.5-linux-x64.md) closes C2.5. C3 selects declarative deployments, extensibility, interoperability and release delivery, excluding Otto integration.
 
 ## Read the design selectively
 
@@ -130,6 +130,30 @@ C2.5 records one deciding ID for every applicable allowed tool/launcher/root dim
 ### D028 — Make native Linux acceptance reproducible in private CI
 
 Use the private repository's Ubuntu x64 workflow to verify the native architecture and unprivileged fixtures, full suites, real Collector and matched C1.7/C2 measurements. Record the hosted VM environment rather than implying bare-metal timing. Upload only measurement reports, keep provider credentials local and preserve provisional sizing/performance observations without inventing ceilings. This resolves the runner blocker and makes acceptance repeatable; see [Linux evidence](evidence/c2.5-linux-x64.md).
+
+### D029 — Adopt C3 through small independently verified checkpoints
+
+The user selected all proposed extensibility, interoperability and release-hardening work except Otto, preferring smaller checkpoints. [C3](cycles/003-extensibility-and-release.md) separates each gateway/transport, schema validation/repair, child lifecycle/concurrency/handoff, TUI/PTY proof and native target. The [contract map](contracts/c3-extensibility-and-release.md) assigns detailed decisions immediately before their owning slice, while the [fixture map](fixtures/c3-extensibility-and-release.md) fixes observable acceptance. Keep one checkpoint per implementation session, all C1/C2 history and the version-1 state model; only the planning checkpoint completes on adoption.
+
+### D030 — Separate the selected prerelease from the full release contract
+
+C3 excludes Otto by user instruction without rewriting sections 29.1/31.1. Its synthetic composition proof cannot satisfy Otto or justify complete beta.1/0.1 claims. Plan four native macOS/Linux architecture gates from section 27.1, with unavailable runners explicit and no emulation substitute; prepare exact artifacts before the separately selected publication action. Preserve unsupported live spending guarantees and measured performance observations. This keeps distribution claims tied to actual evidence rather than to the breadth of the plan.
+
+### D031 — Make deployments declarative and inspectable
+
+The user requested NixOS-style preconfiguration of every part of Pablo. Use versioned typed TOML, bounded local modules/imports, named profiles, deterministic merge, external secret references, validate/explain/render and locked deployment inputs. Every feature supplies options through one shared resolver; deployment authority ceilings survive convenience overrides. The [deployment design](contracts/c3-deployment-config.md) keeps presets reproducible and inspectable without requiring a Nix evaluator or adding OS provisioning.
+
+### D032 — Select ordered fallback and explicit shell command rules
+
+The user's config request promotes these formerly deferred behaviors into C3. Model routes preserve configured order, have one retry owner, count every attempt, retain uncertain charges and never replay completed tools or restart the task. Child routes only narrow authority. Shell rules distinguish the launcher from bounded literal executable/argument matching, reject unsupported syntax when restricted and retain host-owned containment. See the [design](contracts/c3-deployment-config.md); adaptive routing and general retry orchestration remain deferred.
+
+### D033 — Freeze a closed deployment contract before the loader
+
+C3.1 uses an `options` envelope, TOML 1.0.0, exact typed defaults, ordered import/profile layers and explicit list operations. Named credential/profile conflicts reject; authority layers accumulate independently of ordinary values. Locked inputs exclude ambient files/SDK environment and permit only named narrowing overrides. The [contract](contracts/c3-deployment-config.md), [inventory](contracts/c3-deployment-options.md) and G01 corpus make C3.2/C3.3 reviewable without pretending future providers, routes or extensions work. Legacy no-config behavior remains an explicit compatibility path; no loader or runtime change ships at C3.1.
+
+### D034 — Separate effective identity from source and host identity
+
+Hash canonical defaulted config with secret references and authority, preserving list order and exact counters. Keep source/provenance identity separate so comments and rendering do not change effective identity; physical root bindings remain host-only and secret bytes are never hashed. This supports portable presets without claiming identical workspaces, secret-rotation identity or live reproducibility. The [resolved contract](contracts/c3-deployment-config.md#resolved-identity-provenance-and-inspection) and canonical vectors freeze the encoding and hand off real cross-interface proof to C3.3.
 
 ## Working constraints
 

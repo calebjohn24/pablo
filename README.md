@@ -4,6 +4,8 @@ A small, headless Rust agent runtime for applications doing arbitrary work.
 
 The focused [C1 spike](docs/project/cycles/001-first-spike.md) and [C2 cycle](docs/project/cycles/002-single-agent-completion.md) are complete. C2 implements bounded filesystem tools, machine-readable task output, static policy and accounting, with acceptance on macOS arm64 and [native Linux x86_64](docs/project/evidence/c2.5-linux-x64.md). This is not a published release. The [architecture brief](docs/context.md) describes the larger product; section 29.1 defines the 0.1 release contract. The project-state command reports checkpoint progress across retained cycles.
 
+The selected [C3 plan](docs/project/cycles/003-extensibility-and-release.md) covers declarative deployment configuration, ordered model fallback, shell command rules, providers, MCP, Skills, structured output, temporary children, A2A, a basic TUI and release delivery in small checkpoints. Otto integration remains deferred. The [deployment contract and examples](docs/project/contracts/c3-deployment-config.md) are specified; the loader and those capabilities remain planned. The commands below describe the existing C2 runtime.
+
 ## Run a real task
 
 From the project directory:

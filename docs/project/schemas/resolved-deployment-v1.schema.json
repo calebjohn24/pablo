@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:pablo:resolved-deployment:1:c3.1",
+  "title": "Pablo resolved deployment v1 — C3.1 contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "type": "integer"
+    },
+    "contract_revision": {
+      "const": "c3.1"
+    },
+    "config": {
+      "$ref": "urn:pablo:deployment:1:c3.1#/$defs/resolvedConfig"
+    },
+    "fingerprint": {
+      "type": "string",
+      "minLength": 71,
+      "maxLength": 71,
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_.-]+$"
+          },
+          "kind": {
+            "enum": [
+              "defaults",
+              "file",
+              "profile",
+              "environment",
+              "override",
+              "host_authority"
+            ]
+          },
+          "locator": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "digest": {
+            "type": "string",
+            "minLength": 71,
+            "maxLength": 71,
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "locator",
+          "digest"
+        ]
+      },
+      "maxItems": 65536
+    },
+    "provenance": {
+      "type": "object",
+      "maxProperties": 65536,
+      "propertyNames": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4096,
+        "pattern": "^/config(?:/.*)?$"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "source": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "operation": {
+              "enum": [
+                "default",
+                "set",
+                "replace",
+                "append",
+                "prepend",
+                "unset",
+                "constrain"
+              ]
+            }
+          },
+          "required": [
+            "source",
+            "operation"
+          ]
+        },
+        "maxItems": 65536,
+        "minItems": 1
+      }
+    },
+    "input_fingerprint": {
+      "type": "string",
+      "minLength": 71,
+      "maxLength": 71,
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  },
+  "required": [
+    "schema_version",
+    "contract_revision",
+    "config",
+    "fingerprint",
+    "sources",
+    "provenance",
+    "input_fingerprint"
+  ]
+}

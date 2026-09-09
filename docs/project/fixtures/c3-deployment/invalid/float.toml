@@ -1,0 +1,3 @@
+schema_version = 1
+[options.limits]
+max_model_calls = 1.0

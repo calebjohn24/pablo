@@ -1,0 +1,1755 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:pablo:deployment:1:c3.1",
+  "title": "Pablo deployment v1 — C3.1 contract, not implemented",
+  "description": "TOML-to-JSON shape. See c3-deployment-config.md for semantic checks and implementation availability.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "type": "integer"
+    },
+    "imports": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4096,
+        "pattern": "^[^\\u0000]+$"
+      },
+      "maxItems": 32
+    },
+    "profile": {
+      "$ref": "#/$defs/name"
+    },
+    "deployment": {
+      "$ref": "#/$defs/Deployment"
+    },
+    "options": {
+      "$ref": "#/$defs/Options"
+    },
+    "credentials": {
+      "type": "object",
+      "maxProperties": 64,
+      "propertyNames": {
+        "$ref": "#/$defs/name"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/Credential"
+      }
+    },
+    "environment": {
+      "type": "object",
+      "maxProperties": 64,
+      "propertyNames": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128,
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/EnvironmentBinding"
+      }
+    },
+    "profiles": {
+      "type": "object",
+      "maxProperties": 64,
+      "propertyNames": {
+        "$ref": "#/$defs/name"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/Profile"
+      }
+    },
+    "authority": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Authority"
+      },
+      "maxItems": 64
+    }
+  },
+  "required": [
+    "schema_version"
+  ],
+  "$defs": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^(?!builtin\\.)[A-Za-z0-9_.-]+$"
+    },
+    "unset": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "unset": {
+          "const": true
+        }
+      },
+      "required": [
+        "unset"
+      ]
+    },
+    "u64str": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 20,
+      "pattern": "^(0|[1-9][0-9]{0,19})$"
+    },
+    "Path": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "base": {
+              "enum": [
+                "source",
+                "config",
+                "workspace"
+              ]
+            },
+            "path": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "pattern": "^[^\\u0000]+$"
+            }
+          },
+          "required": [
+            "base",
+            "path"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "base": {
+              "const": "binding"
+            },
+            "name": {
+              "$ref": "#/$defs/name"
+            },
+            "path": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "pattern": "^[^\\u0000]+$"
+            }
+          },
+          "required": [
+            "base",
+            "name",
+            "path"
+          ]
+        }
+      ]
+    },
+    "resolvedPath": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "base": {
+              "enum": [
+                "config",
+                "workspace"
+              ]
+            },
+            "path": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "pattern": "^[^\\u0000]+$"
+            }
+          },
+          "required": [
+            "base",
+            "path"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "base": {
+              "const": "binding"
+            },
+            "name": {
+              "$ref": "#/$defs/name"
+            },
+            "path": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "pattern": "^[^\\u0000]+$"
+            }
+          },
+          "required": [
+            "base",
+            "name",
+            "path"
+          ]
+        }
+      ]
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096,
+          "pattern": "^[^\\u0000]+$"
+        }
+      },
+      "required": [
+        "id",
+        "value"
+      ]
+    },
+    "Rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "default": {
+          "enum": [
+            "allow",
+            "deny"
+          ]
+        },
+        "allow": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/rule"
+              },
+              "maxItems": 128
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "mode": {
+                  "enum": [
+                    "replace",
+                    "append",
+                    "prepend"
+                  ]
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/rule"
+                  },
+                  "maxItems": 128
+                }
+              },
+              "required": [
+                "mode",
+                "items"
+              ]
+            }
+          ]
+        },
+        "deny": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/rule"
+              },
+              "maxItems": 128
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "mode": {
+                  "enum": [
+                    "replace",
+                    "append",
+                    "prepend"
+                  ]
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/rule"
+                  },
+                  "maxItems": 128
+                }
+              },
+              "required": [
+                "mode",
+                "items"
+              ]
+            }
+          ]
+        }
+      },
+      "required": [
+        "default"
+      ]
+    },
+    "Policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tools": {
+          "$ref": "#/$defs/Rules"
+        },
+        "executables": {
+          "$ref": "#/$defs/Rules"
+        },
+        "read_roots": {
+          "$ref": "#/$defs/Rules"
+        },
+        "write_roots": {
+          "$ref": "#/$defs/Rules"
+        }
+      }
+    },
+    "resolvedRules": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "default": {
+          "enum": [
+            "allow",
+            "deny"
+          ]
+        },
+        "allow": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/rule"
+          },
+          "maxItems": 128
+        },
+        "deny": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/rule"
+          },
+          "maxItems": 128
+        }
+      },
+      "required": [
+        "default",
+        "allow",
+        "deny"
+      ]
+    },
+    "resolvedPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tools": {
+          "$ref": "#/$defs/resolvedRules"
+        },
+        "executables": {
+          "$ref": "#/$defs/resolvedRules"
+        },
+        "read_roots": {
+          "$ref": "#/$defs/resolvedRules"
+        },
+        "write_roots": {
+          "$ref": "#/$defs/resolvedRules"
+        }
+      }
+    },
+    "Limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_model_calls": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "enum": [
+                "unlimited"
+              ]
+            }
+          ]
+        },
+        "max_tool_calls": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "enum": [
+                "unlimited"
+              ]
+            }
+          ]
+        },
+        "max_total_tokens": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            {
+              "enum": [
+                "unlimited"
+              ]
+            }
+          ]
+        },
+        "max_cost_microusd": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            {
+              "enum": [
+                "unlimited"
+              ]
+            }
+          ]
+        },
+        "max_run_duration_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400000
+        },
+        "max_tool_duration_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400000
+        },
+        "max_tool_input_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "max_context_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "max_input_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "max_output_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "max_tool_output_bytes": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 9007199254740991
+        },
+        "max_output_tokens": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4294967295
+        },
+        "max_events": {
+          "$ref": "#/$defs/u64str"
+        },
+        "filesystem": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_file_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "max_entries": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "max_depth": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "max_scan_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          }
+        }
+      }
+    },
+    "resolvedLimits": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_model_calls": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "enum": [
+                "unlimited"
+              ]
+            }
+          ]
+        },
+        "max_tool_calls": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "enum": [
+                "unlimited"
+              ]
+            }
+          ]
+        },
+        "max_total_tokens": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            {
+              "enum": [
+                "unlimited"
+              ]
+            }
+          ]
+        },
+        "max_cost_microusd": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            {
+              "enum": [
+                "unlimited"
+              ]
+            }
+          ]
+        },
+        "max_run_duration_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400000
+        },
+        "max_tool_duration_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400000
+        },
+        "max_tool_input_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "max_context_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "max_input_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "max_output_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "max_tool_output_bytes": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 9007199254740991
+        },
+        "max_output_tokens": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4294967295
+        },
+        "max_events": {
+          "$ref": "#/$defs/u64str"
+        },
+        "filesystem": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_file_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "max_entries": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "max_depth": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "max_scan_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "max_file_bytes",
+            "max_entries",
+            "max_depth",
+            "max_scan_bytes"
+          ]
+        }
+      },
+      "required": [
+        "max_model_calls",
+        "max_tool_calls",
+        "max_total_tokens",
+        "max_cost_microusd",
+        "max_run_duration_ms",
+        "max_tool_duration_ms",
+        "max_tool_input_bytes",
+        "max_context_bytes",
+        "max_input_bytes",
+        "max_output_bytes",
+        "max_tool_output_bytes",
+        "max_output_tokens",
+        "max_events",
+        "filesystem"
+      ]
+    },
+    "Options": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "run": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "workspace": {
+              "$ref": "#/$defs/Path"
+            },
+            "instructions": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 1048576
+            }
+          }
+        },
+        "model": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "provider": {
+              "const": "vercel"
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+            },
+            "endpoint": {
+              "const": "https://ai-gateway.vercel.sh/v1/chat/completions"
+            },
+            "credential": {
+              "$ref": "#/$defs/name"
+            }
+          }
+        },
+        "shell": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          }
+        },
+        "filesystem": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "write": {
+              "type": "boolean"
+            }
+          }
+        },
+        "trace": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/Path"
+                },
+                {
+                  "$ref": "#/$defs/unset"
+                }
+              ]
+            },
+            "capture_content": {
+              "type": "boolean"
+            },
+            "max_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "interfaces": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cli_output": {
+              "enum": [
+                "text",
+                "json"
+              ]
+            }
+          }
+        },
+        "otel": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "exporter": {
+              "enum": [
+                "none",
+                "otlp"
+              ]
+            },
+            "sdk_disabled": {
+              "type": "boolean"
+            },
+            "endpoint": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "pattern": "^https?://[^/@?#\\s]+(?:/[^?#\\s]*)?$"
+            },
+            "protocol": {
+              "const": "http/protobuf"
+            },
+            "headers": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/name"
+                },
+                {
+                  "$ref": "#/$defs/unset"
+                }
+              ]
+            },
+            "compression": {
+              "enum": [
+                "none",
+                "gzip"
+              ]
+            },
+            "timeout_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "service_name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "resource_attributes": {
+              "type": "object",
+              "maxProperties": 64,
+              "propertyNames": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "additionalProperties": {
+                "type": "string",
+                "minLength": 0,
+                "maxLength": 4096
+              }
+            },
+            "sampler": {
+              "enum": [
+                "always_on",
+                "always_off",
+                "traceidratio",
+                "parentbased_always_on",
+                "parentbased_always_off",
+                "parentbased_traceidratio"
+              ]
+            },
+            "sampler_arg": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 19,
+              "pattern": "^(0(\\.[0-9]{1,17})?|1(\\.0{1,17})?)$"
+            },
+            "propagators": {
+              "oneOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "tracecontext"
+                    ]
+                  },
+                  "maxItems": 1,
+                  "uniqueItems": true
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "mode": {
+                      "enum": [
+                        "replace",
+                        "append",
+                        "prepend"
+                      ]
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "enum": [
+                          "tracecontext"
+                        ]
+                      },
+                      "maxItems": 1,
+                      "uniqueItems": true
+                    }
+                  },
+                  "required": [
+                    "mode",
+                    "items"
+                  ]
+                }
+              ]
+            },
+            "max_queue_size": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "max_export_batch_size": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "schedule_delay_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "export_timeout_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "limits": {
+          "$ref": "#/$defs/Limits"
+        },
+        "policy": {
+          "$ref": "#/$defs/Policy"
+        }
+      }
+    },
+    "CredentialSource": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "environment"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+            }
+          },
+          "required": [
+            "kind",
+            "name"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "file"
+            },
+            "path": {
+              "$ref": "#/$defs/Path"
+            },
+            "encoding": {
+              "const": "utf8"
+            }
+          },
+          "required": [
+            "kind",
+            "path",
+            "encoding"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "file"
+            },
+            "path": {
+              "$ref": "#/$defs/Path"
+            },
+            "encoding": {
+              "const": "dotenv"
+            },
+            "key": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+            }
+          },
+          "required": [
+            "kind",
+            "path",
+            "encoding",
+            "key"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "host"
+            },
+            "name": {
+              "$ref": "#/$defs/name"
+            }
+          },
+          "required": [
+            "kind",
+            "name"
+          ]
+        }
+      ]
+    },
+    "Credential": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "consumer": {
+          "enum": [
+            "provider.vercel",
+            "otel.headers"
+          ]
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CredentialSource"
+          },
+          "maxItems": 8,
+          "minItems": 1
+        }
+      },
+      "required": [
+        "consumer",
+        "sources"
+      ]
+    },
+    "Authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "workspace_roots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Path"
+          },
+          "maxItems": 64
+        },
+        "tool_names": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "maxItems": 128,
+          "uniqueItems": true
+        },
+        "model_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+          },
+          "maxItems": 64,
+          "uniqueItems": true
+        },
+        "provider_endpoints": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "pattern": "^https?://[^/@?#\\s]+(?:/[^?#\\s]*)?$"
+          },
+          "maxItems": 64,
+          "uniqueItems": true
+        },
+        "credential_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/name"
+          },
+          "maxItems": 64,
+          "uniqueItems": true
+        },
+        "otel_endpoints": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "pattern": "^https?://[^/@?#\\s]+(?:/[^?#\\s]*)?$"
+          },
+          "maxItems": 64,
+          "uniqueItems": true
+        },
+        "capture_content": {
+          "type": "boolean"
+        },
+        "limits": {
+          "$ref": "#/$defs/Limits"
+        },
+        "policy": {
+          "$ref": "#/$defs/Policy"
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "resolvedOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "run": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "workspace": {
+              "$ref": "#/$defs/resolvedPath"
+            },
+            "instructions": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 1048576
+            }
+          },
+          "required": [
+            "workspace",
+            "instructions"
+          ]
+        },
+        "model": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "provider": {
+              "const": "vercel"
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+            },
+            "endpoint": {
+              "const": "https://ai-gateway.vercel.sh/v1/chat/completions"
+            },
+            "credential": {
+              "$ref": "#/$defs/name"
+            }
+          },
+          "required": [
+            "provider",
+            "id",
+            "endpoint",
+            "credential"
+          ]
+        },
+        "shell": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "enabled"
+          ]
+        },
+        "filesystem": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "write": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "enabled",
+            "write"
+          ]
+        },
+        "trace": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/resolvedPath"
+                },
+                {
+                  "$ref": "#/$defs/unset"
+                }
+              ]
+            },
+            "capture_content": {
+              "type": "boolean"
+            },
+            "max_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "path",
+            "capture_content",
+            "max_bytes"
+          ]
+        },
+        "interfaces": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cli_output": {
+              "enum": [
+                "text",
+                "json"
+              ]
+            }
+          },
+          "required": [
+            "cli_output"
+          ]
+        },
+        "otel": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "exporter": {
+              "enum": [
+                "none",
+                "otlp"
+              ]
+            },
+            "sdk_disabled": {
+              "type": "boolean"
+            },
+            "endpoint": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "pattern": "^https?://[^/@?#\\s]+(?:/[^?#\\s]*)?$"
+            },
+            "protocol": {
+              "const": "http/protobuf"
+            },
+            "headers": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/name"
+                },
+                {
+                  "$ref": "#/$defs/unset"
+                }
+              ]
+            },
+            "compression": {
+              "enum": [
+                "none",
+                "gzip"
+              ]
+            },
+            "timeout_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "service_name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "resource_attributes": {
+              "type": "object",
+              "maxProperties": 64,
+              "propertyNames": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "additionalProperties": {
+                "type": "string",
+                "minLength": 0,
+                "maxLength": 4096
+              }
+            },
+            "sampler": {
+              "enum": [
+                "always_on",
+                "always_off",
+                "traceidratio",
+                "parentbased_always_on",
+                "parentbased_always_off",
+                "parentbased_traceidratio"
+              ]
+            },
+            "sampler_arg": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 19,
+              "pattern": "^(0(\\.[0-9]{1,17})?|1(\\.0{1,17})?)$"
+            },
+            "propagators": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "tracecontext"
+                ]
+              },
+              "maxItems": 1,
+              "uniqueItems": true
+            },
+            "max_queue_size": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "max_export_batch_size": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "schedule_delay_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "export_timeout_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "exporter",
+            "sdk_disabled",
+            "endpoint",
+            "protocol",
+            "headers",
+            "compression",
+            "timeout_ms",
+            "service_name",
+            "resource_attributes",
+            "sampler",
+            "sampler_arg",
+            "propagators",
+            "max_queue_size",
+            "max_export_batch_size",
+            "schedule_delay_ms",
+            "export_timeout_ms"
+          ]
+        },
+        "limits": {
+          "$ref": "#/$defs/resolvedLimits"
+        },
+        "policy": {
+          "$ref": "#/$defs/resolvedPolicy"
+        }
+      },
+      "required": [
+        "run",
+        "model",
+        "shell",
+        "filesystem",
+        "trace",
+        "interfaces",
+        "otel",
+        "limits",
+        "policy"
+      ]
+    },
+    "resolvedCredentialSource": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "environment"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+            }
+          },
+          "required": [
+            "kind",
+            "name"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "file"
+            },
+            "path": {
+              "$ref": "#/$defs/resolvedPath"
+            },
+            "encoding": {
+              "const": "utf8"
+            }
+          },
+          "required": [
+            "kind",
+            "path",
+            "encoding"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "file"
+            },
+            "path": {
+              "$ref": "#/$defs/resolvedPath"
+            },
+            "encoding": {
+              "const": "dotenv"
+            },
+            "key": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+            }
+          },
+          "required": [
+            "kind",
+            "path",
+            "encoding",
+            "key"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "host"
+            },
+            "name": {
+              "$ref": "#/$defs/name"
+            }
+          },
+          "required": [
+            "kind",
+            "name"
+          ]
+        }
+      ]
+    },
+    "resolvedCredential": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "consumer": {
+          "enum": [
+            "provider.vercel",
+            "otel.headers"
+          ]
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/resolvedCredentialSource"
+          },
+          "maxItems": 8,
+          "minItems": 1
+        }
+      },
+      "required": [
+        "consumer",
+        "sources"
+      ]
+    },
+    "resolvedAuthority": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "workspace_roots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/resolvedPath"
+          },
+          "maxItems": 64
+        },
+        "tool_names": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "maxItems": 128,
+          "uniqueItems": true
+        },
+        "model_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+          },
+          "maxItems": 64,
+          "uniqueItems": true
+        },
+        "provider_endpoints": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "pattern": "^https?://[^/@?#\\s]+(?:/[^?#\\s]*)?$"
+          },
+          "maxItems": 64,
+          "uniqueItems": true
+        },
+        "credential_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/name"
+          },
+          "maxItems": 64,
+          "uniqueItems": true
+        },
+        "otel_endpoints": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "pattern": "^https?://[^/@?#\\s]+(?:/[^?#\\s]*)?$"
+          },
+          "maxItems": 64,
+          "uniqueItems": true
+        },
+        "capture_content": {
+          "type": "boolean"
+        },
+        "limits": {
+          "$ref": "#/$defs/Limits"
+        },
+        "policy": {
+          "$ref": "#/$defs/resolvedPolicy"
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "Deployment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "locked": {
+          "type": "boolean"
+        },
+        "allowed_run_overrides": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "input",
+              "run.workspace",
+              "shell.enabled",
+              "filesystem.enabled",
+              "filesystem.write",
+              "trace.capture_content",
+              "interfaces.cli_output",
+              "limits.max_model_calls",
+              "limits.max_tool_calls",
+              "limits.max_total_tokens",
+              "limits.max_cost_microusd",
+              "limits.max_run_duration_ms",
+              "limits.max_tool_duration_ms",
+              "limits.max_tool_input_bytes",
+              "limits.max_context_bytes",
+              "limits.max_input_bytes",
+              "limits.max_output_bytes",
+              "limits.max_tool_output_bytes",
+              "limits.max_output_tokens",
+              "limits.max_events",
+              "limits.filesystem.max_file_bytes",
+              "limits.filesystem.max_entries",
+              "limits.filesystem.max_depth",
+              "limits.filesystem.max_scan_bytes"
+            ]
+          },
+          "maxItems": 64,
+          "uniqueItems": true
+        }
+      }
+    },
+    "resolvedDeployment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "locked": {
+          "type": "boolean"
+        },
+        "allowed_run_overrides": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "input",
+              "run.workspace",
+              "shell.enabled",
+              "filesystem.enabled",
+              "filesystem.write",
+              "trace.capture_content",
+              "interfaces.cli_output",
+              "limits.max_model_calls",
+              "limits.max_tool_calls",
+              "limits.max_total_tokens",
+              "limits.max_cost_microusd",
+              "limits.max_run_duration_ms",
+              "limits.max_tool_duration_ms",
+              "limits.max_tool_input_bytes",
+              "limits.max_context_bytes",
+              "limits.max_input_bytes",
+              "limits.max_output_bytes",
+              "limits.max_tool_output_bytes",
+              "limits.max_output_tokens",
+              "limits.max_events",
+              "limits.filesystem.max_file_bytes",
+              "limits.filesystem.max_entries",
+              "limits.filesystem.max_depth",
+              "limits.filesystem.max_scan_bytes"
+            ]
+          },
+          "maxItems": 64,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "locked",
+        "allowed_run_overrides"
+      ]
+    },
+    "EnvironmentBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "option": {
+          "enum": [
+            "model.id",
+            "shell.enabled",
+            "filesystem.enabled",
+            "filesystem.write",
+            "interfaces.cli_output",
+            "trace.capture_content",
+            "limits.max_model_calls",
+            "limits.max_tool_calls",
+            "limits.max_total_tokens",
+            "limits.max_cost_microusd",
+            "limits.max_run_duration_ms",
+            "limits.max_tool_duration_ms",
+            "limits.max_tool_input_bytes",
+            "limits.max_context_bytes",
+            "limits.max_input_bytes",
+            "limits.max_output_bytes",
+            "limits.max_tool_output_bytes",
+            "limits.max_output_tokens",
+            "limits.max_events",
+            "limits.filesystem.max_file_bytes",
+            "limits.filesystem.max_entries",
+            "limits.filesystem.max_depth",
+            "limits.filesystem.max_scan_bytes",
+            "otel.exporter",
+            "otel.sdk_disabled",
+            "otel.protocol",
+            "otel.compression",
+            "otel.timeout_ms",
+            "otel.service_name",
+            "otel.sampler",
+            "otel.sampler_arg",
+            "otel.max_queue_size",
+            "otel.max_export_batch_size",
+            "otel.schedule_delay_ms",
+            "otel.export_timeout_ms"
+          ]
+        },
+        "required": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "option"
+      ]
+    },
+    "Profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "extends": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/name"
+          },
+          "maxItems": 32,
+          "uniqueItems": true
+        },
+        "options": {
+          "$ref": "#/$defs/Options"
+        },
+        "authority": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Authority"
+          },
+          "maxItems": 64
+        }
+      }
+    },
+    "resolvedConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "deployment": {
+          "$ref": "#/$defs/resolvedDeployment"
+        },
+        "options": {
+          "$ref": "#/$defs/resolvedOptions"
+        },
+        "credentials": {
+          "type": "object",
+          "maxProperties": 64,
+          "propertyNames": {
+            "$ref": "#/$defs/name"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/resolvedCredential"
+          }
+        },
+        "authority": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/resolvedAuthority"
+          },
+          "maxItems": 64
+        }
+      },
+      "required": [
+        "deployment",
+        "options",
+        "credentials",
+        "authority"
+      ]
+    }
+  }
+}
