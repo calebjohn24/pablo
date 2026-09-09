@@ -3,7 +3,7 @@ use futures_util::{future::BoxFuture, stream};
 use opentelemetry_sdk::trace::{InMemorySpanExporter, SdkTracerProvider};
 use pablo_core::{
     filesystem::{FilesystemResult, FsError},
-    policy::{DefaultDecision, Policy, Rule, Rules},
+    policy::{DefaultDecision, Policy, PolicySet, Rule, Rules},
     provider::{ModelRequest, ProviderError, ProviderEvent, ProviderStream},
     tool::{ToolResult, ToolStatus},
     *,
@@ -166,11 +166,12 @@ async fn run_configured(
     spec: RunSpec,
     name: &str,
     args: Value,
-    policy: Policy,
+    policy: impl Into<PolicySet>,
     flags: Flags,
 ) -> Observed {
     let provider = RoundTrip::new(name, args);
-    let tools = ToolRegistry::configured_with_writes(false, true, flags.writes, policy).unwrap();
+    let tools =
+        ToolRegistry::configured_with_policy_set(false, true, flags.writes, policy.into()).unwrap();
     let exporter = InMemorySpanExporter::default();
     let sdk = SdkTracerProvider::builder()
         .with_simple_exporter(exporter.clone())
@@ -229,6 +230,113 @@ async fn run_configured(
 }
 async fn call(f: &Fixture, name: &str, args: Value) -> Observed {
     run(f.spec(), name, args, Policy::default(), false).await
+}
+
+#[tokio::test]
+async fn authority_policy_allowlists_intersect_and_all_deciding_ids_survive() {
+    let f = Fixture::new();
+    let policy = || {
+        let first: Policy = serde_json::from_value(json!({"tools": {
+            "default":"allow", "allow":[
+                {"id":"first.read","value":"fs.read"},
+                {"id":"first.list","value":"fs.list"}
+            ]
+        }, "read_roots": {"default":"deny", "allow":[{"id":"first.root","value":"."}]}}))
+        .unwrap();
+        let second: Policy = serde_json::from_value(json!({"tools": {
+            "default":"allow", "allow":[
+                {"id":"second.read","value":"fs.read"},
+                {"id":"second.search","value":"fs.search"}
+            ]
+        }, "read_roots": {"default":"deny", "allow":[{"id":"second.root","value":"nested"}]}}))
+        .unwrap();
+        PolicySet::new(Policy::default(), vec![first, second]).unwrap()
+    };
+    let observed = run_configured(
+        f.spec(),
+        "fs.read",
+        json!({"path":"nested/b.txt"}),
+        policy(),
+        Flags::default(),
+    )
+    .await;
+    assert!(observed.outcome.is_completed());
+    assert_eq!(
+        &*observed.result.unwrap().policy_decisions,
+        &[
+            "builtin.tools.default_allow",
+            "first.read",
+            "second.read",
+            "builtin.read_roots.default_allow",
+            "first.root",
+            "second.root"
+        ]
+    );
+    for (name, args) in [
+        ("fs.list", json!({"path":"nested"})),
+        ("fs.search", json!({"path":"nested","pattern":"alpha"})),
+    ] {
+        let observed = run_configured(f.spec(), name, args, policy(), Flags::default()).await;
+        assert!(matches!(observed.outcome, RunOutcome::PolicyDenied { .. }));
+        assert_eq!(observed.calls, 1);
+        assert!(
+            !observed
+                .events
+                .iter()
+                .any(|event| matches!(event.kind, EventKind::ToolStarted { .. }))
+        );
+    }
+    let observed = run_configured(
+        f.spec(),
+        "fs.read",
+        json!({"path":"a.txt"}),
+        policy(),
+        Flags::default(),
+    )
+    .await;
+    assert!(matches!(observed.outcome, RunOutcome::PolicyDenied { .. }));
+    assert!(!observed.native.contains("alpha\\nbeta"));
+}
+
+#[tokio::test]
+async fn authority_write_denial_survives_ordinary_allow_and_omission_adds_no_constraint() {
+    let f = Fixture::new();
+    let ceiling: Policy = serde_json::from_value(json!({"write_roots": {
+        "default":"allow", "deny":[{"id":"sealed.writes","value":"."}]
+    }}))
+    .unwrap();
+    let args = json!({"path":"new.txt","text":"synthetic mutation","expected_revision":null});
+    let observed = run_configured(
+        f.spec(),
+        "fs.write",
+        args.clone(),
+        PolicySet::new(Policy::default(), vec![ceiling]).unwrap(),
+        Flags {
+            writes: true,
+            ..Flags::default()
+        },
+    )
+    .await;
+    assert!(
+        matches!(observed.outcome, RunOutcome::PolicyDenied { rule: PolicyRule::Configured { ref id }} if &**id == "sealed.writes")
+    );
+    assert!(!f.root.join("new.txt").exists());
+    let observed = run_configured(
+        f.spec(),
+        "fs.write",
+        args,
+        PolicySet::new(Policy::default(), vec![Policy::default()]).unwrap(),
+        Flags {
+            writes: true,
+            ..Flags::default()
+        },
+    )
+    .await;
+    assert!(observed.outcome.is_completed());
+    assert_eq!(
+        fs::read_to_string(f.root.join("new.txt")).unwrap(),
+        "synthetic mutation"
+    );
 }
 fn payload(o: &Observed) -> Value {
     serde_json::to_value(o.result.as_ref().unwrap().filesystem.as_ref().unwrap()).unwrap()
@@ -469,26 +577,97 @@ async fn absolute_parent_and_symlink_paths_cannot_escape() {
     );
 }
 #[tokio::test]
+async fn default_read_edit_and_search_cross_former_file_and_scan_caps() {
+    let f = Fixture::new();
+    let mut text = "padding\n".repeat(9 * 1024 * 1024);
+    text.push_str("unique needle\n");
+    fs::write(f.root.join("large.txt"), &text).unwrap();
+    let read = call(&f, "fs.read", json!({"path":"large.txt","max_bytes":8})).await;
+    assert!(read.outcome.is_completed(), "{:?}", read.outcome);
+    assert_eq!(payload(&read)["text"], "padding\n");
+    assert_eq!(payload(&read)["size_bytes"], text.len());
+    assert_eq!(payload(&read)["truncated"], true);
+    let edit = mutation(
+        &f,
+        "fs.edit",
+        json!({
+            "path":"large.txt", "expected_revision":payload(&read)["revision"],
+            "old_text":"unique needle", "new_text":"changed needle"
+        }),
+    )
+    .await;
+    assert!(edit.outcome.is_completed(), "{:?}", edit.outcome);
+    assert_eq!(payload(&edit)["committed"], true);
+    text = text.replace("unique needle", "changed needle");
+    assert_eq!(fs::read_to_string(f.root.join("large.txt")).unwrap(), text);
+    let search = call(
+        &f,
+        "fs.search",
+        json!({"path":".","query":"changed needle"}),
+    )
+    .await;
+    assert!(search.outcome.is_completed(), "{:?}", search.outcome);
+    assert_eq!(payload(&search)["matches"][0]["text"], "changed needle");
+    assert_eq!(payload(&search)["truncated"], false);
+}
+
+#[tokio::test]
+async fn default_listing_pages_past_ten_thousand_entries() {
+    let f = Fixture::new();
+    let directory = f.root.join("wide");
+    fs::create_dir(&directory).unwrap();
+    for i in 0..10_001 {
+        fs::write(directory.join(format!("{i:05}")), "").unwrap();
+    }
+    let result = call(
+        &f,
+        "fs.list",
+        json!({"path":"wide","offset":10000,"max_entries":1}),
+    )
+    .await;
+    assert!(result.outcome.is_completed(), "{:?}", result.outcome);
+    assert_eq!(payload(&result)["entries"][0]["path"], "wide/10000");
+    assert_eq!(payload(&result)["truncated"], false);
+}
+
+#[tokio::test]
+async fn default_search_crosses_thirty_two_levels_in_sorted_depth_first_order() {
+    let f = Fixture::new();
+    let mut nested = f.root.join("deep");
+    for _ in 0..40 {
+        nested.push("a");
+    }
+    fs::create_dir_all(&nested).unwrap();
+    fs::write(nested.join("first.txt"), "needle first").unwrap();
+    fs::write(f.root.join("deep/z.txt"), "needle last").unwrap();
+    let result = call(&f, "fs.search", json!({"path":"deep","query":"needle"})).await;
+    assert!(result.outcome.is_completed(), "{:?}", result.outcome);
+    assert_eq!(payload(&result)["matches"][0]["text"], "needle first");
+    assert_eq!(payload(&result)["matches"][1]["text"], "needle last");
+    assert_eq!(payload(&result)["truncated"], false);
+}
+
+#[tokio::test]
 async fn hard_file_directory_scan_depth_and_serialized_limits_stop_the_run() {
     let f = Fixture::new();
     for kind in 0..5 {
         let mut s = f.spec();
         let (name, args) = match kind {
             0 => {
-                s.limits.filesystem.max_file_bytes = 16;
+                s.limits.filesystem.max_file_bytes = Some(16);
                 ("fs.read", json!({"path":"a.txt"}))
             }
             1 => {
-                s.limits.filesystem.max_entries = 2;
+                s.limits.filesystem.max_entries = Some(2);
                 ("fs.list", json!({"path":"."}))
             }
             2 => {
-                s.limits.filesystem.max_scan_bytes = 1;
+                s.limits.filesystem.max_scan_bytes = Some(1);
                 ("fs.search", json!({"path":".","query":"alpha"}))
             }
             3 => {
                 fs::create_dir_all(f.root.join("nested/deep/too-deep")).unwrap();
-                s.limits.filesystem.max_depth = 1;
+                s.limits.filesystem.max_depth = Some(1);
                 ("fs.search", json!({"path":"nested","query":"alpha"}))
             }
             _ => {
@@ -890,7 +1069,7 @@ async fn replacement_size_limit_never_truncates_original_and_long_text_is_suppor
     let f = Fixture::new();
     let revision = file_revision(&f, "a.txt").await;
     let mut s = f.spec();
-    s.limits.filesystem.max_file_bytes = 17;
+    s.limits.filesystem.max_file_bytes = Some(17);
     let o = run_configured(
         s,
         "fs.write",

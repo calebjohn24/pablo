@@ -8,6 +8,8 @@ use std::{
 };
 
 pub struct Options {
+    pub deployment: Option<crate::deployment::Bootstrap>,
+    explicit: HashSet<String>,
     pub live: bool,
     pub acp: bool,
     pub json: bool,
@@ -33,6 +35,7 @@ pub struct Options {
 impl Options {
     pub fn parse(command: OsString, args: impl Iterator<Item = OsString>) -> Result<Self, String> {
         let mut arguments: Vec<_> = args.collect();
+        let deployment = crate::deployment::Bootstrap::extract(&mut arguments)?;
         let command = if command == "run" || command == "demo" || command == "acp" {
             command
         } else {
@@ -46,6 +49,8 @@ impl Options {
             OsString::from("run")
         };
         let mut options = Self {
+            deployment,
+            explicit: HashSet::new(),
             live: command != "demo",
             acp: command == "acp",
             json: false,
@@ -210,12 +215,134 @@ impl Options {
         if options.live && !options.acp && options.input.is_empty() {
             return Err("provide a task: pablo run \"Summarize README.md\"".into());
         }
-        if options.capture_content && options.trace_path.is_none() {
+        if options.capture_content && options.trace_path.is_none() && options.deployment.is_none() {
             return Err("--capture-content requires --trace".into());
         }
+        if !options.live && options.deployment.is_some() {
+            return Err("config_override_forbidden at /demo".into());
+        }
+        options.explicit = seen;
         Ok(options)
     }
-    pub fn tools(&self) -> Result<pablo_core::ToolRegistry, String> {
+    pub fn configured(&self) -> Result<Option<pablo_core::deployment::ResolvedDeployment>, String> {
+        let Some(bootstrap) = &self.deployment else {
+            return Ok(None);
+        };
+        let resolved = bootstrap.resolve()?;
+        if self.env_file.is_some() {
+            return Err("config_override_forbidden at /credentials".into());
+        }
+        let mut overrides = serde_json::Map::new();
+        for (flag, option, value) in [
+            ("--json", "interfaces.cli_output", serde_json::json!("json")),
+            ("--no-shell", "shell.enabled", serde_json::json!(false)),
+            (
+                "--no-filesystem",
+                "filesystem.enabled",
+                serde_json::json!(false),
+            ),
+            ("--allow-write", "filesystem.write", serde_json::json!(true)),
+            (
+                "--capture-content",
+                "trace.capture_content",
+                serde_json::json!(true),
+            ),
+        ] {
+            if self.explicit.contains(flag) {
+                overrides.insert(option.into(), value);
+            }
+        }
+        for (option, value) in [
+            (
+                "limits.max_run_duration_ms",
+                self.timeout_seconds.map(|v| v * 1000),
+            ),
+            (
+                "limits.max_tool_duration_ms",
+                self.tool_timeout_seconds.map(|v| v * 1000),
+            ),
+            (
+                "limits.max_model_calls",
+                self.max_model_calls.map(u64::from),
+            ),
+            ("limits.max_tool_calls", self.max_tool_calls.map(u64::from)),
+        ] {
+            if let Some(value) = value {
+                overrides.insert(option.into(), value.into());
+            }
+        }
+        for (option, value) in [
+            ("limits.max_total_tokens", self.max_total_tokens),
+            ("limits.max_cost_microusd", self.max_cost_microusd),
+        ] {
+            if let Some(value) = value {
+                overrides.insert(option.into(), value.to_string().into());
+            }
+        }
+        if let Some(model) = &self.model {
+            overrides.insert("model.id".into(), model.clone().into());
+        }
+        for (option, path) in [
+            ("run.workspace", self.workspace.as_deref()),
+            ("trace.path", self.trace_path.as_deref()),
+        ] {
+            if let Some(path) = path {
+                overrides.insert(option.into(), bootstrap.path_reference(path)?);
+            }
+        }
+        if self.policy_path.is_some() {
+            // Prove assignment is allowed before reading the policy file.
+            resolved
+                .with_overrides(
+                    [("policy".into(), serde_json::json!({}))]
+                        .into_iter()
+                        .collect(),
+                )
+                .map_err(|e| e.to_string())?;
+            let mut policy = serde_json::to_value(
+                self.policy()
+                    .map_err(|_| "config_invalid_value at /options/policy")?,
+            )
+            .map_err(|_| "config_invalid_value at /options/policy")?;
+            // --policy replaces the ordinary policy. Explicit allow defaults
+            // clear omitted dimensions through normal map/list composition;
+            // immutable authority policies remain separate intersections.
+            for dimension in policy.as_object_mut().unwrap().values_mut() {
+                if dimension.is_null() {
+                    *dimension = serde_json::json!({"default":"allow","allow":[],"deny":[]});
+                }
+            }
+            overrides.insert("policy".into(), policy);
+        }
+        if overrides.is_empty() {
+            return Ok(Some(resolved));
+        }
+        resolved
+            .with_overrides(overrides)
+            .map(Some)
+            .map_err(|e| e.to_string())
+    }
+
+    pub fn prepare_run(
+        &self,
+        input: Option<String>,
+        workspace: Option<PathBuf>,
+        session_id: Option<String>,
+    ) -> Result<Option<pablo_core::deployment::PreparedRun>, String> {
+        self.configured()?
+            .map(|resolved| {
+                resolved
+                    .prepare_run(pablo_core::deployment::RunInput {
+                        input: input.unwrap_or_else(|| self.input.clone()),
+                        workspace,
+                        session_id,
+                    })
+                    .map_err(|e| e.to_string())
+            })
+            .transpose()
+    }
+
+    fn policy(&self) -> Result<pablo_core::policy::Policy, String> {
         let policy = if let Some(path) = &self.policy_path {
             let file = File::open(path).map_err(|_| "cannot read policy file")?;
             let mut bytes = Vec::new();
@@ -230,11 +357,14 @@ impl Options {
         } else {
             pablo_core::policy::Policy::default()
         };
+        Ok(policy)
+    }
+    pub fn tools(&self) -> Result<pablo_core::ToolRegistry, String> {
         pablo_core::ToolRegistry::configured_with_writes(
             self.live && !self.no_shell,
             self.live && !self.no_filesystem,
             self.allow_write,
-            policy,
+            self.policy()?,
         )
         .map_err(|_| "cannot configure tool policy".into())
     }

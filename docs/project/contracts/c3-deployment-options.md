@@ -23,8 +23,8 @@ Each row inherits owner C3.3, availability `c3.1` contract / C3.2 resolver / C3.
 | `limits.max_context_bytes`, `limits.max_input_bytes`, `limits.max_output_bytes` | `positive`; 33,554,432 / 1,048,576 / 4,194,304 | Existing core byte accounting; config capacity is a separate bound |
 | `limits.max_output_tokens` | Integer 1–4,294,967,295; 65,536 | Provider request bound, not an invented token count or enforceability attestation |
 | `limits.max_events` | `u64str`, `"1000000"`, minimum 4 | Includes terminal/lifecycle slots |
-| `limits.filesystem.max_file_bytes`, `max_scan_bytes` | `positive`; 8,388,608 / 67,108,864 | `FilesystemLimits`; bounded UTF-8 reads/mutations/search |
-| `limits.filesystem.max_entries`, `max_depth` | `positive`; 10,000 / 32 | Same filesystem owner; not import-parser limits |
+| `limits.filesystem.max_file_bytes`, `max_scan_bytes` | `positive` or `"unlimited"`; `"unlimited"` each | Optional `FilesystemLimits` host quotas; UTF-8 reads/mutations/search |
+| `limits.filesystem.max_entries`, `max_depth` | `positive` or `"unlimited"`; `"unlimited"` each | Optional traversal quotas; not import-parser limits |
 | `shell.enabled` | Boolean, true | Tool registry enables `shell.run`; command policy is reserved C3.4 |
 | `filesystem.enabled`, `filesystem.write` | Boolean; true / false | Tool registry enables read/list/search and explicit write/edit opt-in; write with disabled filesystem rejects |
 | `policy.tools`, `executables`, `read_roots`, `write_roots` | Optional rule dimension, omitted by default | Exact C2 `Policy`; each supplied dimension requires `default = "allow"` or `"deny"`, with ordered `allow`/`deny` lists default `[]`; ordinary list replace/append/prepend supported |

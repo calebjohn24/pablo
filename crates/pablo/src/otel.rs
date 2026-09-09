@@ -13,6 +13,7 @@ use opentelemetry_sdk::{
     },
 };
 use pablo_core::CancellationToken;
+use pablo_core::deployment::{CredentialConsumer, PreparedRun, ScopedCredential};
 use std::{
     collections::HashMap,
     sync::{
@@ -38,6 +39,141 @@ struct Counts {
 }
 
 impl Telemetry {
+    pub fn check_configured(
+        prepared: &PreparedRun,
+        headers: Option<&ScopedCredential>,
+    ) -> Result<(), String> {
+        let options = &prepared.deployment().options()["otel"];
+        if options["sdk_disabled"] != true && options["exporter"] == "otlp" {
+            match headers {
+                Some(secret) => {
+                    explicit_headers(
+                        secret
+                            .expose_for(
+                                CredentialConsumer::OtelHeaders,
+                                options["endpoint"].as_str().unwrap(),
+                            )
+                            .map_err(|e| e.to_string())?,
+                    )?;
+                }
+                None if options["headers"]["unset"] == true => {}
+                None => return Err("config_credential_missing at /options/otel/headers".into()),
+            }
+        }
+        Ok(())
+    }
+    /// Fully explicit SDK/exporter setup. No environment detector or ambient
+    /// exporter header/endpoint may participate in an admitted deployment.
+    pub fn configured(
+        prepared: &PreparedRun,
+        headers: Option<&ScopedCredential>,
+    ) -> Result<Self, String> {
+        let options = &prepared.deployment().options()["otel"];
+        let cancel = CancellationToken::new();
+        let counts = Arc::new(Counts::default());
+        let resource = Resource::builder_empty()
+            .with_attributes(
+                options["resource_attributes"]
+                    .as_object()
+                    .unwrap()
+                    .iter()
+                    .map(|(key, value)| {
+                        KeyValue::new(key.clone(), value.as_str().unwrap().to_owned())
+                    }),
+            )
+            .with_service_name(options["service_name"].as_str().unwrap().to_owned())
+            .with_attribute(KeyValue::new("service.version", env!("CARGO_PKG_VERSION")))
+            .build();
+        let ratio = options["sampler_arg"]
+            .as_str()
+            .unwrap()
+            .parse::<f64>()
+            .map_err(|_| "config_invalid_value at /options/otel/sampler_arg")?;
+        let sampler = if options["sdk_disabled"] == true {
+            Sampler::AlwaysOff
+        } else {
+            match options["sampler"].as_str().unwrap() {
+                "always_on" => Sampler::AlwaysOn,
+                "always_off" => Sampler::AlwaysOff,
+                "traceidratio" => Sampler::TraceIdRatioBased(ratio),
+                "parentbased_always_on" => Sampler::ParentBased(Box::new(Sampler::AlwaysOn)),
+                "parentbased_always_off" => Sampler::ParentBased(Box::new(Sampler::AlwaysOff)),
+                "parentbased_traceidratio" => {
+                    Sampler::ParentBased(Box::new(Sampler::TraceIdRatioBased(ratio)))
+                }
+                _ => return Err("config_invalid_value at /options/otel/sampler".into()),
+            }
+        };
+        let mut builder = SdkTracerProvider::builder_without_environment()
+            .with_resource(resource)
+            .with_sampler(sampler);
+        if options["sdk_disabled"] != true && options["exporter"] == "otlp" {
+            let endpoint = options["endpoint"].as_str().unwrap();
+            let headers = match headers {
+                Some(secret) => explicit_headers(
+                    secret
+                        .expose_for(CredentialConsumer::OtelHeaders, endpoint)
+                        .map_err(|e| e.to_string())?,
+                )?,
+                None if options["headers"]["unset"] == true => HashMap::new(),
+                None => return Err("config_credential_missing at /options/otel/headers".into()),
+            };
+            let timeout = Duration::from_millis(options["timeout_ms"].as_u64().unwrap());
+            let client = reqwest::Client::builder()
+                .redirect(reqwest::redirect::Policy::none())
+                .no_proxy()
+                .retry(reqwest::retry::never())
+                .timeout(timeout)
+                .build()
+                .map_err(|_| "config_invalid_value at /options/otel")?;
+            let mut exporter = opentelemetry_otlp::HttpExporterBuilder::default()
+                .without_environment()
+                .with_endpoint(endpoint)
+                .with_protocol(opentelemetry_otlp::Protocol::HttpBinary)
+                .with_timeout(timeout)
+                .with_headers(headers)
+                .with_http_client(BoundedHttp(client, counts.clone()));
+            if options["compression"] == "gzip" {
+                exporter = exporter.with_compression(opentelemetry_otlp::Compression::Gzip);
+            }
+            let inner = exporter
+                .build_span_exporter()
+                .map_err(|_| "config_invalid_value at /options/otel")?;
+            let export_timeout =
+                Duration::from_millis(options["export_timeout_ms"].as_u64().unwrap());
+            let exporter = OwnedExporter {
+                inner,
+                executor: Mutex::new(Some(
+                    tokio::runtime::Builder::new_current_thread()
+                        .enable_all()
+                        .build()
+                        .map_err(|_| "config_invalid_value at /options/otel")?,
+                )),
+                export_timeout: timeout.min(export_timeout),
+                cancel: cancel.clone(),
+                counts: counts.clone(),
+            };
+            let config = opentelemetry_sdk::trace::BatchConfigBuilder::without_environment()
+                .with_max_queue_size(options["max_queue_size"].as_u64().unwrap() as usize)
+                .with_max_export_batch_size(
+                    options["max_export_batch_size"].as_u64().unwrap() as usize
+                )
+                .with_scheduled_delay(Duration::from_millis(
+                    options["schedule_delay_ms"].as_u64().unwrap(),
+                ))
+                .build();
+            builder = builder.with_span_processor(CountedProcessor {
+                inner: BatchSpanProcessor::builder_with_config(exporter, config).build(),
+                counts: counts.clone(),
+            });
+        }
+        Ok(Self {
+            sdk: builder.build(),
+            cancel,
+            counts,
+        })
+    }
+
     pub fn new() -> Self {
         let cancel = CancellationToken::new();
         let counts = Arc::new(Counts::default());
@@ -319,7 +455,19 @@ impl SpanProcessor for CountedProcessor {
 /// Invalid/oversized fields are ignored with a fixed diagnostic, never echoed.
 pub fn parent(traceparent: Option<&str>, tracestate: Option<&str>) -> Context {
     let propagators = std::env::var("OTEL_PROPAGATORS").unwrap_or_else(|_| "tracecontext".into());
-    if !propagators.split(',').any(|p| p.trim() == "tracecontext") {
+    parent_explicit(
+        traceparent,
+        tracestate,
+        propagators.split(',').any(|p| p.trim() == "tracecontext"),
+    )
+}
+
+pub fn parent_explicit(
+    traceparent: Option<&str>,
+    tracestate: Option<&str>,
+    tracecontext: bool,
+) -> Context {
+    if !tracecontext {
         return Context::new();
     }
     let Some(traceparent) = traceparent else {
@@ -338,4 +486,56 @@ pub fn parent(traceparent: Option<&str>, tracestate: Option<&str>) -> Context {
         eprintln!("pablo: invalid incoming trace context; starting a local trace");
     }
     context
+}
+
+fn explicit_headers(value: &str) -> Result<HashMap<String, String>, String> {
+    let invalid = || "config_credential_invalid at /options/otel/headers".to_owned();
+    let mut headers = HashMap::new();
+    for pair in value.split(',') {
+        let (key, value) = pair.trim().split_once('=').ok_or_else(invalid)?;
+        let key = key.trim().to_ascii_lowercase();
+        let value = value.trim();
+        if matches!(
+            key.as_str(),
+            "host"
+                | "content-type"
+                | "content-length"
+                | "content-encoding"
+                | "transfer-encoding"
+                | "connection"
+                | "upgrade"
+                | "te"
+                | "trailer"
+                | "proxy-authorization"
+        ) || value.is_empty()
+        {
+            return Err(invalid());
+        }
+        reqwest::header::HeaderName::from_bytes(key.as_bytes()).map_err(|_| invalid())?;
+        let mut decoded = Vec::new();
+        let mut bytes = value.bytes();
+        while let Some(byte) = bytes.next() {
+            decoded.push(if byte == b'%' {
+                let a = (bytes.next().ok_or_else(invalid)? as char)
+                    .to_digit(16)
+                    .ok_or_else(invalid)?;
+                let b = (bytes.next().ok_or_else(invalid)? as char)
+                    .to_digit(16)
+                    .ok_or_else(invalid)?;
+                (a * 16 + b) as u8
+            } else {
+                byte
+            });
+        }
+        let decoded = std::str::from_utf8(&decoded).map_err(|_| invalid())?;
+        if decoded.chars().any(char::is_control) {
+            return Err(invalid());
+        }
+        reqwest::header::HeaderValue::from_str(decoded).map_err(|_| invalid())?;
+        // The SDK decodes once in with_headers; retain the encoded input here.
+        if headers.insert(key, value.to_owned()).is_some() {
+            return Err(invalid());
+        }
+    }
+    Ok(headers)
 }

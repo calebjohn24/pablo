@@ -170,6 +170,9 @@ impl Serialize for RedactedEvent<'_> {
         map.serialize_entry("span_id", &e.span_id)?;
         map.serialize_entry("parent_span_id", &e.parent_span_id)?;
         map.serialize_entry("trace_flags", &e.trace_flags)?;
+        if let Some(deployment) = &e.deployment {
+            map.serialize_entry("deployment", deployment)?;
+        }
         if let Some(accounting) = &e.accounting {
             map.serialize_entry("accounting", accounting)?;
         }

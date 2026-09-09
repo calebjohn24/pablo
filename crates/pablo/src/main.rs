@@ -1,5 +1,6 @@
 mod acp;
 mod config;
+mod deployment;
 mod otel;
 
 use std::{
@@ -19,9 +20,12 @@ const HELP: &str = "pablo — headless Rust runtime\n\nUsage:\n  pablo \"TASK\" 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> ExitCode {
     let args: Vec<_> = std::env::args_os().skip(1).collect();
-    let json = args
-        .first()
-        .is_none_or(|c| c != "acp" && c != "demo" && c != "--help" && c != "--version")
+    let json = args.first().is_none_or(|c| {
+        c != "config" && c != "acp" && c != "demo" && c != "--help" && c != "--version"
+    }) && !args
+        .iter()
+        .take_while(|a| *a != "--")
+        .any(|a| a == "--config")
         && args
             .iter()
             .take_while(|a| *a != "--")
@@ -49,8 +53,12 @@ async fn execute(
 ) -> Result<ExitCode, String> {
     let mut args = args.into_iter();
     let command = args.next().unwrap_or_else(|| "--help".into());
+    if command == "config" {
+        deployment::inspect(args.collect())?;
+        return Ok(ExitCode::SUCCESS);
+    }
     if command == "--help" && args.len() == 0 {
-        print!("{HELP}");
+        print!("{HELP}{}", deployment::HELP);
         return Ok(ExitCode::SUCCESS);
     }
     if command == "--version" && args.len() == 0 {
@@ -62,14 +70,30 @@ async fn execute(
         );
         return Ok(ExitCode::SUCCESS);
     }
-    let options = config::Options::parse(command, args)?;
+    let mut options = config::Options::parse(command, args)?;
     if options.acp {
         return acp::serve(options).await;
     }
     *stage = TaskErrorCode::InvalidConfiguration;
-    let spec = options.spec()?;
-    let tools = options.tools()?;
-    let provider: Box<dyn Provider> = if options.live {
+    let prepared = options.prepare_run(None, None, Some(uuid::Uuid::new_v4().to_string()))?;
+    if let Some(prepared) = &prepared {
+        options.json = prepared.deployment().options()["interfaces"]["cli_output"] == "json";
+    }
+    let spec = match &prepared {
+        Some(prepared) => prepared.spec().clone(),
+        None => options.spec()?,
+    };
+    let tools = match &prepared {
+        Some(prepared) => prepared.tools().map_err(|e| e.to_string())?,
+        None => options.tools()?,
+    };
+    let secrets = prepared
+        .as_ref()
+        .map(|prepared| deployment::Secrets::read(prepared, options.deployment.as_ref().unwrap()))
+        .transpose()?;
+    let provider: Box<dyn Provider> = if let Some(secrets) = &secrets {
+        Box::new(secrets.provider(options.deployment.as_ref().unwrap())?)
+    } else if options.live {
         if let Some(endpoint) = std::env::var_os("PABLO_FIXTURE_ENDPOINT") {
             Box::new(GatewayProvider::local_fixture(
                 endpoint.to_str().ok_or("invalid fixture endpoint")?,
@@ -83,29 +107,85 @@ async fn execute(
     } else {
         Box::new(ScriptedProvider::text(["Hello ", "from ", "pablo.\n"]))
     };
+    if prepared.is_some() {
+        pablo_core::runtime::validate_run(&spec, provider.as_ref(), &tools)
+            .map_err(|_| "config_invalid_value at /run")?;
+    }
+    let mut configured_sdk = prepared
+        .as_ref()
+        .map(|prepared| {
+            otel::Telemetry::configured(
+                prepared,
+                secrets
+                    .as_ref()
+                    .and_then(|secrets| secrets.headers.as_ref()),
+            )
+        })
+        .transpose()?;
     *stage = TaskErrorCode::TraceSetupFailed;
-    let mut native_trace = match &options.trace_path {
-        Some(path) => {
-            let mut open = OpenOptions::new();
-            open.write(true).create_new(true);
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::OpenOptionsExt;
-                open.mode(0o600);
+    let mut native_trace = if let Some(prepared) = &prepared {
+        match prepared.create_trace_file().and_then(|file| {
+            file.map(|file| {
+                JsonlSink::new(BufWriter::new(file), &spec).map_err(|_| {
+                    pablo_core::deployment::ConfigError {
+                        code: "config_invalid_value",
+                        option: "/options/trace".into(),
+                        source: None,
+                        line: None,
+                        owner: None,
+                        authority_id: None,
+                        chain: Vec::new(),
+                    }
+                })
+            })
+            .transpose()
+        }) {
+            Ok(trace) => trace,
+            Err(error) => {
+                configured_sdk.take().unwrap().shutdown().await;
+                return Err(error.to_string());
             }
-            let file = open.open(path).map_err(
-                |_| "cannot create trace file; check its parent directory and use a new path",
-            )?;
-            Some(JsonlSink::new(BufWriter::new(file), &spec).map_err(|e| e.to_string())?)
         }
-        None => None,
+    } else {
+        match &options.trace_path {
+            Some(path) => {
+                let mut open = OpenOptions::new();
+                open.write(true).create_new(true);
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::OpenOptionsExt;
+                    open.mode(0o600);
+                }
+                let file = open.open(path).map_err(
+                    |_| "cannot create trace file; check its parent directory and use a new path",
+                )?;
+                Some(JsonlSink::new(BufWriter::new(file), &spec).map_err(|e| e.to_string())?)
+            }
+            None => None,
+        }
     };
     *stage = TaskErrorCode::InvalidConfiguration;
-    let sdk = otel::Telemetry::new();
-    let runtime = Runtime::new(telemetry::tracer(&sdk.sdk)).with_parent_context(otel::parent(
-        options.traceparent.as_deref(),
-        options.tracestate.as_deref(),
-    ));
+    let sdk = configured_sdk.unwrap_or_else(otel::Telemetry::new);
+    let parent = if let Some(prepared) = &prepared {
+        otel::parent_explicit(
+            options.traceparent.as_deref(),
+            options.tracestate.as_deref(),
+            prepared.deployment().options()["otel"]["propagators"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|v| v == "tracecontext"),
+        )
+    } else {
+        otel::parent(
+            options.traceparent.as_deref(),
+            options.tracestate.as_deref(),
+        )
+    };
+    let mut runtime = Runtime::new(telemetry::tracer(&sdk.sdk)).with_parent_context(parent);
+    if let Some(prepared) = &prepared {
+        runtime = runtime.with_deployment(prepared.deployment());
+    }
     let cancellation = CancellationToken::new();
     // Register before starting work. Poll signals alongside the same run future;
     // never drop a running shell future on Ctrl-C.

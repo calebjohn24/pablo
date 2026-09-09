@@ -36,6 +36,81 @@ pub struct Policy {
     pub read_roots: Option<Rules>,
     pub write_roots: Option<Rules>,
 }
+
+/// An ordinary policy intersected with immutable host/deployment policies.
+/// Missing dimensions in a ceiling add no constraint. Lists from separate
+/// layers are never merged: every applicable layer must admit the operation.
+#[derive(Clone, Debug, Default)]
+pub struct PolicySet {
+    ordinary: Policy,
+    ceilings: Vec<Policy>,
+}
+
+impl From<Policy> for PolicySet {
+    fn from(ordinary: Policy) -> Self {
+        Self {
+            ordinary,
+            ceilings: Vec::new(),
+        }
+    }
+}
+
+impl PolicySet {
+    pub fn new(ordinary: Policy, ceilings: Vec<Policy>) -> Result<Self, &'static str> {
+        let set = Self { ordinary, ceilings };
+        set.validate()?;
+        Ok(set)
+    }
+
+    pub fn validate(&self) -> Result<(), &'static str> {
+        if self.ceilings.len() > 64 {
+            return Err("too many authority policies");
+        }
+        let mut ids = HashSet::new();
+        for policy in std::iter::once(&self.ordinary).chain(&self.ceilings) {
+            policy.validate()?;
+            for (_, rules) in policy.dimensions() {
+                for rule in rules
+                    .into_iter()
+                    .flat_map(|r| r.allow.iter().chain(&r.deny))
+                {
+                    if !ids.insert(&rule.id) {
+                        return Err("duplicate policy rule ID across layers");
+                    }
+                    if ids.len() > 1024 {
+                        return Err("too many policy rules across layers");
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub(crate) fn dimensions(&self) -> impl Iterator<Item = (&'static str, Option<&Rules>)> {
+        std::iter::once(&self.ordinary)
+            .chain(&self.ceilings)
+            .flat_map(Policy::dimensions)
+    }
+
+    pub(crate) fn decide(
+        &self,
+        dimension: &str,
+        value: &str,
+        write_opt_in: bool,
+    ) -> Result<Vec<String>, PolicyRule> {
+        let mut decisions = vec![self.ordinary.decide(dimension, value, write_opt_in)?];
+        for ceiling in &self.ceilings {
+            if ceiling
+                .dimensions()
+                .iter()
+                .any(|(name, rules)| *name == dimension && rules.is_some())
+            {
+                decisions.push(ceiling.decide(dimension, value, write_opt_in)?);
+            }
+        }
+        Ok(decisions)
+    }
+}
 impl Policy {
     pub fn validate(&self) -> Result<(), &'static str> {
         let mut ids = HashSet::new();
@@ -144,6 +219,13 @@ pub(crate) fn relative_path(value: &str) -> Result<PathBuf, PolicyRule> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn policy_sets_validate_global_identity_and_layer_bounds() {
+        let policy: Policy = serde_json::from_value(serde_json::json!({"tools":{"default":"allow","allow":[{"id":"shared","value":"fs.read"}]}})).unwrap();
+        assert!(PolicySet::new(policy.clone(), vec![policy]).is_err());
+        assert!(PolicySet::new(Policy::default(), vec![Policy::default(); 64]).is_ok());
+        assert!(PolicySet::new(Policy::default(), vec![Policy::default(); 65]).is_err());
+    }
     #[test]
     fn closed_configuration_and_component_matching_preserve_precedence() {
         for json in [

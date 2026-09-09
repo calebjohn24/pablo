@@ -28,10 +28,10 @@
     "max_output_tokens": 65536,
     "max_events": "1000000",
     "filesystem": {
-      "max_file_bytes": 8388608,
-      "max_entries": 10000,
-      "max_depth": 32,
-      "max_scan_bytes": 67108864
+      "max_file_bytes": "unlimited",
+      "max_entries": "unlimited",
+      "max_depth": "unlimited",
+      "max_scan_bytes": "unlimited"
     }
   },
   "shell": {

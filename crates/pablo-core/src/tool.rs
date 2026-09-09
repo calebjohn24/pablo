@@ -113,7 +113,7 @@ impl std::error::Error for ToolSetupError {}
 pub struct ToolRegistry {
     shell: Option<crate::shell::ShellTool>,
     filesystem: Vec<crate::filesystem::FilesystemTool>,
-    policy: std::sync::Arc<crate::policy::Policy>,
+    policy: std::sync::Arc<crate::policy::PolicySet>,
     descriptors: Vec<ToolDescriptor>,
 }
 
@@ -140,6 +140,15 @@ impl ToolRegistry {
         filesystem: bool,
         writes: bool,
         policy: crate::policy::Policy,
+    ) -> Result<Self, ToolSetupError> {
+        Self::configured_with_policy_set(shell, filesystem, writes, policy.into())
+    }
+    /// Configure the same built-in tools with independently enforced ceilings.
+    pub fn configured_with_policy_set(
+        shell: bool,
+        filesystem: bool,
+        writes: bool,
+        policy: crate::policy::PolicySet,
     ) -> Result<Self, ToolSetupError> {
         if writes && !filesystem {
             return Err(ToolSetupError);
@@ -178,7 +187,7 @@ impl ToolRegistry {
     pub(crate) fn has_filesystem(&self) -> bool {
         !self.filesystem.is_empty()
     }
-    pub(crate) fn policy(&self) -> &crate::policy::Policy {
+    pub(crate) fn policy(&self) -> &crate::policy::PolicySet {
         &self.policy
     }
     pub(crate) fn get(&self, name: &str) -> Option<&dyn Tool> {

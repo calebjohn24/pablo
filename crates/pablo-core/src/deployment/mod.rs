@@ -2,8 +2,11 @@
 //! environment, credentials or workspace content and never activates a runtime.
 //! The checked-in schema/defaults are the option inventory for this revision.
 
+mod admission;
 mod canonical;
+mod credentials;
 mod input;
+mod render;
 mod resolve;
 mod validate;
 
@@ -11,8 +14,12 @@ use serde::Serialize;
 use serde_json::{Map, Value};
 use std::{collections::BTreeMap, fmt, path::PathBuf};
 
+pub use admission::{PreparedRun, RunInput};
 pub use canonical::fingerprint;
-pub use resolve::resolve;
+pub use credentials::{
+    CredentialConsumer, CredentialInputs, CredentialReadError, ProcessCredentials, ScopedCredential,
+};
+pub use resolve::{LoadedDeployment, load, resolve};
 
 pub const CONTRACT_REVISION: &str = "c3.1";
 pub const DOCUMENT_SCHEMA: &str =
@@ -163,6 +170,10 @@ pub struct Origin {
 /// inspection; Debug and runtime summaries must not dump operator content.
 #[derive(Clone, Serialize)]
 pub struct ResolvedDeployment {
+    #[serde(skip)]
+    config_root: PathBuf,
+    #[serde(skip)]
+    path_bindings: BTreeMap<String, PathBuf>,
     schema_version: u32,
     contract_revision: &'static str,
     config: Value,
@@ -171,7 +182,28 @@ pub struct ResolvedDeployment {
     provenance: BTreeMap<String, Vec<Origin>>,
     input_fingerprint: String,
 }
+
+/// Safe run metadata. It intentionally excludes sources, paths, task content,
+/// credential presence and the private host-bindings fingerprint.
+#[derive(Clone, Debug, Serialize, serde::Deserialize, PartialEq, Eq)]
+pub struct DeploymentIdentity {
+    schema_version: u32,
+    contract_revision: String,
+    fingerprint: String,
+}
 impl ResolvedDeployment {
+    pub fn identity(&self) -> DeploymentIdentity {
+        DeploymentIdentity {
+            schema_version: self.schema_version,
+            contract_revision: self.contract_revision.into(),
+            fingerprint: self.fingerprint.clone(),
+        }
+    }
+    /// Canonical, portable TOML with all defaults and secret references retained.
+    /// This is explicit local inspection and may contain operator-authored text.
+    pub fn render(&self) -> Result<String, ConfigError> {
+        render::render(&self.config)
+    }
     pub fn config(&self) -> &Value {
         &self.config
     }

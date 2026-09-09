@@ -39,10 +39,10 @@
         "max_output_tokens": 65536,
         "max_events": "1000000",
         "filesystem": {
-          "max_file_bytes": 8388608,
-          "max_entries": 10000,
-          "max_depth": 32,
-          "max_scan_bytes": 67108864
+          "max_file_bytes": "unlimited",
+          "max_entries": "unlimited",
+          "max_depth": "unlimited",
+          "max_scan_bytes": "unlimited"
         }
       },
       "shell": {
@@ -148,7 +148,7 @@
       "id": "source-0000",
       "kind": "defaults",
       "locator": "deployment-defaults-v1.json",
-      "digest": "sha256:1235870e9ef348986bb2a11a24b6bc57a08594e333377ac08f87f2e6c1961573"
+      "digest": "sha256:5dbb2c92e1ac7b8f922026fd8666aa962ece3de42ffe1f14f5fa283e83faf6b9"
     },
     {
       "id": "source-0001",
@@ -785,6 +785,6 @@
       }
     ]
   },
-  "fingerprint": "sha256:05da699dbe1fad56d03edcd5ed1d0fbceea7932fda05907492187eff08c86c7e",
-  "input_fingerprint": "sha256:f666c9503d6f2cada8ae91bc2c1c50b9c7415050913bce23ad60130ca35c7e84"
+  "fingerprint": "sha256:9b9c57c1c92a57cea452582c947ff131f8b0fe231f512023e42779385e3a0d30",
+  "input_fingerprint": "sha256:95daa73518c7fb8809596c6fffd18f05f8631a9055479dbfbfa4ff2dd10f1f28"
 }

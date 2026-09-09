@@ -54,11 +54,15 @@ fn meta(value: Value) -> wire::Meta {
     [(EXTENSION.to_owned(), value)].into_iter().collect()
 }
 fn correlation(event: &RunEvent, first: u64) -> Value {
-    json!({"schema_version":event.schema_version,"run_id":event.run_id,
+    let mut value = json!({"schema_version":event.schema_version,"run_id":event.run_id,
         "session_id":event.session_id,"seq_start":first,"seq_end":event.seq,
         "timestamp_unix_micros":event.timestamp_unix_micros,
         "trace_id":event.trace_id,"span_id":event.span_id,
-        "parent_span_id":event.parent_span_id,"trace_flags":event.trace_flags})
+        "parent_span_id":event.parent_span_id,"trace_flags":event.trace_flags});
+    if let Some(identity) = &event.deployment {
+        value["deployment"] = serde_json::to_value(identity).expect("bounded identity");
+    }
+    value
 }
 
 #[cfg(unix)]
@@ -92,6 +96,19 @@ async fn serve_streams(
     input: impl futures::AsyncRead + Unpin + Send + 'static,
     output: impl futures::AsyncWrite + Unpin + Send + 'static,
 ) -> Result<ExitCode, String> {
+    if let Some(prepared) = options.prepare_run(
+        Some(String::new()),
+        None,
+        Some(uuid::Uuid::new_v4().to_string()),
+    )? {
+        let secrets =
+            crate::deployment::Secrets::read(&prepared, options.deployment.as_ref().unwrap())?;
+        let provider = secrets.provider(options.deployment.as_ref().unwrap())?;
+        let tools = prepared.tools().map_err(|e| e.to_string())?;
+        pablo_core::runtime::validate_run(prepared.spec(), &provider, &tools)
+            .map_err(|_| "config_invalid_value at /run")?;
+        crate::otel::Telemetry::check_configured(&prepared, secrets.headers.as_ref())?;
+    }
     let state = Arc::new(Mutex::new(State::default()));
     let options = Arc::new(options);
     let cancellation = CancellationToken::new();
@@ -210,6 +227,7 @@ async fn serve_streams(
         .on_receive_request(
             {
                 let state = state.clone();
+                let options = options.clone();
                 async move |request: wire::NewSessionRequest,
                             responder: Responder<wire::NewSessionResponse>,
                             _cx| {
@@ -237,6 +255,13 @@ async fn serve_streams(
                         return responder.respond_with_error(invalid("cwd must be a directory"));
                     }
                     let id = wire::SessionId::new(uuid::Uuid::new_v4().to_string());
+                    if let Err(message) = options.prepare_run(
+                        Some(String::new()),
+                        Some(cwd.clone()),
+                        Some(id.to_string()),
+                    ) {
+                        return responder.respond_with_error(Error::invalid_params().data(message));
+                    }
                     state.session = Some((id.clone(), cwd));
                     state.prompted = false;
                     responder.respond(wire::NewSessionResponse::new(id))
@@ -295,7 +320,22 @@ async fn serve_streams(
                         s.prompted = true;
                         (cwd, s.extended, s.task_extended)
                     };
-                    let mut spec = match options.spec() {
+                    let prepared = match options.prepare_run(
+                        Some(input.clone()),
+                        Some(cwd.clone()),
+                        Some(request.session_id.to_string()),
+                    ) {
+                        Ok(prepared) => prepared,
+                        Err(message) => {
+                            return responder
+                                .respond_with_error(Error::invalid_params().data(message));
+                        }
+                    };
+                    let mut spec = match prepared
+                        .as_ref()
+                        .map(|p| Ok(p.spec().clone()))
+                        .unwrap_or_else(|| options.spec())
+                    {
                         Ok(spec) => spec,
                         Err(_) => {
                             return responder.respond_with_error(
@@ -307,7 +347,21 @@ async fn serve_streams(
                     spec.input = input;
                     spec.session_id = Some(request.session_id.to_string());
                     let incoming = request.meta.as_ref().and_then(|m| m.get(EXTENSION));
-                    let parent = if extended {
+                    let parent = if let Some(prepared) = prepared.as_ref().filter(|_| extended) {
+                        crate::otel::parent_explicit(
+                            incoming
+                                .and_then(|m| m.get("traceparent"))
+                                .and_then(Value::as_str),
+                            incoming
+                                .and_then(|m| m.get("tracestate"))
+                                .and_then(Value::as_str),
+                            prepared.deployment().options()["otel"]["propagators"]
+                                .as_array()
+                                .unwrap()
+                                .iter()
+                                .any(|v| v == "tracecontext"),
+                        )
+                    } else if extended {
                         crate::otel::parent(
                             incoming
                                 .and_then(|m| m.get("traceparent"))
@@ -335,6 +389,7 @@ async fn serve_streams(
                             }
                         }
                         let task = Task {
+                            prepared,
                             spec,
                             parent,
                             cancel: cancel.clone(),
@@ -591,8 +646,13 @@ fn prompt_response(
     task_extended: bool,
     cancelled: bool,
 ) -> Result<wire::PromptResponse, Error> {
-    let outcome =
-        outcome.map_err(|_| Error::internal_error().data("runtime setup or execution failed"))?;
+    let outcome = outcome.map_err(|message| {
+        if message.starts_with("config_") {
+            Error::invalid_params().data(message)
+        } else {
+            Error::internal_error().data("runtime setup or execution failed")
+        }
+    })?;
     let terminal =
         terminal.ok_or_else(|| Error::internal_error().data("terminal event unavailable"))?;
     let mut details = correlation(&terminal, terminal.seq);
@@ -643,6 +703,7 @@ mod tests {
 
     fn event(seq: u64, kind: EventKind) -> RunEvent {
         RunEvent {
+            deployment: None,
             accounting: None,
             schema_version: "c1.2".into(),
             seq,
