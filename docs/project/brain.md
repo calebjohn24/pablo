@@ -6,7 +6,7 @@ Pablo is a small headless Rust agent runtime for applications doing arbitrary wo
 
 This file holds durable context. [State](state.json) reports current progress, [the log](log.jsonl) records history, and [cycle C2](cycles/002-single-agent-completion.md) defines the selected work. [Cycle C1](cycles/001-first-spike.md) and its evidence remain historical. Run `node scripts/project.mjs context` for a focused handoff.
 
-Private source remote: [calebjohn24/pablo](https://github.com/calebjohn24/pablo), with `main` tracking `origin/main`. Repository creation is recorded in LOG-0044; native Linux acceptance remains a separate gate.
+Private source remote: [calebjohn24/pablo](https://github.com/calebjohn24/pablo), with `main` tracking `origin/main`. Repository creation is recorded in LOG-0044; [native Linux acceptance](evidence/c2.5-linux-x64.md) closes C2.5. No next cycle is selected.
 
 ## Read the design selectively
 
@@ -45,7 +45,7 @@ Root execution, model calls, tools, ACP updates, JSONL records, and OTel spans o
 
 ### D007 — Reuse installed development tools
 
-Rust is installed. Node 24.20.0 and npm 11.19.0 are installed through nvm; noninteractive shells may need nvm initialization. Python/uv are also available. Use Node's built-in modules and test runner for project management; pin dependencies and protocols when introduced.
+Reuse installed Rust and Node tools; noninteractive shells may need nvm initialization. `.nvmrc` pins Node 24.20.0, but verify and record each host's actual version rather than assuming it matches. Use Node's built-in modules and test runner for project management; pin dependencies and protocols when introduced.
 
 ### D008 — Inject the tracer and stream into a host-owned sink
 
@@ -126,6 +126,10 @@ Project the native terminal event into CLI JSON and opt-in ACP task metadata; us
 ### D027 — Keep policy identity complete without breaking native built-ins
 
 C2.5 records one deciding ID for every applicable allowed tool/launcher/root dimension, including defaults and recoverable filesystem errors. The decisive denial ID appears in native metadata and OTel. Mandatory built-in denials retain C1 enum wire values, mapped explicitly to logical `builtin.*` identities; changing them would break existing clients without improving enforcement. See the [policy contract](contracts/c2-single-agent.md#static-policy).
+
+### D028 — Make native Linux acceptance reproducible in private CI
+
+Use the private repository's Ubuntu x64 workflow to verify the native architecture and unprivileged fixtures, full suites, real Collector and matched C1.7/C2 measurements. Record the hosted VM environment rather than implying bare-metal timing. Upload only measurement reports, keep provider credentials local and preserve provisional sizing/performance observations without inventing ceilings. This resolves the runner blocker and makes acceptance repeatable; see [Linux evidence](evidence/c2.5-linux-x64.md).
 
 ## Working constraints
 

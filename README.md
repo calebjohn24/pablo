@@ -2,7 +2,7 @@
 
 A small, headless Rust agent runtime for applications doing arbitrary work.
 
-The focused [C1 spike](docs/project/cycles/001-first-spike.md) is complete. The adopted [C2 cycle](docs/project/cycles/002-single-agent-completion.md) now implements bounded filesystem tools, machine-readable task output, static policy and accounting. Final acceptance still requires native Linux x86_64 verification; this is not a published release. The [architecture brief](docs/context.md) describes the larger product; section 29.1 defines the 0.1 release contract. The project-state command reports checkpoint progress across retained cycles.
+The focused [C1 spike](docs/project/cycles/001-first-spike.md) and [C2 cycle](docs/project/cycles/002-single-agent-completion.md) are complete. C2 implements bounded filesystem tools, machine-readable task output, static policy and accounting, with acceptance on macOS arm64 and [native Linux x86_64](docs/project/evidence/c2.5-linux-x64.md). This is not a published release. The [architecture brief](docs/context.md) describes the larger product; section 29.1 defines the 0.1 release contract. The project-state command reports checkpoint progress across retained cycles.
 
 ## Run a real task
 

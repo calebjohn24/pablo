@@ -2,7 +2,7 @@
 
 The implementation runs a bounded, sequential model/tool loop through two crates. `pablo-core` owns contracts, provider normalization, lifecycle transitions, event delivery, and OTel instrumentation. `pablo` owns the standalone SDK and terminal commands. C1.2a added the direct HTTP gateway adapter and live `run` command through this same lifecycle; `demo` remains offline. See [the gateway contract](gateway.md). C1.5 added opt-in [network telemetry export](telemetry.md).
 
-The contract revision is `c2.2`, not a frozen 0.1 API. C2.2 implements [bounded filesystem reads and revision-checked mutations](filesystem.md); [cycle C2](project/cycles/002-single-agent-completion.md) defines the remaining JSON and accounting checkpoints.
+The native contract revision is `c2.4`, not a frozen 0.1 API. It includes [bounded filesystem reads and revision-checked mutations](filesystem.md), the `c2.3` task envelope, static policy and accounting implemented in [cycle C2](project/cycles/002-single-agent-completion.md).
 
 ## Embedding
 

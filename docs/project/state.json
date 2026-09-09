@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-09T02:51:13.374Z",
+  "updated_at": "2026-09-09T18:21:29.017Z",
   "active_checkpoint": null,
   "next_checkpoint": null,
-  "next_action": "Private origin is configured at https://github.com/calebjohn24/pablo.git and main is pushed. Resume C2.5 with an authorized native Linux x86_64 runner: execute full acceptance and comparable release measurements, append evidence, then close the cycle only after that gate passes.",
-  "latest_log_entry": "LOG-0044",
+  "next_action": "C2.5 and cycle C2 are complete. Review docs/project/evidence/c2.5-linux-x64.md for native Linux acceptance and matched release measurements. Select and specify the next extensibility cycle before implementation; OpenRouter is eligible. Publishing and broader release-hardening gates remain deferred.",
+  "latest_log_entry": "LOG-0046",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -210,13 +210,10 @@
       "depends_on": [
         "C2.4"
       ],
-      "status": "blocked",
-      "blockers": [
-        "Native Linux x86_64 runner unavailable. Unblock when an authorized native x86_64 SSH host or CI runner is provided, then execute full C2 acceptance and comparable release measurements. macOS and supplemental Linux arm64 checks pass."
-      ],
+      "status": "done",
+      "blockers": [],
       "verification": [
-        "LOG-0041",
-        "LOG-0042"
+        "LOG-0046"
       ]
     }
   ]
