@@ -10,7 +10,7 @@ from the exact upstream commits recorded in the published crate metadata:
 - SDK: `284a37d93b3856e1975c2807ba3af1421ebd9b52`
 - OTLP: `ec289cb3c6f8260951699c51df968560943c1451`
 
-Only three upstream source files change:
+Three upstream source files have behavioral patches:
 
 - SDK `src/trace/provider.rs`: add `builder_without_environment`, bypassing
   implicit resource and span-limit environment detectors.
@@ -19,6 +19,8 @@ Only three upstream source files change:
 - OTLP `src/exporter/http/mod.rs`: add opt-in `without_environment` so configured
   endpoint, protocol, timeout, compression and headers cannot be overridden or
   augmented by ambient variables. Update one test builder for the new field.
+
+Two SDK metrics files (`meter.rs` and `periodic_reader_with_async_runtime.rs`) also have four upstream trailing-whitespace lines normalized for the repository diff check; they have no behavior changes.
 
 Existing builder behavior remains the default for legacy invocations. Configured
 Pablo tasks select the explicit builders. Passing headers through the original

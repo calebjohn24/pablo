@@ -433,7 +433,7 @@ impl<E: PushMetricExporter> MetricReader for PeriodicReader<E> {
     /// This function SHOULD be obtained from the exporter.
     ///
     /// If not configured, the Cumulative temporality SHOULD be used.
-    ///  
+    ///
     /// [metric-reader]: https://github.com/open-telemetry/opentelemetry-specification/blob/0a78571045ca1dca48621c9648ec3c832c3c541c/specification/metrics/sdk.md#metricreader
     fn temporality(&self, kind: InstrumentKind) -> super::Temporality {
         kind.temporality_preference(self.exporter.temporality())

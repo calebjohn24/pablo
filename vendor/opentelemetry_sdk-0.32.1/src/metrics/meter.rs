@@ -124,7 +124,7 @@ impl SdkMeter {
         let validation_result = validate_instrument_config(builder.name.as_ref(), &builder.unit);
         if let Err(err) = validation_result {
             otel_error!(
-                name: "InstrumentCreationFailed", 
+                name: "InstrumentCreationFailed",
                 meter_name = self.scope.name(),
                 instrument_name = builder.name.as_ref(),
                 message = "Callbacks for this ObservableCounter will not be invoked.",
@@ -183,7 +183,7 @@ impl SdkMeter {
         let validation_result = validate_instrument_config(builder.name.as_ref(), &builder.unit);
         if let Err(err) = validation_result {
             otel_error!(
-                name: "InstrumentCreationFailed", 
+                name: "InstrumentCreationFailed",
                 meter_name = self.scope.name(),
                 instrument_name = builder.name.as_ref(),
                 message = "Callbacks for this ObservableUpDownCounter will not be invoked.",
@@ -242,7 +242,7 @@ impl SdkMeter {
         let validation_result = validate_instrument_config(builder.name.as_ref(), &builder.unit);
         if let Err(err) = validation_result {
             otel_error!(
-                name: "InstrumentCreationFailed", 
+                name: "InstrumentCreationFailed",
                 meter_name = self.scope.name(),
                 instrument_name = builder.name.as_ref(),
                 message = "Callbacks for this ObservableGauge will not be invoked.",

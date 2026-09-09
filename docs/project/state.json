@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-09T21:48:48.455Z",
+  "updated_at": "2026-09-09T21:49:40.517Z",
   "active_checkpoint": "C3.3",
   "next_checkpoint": null,
   "next_action": "Finish C3.3 configured OTel hostile-environment/exporter and ACP snapshot/resource/credential-rotation acceptance, map all nine G03 cases and measure configured lifecycle performance before merging draft PR #4. D038 removes default filesystem work quotas; debug/release binaries and regression evidence are ready. Continue C3.4 after the verified merge.",
-  "latest_log_entry": "LOG-0056",
+  "latest_log_entry": "LOG-0057",
   "checkpoints": [
     {
       "id": "C1.0",
