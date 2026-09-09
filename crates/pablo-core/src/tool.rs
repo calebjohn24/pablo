@@ -178,6 +178,20 @@ impl ToolRegistry {
         }
         Ok(registry)
     }
+    /// Configure shell restrictions without changing the independent tool/launcher policy.
+    pub fn with_shell_configuration(
+        mut self,
+        settings: crate::shell_policy::ShellSettings,
+        ceilings: Vec<crate::shell_policy::ShellRestriction>,
+    ) -> Result<Self, ToolSetupError> {
+        crate::shell_policy::validate(&settings, &ceilings, &mut self.policy.rule_ids())
+            .map_err(|_| ToolSetupError)?;
+        if let Some(shell) = self.shell.as_mut() {
+            shell.configure(settings, ceilings)?;
+            self.descriptors[0] = shell.descriptor();
+        }
+        Ok(self)
+    }
     pub fn with_filesystem_reads() -> Result<Self, ToolSetupError> {
         Self::configured(false, true, crate::policy::Policy::default())
     }

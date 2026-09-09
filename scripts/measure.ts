@@ -21,7 +21,9 @@ assert(Number.isInteger(count) && count >= 10 && count <= 1000, 'sample count mu
 const binary = resolve(process.env.PABLO_MEASURE_BINARY ?? join(root, 'target/release/pablo'));
 const direct = resolve(process.env.PABLO_MEASURE_DIRECT ?? join(root, 'target/release/examples/measure'));
 const reuse = process.env.PABLO_MEASURE_REUSE !== '0';
-const configured = process.env.PABLO_MEASURE_CONFIGURED === '1';
+const restricted = process.env.PABLO_MEASURE_RESTRICTED === '1';
+const configured = process.env.PABLO_MEASURE_CONFIGURED === '1' || restricted;
+const absoluteCommand = process.env.PABLO_MEASURE_ABSOLUTE_COMMAND === '1';
 const destination = resolve(process.argv[3] ?? join(root, `.pablo/measurements/c2.5-${process.platform}-${process.arch}.json`));
 const cwd = await realpath(await mkdtemp(join(tmpdir(), 'pablo-measure-')));
 const env = cleanEnv();
@@ -64,7 +66,7 @@ const gateway = await server(async (req, res) => {
     res.end(Array.from({ length: 32 }, () => frame({ content: chunk })).join('') + frame({}, 'stop') + 'data: [DONE]\n\n');
   } else {
     res.end(frame({ tool_calls: [{ index: 0, id: 'measure_call', type: 'function', function: {
-      name: 'shell_run', arguments: JSON.stringify({ command: 'printf measure', cwd: '.' }),
+      name: 'shell_run', arguments: JSON.stringify({ command: absoluteCommand ? '/usr/bin/printf measure' : 'printf measure', cwd: '.' }),
     } }] }, 'tool_calls') + 'data: [DONE]\n\n');
   }
 });
@@ -82,7 +84,7 @@ id="fixture/measure"
 [options.limits]
 max_model_calls=2
 max_tool_calls=1
-`);
+${restricted ? `[options.shell.commands]\ndefault="deny"\nallow=[{id="measure.printf",executable="/usr/bin/printf",args=["measure"],match="exact"}]\n` : ""}`);
   const measurements: Record<string, number[]> = Object.fromEntries([
     'version_process_ms', 'cli_provider_ready_ms', 'cli_total_ms', 'core_run_ms', 'core_host_total_ms',
     'acp_initialize_ms', 'acp_prompt_ms', 'acp_total_ms', 'acp_first_text_ms', 'idle_rss_kib', 'acp_first_delta_delivery_ms',
@@ -188,8 +190,8 @@ max_tool_calls=1
       environment: process.env.PABLO_MEASURE_ENVIRONMENT ?? 'local host' },
     build: { profile: process.env.PABLO_MEASURE_BUILD ?? (await readFile(join(root, 'Cargo.toml'), 'utf8')).split('[profile.release]')[1].trim(), binary_bytes: (await stat(binary)).size, stripped_binary_bytes: (await stat(stripped)).size, strip_method: 'platform strip on a copy; timings use original release executable',
       binary_sha256: createHash('sha256').update(await readFile(binary)).digest('hex') },
-    method: { configuration: configured ? 'explicit deployment file; re-resolved per admitted task' : 'legacy invocation', samples: count, warmup: 5, cache: 'warm filesystem; no forced cache eviction',
-      workload: 'two local HTTP/SSE calls, one real printf shell, 32 x 16-byte output deltas',
+    method: { configuration: restricted ? 'explicit deployment file with exact printf executable/argv allowlist' : configured ? 'explicit deployment file; re-resolved per admitted task' : 'legacy invocation', samples: count, warmup: 5, cache: 'warm filesystem; no forced cache eviction',
+      workload: `two local HTTP/SSE calls, one ${absoluteCommand ? 'explicit /usr/bin/printf' : 'bare printf'} shell command, 32 x 16-byte output deltas`,
       startup: 'Node monotonic spawn to first loopback provider request arrival; separate --version process wall time',
       baseline: 'direct core run_with_tools in measurement host; SDK/provider/tool construction excluded from core_run_ms',
       acp: 'official TS SDK; one new process/session/prompt per sample; prompt includes per-run provider/tool/SDK setup; total excludes deliberate RSS wait and session creation',

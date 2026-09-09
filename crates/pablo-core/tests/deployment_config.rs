@@ -1711,3 +1711,88 @@ fn prepared_trace_creation_rejects_parent_swaps_and_existing_targets() {
         "existing evidence"
     );
 }
+
+#[test]
+fn shell_configuration_roundtrips_composes_and_preserves_authority() {
+    let f = Fixture::new();
+    let rule = json!({"id":"ordinary.printf","executable":"/usr/bin/printf","args":["%s"],"match":"prefix"});
+    let mut request=f.document(json!({
+        "options":{"shell":{"commands":{"default":"deny","allow":[rule]},
+            "environment":{"values":{"PABLO_TASK_A":"default"}},
+            "cwd_roots":{"default":"deny","allow":[{"id":"cwd.base","value":"."}]}}},
+        "profiles":{"selected":{"options":{"shell":{"cwd_roots":{"default":"deny","allow":{"mode":"append","items":[{"id":"cwd.profile","value":"nested"}]}}}}}},
+        "authority":[{"id":"root","shell":{"commands":{"default":"allow","deny":[{"id":"root.push","executable":"/usr/bin/git","args":["push"],"match":"prefix"}]},
+            "environment":{"allowed_names":["PABLO_TASK_A"]}}}]
+    }));
+    request.profile = Some("selected".into());
+    let resolved = deployment::resolve(request).unwrap();
+    assert_eq!(
+        resolved.config()["options"]["shell"]["cwd_roots"]["allow"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+    assert_eq!(
+        resolved.config()["options"]["shell"]["commands"]["deny"],
+        json!([])
+    );
+    assert_eq!(
+        resolved.config()["authority"][0]["shell"]["commands"]["allow"],
+        json!([])
+    );
+    let prepared = resolved
+        .prepare_run(deployment::RunInput {
+            input: "synthetic".into(),
+            workspace: Some(f.0.clone()),
+            session_id: None,
+        })
+        .unwrap();
+    assert!(
+        prepared.tools().unwrap().descriptors()[0]
+            .description
+            .contains("literal")
+    );
+    f.write("rendered.toml", &resolved.render().unwrap());
+    let reloaded = deployment::resolve(f.request("rendered.toml")).unwrap();
+    assert_eq!(resolved.fingerprint(), reloaded.fingerprint());
+    assert_eq!(resolved.config(), reloaded.config());
+    let error = deployment::resolve(f.document(json!({
+        "options":{"shell":{"environment":{"values":{"PABLO_TASK_SECRET":"private-value"}}}},
+        "authority":[{"id":"root","shell":{"environment":{"allowed_names":[]}}}]
+    })))
+    .unwrap_err();
+    assert_eq!(error.code, "config_authority_violation");
+    assert_eq!(error.authority_id.as_deref(), Some("root"));
+    assert!(!error.to_string().contains("private-value"));
+}
+
+#[test]
+fn shell_configuration_rejects_unknown_invalid_inactive_and_duplicate_rules() {
+    let f = Fixture::new();
+    let good = json!({"id":"valid","executable":"/usr/bin/printf","args":[],"match":"exact"});
+    for (key, value) in [
+        ("id", json!("builtin.bad")),
+        ("executable", json!("printf")),
+        ("match", json!("substring")),
+        ("args", json!(["é".repeat(4097)])),
+        ("args", json!(["a\nb"])),
+        ("extra", json!(true)),
+    ] {
+        let mut rule = good.clone();
+        rule[key] = value;
+        let bad=f.document(json!({"profiles":{"inactive":{"options":{"shell":{"commands":{"default":"deny","allow":[rule]}}}}}}));
+        assert!(deployment::resolve(bad).is_err(), "{key}");
+    }
+    for shell in [
+        json!({"environment":{"values":{"AI_GATEWAY_API_KEY":"private"}}}),
+        json!({"environment":{"allowed_names":["PABLO_TASK_A","PABLO_TASK_A"]}}),
+        json!({"environment":{"values":{"PABLO_TASK_A":"x\u{0000}y"}}}),
+        json!({"cwd_roots":{"default":"allow","allow":[{"id":"root","value":"../escape"}]}}),
+    ] {
+        assert!(deployment::resolve(f.document(json!({"options":{"shell":shell}}))).is_err());
+    }
+    assert!(deployment::resolve(f.document(json!({"authority":[{"id":"root","shell":{"environment":{"values":{"PABLO_TASK_A":"x"}}}}]}))).is_err());
+    error(f.document(json!({"options":{"policy":{"tools":{"default":"allow","allow":[{"id":"valid","value":"shell.run"}]}},"shell":{"commands":{"default":"deny","allow":[good.clone()]}}}})),"config_conflict");
+    error(f.document(json!({"options":{"shell":{"commands":{"default":"deny","allow":[good.clone()]}}},"authority":[{"id":"root","shell":{"commands":{"default":"deny","allow":[good]}}}]})),"config_conflict");
+}

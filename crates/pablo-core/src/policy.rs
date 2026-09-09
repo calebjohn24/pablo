@@ -56,6 +56,14 @@ impl From<Policy> for PolicySet {
 }
 
 impl PolicySet {
+    pub(crate) fn rule_ids(&self) -> std::collections::HashSet<String> {
+        std::iter::once(&self.ordinary)
+            .chain(&self.ceilings)
+            .flat_map(|p| p.dimensions().into_iter().filter_map(|(_, r)| r))
+            .flat_map(|r| r.allow.iter().chain(&r.deny))
+            .map(|r| r.id.clone())
+            .collect()
+    }
     pub fn new(ordinary: Policy, ceilings: Vec<Policy>) -> Result<Self, &'static str> {
         let set = Self { ordinary, ceilings };
         set.validate()?;

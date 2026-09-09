@@ -98,7 +98,12 @@ impl PreparedRun {
             options["filesystem"]["write"].as_bool().unwrap(),
             self.policy.clone(),
         )
-        .map_err(|_| error("config_invalid_value", "/options/policy"))
+        .map_err(|_| error("config_invalid_value", "/options/policy"))?
+        .with_shell_configuration(
+            super::shell::settings(&options["shell"])?,
+            super::shell::ceilings(self.deployment.config())?,
+        )
+        .map_err(|_| error("config_invalid_value", "/options/shell"))
     }
 }
 

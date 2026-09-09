@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_revision": "c3.1",
+  "contract_revision": "c3.4",
   "config": {
     "deployment": {
       "locked": true,
@@ -46,7 +46,10 @@
         }
       },
       "shell": {
-        "enabled": false
+        "enabled": false,
+        "environment": {
+          "values": {}
+        }
       },
       "filesystem": {
         "enabled": true,
@@ -148,7 +151,7 @@
       "id": "source-0000",
       "kind": "defaults",
       "locator": "deployment-defaults-v1.json",
-      "digest": "sha256:5dbb2c92e1ac7b8f922026fd8666aa962ece3de42ffe1f14f5fa283e83faf6b9"
+      "digest": "sha256:d6de0a14baad734ba8e13ec56aed343484d1d18d252c0f1971a18e403fa3704b"
     },
     {
       "id": "source-0001",
@@ -760,6 +763,12 @@
         "operation": "set"
       }
     ],
+    "/config/options/shell/environment/values": [
+      {
+        "source": "source-0000",
+        "operation": "default"
+      }
+    ],
     "/config/options/trace/capture_content": [
       {
         "source": "source-0000",
@@ -785,6 +794,6 @@
       }
     ]
   },
-  "fingerprint": "sha256:9b9c57c1c92a57cea452582c947ff131f8b0fe231f512023e42779385e3a0d30",
-  "input_fingerprint": "sha256:95daa73518c7fb8809596c6fffd18f05f8631a9055479dbfbfa4ff2dd10f1f28"
+  "fingerprint": "sha256:cb34f67b07c9881a09729ac6bad3b5a5db23e930195a47c84081b80f189180c9",
+  "input_fingerprint": "sha256:a72d506c9992c14c992219678d2fb5e39bd11a0574316a29b75ad6d2d913fca4"
 }

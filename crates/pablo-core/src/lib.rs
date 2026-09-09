@@ -12,6 +12,7 @@ pub mod policy;
 pub mod provider;
 pub mod runtime;
 pub mod shell;
+pub mod shell_policy;
 pub mod task;
 pub mod telemetry;
 pub mod tool;

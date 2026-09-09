@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-09T22:10:33.919Z",
+  "updated_at": "2026-09-09T22:40:46.285Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.4",
-  "next_action": "Activate C3.4 on feat/c3-shell-command-policy (based on merged C3.3 acfb371). Implement and verify literal shell command/argument rules under Q01, preserve unrestricted legacy behavior and D038 filesystem defaults, and measure performance before opening/merging the next PR. Continue the remaining cycle under the standing authorization.",
-  "latest_log_entry": "LOG-0059",
+  "next_checkpoint": "C3.5",
+  "next_action": "Merge the verified C3.4 PR, then activate C3.5 on a new branch for provider selection/shared transport, P01 and an officially verified OpenRouter candidate. Continue the full cycle; no paid call is required by C3.5.",
+  "latest_log_entry": "LOG-0062",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -276,9 +276,11 @@
       "depends_on": [
         "C3.3"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0062"
+      ]
     },
     {
       "id": "C3.5",
