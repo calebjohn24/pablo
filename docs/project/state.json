@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "cycle": {
-    "id": "C2",
-    "title": "Single-agent completion",
-    "spec": "docs/project/cycles/002-single-agent-completion.md"
+    "id": "C3",
+    "title": "Extensibility, interoperability and release delivery",
+    "spec": "docs/project/cycles/003-extensibility-and-release.md"
   },
   "source_context": {
     "path": "docs/context.md",
@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-09T18:24:31.420Z",
+  "updated_at": "2026-09-09T18:53:42.415Z",
   "active_checkpoint": null,
-  "next_checkpoint": null,
-  "next_action": "PR #1 is merged into main; C2.5 and cycle C2 are complete. Select and specify the next extensibility cycle before implementation; OpenRouter is eligible. Publishing and broader release-hardening gates remain deferred.",
-  "latest_log_entry": "LOG-0047",
+  "next_checkpoint": "C3.1",
+  "next_action": "Activate C3.1 and freeze the declarative deployment configuration schema, module/profile composition, precedence, locked authority, secret references and G01 examples. Stop after this contract checkpoint; loader implementation is C3.2. C3 includes ordered model fallback and command rules, excludes Otto, and makes no complete 0.1 release claim.",
+  "latest_log_entry": "LOG-0048",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -215,6 +215,465 @@
       "verification": [
         "LOG-0046"
       ]
+    },
+    {
+      "id": "C3.0",
+      "title": "Adopt the cycle and acceptance map",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c30-adopt-the-cycle-and-acceptance-map",
+      "depends_on": [
+        "C2.5"
+      ],
+      "status": "done",
+      "blockers": [],
+      "verification": [
+        "LOG-0048"
+      ]
+    },
+    {
+      "id": "C3.1",
+      "title": "Deployment configuration contracts",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c31-deployment-configuration-contracts",
+      "depends_on": [
+        "C3.0"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.2",
+      "title": "Configuration loading and composition",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c32-configuration-loading-and-composition",
+      "depends_on": [
+        "C3.1"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.3",
+      "title": "Effective configuration and deployment inspection",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c33-effective-configuration-and-deployment-inspection",
+      "depends_on": [
+        "C3.2"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.4",
+      "title": "Shell command allow and deny rules",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c34-shell-command-allow-and-deny-rules",
+      "depends_on": [
+        "C3.3"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.5",
+      "title": "Provider selection and shared transport",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c35-provider-selection-and-shared-transport",
+      "depends_on": [
+        "C3.4"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.6",
+      "title": "OpenRouter streamed tool calls",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c36-openrouter-streamed-tool-calls",
+      "depends_on": [
+        "C3.5"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.7",
+      "title": "Live OpenRouter acceptance",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c37-live-openrouter-acceptance",
+      "depends_on": [
+        "C3.6"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.8",
+      "title": "Open Responses contracts and fixtures",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c38-open-responses-contracts-and-fixtures",
+      "depends_on": [
+        "C3.6"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.9",
+      "title": "Open Responses streamed tool calls",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c39-open-responses-streamed-tool-calls",
+      "depends_on": [
+        "C3.8"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.10",
+      "title": "Ordered model profiles and routes",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c310-ordered-model-profiles-and-routes",
+      "depends_on": [
+        "C3.9"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.11",
+      "title": "Ordered model fallback execution",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c311-ordered-model-fallback-execution",
+      "depends_on": [
+        "C3.10"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.12",
+      "title": "Fallback failure and accounting proof",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c312-fallback-failure-and-accounting-proof",
+      "depends_on": [
+        "C3.11"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.13",
+      "title": "Final-output schema validation",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c313-final-output-schema-validation",
+      "depends_on": [
+        "C3.12"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.14",
+      "title": "One bounded output repair",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c314-one-bounded-output-repair",
+      "depends_on": [
+        "C3.13"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.15",
+      "title": "MCP configuration and policy contracts",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c315-mcp-configuration-and-policy-contracts",
+      "depends_on": [
+        "C3.14"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.16",
+      "title": "MCP stdio tool path",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c316-mcp-stdio-tool-path",
+      "depends_on": [
+        "C3.15"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.17",
+      "title": "MCP Streamable HTTP tool path",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c317-mcp-streamable-http-tool-path",
+      "depends_on": [
+        "C3.16"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.18",
+      "title": "MCP host integration and failure proof",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c318-mcp-host-integration-and-failure-proof",
+      "depends_on": [
+        "C3.17"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.19",
+      "title": "Local Skill discovery",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c319-local-skill-discovery",
+      "depends_on": [
+        "C3.18"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.20",
+      "title": "Skill activation and selected resources",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c320-skill-activation-and-selected-resources",
+      "depends_on": [
+        "C3.19"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.21",
+      "title": "Child contracts and typed ACP dispatch",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c321-child-contracts-and-typed-acp-dispatch",
+      "depends_on": [
+        "C3.20"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.22",
+      "title": "One supervised local child",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c322-one-supervised-local-child",
+      "depends_on": [
+        "C3.21"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.23",
+      "title": "Two children and shared budgets",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c323-two-children-and-shared-budgets",
+      "depends_on": [
+        "C3.22"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.24",
+      "title": "Validated child handoffs",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c324-validated-child-handoffs",
+      "depends_on": [
+        "C3.23"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.25",
+      "title": "Extensibility acceptance",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c325-extensibility-acceptance",
+      "depends_on": [
+        "C3.7",
+        "C3.24"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.26",
+      "title": "A2A binding and Agent Cards",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c326-a2a-binding-and-agent-cards",
+      "depends_on": [
+        "C3.25"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.27",
+      "title": "A2A task streaming and Artifact",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c327-a2a-task-streaming-and-artifact",
+      "depends_on": [
+        "C3.26"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.28",
+      "title": "A2A cancellation and boundary proof",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c328-a2a-cancellation-and-boundary-proof",
+      "depends_on": [
+        "C3.27"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.29",
+      "title": "Basic streaming TUI",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c329-basic-streaming-tui",
+      "depends_on": [
+        "C3.25"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.30",
+      "title": "TUI PTY and restoration proof",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c330-tui-pty-and-restoration-proof",
+      "depends_on": [
+        "C3.28",
+        "C3.29"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.31",
+      "title": "Offline doctor and focused diagnostics",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c331-offline-doctor-and-focused-diagnostics",
+      "depends_on": [
+        "C3.28",
+        "C3.30"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.32",
+      "title": "Complete deployment preset acceptance",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c332-complete-deployment-preset-acceptance",
+      "depends_on": [
+        "C3.31"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.33",
+      "title": "Compatibility and protocol fixtures",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c333-compatibility-and-protocol-fixtures",
+      "depends_on": [
+        "C3.32"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.34",
+      "title": "Release archives and installation",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c334-release-archives-and-installation",
+      "depends_on": [
+        "C3.33"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.35",
+      "title": "Native macOS arm64 acceptance",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c335-native-macos-arm64-acceptance",
+      "depends_on": [
+        "C3.34"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.36",
+      "title": "Native Linux x86_64 acceptance",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c336-native-linux-x86_64-acceptance",
+      "depends_on": [
+        "C3.34"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.37",
+      "title": "Native macOS x86_64 acceptance",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c337-native-macos-x86_64-acceptance",
+      "depends_on": [
+        "C3.34"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.38",
+      "title": "Native Linux arm64 acceptance",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c338-native-linux-arm64-acceptance",
+      "depends_on": [
+        "C3.34"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.39",
+      "title": "Matched release measurements",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c339-matched-release-measurements",
+      "depends_on": [
+        "C3.35",
+        "C3.36",
+        "C3.37",
+        "C3.38"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.40",
+      "title": "Prerelease distribution and cycle handoff",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c340-prerelease-distribution-and-cycle-handoff",
+      "depends_on": [
+        "C3.39"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
     }
   ]
 }
