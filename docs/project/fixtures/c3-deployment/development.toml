@@ -1,0 +1,28 @@
+schema_version = 1
+imports = ["modules/base.toml"]
+profile = "development"
+
+[deployment]
+locked = false
+
+[environment.PABLO_CONFIG_TOOL_CALLS]
+option = "limits.max_tool_calls"
+required = false
+
+[options.limits]
+max_tool_calls = 20
+
+[options.policy.read_roots]
+default = "deny"
+allow = { mode = "append", items = [{ id = "read.docs", value = "docs" }] }
+
+[profiles.development]
+extends = ["inspection"]
+
+[profiles.development.options.filesystem]
+enabled = true
+write = true
+
+[profiles.development.options.trace]
+path = { base = "workspace", path = "trace-{session_id}.jsonl" }
+capture_content = false

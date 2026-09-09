@@ -1,0 +1,808 @@
+{
+  "contract_revision": "c3.1",
+  "shape_cases": [
+    {
+      "file": "modules/base.toml",
+      "expected": "accepted_shape"
+    },
+    {
+      "file": "development.toml",
+      "expected": "accepted_shape"
+    },
+    {
+      "file": "production.toml",
+      "expected": "accepted_shape"
+    },
+    {
+      "file": "credential-sources.toml",
+      "expected": "accepted_shape"
+    },
+    {
+      "file": "invalid/unknown-option.toml",
+      "expected": "schema_error"
+    },
+    {
+      "file": "invalid/future-feature.toml",
+      "expected": "schema_error"
+    },
+    {
+      "file": "invalid/future-provider.toml",
+      "expected": "schema_error"
+    },
+    {
+      "file": "invalid/version.toml",
+      "expected": "schema_error"
+    },
+    {
+      "file": "invalid/inline-secret.toml",
+      "expected": "schema_error"
+    },
+    {
+      "file": "invalid/duplicate-key.toml",
+      "expected": "parse_error"
+    },
+    {
+      "file": "invalid/list-operation.toml",
+      "expected": "schema_error"
+    },
+    {
+      "file": "invalid/old-proposal.toml",
+      "expected": "schema_error"
+    },
+    {
+      "file": "invalid/float.toml",
+      "expected": "type_error"
+    },
+    {
+      "file": "invalid/date.toml",
+      "expected": "type_error"
+    },
+    {
+      "file": "invalid/type.toml",
+      "expected": "schema_error"
+    },
+    {
+      "file": "invalid/count.toml",
+      "expected": "schema_error"
+    },
+    {
+      "file": "invalid/override-permission.toml",
+      "expected": "schema_error"
+    },
+    {
+      "file": "invalid/secret-destination.toml",
+      "expected": "schema_error"
+    }
+  ],
+  "resolution_cases": [
+    {
+      "id": "G02-01",
+      "owner": "C3.2",
+      "status": "not_run",
+      "input": {
+        "entry": "production.toml",
+        "bindings": {
+          "workspace": "<explicit canonical temporary root>"
+        }
+      },
+      "expected": {
+        "resolved": "production.resolved.json",
+        "compare": "Complete config and fingerprint equal golden; deterministic origins and source digests match. No secret lookup or agent work."
+      }
+    },
+    {
+      "id": "G02-02",
+      "owner": "C3.2",
+      "status": "not_run",
+      "input": {
+        "entry": "development.toml",
+        "bindings": {
+          "workspace": "<explicit canonical temporary root>"
+        },
+        "environment": {}
+      },
+      "expected": {
+        "options.limits.max_tool_calls": 20,
+        "options.limits.max_model_calls": "unlimited",
+        "options.filesystem.write": true,
+        "options.policy.read_roots.allow.ids": [
+          "read.workspace",
+          "read.shared",
+          "read.docs"
+        ],
+        "options.trace.path": {
+          "base": "workspace",
+          "path": "trace-{session_id}.jsonl"
+        }
+      }
+    },
+    {
+      "id": "G02-03",
+      "owner": "C3.2",
+      "status": "not_run",
+      "input": {
+        "entry": "development.toml",
+        "environment": {
+          "PABLO_CONFIG_TOOL_CALLS": "7"
+        },
+        "overrides": {
+          "limits.max_tool_calls": 5
+        }
+      },
+      "expected": {
+        "options.limits.max_tool_calls": 5,
+        "origins": [
+          "default",
+          "development.toml",
+          "environment:PABLO_CONFIG_TOOL_CALLS",
+          "override:limits.max_tool_calls"
+        ],
+        "rule": "File/profile then environment then explicit override; every contribution retained."
+      }
+    },
+    {
+      "id": "G02-04",
+      "owner": "C3.2",
+      "status": "not_run",
+      "input": {
+        "base": {
+          "otel.resource_attributes": {
+            "stage": "base",
+            "region": "fixture"
+          }
+        },
+        "entry": {
+          "otel.resource_attributes": {
+            "stage": "entry"
+          },
+          "trace.path": {
+            "unset": true
+          },
+          "policy.read_roots.allow": []
+        }
+      },
+      "expected": {
+        "otel.resource_attributes": {
+          "stage": "entry",
+          "region": "fixture"
+        },
+        "trace.path": {
+          "unset": true
+        },
+        "policy.read_roots.allow": [],
+        "rule": "Missing leaves inherit; maps merge; unset clears optional leaves; empty arrays replace."
+      }
+    },
+    {
+      "id": "G02-05",
+      "owner": "C3.2",
+      "status": "not_run",
+      "input": {
+        "entry": "production.toml",
+        "variants": [
+          "repeat identical inputs",
+          "append one comment to base module",
+          "change max_tool_calls from 8 to 7"
+        ]
+      },
+      "expected": {
+        "identical": "Both fingerprints equal",
+        "comment": "Config fingerprint equal, input fingerprint differs",
+        "value": "Both fingerprints differ; origin names edited file"
+      }
+    },
+    {
+      "id": "G02-06",
+      "owner": "C3.2",
+      "status": "not_run",
+      "input": {
+        "entry": "nested/entry.toml",
+        "imports": [
+          "../modules/base.toml"
+        ],
+        "module_trace_path": {
+          "base": "source",
+          "path": "output/trace.jsonl"
+        },
+        "cwd_variants": [
+          "unrelated-a",
+          "unrelated-b"
+        ]
+      },
+      "expected": {
+        "trace_path": {
+          "base": "config",
+          "path": "modules/output/trace.jsonl"
+        },
+        "rule": "Same explicit root/inputs yield same config, regardless of invocation cwd. No output directory is created."
+      }
+    },
+    {
+      "id": "G02-07",
+      "owner": "C3.2",
+      "status": "not_run",
+      "input": {
+        "graph": {
+          "entry": [
+            "a"
+          ],
+          "a": [
+            "entry"
+          ]
+        }
+      },
+      "expected": {
+        "code": "config_import_cycle",
+        "safe_diagnostic": "Bounded root-relative import chain; no partial config"
+      }
+    },
+    {
+      "id": "G02-08",
+      "owner": "C3.2",
+      "status": "not_run",
+      "input": {
+        "graphs": [
+          {
+            "entry": [
+              "a",
+              "a"
+            ]
+          },
+          {
+            "entry": [
+              "a",
+              "b"
+            ],
+            "a": [
+              "shared"
+            ],
+            "b": [
+              "shared"
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "code": "config_duplicate_import",
+        "rule": "Do not silently deduplicate or double-apply lists"
+      }
+    },
+    {
+      "id": "G02-09",
+      "owner": "C3.2",
+      "status": "not_run",
+      "input": {
+        "imports": [
+          "https://example.invalid/a.toml",
+          "/outside/a.toml",
+          "../escape.toml",
+          "*.toml",
+          "symlink.toml",
+          "fifo.toml"
+        ]
+      },
+      "expected": {
+        "code": "config_import_path",
+        "rule": "Each separate variant rejects before opening outside roots, blocking on a FIFO or doing network I/O"
+      }
+    },
+    {
+      "id": "G02-10",
+      "owner": "C3.2",
+      "status": "not_run",
+      "input": {
+        "profiles": [
+          {
+            "a": {
+              "extends": [
+                "b"
+              ]
+            },
+            "b": {
+              "extends": [
+                "a"
+              ]
+            }
+          },
+          {
+            "a": {
+              "extends": [
+                "missing"
+              ]
+            }
+          },
+          {
+            "a": {
+              "extends": [
+                "b",
+                "c"
+              ]
+            },
+            "b": {
+              "extends": [
+                "d"
+              ]
+            },
+            "c": {
+              "extends": [
+                "d"
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "codes": [
+          "config_profile_cycle",
+          "config_unknown_profile",
+          "config_duplicate_profile_ancestor"
+        ]
+      }
+    },
+    {
+      "id": "G02-11",
+      "owner": "C3.2",
+      "status": "not_run",
+      "input": {
+        "imports": [
+          "a.toml",
+          "b.toml"
+        ],
+        "conflict_variants": [
+          "same credential name, different consumer/source",
+          "same profile name, different values",
+          "same environment binding name, different target"
+        ]
+      },
+      "expected": {
+        "code": "config_conflict",
+        "identical_variant": "Equal normalized atomic records may coalesce with both origins; do not field-merge identities"
+      }
+    },
+    {
+      "id": "G02-12",
+      "owner": "C3.2",
+      "status": "not_run",
+      "input": {
+        "policy_variants": [
+          "duplicate ID after append",
+          "same ID in allow and deny",
+          "same ID across ordinary policy and authority",
+          "129 combined allow/deny rules in one dimension"
+        ]
+      },
+      "expected": {
+        "codes": [
+          "config_conflict",
+          "config_conflict",
+          "config_conflict",
+          "config_limit"
+        ],
+        "rule": "No sorting/deduplication or loss of deciding IDs"
+      }
+    },
+    {
+      "id": "G02-13",
+      "owner": "C3.2",
+      "status": "not_run",
+      "input": {
+        "boundaries": {
+          "single_file_bytes": 1048576,
+          "aggregate_file_bytes": 8388608,
+          "file_depth": 16,
+          "files": 64,
+          "import_edges": 128,
+          "imports_per_file": 32,
+          "nesting": 32,
+          "aggregate_nodes": 65536,
+          "profiles": 64,
+          "profile_depth": 16,
+          "profile_ancestors": 64,
+          "credentials": 64,
+          "sources_per_credential": 8,
+          "environment_bindings": 64,
+          "path_bindings": 64,
+          "array_entries": 1024,
+          "authority_layers": 64,
+          "aggregate_rules": 1024
+        },
+        "action": "For each independent bound generate an otherwise valid case at the bound and one over; use bounded parser seams for structural maxima."
+      },
+      "expected": {
+        "at_bound": "No limit rejection",
+        "one_over": "config_limit before next allocation/read; no silently skipped sources"
+      }
+    },
+    {
+      "id": "G02-14",
+      "owner": "C3.2",
+      "status": "not_run",
+      "input": {
+        "entry": "production.toml",
+        "hostile_ambient": [
+          "invalid/unreadable selected user file",
+          "workspace config enables writes",
+          "OTEL_TRACES_EXPORTER=otlp",
+          "OTEL_EXPORTER_OTLP_ENDPOINT=https://outside.invalid",
+          "HOME/XDG variations",
+          "unreadable ambient .env"
+        ],
+        "environment": {}
+      },
+      "expected": {
+        "rule": "None read/applied; config and both fingerprints equal clean golden. No credential or SDK detector runs."
+      }
+    },
+    {
+      "id": "G02-15",
+      "owner": "C3.2",
+      "status": "not_run",
+      "input": {
+        "binding": "PABLO_CONFIG_TOOL_CALLS",
+        "variants": [
+          "missing optional",
+          "missing required",
+          "empty string",
+          "1.0",
+          "-1",
+          "4294967296",
+          "unlimited",
+          "0",
+          "7"
+        ]
+      },
+      "expected": {
+        "results": [
+          "inherit",
+          "config_environment_missing",
+          "config_environment_value",
+          "config_environment_value",
+          "config_environment_value",
+          "config_environment_value",
+          "unlimited",
+          0,
+          7
+        ],
+        "rule": "No value/parser snippet in failures; no dotenv or general environment expansion"
+      }
+    },
+    {
+      "id": "G02-16",
+      "owner": "C3.2",
+      "status": "not_run",
+      "input": {
+        "entry": "credential-sources.toml",
+        "bindings": [
+          "workspace",
+          "secrets"
+        ],
+        "sentinels": [
+          "environment key",
+          "private file content",
+          "host callback result"
+        ]
+      },
+      "expected": {
+        "rule": "Only references enter config; none of these values or their hashes are read. Host callback invocation count, secret-file open count and network count remain zero."
+      }
+    },
+    {
+      "id": "G02-17",
+      "owner": "C3.2",
+      "status": "not_run",
+      "input": {
+        "variants": [
+          "missing credential ID",
+          "provider consumes exporter credential",
+          "unknown path binding",
+          "run.workspace uses base=workspace",
+          "path escapes binding",
+          "writes enabled with filesystem disabled",
+          "capture true without trace",
+          "batch size greater than queue"
+        ]
+      },
+      "expected": {
+        "code": "config_invalid_value",
+        "rule": "Reject before credential resolution or activation, even if a conflicting default would otherwise mask it"
+      }
+    },
+    {
+      "id": "G02-18",
+      "owner": "C3.2",
+      "status": "not_run",
+      "input": {
+        "counter_variants": [
+          "18446744073709551615",
+          "18446744073709551616",
+          "01",
+          "-1"
+        ],
+        "event_variants": [
+          "4",
+          "3"
+        ],
+        "action": "Use token ceiling for counters, max_events for event variants."
+      },
+      "expected": {
+        "counter_results": [
+          "accept exact u64",
+          "config_invalid_value",
+          "config_invalid_value",
+          "config_invalid_value"
+        ],
+        "event_results": [
+          "accept",
+          "config_invalid_value"
+        ]
+      }
+    },
+    {
+      "id": "G02-19",
+      "owner": "C3.2",
+      "status": "not_run",
+      "input": {
+        "variants": [
+          "missing version",
+          "schema_version=0",
+          "schema_version=2",
+          "schema_version=\"1\"",
+          "invalid/old-proposal.toml",
+          "invalid/future-feature.toml"
+        ]
+      },
+      "expected": {
+        "rule": "Version variants reject as config_schema_version before imports; old proposal has no implicit migration; inactive MCP reports config_unsupported_feature and C3.15 owner."
+      }
+    },
+    {
+      "id": "G02-20",
+      "owner": "C3.2",
+      "status": "not_run",
+      "input": {
+        "authority": {
+          "limits.max_tool_calls": 8
+        },
+        "profiles": {
+          "selected": {
+            "limits.max_tool_calls": 9
+          }
+        },
+        "environment": {
+          "approved_tool_cap": "10"
+        }
+      },
+      "expected": {
+        "code": "config_authority_violation",
+        "rule": "Profiles and environment have ordinary precedence only; requested limit is not silently clamped."
+      }
+    },
+    {
+      "id": "G02-21",
+      "owner": "C3.2",
+      "status": "not_run",
+      "input": {
+        "file_read": "Mutate an opened config file while its bounded read is paused; separately replace entry via symlink component."
+      },
+      "expected": {
+        "codes": [
+          "config_input_changed",
+          "config_import_path"
+        ],
+        "rule": "No mixed snapshot or outside-root read; host still owns independent-writer isolation."
+      }
+    },
+    {
+      "id": "G03-01",
+      "owner": "C3.3",
+      "status": "not_run",
+      "input": {
+        "entry": "production.toml",
+        "per_task_variants": [
+          {
+            "input": "synthetic task"
+          },
+          {
+            "limits.max_run_duration_ms": 300000
+          },
+          {
+            "limits.max_run_duration_ms": 600001
+          },
+          {
+            "shell.enabled": false
+          },
+          {
+            "profile": "development"
+          },
+          {
+            "credentials.gateway": "other"
+          }
+        ]
+      },
+      "expected": {
+        "results": [
+          "admit",
+          "admit narrowed",
+          "config_authority_violation",
+          "config_override_forbidden even though equal",
+          "config_override_forbidden",
+          "config_override_forbidden"
+        ],
+        "rule": "No run/provider/tool/trace-file side effect on rejection"
+      }
+    },
+    {
+      "id": "G03-02",
+      "owner": "C3.3",
+      "status": "not_run",
+      "input": {
+        "authority_layers": [
+          {
+            "policy.tools.allow": [
+              "fs.read",
+              "fs.list"
+            ]
+          },
+          {
+            "policy.tools.allow": [
+              "fs.read",
+              "fs.search"
+            ]
+          }
+        ],
+        "ordinary_tools": [
+          "fs.read",
+          "fs.list",
+          "fs.search"
+        ],
+        "action": "Exercise each request under both deciding layers."
+      },
+      "expected": {
+        "allowed": [
+          "fs.read"
+        ],
+        "denied": [
+          "fs.list",
+          "fs.search"
+        ],
+        "rule": "Intersection of independently evaluated allowlists, never union; all deciding IDs retained. Deny wins in any layer."
+      }
+    },
+    {
+      "id": "G03-03",
+      "owner": "C3.3",
+      "status": "not_run",
+      "input": {
+        "entry": "production.toml",
+        "equivalent_surfaces": [
+          "CLI config+task",
+          "ACP process config+standard session/new.cwd+prompt",
+          "Rust typed configured request"
+        ],
+        "bindings": "same explicit canonical workspace",
+        "task": "synthetic identical input"
+      },
+      "expected": {
+        "rule": "Equal admitted provider/model/tools/policy/limits/output/trace config and fingerprint; source/input fingerprints may differ; one existing runtime lifecycle and no new ACP method"
+      }
+    },
+    {
+      "id": "G03-04",
+      "owner": "C3.3",
+      "status": "not_run",
+      "input": {
+        "entry": "production.toml",
+        "commands": [
+          "config validate",
+          "config explain",
+          "config render"
+        ],
+        "reload": "Render to a new file and reload with same bindings"
+      },
+      "expected": {
+        "rule": "Validate/explain/render perform no model/MCP/network/secret work; explain matches resolved schema; rendered file has no imports/profiles/environment/list operations; effective fingerprint equal, input fingerprint differs."
+      }
+    },
+    {
+      "id": "G03-05",
+      "owner": "C3.3",
+      "status": "not_run",
+      "input": {
+        "no_config_variants": [
+          "default CLI run",
+          "ACP process default",
+          "legacy --env-file plus process canonical/alias",
+          "legacy OTEL signal-specific/general precedence",
+          "direct legacy Rust RunSpec"
+        ],
+        "action": "Use existing synthetic CLI/ACP/telemetry fixtures, never real .env."
+      },
+      "expected": {
+        "rule": "C2 defaults, caller input, tool enablement, credential precedence, native/task framing and legacy diagnostics preserved. Default model/tool calls remain unlimited."
+      }
+    },
+    {
+      "id": "G03-06",
+      "owner": "C3.3",
+      "status": "not_run",
+      "input": {
+        "entry": "production.toml",
+        "mutations": [
+          "edit policy while first run paused",
+          "change exporter settings before next ACP task",
+          "rotate referenced synthetic key without editing config",
+          "change physical workspace binding"
+        ]
+      },
+      "expected": {
+        "rule": "First run retains admitted config; subsequent admission re-resolves, reconstructs changed process setup as needed. Rotation preserves config identity but requires private credential use checks; changed root alters host bindings fingerprint, not portable config fingerprint."
+      }
+    },
+    {
+      "id": "G03-07",
+      "owner": "C3.3",
+      "status": "not_run",
+      "input": {
+        "credential_variants": [
+          "first source absent, second valid",
+          "first source empty, second valid",
+          "unreadable first file",
+          "malformed/duplicate dotenv key",
+          "present value >65536 bytes",
+          "changed credential consumer/destination",
+          "attempt to send real-provider credential to synthetic fixture endpoint"
+        ]
+      },
+      "expected": {
+        "rule": "Only absence falls through. Other cases reject without leaked values/hashes or redirected credentials. Prove synthetic sentinels absent from shell env, native/OTel, ACP, errors and render."
+      }
+    },
+    {
+      "id": "G03-08",
+      "owner": "C3.3",
+      "status": "not_run",
+      "input": {
+        "authority": {
+          "workspace_roots": [
+            "<root>"
+          ],
+          "policy.tools": {
+            "default": "deny",
+            "allow": [
+              {
+                "id": "host.read",
+                "value": "fs.read"
+              }
+            ]
+          }
+        },
+        "variants": [
+          "explicitly permitted child directory cwd",
+          "sibling/root escape",
+          "CLI --policy replacing ordinary denies",
+          "forbidden --allow-write",
+          "trace capture widening"
+        ]
+      },
+      "expected": {
+        "rule": "Contained permitted workspace only; all ceilings retained after policy loading and CLI/ACP/Rust overrides; stable error/constraint IDs and no unauthorized admission."
+      }
+    },
+    {
+      "id": "G03-09",
+      "owner": "C3.3",
+      "status": "not_run",
+      "input": {
+        "transport_errors": [
+          "invalid explicit CLI config with --json",
+          "invalid ACP startup config",
+          "prohibited ACP session cwd",
+          "invalid Rust configured request"
+        ]
+      },
+      "expected": {
+        "rule": "CLI exit 2/stdout empty; ACP startup no protocol service, per-session invalid params/no run; Rust typed diagnostic/no handle. Bounded metadata-only errors contain no source excerpts."
+      }
+    }
+  ]
+}

@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-09T18:53:42.415Z",
+  "updated_at": "2026-09-09T19:38:47.886Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.1",
-  "next_action": "Activate C3.1 and freeze the declarative deployment configuration schema, module/profile composition, precedence, locked authority, secret references and G01 examples. Stop after this contract checkpoint; loader implementation is C3.2. C3 includes ordered model fallback and command rules, excludes Otto, and makes no complete 0.1 release claim.",
-  "latest_log_entry": "LOG-0048",
+  "next_checkpoint": "C3.2",
+  "next_action": "Activate C3.2 and implement the bounded local TOML loader and deterministic resolver against the C3.1 schema, inventory, production golden and G02 cases. Resolve no secret bytes and activate no agents/providers/tools. Preserve C2 defaults; CLI/ACP/Rust integration and config validate/explain/render are C3.3. Complete only C3.2 and its verification/handoff this session.",
+  "latest_log_entry": "LOG-0051",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -236,9 +236,12 @@
       "depends_on": [
         "C3.0"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0050",
+        "LOG-0051"
+      ]
     },
     {
       "id": "C3.2",

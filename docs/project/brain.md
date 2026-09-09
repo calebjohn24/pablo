@@ -147,6 +147,14 @@ The user requested NixOS-style preconfiguration of every part of Pablo. Use vers
 
 The user's config request promotes these formerly deferred behaviors into C3. Model routes preserve configured order, have one retry owner, count every attempt, retain uncertain charges and never replay completed tools or restart the task. Child routes only narrow authority. Shell rules distinguish the launcher from bounded literal executable/argument matching, reject unsupported syntax when restricted and retain host-owned containment. See the [design](contracts/c3-deployment-config.md); adaptive routing and general retry orchestration remain deferred.
 
+### D033 — Freeze a closed deployment contract before the loader
+
+C3.1 uses an `options` envelope, TOML 1.0.0, exact typed defaults, ordered import/profile layers and explicit list operations. Named credential/profile conflicts reject; authority layers accumulate independently of ordinary values. Locked inputs exclude ambient files/SDK environment and permit only named narrowing overrides. The [contract](contracts/c3-deployment-config.md), [inventory](contracts/c3-deployment-options.md) and G01 corpus make C3.2/C3.3 reviewable without pretending future providers, routes or extensions work. Legacy no-config behavior remains an explicit compatibility path; no loader or runtime change ships at C3.1.
+
+### D034 — Separate effective identity from source and host identity
+
+Hash canonical defaulted config with secret references and authority, preserving list order and exact counters. Keep source/provenance identity separate so comments and rendering do not change effective identity; physical root bindings remain host-only and secret bytes are never hashed. This supports portable presets without claiming identical workspaces, secret-rotation identity or live reproducibility. The [resolved contract](contracts/c3-deployment-config.md#resolved-identity-provenance-and-inspection) and canonical vectors freeze the encoding and hand off real cross-interface proof to C3.3.
+
 ## Working constraints
 
 - Keep `docs/context.md` as the detailed design source; review deliberate changes using the state file's stored SHA-256.

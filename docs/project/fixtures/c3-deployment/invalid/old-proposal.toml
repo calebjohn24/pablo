@@ -1,0 +1,6 @@
+# C3.0 was an unimplemented proposal, never a version-1 compatibility format.
+schema_version = 1
+[models.primary]
+provider = "vercel"
+model = "primary-model"
+credential = "vercel"

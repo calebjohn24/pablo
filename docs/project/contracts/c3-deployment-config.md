@@ -1,20 +1,112 @@
 # C3 declarative deployment configuration
 
-The user requested a NixOS-style file system for preconfiguring every part of Pablo, including an ordered list of models and shell command allow/deny rules. [C3](../cycles/003-extensibility-and-release.md) selects this work early, then requires every later feature to participate. This document fixes design intent; exact syntax and schemas freeze at C3.1 and the owning feature checkpoints. Examples below are proposed TOML, not currently supported configuration.
+The user requested a NixOS-style file system for preconfiguring every part of Pablo, including an ordered list of models and shell command allow/deny rules. [C3](../cycles/003-extensibility-and-release.md) selects this work early, then requires every later feature to participate. C3.1 freezes the configuration contract below, the [option inventory](c3-deployment-options.md), [document schema](../schemas/deployment-v1.schema.json), [resolved schema](../schemas/resolved-deployment-v1.schema.json) and [G01 corpus](../fixtures/c3-deployment/README.md). These are specification artifacts. The existing executable has no deployment loader or `config` commands; C3.2 implements resolution and C3.3 wires current runtime options.
 
-## Declarative options and composition
+## Versioned document
 
-Use typed, versioned TOML with local module imports and named profiles, following the brief's section 20. The NixOS inspiration is composable option declarations, defaults, deterministic resolution, assertions and value provenance. Pablo evaluates bounded data; it does not need Nix, evaluate arbitrary code or provision an operating system. Deployment tools may generate the same canonical configuration externally.
+Pin [TOML 1.0.0](https://toml.io/en/v1.0.0). Each UTF-8 document requires integer `schema_version = 1`; no BOM, invalid Unicode or NUL is accepted. Normalize physical CRLF to LF before parsing strings, but hash the original file bytes for source identity. Pablo accepts booleans, strings, integers, arrays and tables in the declared shapes. Dates, times, floats (including NaN/infinity), arbitrary evaluation and string interpolation are not configuration types. Units appear in option names; full-range u64 counters use decimal strings to avoid JSON/JavaScript rounding. Integer spelling in TOML does not change its value.
 
-A deployment has one explicit entry file, optional local imports, a selected profile and declared environment/secret bindings. Define each option once in the runtime's option inventory with type, default, merge behavior, sensitivity, owner and availability version. Feature modules register their options with this inventory so the schema, validation, effective-value display and runtime adapters share one definition. Unknown keys, conflicting definitions, unsupported feature versions and invalid combinations are errors before model calls, tools or connections start.
+The closed [Draft 2020-12](https://json-schema.org/draft/2020-12/json-schema-core) schema describes the TOML-to-JSON data shape. It is a contract artifact, not a parser dependency choice. Cross-reference, UTF-8 byte-length, numeric-string range, containment and authority checks below are additional semantic requirements; a JSON Schema pass alone is insufficient.
 
-Freeze deterministic import order and per-type merge semantics at C3.1: defaults supply missing values; later explicitly selected layers can replace scalar values; maps merge by declared keys; ordered model/rule lists use explicit replace/append/prepend semantics without accidental sorting or set conversion. A list's order must survive round trips. State how a value is cleared and how incompatible definitions fail. Reject import cycles and excessive files/depth/bytes. Imports resolve relative to the file that declares them and stay within approved configuration roots; do not fetch remote imports or execute environment substitutions.
+| Top-level member | Contract |
+| --- | --- |
+| `schema_version` | Required literal `1` in entries and imported modules |
+| `imports` | Ordered array of local relative TOML paths, default `[]` |
+| `profile` | Optional default profile name; entry files only |
+| `deployment` | Entry-only bootstrap controls: `locked` (default false), `allowed_run_overrides` (default `["input"]`) |
+| `options` | Partial typed values from the inventory; missing leaves inherit built-in defaults |
+| `credentials` | Map of named atomic credential-source records; secret references only |
+| `environment` | Map of environment names to one explicitly permitted scalar option each |
+| `profiles` | Map of named `{extends, options, authority}` records; no imports, credentials, environment bindings or deployment controls inside a profile |
+| `authority` | Ordered array of immutable constraints with stable unique IDs; accumulated, never overwritten |
 
-Ordinary local precedence follows section 20: defaults, user/profile config, explicitly trusted workspace config, selected environment values, then CLI/host run overrides. The explicit entry/profile and module ordering must remove ambiguity between those layers. Separately apply a host/deployment authority ceiling after resolution; a higher-precedence convenience flag cannot remove a locked deny, add a credential destination or expand a workspace.
+Names use `[a-z][a-z0-9_-]{0,63}`. Rule/authority IDs additionally allow dots, remain at most 64 ASCII bytes, and cannot use the reserved `builtin.` prefix. No wildcard key or plugin-owned untyped table is accepted. Unknown names produce `config_unknown_option`; a recognized future namespace or provider produces `config_unsupported_feature` with its owning checkpoint. Even an empty table or `enabled = false` in an unimplemented namespace is rejected, including in an inactive profile. `requires` and protocol compatibility selectors are reserved for C3.33; the current schema/contract revision supplies the compatibility requirement without inventing a binary version pin.
 
-Locked deployment mode reads only the selected entry/imports/profile and declared environment bindings. Ambient home/workspace files and unrelated variables cannot change behavior. Hosts explicitly designate which run fields may vary, such as task input or a narrowed deadline; disallowed overrides fail visibly. Secrets are references to approved environment, private file or host credential sources, resolved privately at use; evaluated/rendered configuration and fingerprints never include secret bytes. Credential-file contents remain outside shell tools and project records.
+## Resolution inputs and precedence
 
-Snapshot the resolved config at admission. Later file edits apply to subsequent runs; no hot reload changes policy under an active model/tool call. Record schema version, declared input digests, redacted effective-config fingerprint and important value origins. Document whether runtime/environment-dependent paths contribute to identity rather than claiming reproducibility across different declared inputs.
+The host supplies a `ResolveRequest`: explicit entry (if any), approved configuration root, named absolute path bindings, optional user file, explicitly trusted workspace file, selected profile, approved environment snapshot, typed option overrides and immutable host authority. These are data inputs to one resolver. CLI paths are anchored once at invocation; embedded callers supply absolute paths. No config can add trust roots, select a new entry, trust a workspace file, read the process environment wholesale or call a host callback during resolution.
+
+For ordinary mode, apply these layers from low to high: built-in defaults; explicitly selected user file tree and its profile; explicitly trusted workspace tree and its profile; explicit entry tree and its profile; declared environment bindings; explicit CLI **or** typed host overrides. The last two are equivalent interfaces, not competing priority levels. There is no automatic user/workspace file search in v1. With no new configuration inputs, the C3.3 compatibility adapter retains the current C2 invocation defaults, key precedence and supported OTel variables from the [inventory](c3-deployment-options.md#compatibility-and-intentional-host-only-inputs). Selecting an explicit entry disables these implicit environment inputs; bindings opt in individually.
+
+For each file tree, visit imports depth-first in their written order, then apply the declaring file's body. Every visit has a monotonically increasing precedence ordinal. Later imports and the importer intentionally override ordinary earlier leaves; record both origins. Collect profile definitions during that traversal, then apply the entry's selected profile: explicit host selection wins over entry `profile`; absent both, apply no profile. Resolve `extends` depth-first in written order, parents before the selected profile, after the entry body. Unknown profiles or repeated/cyclic ancestors reject. Profiles are confined to their file tree; an entry cannot accidentally select a home file's same-named profile.
+
+| Value | Merge and clear rule |
+| --- | --- |
+| Scalar, enum, path object, optional value | Later explicit value replaces earlier value atomically. Omission inherits; optional path/string leaves accept exactly `{unset = true}` to clear. Empty strings are allowed only where the option type says so. |
+| Typed option table / `otel.resource_attributes` | Merge by key recursively; no implicit deletion of map keys. To remove a resource attribute use a new preset without it. |
+| Ordinary ordered list | A bare array replaces. `{mode = "replace", items = [...]}`, `append` and `prepend` are explicit operations on the accumulated list, in layer order. Operations on missing lists use `[]`. `[]` clears; no sorting or deduplication. Duplicate identities fail where the option requires uniqueness. |
+| `imports`, profile `extends`, override permissions | Plain control arrays, not list-operation objects; do not inherit or append implicitly. |
+| Named credentials, environment bindings, profiles | Atomic named definitions. Identical normalized definitions may coalesce and retain both origins; unequal definitions of the same name produce `config_conflict`. There is no credential field-wise merge that could combine one source with another destination. |
+| Authority | Append constraints in traversal order, followed by selected profile constraints; prepend host authority. No ordinary merge, clearing, replacement or list operation applies. |
+
+Duplicate TOML keys/tables are parse errors. Duplicate policy/authority IDs and two environment bindings targeting the same leaf are `config_conflict`. Invalid unset/list operations and incompatible types are shape errors; dangling credential/path references, filesystem writes with reads disabled and content capture without a trace destination are `config_invalid_value`. A changed scalar at a later ordinal is an explained override, not a conflict. List order matters for first deciding policy IDs and, when implemented, model routes. A policy dimension can replace its ordinary allow/deny list; this never removes an authority policy layer.
+
+## Bounds and path bases
+
+Limits below are fixed parser safety bounds, checked before growth or opening the next input. They are not model/tool call budgets. Boundary fixtures use exactly the limit and one excess; never silently truncate or skip a source.
+
+| Resource | Maximum |
+| --- | --- |
+| Single config file / all config bytes | 1 MiB / 8 MiB; read at most one extra byte to detect overflow |
+| File depth / distinct files / import edges | 16 (entry depth 1) / 64 / 128; at most 32 imports per file |
+| Parsed nesting / aggregate scalar-and-container nodes | 32 levels (root 1) / 65,536 nodes across all inputs and profile expansion |
+| Profiles / profile ancestry depth / expanded ancestors | 64 per resolution / 16 / 64 |
+| Credentials / environment bindings / path bindings | 64 each; at most 8 ordered sources per credential |
+| Ordinary data array / named map size | 1,024 entries unless a smaller schema bound applies; 64 resource attributes; inspection/provenance have the separate bounds below |
+| Identifier / path or URL / ordinary string | 64 / 4,096 / 65,536 UTF-8 bytes; instruction text at most 1 MiB and counts against input/context admission |
+| Authority layers / policy rules | 64 layers including host and selected profiles; 128 rules per dimension per layer, 1,024 total configured rules across effective policy and authority |
+| Effective config / provenance / diagnostics | 8 MiB canonical config, 65,536 origin contributions and 8 MiB serialized inspection envelope; first 32 diagnostics, each at most 1,024 bytes |
+
+All counters use checked arithmetic. A repeated canonical file is `config_duplicate_import`, including diamonds; an edge to an active ancestor takes precedence as `config_import_cycle`. Do not silently deduplicate a module and accidentally change list contributions. Reject symlink components and non-regular files for entry/import reads. Resolve imports relative to their declaring file, allowing lexical `..` only while the normalized path stays inside the host-approved configuration root. Absolute imports, URLs, glob patterns, expansion and root escapes reject. Pin opened-file identity/content for the evaluation; a file changing while read fails `config_input_changed`. Hosts own isolation from independent writers.
+
+Option paths are typed `{base, path}` objects. `base = "source"` is relative to the declaring file and normalizes to `base = "config"`, relative to the approved root. `base = "config"` is already relative to that root; `base = "workspace"` is relative to the admitted workspace; `base = "binding"` additionally requires `name`, naming a host-supplied absolute root. Paths are nonempty relative UTF-8 paths, normalized by components, with no remaining `..`, NUL or absolute prefix. `run.workspace` cannot use `base = "workspace"` (self-reference). Policy filesystem roots retain C2's workspace-relative string format and component matching. An import's directory never becomes the runtime working directory implicitly.
+
+Resolution performs bounded config reads and declared non-secret environment lookup, but no workspace scan, credential-file read, schema-resource read, executable probe, DNS/HTTP, trace-file creation, MCP startup or model/tool work. The host supplies existing canonical roots; later admission checks actual workspace/root containment, credentials and destination/file requirements before use. Trace paths alone may contain the existing literal `{session_id}` template, expanded after session admission. Other brace substitutions, `~`, environment expansion and platform search paths have no special meaning. Portable presets retain path bindings; `config render` never substitutes a private absolute path into them.
+
+## Locked authority and secret references
+
+Determine locked mode from the selected entry/host before opening any user/workspace layer. It requires an explicit entry (or equivalent complete typed preset) and explicit workspace binding; reject implicit invocation-directory defaults. Ignore user/workspace files and all undeclared environment inputs, including `.env`, `OTEL_*`, `HOME`, `XDG_*` and `PABLO_TASK_*`. Do not read those files even to diagnose their contents. Imported modules and profiles cannot change `deployment.locked` or override permissions. Host lock mode cannot be disabled by the entry. The selected profile is an admitted bootstrap input, not a per-task override.
+
+`allowed_run_overrides` restricts locked per-task requests and names exact fields from the schema, defaulting to `input`. Ordinary unlocked requests may override typed option values, subject to all immutable ceilings; authoring/bootstrap fields still cannot become per-task inputs. Unknown permission names or wildcards reject. Permission to change a limit permits only narrowing: finite values can decrease, unlimited can become finite, and zero remains a hard zero. Workspace overrides must be contained in the original admitted workspace **and** every applicable ceiling. Enablement/capture overrides may only change true to false. Under lock, credentials, endpoint destinations, imports, bindings, profiles, authority, policy and deployment controls cannot be per-task overrides. In unlocked compatibility mode, `--policy` remains an ordinary policy input below all immutable ceilings; it is not permission to replace an authority layer. An attempted prohibited assignment rejects even if it repeats the existing value; do not silently ignore the caller.
+
+Each `authority` layer has an `id` and optional allowed workspace roots, tool names, exact model IDs, provider endpoints, credential IDs, OTel endpoints, capture permission, numeric limits and C2 policy dimensions. Omission adds no constraint; an empty allowed list permits none. Tool availability and decisions must satisfy **every** layer. Numeric ceilings intersect by minimum (unlimited is infinity); workspace access intersects by containment; denies and allowlist requirements in each policy layer remain independently effective. Ordinary profiles cannot expand this intersection. Reject resolved tool enablement, destinations, models, capture or requested limits that exceed any ceiling, before side effects, with `config_authority_violation` and the deciding authority ID. For `tool_names`, the requested enabled catalog must be a subset of every declared list; finer restrictions within an enabled group use `authority.policy.tools`. Policy restrictions decide calls independently and do not silently disable an entire tool group. For policy changes, retain all ceiling rules and evaluate each layer; do not flatten intersected allowlists into a union. Global policy IDs stay unique and all deciding IDs remain observable. The C2 [policy semantics](c2-single-agent.md#static-policy) still govern each layer; no command or OS sandbox is implied.
+
+Credential definitions are atomic `{consumer, sources}` records. Current consumers are `provider.vercel` and `otel.headers`; each record has exactly one consumer and is referenced by ID at that consumer's option. A source is exactly one of `{kind = "environment", name}`, `{kind = "file", path, encoding = "utf8"}`, `{kind = "file", path, encoding = "dotenv", key}`, or `{kind = "host", name}`. Try sources in order only when the preceding source is absent; an empty, malformed, unreadable or rejected present source is an error, not fallback. At use, cap an environment/host value or credential file at 64 KiB. UTF-8 token files trim one terminal LF or CRLF and reject other control bytes; dotenv privately extracts only the named key, rejects duplicates and disables interpolation. Do not source a file, mutate process environment, hash the bytes or include underlying parser error snippets in diagnostics.
+
+Resolution validates reference shape/consumer compatibility and retains the source list without testing whether secrets exist. Provider credentials can go only to the provider's admitted endpoint; exporter headers only to its admitted OTel destination. Never expose either to shell, MCP, Skills, task specs, peers, trace records or rendered output. Header bytes and host credential callbacks stay outside the resolved config. URLs must be absolute HTTP(S) without userinfo, query or fragment; HTTPS/TLS/redirect behavior remains adapter-owned. C3.3 admits only the current fixed Vercel endpoint; custom fixture endpoints remain synthetic host-only adapters until C3.5 freezes provider endpoint trust.
+
+Non-secret `environment.NAME = {option = "limits.max_tool_calls", required = false}` bindings target only the schema's scalar allowlist. Missing optional values inherit; missing required values fail. Booleans accept exactly `true`/`false`, counts accept unsigned decimal or `unlimited` where declared, enums/strings accept raw UTF-8 without trimming. No TOML snippets, list/path/policy values, instructions, credential material or substitutions can enter through this map. Bound each value at 65,536 bytes and validate its target type; never echo invalid input. Declared environment values affect effective identity; secret-source names do, secret values do not.
+
+## Resolved identity, provenance and inspection
+
+Snapshot a fully materialized immutable configuration per admitted run. The [resolved schema](../schemas/resolved-deployment-v1.schema.json) requires `schema_version`, `contract_revision`, `config`, `fingerprint`, `sources`, `provenance` and `input_fingerprint`. `config` contains all defaulted options, normalized reference paths, declared credentials, lock/override controls and the ordered authority layers. It contains no imports, profiles, environment lookups, list-operation objects or unresolved `source` paths. Optional unset values retain `{unset:true}`. Request input, session/run/trace IDs, secret bytes/presence, live handles, timestamps, provenance and physical path bindings are outside `config`.
+
+Canonical encoding `pablo-config-json-v1` is deliberately small: recursively sort object keys by UTF-8 byte order; preserve array order; emit exact base-10 integers (no floats, exponents or leading zeroes); emit booleans/null as JSON literals; encode strings as UTF-8, escaping quote/backslash and every U+0000–001F as lowercase six-character `\u00xx`, with no other escaping or Unicode normalization. Emit no whitespace or trailing newline. `fingerprint` is `sha256:` plus lowercase SHA-256 of these bytes for `{schema_version, contract_revision, config}`. A change to a credential reference, authority or effective option changes it; changing source comments or secret bytes does not. This is a configuration equality fingerprint, not a signature, secret-rotation identity, artifact digest or claim that two machines behave identically.
+
+`sources` is an ordered manifest of `{id, kind, locator, digest}`. Assign IDs `source-0000`, `source-0001`, etc., decimal ordinals padded to at least four digits. Emit defaults first, then host authority in host order, file/profile sources in the traversal/precedence order above, environment bindings sorted by UTF-8 name, and overrides sorted by option path. Do not add task input or ignored ambient inputs. File locators use approved-root-relative names; environment/host sources use declared names, never values. Digest inputs are fixed below (all except files use the canonical encoding):
+
+| Source kind | Digest payload |
+| --- | --- |
+| `defaults` | `{options, deployment}` with exact built-in defaults |
+| `file` | Original file bytes, before CRLF normalization |
+| `profile` | `{name, profile}` with the declared body, source paths normalized, before inheritance/defaults |
+| `environment` | `{name, option, present, value}` with the parsed non-secret scalar; omit `value` when an optional binding is absent |
+| `override` | `{option, value}` with normalized typed value; task input excluded |
+| `host_authority` | One normalized declared authority object, including its ID |
+
+ `input_fingerprint` hashes canonical `{schema_version, contract_revision, sources}` and therefore changes when comments, source layout, profile selection or origins change. Secret files/values are never sources and have no digest. The portable `fingerprint` excludes physical roots; admission separately records a `bindings_fingerprint` over canonical named absolute roots in host-only metadata, never in model/OTel output. Equal config fingerprints with different binding fingerprints do not assert equal workspaces.
+
+`provenance` maps JSON Pointers under `/config` to ordered `{source, operation}` contributions (`default`, `set`, `replace`, `append`, `prepend`, `unset`, `constrain`). Cover every effective leaf, including empty collections, and each ordered list item; `source` references the manifest. Earlier contributions remain available without copying old values. Non-secret instruction text, policy paths and metadata are deployment-author content: only explicit local inspection/render may expose them. Ordinary run/native/OTel summaries carry schema/revision/effective-config fingerprint and bounded deciding IDs, not the entire config, source file bytes or environment snapshots. Invalid input diagnostics include a code, option pointer, root-relative source/line when known and owning feature/constraint ID; escape controls and omit input excerpts/values.
+
+At C3.3, `config validate --config PATH [--profile NAME]` performs offline resolution/semantic checks without resolving credentials. `config explain` emits the resolved JSON envelope; `config render` emits a self-contained TOML entry with defaulted options, normalized paths, credential refs and authority, no imports/profiles/environment bindings. Reloading render preserves `fingerprint`; its `input_fingerprint` and provenance change. Do not treat source identity as effective identity. Read resources referenced by future schema/Skill options only at their owning validation stage, with separate digests. File edits affect subsequent admission; an active run's policy, tools and configuration cannot hot reload. ACP may retain client/SDK setup only while process-owned settings are unchanged; changed provider/tool/exporter setup requires explicit reconstruction before another task.
+
+CLI errors from explicit config use exit 2, stdout empty (including `--json`), and bounded stderr diagnostics before admission. ACP startup config errors exit before protocol service; per-session unauthorized fields return an invalid-params error with the same safe config code and create no run. Rust returns a typed diagnostic and no run handle. Existing C2 task/protocol versions do not change at C3.1. ACP clients continue supplying standard `session/new.cwd` and prompt input; deployment settings are host process inputs, not a new wire method. C3.3 proves identical options, authority and fingerprint for equivalent CLI/ACP/Rust admissions; origin/input fingerprints may differ by interface. Existing direct Rust APIs remain available, with the embedding host responsible for supplying its immutable ceilings to the shared configured path.
+
+## Evolution and migration
+
+Schema version 1 has no implicit migration. Missing, zero, future or string versions reject with `config_schema_version` before profile/import evaluation. The C3.0 proposed example and brief section 20.2 were never supported inputs; translate them explicitly into this envelope instead of accepting undocumented aliases. The G01 corpus includes that rejection and a v1 replacement. No `config migrate` command is selected.
+
+Record this bundle as `contract_revision = "c3.1"`. Later owning checkpoints add typed options/availability and bump this revision, updating schemas, defaults, inspection, projections and fixtures together. Older binaries reject new feature options even when `schema_version` is still 1. Changing existing semantics, defaults, merge order or identity encoding requires a recorded migration decision and examples; incompatible input meaning requires schema version 2 and an explicit conversion that writes a new file. Native `c2.4`, task `c2.3` and ACP pins are separate version spaces. Never silently repurpose them or update the reviewed product-context hash merely to bless config changes.
 
 ## Coverage and inspection
 
@@ -53,67 +145,14 @@ Freeze a small literal-argument command subset with exact executable and argumen
 
 Unconfigured command rules retain C2's ordinary shell semantics. Configured rules govern admitted commands, not what an allowed program, script or remote MCP service may do internally; hosts own OS/process/network containment. Native traces record deciding rule IDs without echoing private commands. Invalid or denied commands keep the current terminal policy outcome until policy recovery is separately selected.
 
-## Proposed deployment example
+## Portable deployment examples
 
-The example illustrates option relationships; C3.1/C3.10/C3.4 freeze the final spelling and matching semantics. `primary-model` and `secondary-model` are placeholder IDs, not claims of gateway availability. A base module can hold shared bounds and telemetry defaults; the production entry narrows authority.
+The [base module](../fixtures/c3-deployment/modules/base.toml), [development entry](../fixtures/c3-deployment/development.toml) and [production entry](../fixtures/c3-deployment/production.toml) use frozen C3.1 syntax. Supply the `workspace` path binding explicitly. Production disables shell and mutations, retains read tools, seals its provider identity/credential destinations and permits only task input and a narrowed deadline. Development enables writes, demonstrates profile inheritance and ordered policy-list contributions, and opts into one non-secret environment binding. Their credentials are environment references; no value or secret file is in the corpus.
 
-```toml
-schema_version = 1
-imports = ["modules/base.toml"]
-profile = "production"
-
-[deployment]
-locked = true
-allowed_run_overrides = ["input"]
-
-[credentials.vercel]
-environment = "AI_GATEWAY_API_KEY"
-
-[credentials.openrouter]
-environment = "OPENROUTER_API_KEY"
-
-[models.primary]
-provider = "vercel"
-model = "primary-model"
-credential = "vercel"
-
-[models.secondary]
-provider = "openrouter"
-model = "secondary-model"
-credential = "openrouter"
-
-[routes.analysis]
-models = ["primary", "secondary"]
-fallback_on = ["rate_limited", "unavailable", "not_sent"]
-max_attempts = 2
-retry_owner = "runtime"
-allow_uncertain_delivery = false
-
-[profiles.production]
-model_route = "analysis"
-
-[filesystem]
-roots = ["."]
-write = false
-
-[shell.commands]
-default = "deny"
-
-[[shell.commands.allow]]
-id = "inspect.git-status"
-executable = "/usr/bin/git"
-arguments = ["status", "--short"]
-match = "exact_argv"
-
-[[shell.commands.deny]]
-id = "deny.git-push"
-executable = "/usr/bin/git"
-arguments = ["push"]
-match = "argv_prefix"
-```
+The examples are contract fixtures for C3.2/C3.3, not commands the C2 executable can run. They intentionally contain only baseline options; G04 extends presets with each implemented feature. `options.models`, `options.routes` and `options.shell.commands` are reserved to C3.10/C3.4: the route and shell-policy sections above preserve their behavioral requirements without accepting placeholder implementations. Single-model selection is `options.model` until routes ship; C3.10 must document that migration.
 
 ## Planning sources and acceptance
 
 The [NixOS module manual](https://nixos.org/manual/nixos/stable/#sec-writing-modules) describes option declarations, composition, priorities and source-aware conflicts. C3 adopts those design ideas in a bounded TOML system; it does not claim Nix language compatibility. The [OpenRouter model fallback documentation](https://openrouter.ai/docs/guides/routing/model-fallbacks) describes gateway-owned ordered model lists; C3 deliberately assigns one retry owner and verifies its runtime-owned route across gateways. Both sources were inspected 2026-09-09; the unchanged brief's sections 19–20 remain the existing project design context.
 
-G01–G04, Q01 and F01–F03 in the [fixture map](../fixtures/c3-extensibility-and-release.md) cover configuration contracts/composition/inspection, shell restrictions, routes/fallback and full deployment proof. Each later feature also proves file-config equivalence when it ships. These are C3 requirements, with no config implementation or execution evidence claimed by C3.0.
+G01–G04, Q01 and F01–F03 in the [fixture map](../fixtures/c3-extensibility-and-release.md) cover configuration contracts/composition/inspection, shell restrictions, routes/fallback and full deployment proof. Each later feature also proves file-config equivalence when it ships. C3.1's [audit](../fixtures/c3-deployment/audit.py) parses example TOML, validates schema shapes and checks canonical identity vectors. It does not implement a resolver or pass G02/G03. Official TOML 1.0.0 and JSON Schema 2020-12 sources were inspected 2026-09-09; the chosen versions are explicit even if later upstream versions exist.

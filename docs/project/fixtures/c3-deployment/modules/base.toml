@@ -1,0 +1,21 @@
+schema_version = 1
+
+[credentials.gateway]
+consumer = "provider.vercel"
+sources = [{ kind = "environment", name = "AI_GATEWAY_API_KEY" }]
+
+[options.run]
+workspace = { base = "binding", name = "workspace", path = "." }
+
+[options.model]
+provider = "vercel"
+id = "google/gemini-3.8-flash"
+credential = "gateway"
+
+[options.policy.read_roots]
+default = "deny"
+allow = [{ id = "read.shared", value = "shared" }]
+
+[profiles.inspection.options.policy.read_roots]
+default = "deny"
+allow = { mode = "prepend", items = [{ id = "read.workspace", value = "." }] }

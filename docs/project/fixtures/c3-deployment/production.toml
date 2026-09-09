@@ -1,0 +1,40 @@
+schema_version = 1
+imports = ["modules/base.toml"]
+profile = "production"
+
+[deployment]
+locked = true
+allowed_run_overrides = ["input", "limits.max_run_duration_ms"]
+
+[options.limits]
+max_model_calls = 4
+max_tool_calls = 8
+max_run_duration_ms = 600000
+
+[profiles.production.options.shell]
+enabled = false
+
+[profiles.production.options.filesystem]
+enabled = true
+write = false
+
+[profiles.production.options.policy.read_roots]
+default = "allow"
+allow = []
+
+[[authority]]
+id = "production.ceiling"
+workspace_roots = [{ base = "binding", name = "workspace", path = "." }]
+tool_names = ["fs.read", "fs.list", "fs.search"]
+model_ids = ["google/gemini-3.8-flash"]
+provider_endpoints = ["https://ai-gateway.vercel.sh/v1/chat/completions"]
+credential_ids = ["gateway"]
+capture_content = false
+
+[authority.limits]
+max_model_calls = 4
+max_tool_calls = 8
+max_run_duration_ms = 600000
+
+[authority.policy.write_roots]
+default = "deny"

@@ -40,8 +40,8 @@ The owner below must check current official sources, record immutable revisions/
 
 | Owner | Decisions to freeze before implementation |
 | --- | --- |
-| C3.1 | Config schema/version, typed option ownership, local imports/profiles, deterministic merge/precedence, declared environment/secret refs, path/work bounds, lock mode and migrations |
-| C3.3 | One resolved configuration across CLI/ACP/embedding, validate/explain/render, canonical fingerprint, authority ceilings and per-run snapshot |
+| C3.1 | [Frozen schema/inventory](c3-deployment-config.md): version, typed option ownership, imports/profiles, deterministic merge/precedence, environment/secret refs, bounds, lock/authority, canonical identity/provenance, cross-interface projections and migrations |
+| C3.3 | Implement the C3.1 resolved contract across CLI/ACP/embedding, validate/explain/render, canonical fingerprints, authority ceilings and per-run snapshots; prove legacy and explicit-config behavior |
 | C3.4 | Literal-command parsing subset, exact executable/argv and supported prefix matching, defaults/deny precedence, ambiguous syntax rejection, stable decision IDs and launcher/descendant distinction |
 | C3.5 | Provider-selection/credential precedence for CLI/ACP/Rust, explicit model defaults, shared versus gateway-owned fields, trusted endpoint handling, OpenRouter candidate profile and requested/resolved capability metadata |
 | C3.8 | Open Responses pinned HTTP/SSE subset, item/event ordering and continuation retention, configured capability resolution, usage/finish/errors, unsupported content and bounded state |
