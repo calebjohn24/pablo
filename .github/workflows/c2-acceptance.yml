@@ -1,0 +1,117 @@
+name: C2 acceptance
+
+on:
+  push:
+    branches: [acceptance/c2-5]
+    paths:
+      - '.github/workflows/c2-acceptance.yml'
+      - 'crates/**'
+      - 'examples/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'Cargo.*'
+      - 'rust-toolchain.toml'
+      - 'package*.json'
+      - 'tsconfig.json'
+      - '.nvmrc'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: c2-acceptance-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  linux-x64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CARGO_TERM_COLOR: never
+      PABLO_MEASURE_ENVIRONMENT: GitHub-hosted Ubuntu 24.04 x64 VM; native x86_64 execution; sequential measurements
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+      - name: Verify native target and record environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -s)" = Linux
+          test "$(uname -m)" = x86_64
+          test "$(id -u)" -ne 0
+          rustup show
+          rustc -vV | tee /tmp/pablo-rust-version.txt
+          grep -Fx 'host: x86_64-unknown-linux-gnu' /tmp/pablo-rust-version.txt
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
+          import { execFileSync } from 'node:child_process';
+          import { cpus, release, totalmem } from 'node:os';
+          assert.equal(process.arch, 'x64');
+          assert.equal(process.version, 'v' + readFileSync('.nvmrc', 'utf8').trim());
+          mkdirSync('.pablo/acceptance', { recursive: true });
+          const report = { timestamp: new Date().toISOString(), commit: process.env.GITHUB_SHA,
+            run_id: process.env.GITHUB_RUN_ID, run_attempt: process.env.GITHUB_RUN_ATTEMPT,
+            platform: process.platform, arch: process.arch, kernel: release(),
+            cpu: cpus()[0].model, logical_cpus: cpus().length, memory_bytes: totalmem(),
+            uid: process.getuid(), node: process.version,
+            os_release: readFileSync('/etc/os-release', 'utf8'),
+            virtualization: execFileSync('systemd-detect-virt', [], { encoding: 'utf8' }).trim(),
+            runner_image: process.env.ImageOS, runner_image_version: process.env.ImageVersion };
+          writeFileSync('.pablo/acceptance/platform.json', JSON.stringify(report, null, 2) + '\n');
+          console.log(JSON.stringify(report));
+          NODE
+      - name: Install locked dependencies and verify project records
+        run: |
+          npm ci
+          node scripts/project.mjs check
+          npm test
+          npm run typecheck
+      - name: Rust acceptance
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --workspace --all-targets --locked -- -D warnings
+          cargo test --workspace --locked
+          cargo build --locked -p pablo
+      - name: CLI, ACP and telemetry acceptance
+        run: node --test tests/acp.test.ts tests/telemetry.test.ts
+      - name: Real Collector filesystem correlation
+        run: node scripts/smoke-collector.ts --filesystem > .pablo/acceptance/collector.json
+      - name: Build current and C1.7 release executables
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build --release --locked -p pablo --bin pablo --example measure
+          git worktree add --detach .cache/c1.7-source 8b8cc69
+          cargo build --release --locked --manifest-path .cache/c1.7-source/Cargo.toml --target-dir .cache/c1.7-target -p pablo --bin pablo --example measure
+          node --input-type=module <<'NODE'
+          import { writeFileSync } from 'node:fs';
+          import { sourceFingerprint } from './scripts/lib/source-fingerprint.mjs';
+          writeFileSync('.pablo/acceptance/source.json', JSON.stringify({ current: await sourceFingerprint(process.cwd()), baseline: await sourceFingerprint(process.cwd() + '/.cache/c1.7-source') }, null, 2) + '\n');
+          NODE
+      - name: Matched release measurements (30 samples after 5 warm-ups)
+        shell: bash
+        run: |
+          set -euo pipefail
+          PABLO_MEASURE_BINARY="$PWD/.cache/c1.7-target/release/pablo" \
+          PABLO_MEASURE_DIRECT="$PWD/.cache/c1.7-target/release/examples/measure" \
+          PABLO_MEASURE_SOURCE_SHA256="$(node -p 'JSON.parse(require("node:fs").readFileSync(".pablo/acceptance/source.json", "utf8")).baseline')" \
+          PABLO_MEASURE_CHECKPOINT=C1.7 \
+            node scripts/measure.ts 30 .pablo/acceptance/c1.7-linux-x64.json
+          node scripts/measure.ts 30 .pablo/acceptance/c2.5-linux-x64.json
+          node scripts/measure-filesystem.ts .pablo/acceptance/c2.5-filesystem-linux-x64.json
+      - name: Upload measurement reports only
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: c2-acceptance-linux-x64
+          path: .pablo/acceptance/*.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
