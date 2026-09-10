@@ -108,7 +108,7 @@ async fn serve_streams(
             crate::deployment::Secrets::read(&prepared, options.deployment.as_ref().unwrap())?;
         let provider = secrets.provider(options.deployment.as_ref().unwrap())?;
         let tools = prepared.tools().map_err(|e| e.to_string())?;
-        pablo_core::runtime::validate_run(prepared.spec(), &provider, &tools)
+        pablo_core::runtime::validate_run(prepared.spec(), provider.as_ref(), &tools)
             .map_err(|_| "config_invalid_value at /run")?;
         crate::otel::Telemetry::check_configured(&prepared, secrets.headers.as_ref())?;
     }

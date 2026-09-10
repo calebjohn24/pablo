@@ -461,6 +461,7 @@ impl Provider for OpeningProvider {
             let _guard = DropSignal(self.dropped.clone());
             if self.fail {
                 return Err(ProviderError {
+                    retry_class: None,
                     code: FailureCode::ProviderRejected,
                     delivery: DeliveryCertainty::NotSent,
                 });
@@ -689,6 +690,7 @@ async fn stream_failure_is_not_retried_or_hidden_by_a_later_trace_capacity_error
         (
             Duration::ZERO,
             Err(ProviderError {
+                retry_class: None,
                 code: FailureCode::ProviderTransport,
                 delivery: DeliveryCertainty::ResponseReceived,
             }),

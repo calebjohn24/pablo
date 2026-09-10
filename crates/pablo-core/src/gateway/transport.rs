@@ -84,6 +84,7 @@ impl Transport {
             .send()
             .await
             .map_err(|error| ProviderError {
+                retry_class: None,
                 code: FailureCode::ProviderTransport,
                 delivery: if error.is_connect() || error.is_builder() {
                     DeliveryCertainty::NotSent
@@ -94,6 +95,11 @@ impl Transport {
         if !response.status().is_success() {
             // Do not read or serialize gateway error bodies.
             return Err(ProviderError {
+                retry_class: match response.status().as_u16() {
+                    429 => Some(crate::provider::RetryClass::RateLimited),
+                    502..=504 => Some(crate::provider::RetryClass::ServiceUnavailable),
+                    _ => None,
+                },
                 code: FailureCode::ProviderRejected,
                 delivery: DeliveryCertainty::ResponseReceived,
             });

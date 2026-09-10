@@ -45,8 +45,6 @@ pub struct ResolvedRoute {
     selection_reason: &'static str,
     execution_available: bool,
     fallback_owner: &'static str,
-    #[serde(skip)]
-    requires_attempt_deadline: bool,
 }
 impl ResolvedRoute {
     pub fn name(&self) -> &str {
@@ -80,7 +78,7 @@ impl ResolvedRoute {
         let mut route = self.clone();
         route.selected_entry = entries[0].name.clone();
         route.policy.max_attempts = route.policy.max_attempts.min(entries.len());
-        route.execution_available = entries.len() == 1 && !route.requires_attempt_deadline;
+        route.execution_available = true;
         route.entries = entries;
         route.selection_reason = "inherited_ordered_subsequence";
         Ok(route)
@@ -336,13 +334,10 @@ pub(super) fn resolve(config: &Value) -> Result<Option<ResolvedRoute>, ConfigErr
             }
         }
         if options["model_route"].as_str() == Some(name) {
-            let requires_attempt_deadline = route["per_attempt_timeout_ms"].as_u64().unwrap()
-                < options["limits"]["max_run_duration_ms"].as_u64().unwrap();
             selected = Some(ResolvedRoute {
                 name: name.clone(),
                 selected_entry: entries[0].name.clone(),
-                execution_available: entries.len() == 1 && !requires_attempt_deadline,
-                requires_attempt_deadline,
+                execution_available: true,
                 entries,
                 policy: RoutePolicy {
                     max_attempts: maximum,

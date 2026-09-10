@@ -35,17 +35,18 @@ test('F01 executable explains ordered routes offline and single-entry CLI ACP ma
     const args = ['--config', entry, '--bind', `workspace=${cwd}`]; const env = { ...cleanEnv(), ROUTE_ROUTER_KEY: 'invalid private key' };
     const explained = JSON.parse((await exec(binary, ['config', 'explain', ...args], { env })).stdout);
     assert(checkExplanation(explained), ajv.errorsText(checkExplanation.errors));
-    assert.equal(explained.contract_revision, 'c3.10');
+    assert.equal(explained.contract_revision, 'c3.11');
     assert.deepEqual(explained.model_route.entries.map((e: any) => e.name), ['primary', 'secondary', 'third']);
     assert.deepEqual(explained.model_route.entries.map((e: any) => e.credential), ['router', 'vercel', 'responses']);
-    assert.equal(explained.model_route.selected_entry, 'primary'); assert.equal(explained.model_route.execution_available, false);
+    assert.equal(explained.model_route.selected_entry, 'primary'); assert.equal(explained.model_route.execution_available, true);
     assert(!JSON.stringify(explained).includes('invalid private key'));
     await exec(binary, ['config', 'validate', ...args], { env });
     const rendered = (await exec(binary, ['config', 'render', ...args], { env })).stdout; await writeFile(join(cwd, 'rendered.toml'), rendered);
     const reloaded = JSON.parse((await exec(binary, ['config', 'explain', '--config', join(cwd, 'rendered.toml'), '--bind', `workspace=${cwd}`], { env })).stdout);
     assert.equal(reloaded.fingerprint, explained.fingerprint); assert.deepEqual(reloaded.model_route, explained.model_route);
-    for (const cmd of [['run', 'not admitted'], ['acp', '--stdio']]) await assert.rejects(exec(binary, [...cmd, ...args, '--fixture-endpoint', gateway.url], { env, timeout: 5000 }), error => {
-      const e = error as any; assert.equal(e.code, 2); assert.match(e.stderr, /config_unsupported_feature.*C3.11/); assert(!e.stderr.includes('private')); return true;
+    // All route credentials are checked before any request on the live path.
+    await assert.rejects(exec(binary, ['run', 'not admitted', ...args], { env, timeout: 5000 }), error => {
+      const e = error as any; assert.equal(e.code, 2); assert.match(e.stderr, /config_credential_invalid/); assert(!e.stderr.includes('private')); return true;
     });
     assert.equal(requests.length, 0);
     await writeFile(entry, base.replace('entries=[{model="primary"},{model="secondary"},{model="third"}]', 'entries=[{model="primary"}]'));

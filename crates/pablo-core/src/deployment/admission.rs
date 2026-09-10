@@ -138,15 +138,6 @@ impl ResolvedDeployment {
     }
     pub fn prepare_run(&self, input: RunInput) -> Result<PreparedRun, ConfigError> {
         let options = self.options();
-        if self
-            .model_route
-            .as_ref()
-            .is_some_and(|route| !route.execution_available())
-        {
-            let mut e = error("config_unsupported_feature", "/options/model_route");
-            e.owner = Some("C3.11");
-            return Err(e);
-        }
         if self.config["deployment"]["locked"] == true
             && !self.config["deployment"]["allowed_run_overrides"]
                 .as_array()
@@ -295,9 +286,6 @@ impl ResolvedDeployment {
         spec.instructions = options["run"]["instructions"].as_str().unwrap().into();
         spec.limits = serde_json::from_value(limits)
             .map_err(|_| error("config_invalid_value", "/options/limits"))?;
-        if let Some(route) = &self.model_route {
-            spec.limits.max_output_tokens = route.entries()[0].max_output_tokens();
-        }
         spec.trace.capture_content = options["trace"]["capture_content"].as_bool().unwrap();
         spec.trace.max_bytes = options["trace"]["max_bytes"].as_u64().unwrap() as usize;
         let ordinary: Policy = serde_json::from_value(options["policy"].clone())

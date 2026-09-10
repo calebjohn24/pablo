@@ -2,11 +2,7 @@
 
 Pablo is a small headless Rust agent runtime for applications doing arbitrary work. Hosts own their sandboxes, business state, approvals, and user experience. CLI and protocol clients share one runtime lifecycle.
 
-This file holds durable context. [State](state.json) reports current progress, [the log](log.jsonl) records history, and [cycle C3](cycles/003-extensibility-and-release.md) defines the selected work. Completed [C1](cycles/001-first-spike.md) and [C2](cycles/002-single-agent-completion.md) plans/evidence remain historical. Run `node scripts/project.mjs context` for a focused handoff.
-
-Private source remote: [calebjohn24/pablo](https://github.com/calebjohn24/pablo), with `main` tracking `origin/main`. Repository creation is recorded in LOG-0044; [native Linux acceptance](evidence/c2.5-linux-x64.md) closes C2.5. C3 selects declarative deployments, extensibility, interoperability and release delivery, excluding Otto integration.
-
-## Read the design selectively
+This file holds durable context. [State](state.json) reports current progress, [the log](log.jsonl) records history, and [cycle C3](cycles/003-extensibility-and-release.md) defines the selected work. Completed [C1](cycles/001-first-spike.md) and [C2](cycles/002-single-agent-completion.md) plans/evidence remain historical. Run `node scripts/project.mjs context` for a focused handoff. Private source remote: [calebjohn24/pablo](https://github.com/calebjohn24/pablo), with `main` tracking `origin/main`. Repository creation is recorded in LOG-0044; [native Linux acceptance](evidence/c2.5-linux-x64.md) closes C2.5. C3 selects declarative deployments, extensibility, interoperability and release delivery, excluding Otto integration.
 
 Read [the architecture brief](../context.md) selectively: section 29.1 defines the 0.1 contract; section 37.1 the C1 spike; sections 12–14 contracts/lifecycle/cancellation/shell; sections 19/21 providers and OTel; sections 28/31/32 performance/release/tests. [Backlog](backlog.md) retains deferred slices and promotion conditions.
 
@@ -194,7 +190,10 @@ C3.6 enables OpenRouter through the shared gateway and treats its repeated termi
 
 C3.8 freezes release 2026-04-24 at upstream 92c12d96d7b61d6d15e2214daa5e9c6000ab6e1c. Named HTTP/SSE events and complete ordered items are required; private opaque reasoning, summaries and assistant phase survive subsequent tool turns within their original endpoint/model scope. Unrepresentable raw reasoning rejects instead of disappearing. Configured capabilities are operator declarations, not remote attestations. C3.9 implements this with a non-serializable carrier, named-event validation, exact accounting and explicit auth-header scope. See [OR01](contracts/c3-open-responses.md).
 
-
 ### D044 — Resolve exact ordered routes before allowing fallback
 
-C3.10 names profiles and composes ordered routes offline, validating every entry's capabilities, credential destination and authority. Children can retain only exact inherited entries in order. Sticky, forward-only runtime selection and one retry owner prevent hidden repeated attempts; all attempts consume root budgets and incompatible private continuation stops fallback. Single-entry behavior is verified now; C3.11 owns fallback and distinct per-attempt deadlines. See [F01](contracts/c3-model-routes.md).
+C3.10 names profiles and composes ordered routes offline, validating every entry's capabilities, credential destination and authority. Children can retain only exact inherited entries in order. Sticky, forward-only runtime selection and one retry owner prevent hidden repeated attempts; all attempts consume root budgets and incompatible private continuation stops fallback. C3.11 executes fallback and distinct attempt deadlines through runtime-owned selection, with all-entry credential/accounting preflight and independent profile/root token clamping. ACP resource reuse never retains a task cursor; incompatible history stops before dispatch. See [F01/F02](contracts/c3-model-routes.md).
+
+### D045 — Basic compaction belongs in C3
+
+The user explicitly added compaction to C3. C3.12a closes the omitted section 23/28.8 bounded-run requirement with one summary pass and one overflow recovery, preserving prefix, task constraints, recent complete tool pairs, private continuation and shared budgets. Codex informs the summary-and-history replacement pattern; GLM providers remain default, and durable memory/tokenizers are deferred. See [scope](evidence/c3-compaction-scope.md).

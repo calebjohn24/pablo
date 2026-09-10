@@ -4,7 +4,7 @@ A small, headless Rust agent runtime for applications doing arbitrary work.
 
 The focused [C1 spike](docs/project/cycles/001-first-spike.md) and [C2 cycle](docs/project/cycles/002-single-agent-completion.md) are complete. C2 implements bounded filesystem tools, machine-readable task output, static policy and accounting, with acceptance on macOS arm64 and [native Linux x86_64](docs/project/evidence/c2.5-linux-x64.md). This is not a published release. The [architecture brief](docs/context.md) describes the larger product; section 29.1 defines the 0.1 release contract. The project-state command reports checkpoint progress across retained cycles.
 
-The selected [C3 plan](docs/project/cycles/003-extensibility-and-release.md) covers declarative deployment configuration, ordered model fallback, shell command rules, providers, MCP, Skills, structured output, temporary children, A2A, a basic TUI and release delivery in small checkpoints. Otto integration remains deferred. Deployment loading/inspection, shell command rules, Vercel/OpenRouter gateways and configured Open Responses are implemented; later capabilities remain checkpointed in the plan. See the [deployment contract and examples](docs/project/contracts/c3-deployment-config.md).
+The selected [C3 plan](docs/project/cycles/003-extensibility-and-release.md) covers declarative deployment configuration, ordered model fallback, basic context compaction, shell command rules, providers, MCP, Skills, structured output, temporary children, A2A, a basic TUI and release delivery in small checkpoints. Otto integration remains deferred. Deployment loading/inspection, shell command rules, Vercel/OpenRouter gateways and configured Open Responses are implemented; later capabilities remain checkpointed in the plan. See the [deployment contract and examples](docs/project/contracts/c3-deployment-config.md).
 
 ## Run a real task
 
@@ -67,7 +67,7 @@ Shorthand and machine output use the same runtime:
 
 See [the gateway and CLI contract](docs/gateway.md) for transport details, trace options, and the explicit live smoke check.
 
-Named models and ordered routes can be inspected offline with `pablo config explain`. A single-entry route runs through CLI/ACP; fallback execution belongs to C3.11. See [route configuration and examples](docs/project/contracts/c3-model-routes.md).
+Named models and ordered routes can be inspected offline with `pablo config explain`. Ordered fallback runs through CLI/ACP with shared task budgets and preserved tool history. See [route configuration and examples](docs/project/contracts/c3-model-routes.md).
 
 ## Use ACP from TypeScript
 

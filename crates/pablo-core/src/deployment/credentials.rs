@@ -85,7 +85,6 @@ impl PreparedRun {
         consumer: CredentialConsumer,
         inputs: &dyn CredentialInputs,
     ) -> Result<Option<ScopedCredential>, ConfigError> {
-        let config = self.deployment().config();
         let options = self.deployment().options();
         let model = self.deployment().selected_model();
         let (reference, destination) = match consumer {
@@ -99,6 +98,35 @@ impl PreparedRun {
                 options["otel"]["endpoint"].as_str().unwrap(),
             ),
         };
+        self.resolve_credential(consumer, reference, destination, inputs)
+    }
+    /// Select only an entry of this prepared deployment's authorized route.
+    pub fn route_credential(
+        &self,
+        index: usize,
+        inputs: &dyn CredentialInputs,
+    ) -> Result<ScopedCredential, ConfigError> {
+        let entry = self
+            .deployment()
+            .model_route()
+            .and_then(|r| r.entries().get(index))
+            .ok_or_else(|| error("config_credential_scope", "/model_route"))?;
+        self.resolve_credential(
+            entry.profile().provider.credential_consumer(),
+            &Value::String(entry.credential().into()),
+            &entry.profile().endpoint,
+            inputs,
+        )?
+        .ok_or_else(|| error("config_credential_missing", "/model_route"))
+    }
+    fn resolve_credential(
+        &self,
+        consumer: CredentialConsumer,
+        reference: &Value,
+        destination: &str,
+        inputs: &dyn CredentialInputs,
+    ) -> Result<Option<ScopedCredential>, ConfigError> {
+        let config = self.deployment().config();
         if reference["unset"] == true {
             return Ok(None);
         }

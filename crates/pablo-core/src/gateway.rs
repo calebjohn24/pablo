@@ -103,6 +103,17 @@ impl GatewayProvider {
 }
 
 impl Provider for GatewayProvider {
+    fn accepts_history(
+        &self,
+        model: &str,
+        messages: &[Message],
+        entries: &[crate::provider::ContinuationEntry],
+    ) -> bool {
+        match &self.backend {
+            Backend::Responses(p) => p.accepts_history(model, messages, entries),
+            Backend::Chat(_) => entries.is_empty(),
+        }
+    }
     fn validate_model(&self, model: &str, max_output_tokens: u32) -> Result<(), &'static str> {
         match &self.backend {
             Backend::Responses(p) => p.validate_model(model, max_output_tokens),
@@ -188,6 +199,7 @@ fn native_name(name: &str) -> Option<&'static str> {
 fn request_body(request: &ModelRequest<'_>, kind: GatewayKind) -> Result<Vec<u8>, ProviderError> {
     if !request.continuations.is_empty() {
         return Err(ProviderError {
+            retry_class: None,
             code: FailureCode::UnsupportedProviderContent,
             delivery: DeliveryCertainty::NotSent,
         });
@@ -252,12 +264,14 @@ fn request_body(request: &ModelRequest<'_>, kind: GatewayKind) -> Result<Vec<u8>
 
 fn not_sent() -> ProviderError {
     ProviderError {
+        retry_class: None,
         code: FailureCode::ProviderRejected,
         delivery: DeliveryCertainty::NotSent,
     }
 }
 fn malformed() -> ProviderError {
     ProviderError {
+        retry_class: None,
         code: FailureCode::MalformedStream,
         delivery: DeliveryCertainty::ResponseReceived,
     }
@@ -284,6 +298,7 @@ impl ResponseStream {
                         .read(&mut self.bytes)
                         .await
                         .map_err(|_| ProviderError {
+                            retry_class: None,
                             code: FailureCode::ProviderTransport,
                             delivery: DeliveryCertainty::ResponseReceived,
                         })?;
@@ -337,6 +352,7 @@ impl Completion {
         let value: Value = serde_json::from_slice(data).map_err(|_| malformed())?;
         if value.get("error").is_some() {
             return Err(ProviderError {
+                retry_class: None,
                 code: FailureCode::ProviderRejected,
                 delivery: DeliveryCertainty::ResponseReceived,
             });
