@@ -44,7 +44,7 @@ The owner below must check current official sources, record immutable revisions/
 | C3.3 | Implement the C3.1 resolved contract across CLI/ACP/embedding, validate/explain/render, canonical fingerprints, authority ceilings and per-run snapshots; prove legacy and explicit-config behavior |
 | C3.4 | Literal-command parsing subset, exact executable/argv and supported prefix matching, defaults/deny precedence, ambiguous syntax rejection, stable decision IDs and launcher/descendant distinction |
 | C3.5 | Provider-selection/credential precedence for CLI/ACP/Rust, explicit model defaults, shared versus gateway-owned fields, trusted endpoint handling, OpenRouter candidate profile and requested/resolved capability metadata |
-| C3.8 | Open Responses pinned HTTP/SSE subset, item/event ordering and continuation retention, configured capability resolution, usage/finish/errors, unsupported content and bounded state |
+| C3.8 | [OR01 pinned contract](c3-open-responses.md): Open Responses HTTP/SSE subset, item/event ordering and continuation retention, configured capability resolution, usage/finish/errors, unsupported content and bounded state |
 | C3.10 | Named model profiles/ordered route, sticky selection, capabilities/continuation compatibility, attempt limits/error eligibility/delivery certainty and a single retry owner |
 | C3.13 | Draft 2020-12 keyword/vocabulary and `format` behavior, local-reference/recursion/work limits, schema digest/cache, JSON parsing, output validation envelope and generic ACP projection |
 | C3.14 | Exactly one same-run repair, bounded feedback, accounting admission, repair-visible events and typed exhausted/invalid outcomes |

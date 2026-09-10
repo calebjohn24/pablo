@@ -1,0 +1,38 @@
+{
+  "repository": "https://github.com/openresponses/openresponses",
+  "revision": "92c12d96d7b61d6d15e2214daa5e9c6000ab6e1c",
+  "specification_version": "2026-04-24",
+  "retrieved_at": "2026-09-10",
+  "files": [
+    {
+      "upstream_path": "public/openapi/2026-04-24/openapi.json",
+      "local_path": "upstream/openapi.json",
+      "sha256": "d598753c3a86fd8a2434828fe39dcc8786a7a694bbe46080a0d24c9fa40e72df",
+      "bytes": 138849
+    },
+    {
+      "upstream_path": "src/specifications/2026-04-24.mdx",
+      "local_path": "upstream/specification.mdx",
+      "sha256": "a7a9e3848722b11feaea51df62233ac7b676b6dda42007d9fde02d41dd22aa75",
+      "bytes": 46026
+    },
+    {
+      "upstream_path": "src/lib/compliance-tests.ts",
+      "local_path": "upstream/compliance-tests.ts",
+      "sha256": "63b5e6595ac831ee74b8e887af76c28d69aee8e2ec7d9e99dc688eec4bccb7fb",
+      "bytes": 50598
+    },
+    {
+      "upstream_path": "src/lib/sse-parser.ts",
+      "local_path": "upstream/sse-parser.ts",
+      "sha256": "9a709fb5e4272a61914bd5e309fc5c88b098de98276420598b9b648cce63e76d",
+      "bytes": 8167
+    },
+    {
+      "upstream_path": "LICENSE",
+      "local_path": "upstream/LICENSE",
+      "sha256": "43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1",
+      "bytes": 11356
+    }
+  ]
+}

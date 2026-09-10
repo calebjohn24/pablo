@@ -1,0 +1,18 @@
+# C3.9 contract example; intentionally unsupported by the C3.8 loader.
+schema_version = 1
+
+[credentials.responses]
+consumer = "provider.open_responses"
+sources = [{ kind = "environment", name = "EXAMPLE_RESPONSES_TOKEN" }]
+
+[options.model]
+provider = "open_responses"
+id = "operator-selected-model"
+endpoint = "https://responses.example.test/v1/responses"
+capability_profile = "open-responses-text-tools-v1"
+credential = "responses"
+auth_header = "Authorization"
+auth_scheme = "bearer"
+
+[options.shell]
+enabled = false

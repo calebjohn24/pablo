@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-10T18:06:09.451Z",
+  "updated_at": "2026-09-10T18:26:49.611Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.8",
-  "next_action": "Merge verified C3.7, then select C3.8 to pin Open Responses contracts and upstream fixtures before implementing its adapter. Preserve GLM defaults, private credential resolution and unlimited filesystem work defaults.",
-  "latest_log_entry": "LOG-0068",
+  "next_checkpoint": "C3.9",
+  "next_action": "Merge verified C3.8, then activate C3.9 for the native Open Responses adapter and actual core/CLI/ACP OR02. Preserve private continuation, endpoint/header credential scope, closed unsupported-content errors, GLM gateway defaults and unlimited filesystem work; rebuild and compare matched performance before merge.",
+  "latest_log_entry": "LOG-0070",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -328,9 +328,11 @@
       "depends_on": [
         "C3.6"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0070"
+      ]
     },
     {
       "id": "C3.9",

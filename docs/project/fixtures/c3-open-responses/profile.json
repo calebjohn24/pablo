@@ -1,0 +1,50 @@
+{
+  "id": "open-responses-text-tools-v1",
+  "provider": "open_responses",
+  "protocol": "open-responses-http-sse",
+  "upstream_revision": "92c12d96d7b61d6d15e2214daa5e9c6000ab6e1c",
+  "specification_version": "2026-04-24",
+  "resolution": "operator_declared",
+  "required": [
+    "text_input",
+    "streamed_text_output",
+    "function_tools",
+    "full_input_continuation",
+    "opaque_reasoning",
+    "reasoning_summaries",
+    "assistant_phase",
+    "token_usage",
+    "cache_read_usage"
+  ],
+  "unsupported": [
+    "raw_reasoning_content",
+    "multimodal_content",
+    "refusals",
+    "nonempty_annotations",
+    "nonempty_logprobs",
+    "provider_hosted_tools",
+    "extension_items",
+    "structured_output_enforcement",
+    "background",
+    "websocket",
+    "compaction",
+    "client_cache_controls",
+    "cost_reporting",
+    "hard_token_bound",
+    "hard_cost_bound"
+  ],
+  "limits": {
+    "request_bytes": 134217728,
+    "response_bytes": 134217728,
+    "sse_frame_bytes": 33554432,
+    "sse_frames": 1000000,
+    "retained_state_bytes": 33554432,
+    "items_and_parts": 4096,
+    "function_calls": 128,
+    "id_bytes": 256,
+    "call_id_bytes": 64,
+    "function_name_bytes": 64,
+    "json_depth": 128,
+    "minimum_output_tokens": 16
+  }
+}
