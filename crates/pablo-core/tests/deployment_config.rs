@@ -36,6 +36,90 @@ fn prepared_credential(f: &Fixture, sources: Value) -> deployment::PreparedRun {
 }
 
 #[test]
+fn openrouter_credentials_resolve_privately_and_cannot_cross_consumers_or_destinations() {
+    use deployment::CredentialConsumer::{OpenRouter, OtelHeaders, Vercel};
+    use pablo_core::gateway::{OPENROUTER_ENDPOINT, VERCEL_ENDPOINT};
+    let f = Fixture::new();
+    let prepared = f.resolve(json!({
+        "options":{"model":{"provider":"openrouter"}},
+        "credentials":{"gateway":{"consumer":"provider.openrouter","sources":[
+            {"kind":"environment","name":"OPENROUTER_API_KEY"},
+            {"kind":"file","path":{"base":"config","path":"synthetic.env"},"encoding":"dotenv","key":"OPENROUTER_API_KEY"},
+            {"kind":"host","name":"router"}
+        ]}}
+    })).prepare_run(deployment::RunInput{input:"synthetic".into(),session_id:None,workspace:None}).unwrap();
+    let mut inputs = PrivateInputs {
+        host: Some(b"private-router-host".to_vec()),
+        ..Default::default()
+    };
+    for (environment, file, expected) in [
+        (
+            Some("private-router-env"),
+            Some("OPENROUTER_API_KEY=private-router-file\n"),
+            "private-router-env",
+        ),
+        (
+            None,
+            Some("OPENROUTER_API_KEY=private-router-file\nAI_GATEWAY_API_KEY=private-vercel\n"),
+            "private-router-file",
+        ),
+        (None, None, "private-router-host"),
+    ] {
+        inputs.environment = environment.map(|v| v.as_bytes().to_vec());
+        if let Some(file) = file {
+            f.write("synthetic.env", file);
+        } else {
+            fs::remove_file(f.0.join("synthetic.env")).unwrap();
+        }
+        let credential = prepared.credential(OpenRouter, &inputs).unwrap().unwrap();
+        assert_eq!(
+            credential
+                .expose_for(OpenRouter, OPENROUTER_ENDPOINT)
+                .unwrap(),
+            expected
+        );
+        for (consumer, endpoint) in [
+            (Vercel, VERCEL_ENDPOINT),
+            (Vercel, OPENROUTER_ENDPOINT),
+            (OtelHeaders, OPENROUTER_ENDPOINT),
+            (OpenRouter, VERCEL_ENDPOINT),
+            (OpenRouter, "http://127.0.0.1:1/fixture"),
+        ] {
+            assert_eq!(
+                credential.expose_for(consumer, endpoint).unwrap_err().code,
+                "config_credential_scope"
+            );
+        }
+        let surfaces = format!(
+            "{credential:?} {prepared:?} {} {}",
+            serde_json::to_string(prepared.deployment()).unwrap(),
+            prepared.deployment().render().unwrap()
+        );
+        assert!(!surfaces.contains("private-router"));
+    }
+    assert_eq!(
+        prepared.credential(Vercel, &inputs).unwrap_err().code,
+        "config_credential_scope"
+    );
+    for invalid in [
+        vec![],
+        b"private invalid".to_vec(),
+        vec![255],
+        vec![b'x'; 8193],
+    ] {
+        inputs.environment = Some(invalid);
+        let before = inputs.host_calls.load(std::sync::atomic::Ordering::SeqCst);
+        let error = prepared.credential(OpenRouter, &inputs).unwrap_err();
+        assert_eq!(error.code, "config_credential_invalid");
+        assert!(!format!("{error:?}").contains("private"));
+        assert_eq!(
+            inputs.host_calls.load(std::sync::atomic::Ordering::SeqCst),
+            before
+        );
+    }
+}
+
+#[test]
 fn credential_fallback_only_uses_absent_sources_and_never_hashes_or_serializes_values() {
     use deployment::CredentialConsumer::Vercel;
     let f = Fixture::new();
@@ -1798,7 +1882,7 @@ fn shell_configuration_rejects_unknown_invalid_inactive_and_duplicate_rules() {
 }
 
 #[test]
-fn provider_defaults_metadata_authority_and_unavailable_admission_are_shared() {
+fn provider_defaults_metadata_authority_and_admission_are_shared() {
     use pablo_core::gateway::{GatewayKind, ModelProfile};
     let f = Fixture::new();
     for kind in [GatewayKind::Vercel, GatewayKind::Openrouter] {
@@ -1826,13 +1910,7 @@ fn provider_defaults_metadata_authority_and_unavailable_admission_are_shared() {
             workspace: Some(f.0.clone()),
             session_id: None,
         });
-        if kind == GatewayKind::Vercel {
-            assert_eq!(admitted.unwrap().spec().model, kind.default_model());
-        } else {
-            let error = admitted.unwrap_err();
-            assert_eq!(error.code, "config_unsupported_feature");
-            assert_eq!(error.owner, Some("C3.6"));
-        }
+        assert_eq!(admitted.unwrap().spec().model, kind.default_model());
         assert!(
             !resolved
                 .model_profile()

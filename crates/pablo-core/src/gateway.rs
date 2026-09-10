@@ -1,4 +1,4 @@
-//! Direct Vercel chat-completions transport. Credentials stay adapter-owned.
+//! Direct Vercel/OpenRouter chat-completions adapters. Credentials stay adapter-owned.
 use std::{collections::BTreeMap, collections::VecDeque, pin::Pin};
 
 use futures_util::{future::BoxFuture, stream};
@@ -10,6 +10,7 @@ use crate::{
     provider::{ModelRequest, ProviderError, ProviderEvent, ProviderStream},
 };
 
+mod openrouter;
 mod profile;
 mod transport;
 pub use profile::{
@@ -34,7 +35,13 @@ impl GatewayProvider {
         kind.ensure_available()?;
         Ok(Self {
             kind,
-            transport: transport::Transport::new(kind.endpoint(), key, false)?,
+            transport: transport::Transport::new(kind.endpoint(), key, false).map_err(|e| {
+                if kind == GatewayKind::Openrouter && e == "invalid AI_GATEWAY_API_KEY" {
+                    "invalid OPENROUTER_API_KEY"
+                } else {
+                    e
+                }
+            })?,
         })
     }
     pub fn local_fixture(endpoint: &str) -> Result<Self, &'static str> {
@@ -60,7 +67,7 @@ impl Provider for GatewayProvider {
         request: ModelRequest<'a>,
     ) -> BoxFuture<'a, Result<ProviderStream<'a>, ProviderError>> {
         Box::pin(async move {
-            let body = request_body(&request)?;
+            let body = request_body(&request, self.kind)?;
             // The runtime selects against the absolute deadline and cancellation
             // while opening and polling this stream. Dropping it drops the socket.
             let reader = self.transport.open(body, request.deadline).await?;
@@ -70,7 +77,10 @@ impl Provider for GatewayProvider {
                 cursor: 0,
                 available: 0,
                 decoder: SseDecoder::default(),
-                completion: Completion::default(),
+                completion: Completion {
+                    kind: self.kind,
+                    ..Completion::default()
+                },
                 stopped: false,
             };
             Ok(Box::pin(stream::unfold(state, |mut state| async move {
@@ -111,7 +121,7 @@ fn native_name(name: &str) -> Option<&'static str> {
     }
 }
 
-fn request_body(request: &ModelRequest<'_>) -> Result<Vec<u8>, ProviderError> {
+fn request_body(request: &ModelRequest<'_>, kind: GatewayKind) -> Result<Vec<u8>, ProviderError> {
     let mut messages = Vec::new();
     if !request.instructions.is_empty() {
         messages.push(json!({"role":"system", "content":request.instructions}));
@@ -140,8 +150,10 @@ fn request_body(request: &ModelRequest<'_>) -> Result<Vec<u8>, ProviderError> {
         });
     }
     let mut body = json!({"model":request.model, "messages":messages,
-        "stream":true, "stream_options":{"include_usage":true},
-        "max_tokens":request.max_output_tokens});
+        "stream":true, "max_tokens":request.max_output_tokens});
+    if kind == GatewayKind::Vercel {
+        body["stream_options"] = json!({"include_usage":true});
+    }
     if !request.tools.is_empty() {
         let tools: Result<Vec<_>, _> = request
             .tools
@@ -228,6 +240,8 @@ struct Call {
 }
 #[derive(Default)]
 struct Completion {
+    kind: GatewayKind,
+    cost: Option<u64>,
     pending: VecDeque<ProviderEvent>,
     calls: BTreeMap<u64, Call>,
     finish: Option<FinishReason>,
@@ -240,6 +254,9 @@ impl Completion {
             let reason = self.finish.ok_or_else(malformed)?;
             if self.calls.values().any(|call| !call.started) {
                 return Err(malformed());
+            }
+            if let Some(microusd) = self.cost.take() {
+                self.pending.push_back(ProviderEvent::Cost { microusd });
             }
             self.pending.push_back(ProviderEvent::Finished {
                 reason,
@@ -254,19 +271,24 @@ impl Completion {
                 delivery: DeliveryCertainty::ResponseReceived,
             });
         }
-        if let Some(usage) = value.get("usage").filter(|v| !v.is_null()) {
+        let accounting = value.get("usage").filter(|v| !v.is_null());
+        if let Some(usage) = accounting {
             if self.usage_seen || !usage.is_object() {
                 return Err(malformed());
             }
             self.usage_seen = true;
-            self.usage = Usage {
-                input_tokens: counter(usage.get("prompt_tokens"))?,
-                output_tokens: counter(usage.get("completion_tokens"))?,
-                cache_read_input_tokens: counter(
-                    usage.pointer("/prompt_tokens_details/cached_tokens"),
-                )?,
-                cache_write_input_tokens: None,
-            };
+            if self.kind == GatewayKind::Openrouter {
+                (self.usage, self.cost) = openrouter::accounting(data)?;
+            } else {
+                self.usage = Usage {
+                    input_tokens: counter(usage.get("prompt_tokens"))?,
+                    output_tokens: counter(usage.get("completion_tokens"))?,
+                    cache_read_input_tokens: counter(
+                        usage.pointer("/prompt_tokens_details/cached_tokens"),
+                    )?,
+                    cache_write_input_tokens: None,
+                };
+            }
         }
         let choices = value
             .get("choices")
@@ -275,7 +297,17 @@ impl Completion {
         if choices.is_empty() {
             return Ok(());
         }
-        if choices.len() != 1 || choices[0]["index"] != 0 || self.finish.is_some() {
+        if let Some(finish) = self.finish {
+            if self.kind == GatewayKind::Openrouter
+                && accounting.is_some()
+                && choices.len() == 1
+                && openrouter::accounting_choice(&choices[0], finish)
+            {
+                return Ok(());
+            }
+            return Err(malformed());
+        }
+        if choices.len() != 1 || choices[0]["index"] != 0 {
             return Err(malformed());
         }
         let choice = &choices[0];
@@ -320,11 +352,16 @@ impl Completion {
             .and_then(Value::as_u64)
             .filter(|&i| i < MAX_CALLS)
             .ok_or_else(malformed)?;
-        if value.get("type").is_some_and(|kind| kind != "function") {
+        let nullable = self.kind == GatewayKind::Openrouter;
+        if value
+            .get("type")
+            .filter(|v| !nullable || !v.is_null())
+            .is_some_and(|kind| kind != "function")
+        {
             return Err(malformed());
         }
         let call = self.calls.entry(index).or_default();
-        if let Some(id) = value.get("id") {
+        if let Some(id) = value.get("id").filter(|v| !nullable || !v.is_null()) {
             let id = id.as_str().ok_or_else(malformed)?;
             if id.is_empty()
                 || id.len() > 128
@@ -339,14 +376,17 @@ impl Completion {
             .get("function")
             .and_then(Value::as_object)
             .ok_or_else(malformed)?;
-        if let Some(name) = function.get("name") {
+        if let Some(name) = function.get("name").filter(|v| !nullable || !v.is_null()) {
             let name = name.as_str().ok_or_else(malformed)?;
             if call.started || call.name.len() + name.len() > 64 {
                 return Err(malformed());
             }
             call.name.push_str(name);
         }
-        if let Some(arguments) = function.get("arguments") {
+        if let Some(arguments) = function
+            .get("arguments")
+            .filter(|v| !nullable || !v.is_null())
+        {
             let delta = arguments.as_str().ok_or_else(malformed)?;
             if !delta.is_empty() {
                 if !call.started {

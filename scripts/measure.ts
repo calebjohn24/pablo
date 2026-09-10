@@ -16,6 +16,9 @@ import { body, cleanEnv, server } from '../tests/fixtures/telemetry.ts';
 import { sourceFingerprint } from './lib/source-fingerprint.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const provider=process.env.PABLO_MEASURE_PROVIDER ?? 'vercel';
+assert(provider==='vercel'||provider==='openrouter');
+const model=provider==='vercel'?'zai/glm-5.3-flash':'z-ai/glm-5.3-flash';
 const count = Number(process.argv[2] ?? 30);
 assert(Number.isInteger(count) && count >= 10 && count <= 1000, 'sample count must be 10–1000');
 const binary = resolve(process.env.PABLO_MEASURE_BINARY ?? join(root, 'target/release/pablo'));
@@ -53,7 +56,7 @@ const frame = (delta: object, finish: string | null = null) => `data: ${JSON.str
 const gateway = await server(async (req, res) => {
   requestTimes.push(performance.now());
   const request = JSON.parse((await body(req)).toString());
-  assert.equal(request.model, 'zai/glm-5.3-flash');
+  assert.equal(request.model, model);
   res.writeHead(200, { 'content-type': 'text/event-stream' });
   if (request.messages.at(-1).content === firstDeltaTask) {
     firstDeltaSentAt = performance.now();
@@ -73,14 +76,15 @@ const gateway = await server(async (req, res) => {
 const endpoint = `${gateway.url}/v1/chat/completions`;
 const task = 'Run the fixed measurement task.';
 const entry=join(cwd,'deployment.toml');
-const options = configured ? ['--config',entry,'--bind',`workspace=${cwd}`,'--fixture-endpoint',endpoint] : ['--model', 'zai/glm-5.3-flash', '--max-model-calls', '2', '--max-tool-calls', '1'];
+const options = configured ? ['--config',entry,'--bind',`workspace=${cwd}`,'--fixture-endpoint',endpoint] : [...(provider==='openrouter'?['--provider',provider]:[]),'--model', model, '--max-model-calls', '2', '--max-tool-calls', '1'];
 try {
   if(configured) await writeFile(entry,`schema_version=1
 [credentials.gateway]
-consumer="provider.vercel"
+consumer="provider.${provider}"
 sources=[{kind="environment",name="UNREAD_FIXTURE_KEY"}]
 [options.model]
-id="zai/glm-5.3-flash"
+provider="${provider}"
+id="${model}"
 [options.limits]
 max_model_calls=2
 max_tool_calls=1
@@ -190,7 +194,7 @@ ${restricted ? `[options.shell.commands]\ndefault="deny"\nallow=[{id="measure.pr
       environment: process.env.PABLO_MEASURE_ENVIRONMENT ?? 'local host' },
     build: { profile: process.env.PABLO_MEASURE_BUILD ?? (await readFile(join(root, 'Cargo.toml'), 'utf8')).split('[profile.release]')[1].trim(), binary_bytes: (await stat(binary)).size, stripped_binary_bytes: (await stat(stripped)).size, strip_method: 'platform strip on a copy; timings use original release executable',
       binary_sha256: createHash('sha256').update(await readFile(binary)).digest('hex') },
-    method: { configuration: restricted ? 'explicit deployment file with exact printf executable/argv allowlist' : configured ? 'explicit deployment file; re-resolved per admitted task' : 'legacy invocation', samples: count, warmup: 5, cache: 'warm filesystem; no forced cache eviction',
+    method: { provider, model, configuration: restricted ? 'explicit deployment file with exact printf executable/argv allowlist' : configured ? 'explicit deployment file; re-resolved per admitted task' : 'legacy invocation', samples: count, warmup: 5, cache: 'warm filesystem; no forced cache eviction',
       workload: `two local HTTP/SSE calls, one ${absoluteCommand ? 'explicit /usr/bin/printf' : 'bare printf'} shell command, 32 x 16-byte output deltas`,
       startup: 'Node monotonic spawn to first loopback provider request arrival; separate --version process wall time',
       baseline: 'direct core run_with_tools in measurement host; SDK/provider/tool construction excluded from core_run_ms',

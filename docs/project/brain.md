@@ -179,9 +179,8 @@ Pinned SDK builders read ambient detectors before setters, and OTLP merges ambie
 
 - Keep `docs/context.md` as the detailed design source; review deliberate changes using the state file's stored SHA-256.
 - Secrets and generated runtime traces stay out of project memory and Git. The root `.env` is ignored; shell subprocesses must not inherit provider/exporter credentials.
-- Static execution policy is not containment. Hosts provide isolation.
+- Static execution policy is not containment. Hosts provide isolation; unsupported release capabilities stay visible in the backlog. A green checkpoint does not imply a complete 0.1 runtime.
 - Ordinary tests use offline fixtures. Live provider and real Collector gates require actual evidence before cycle completion.
-- Unsupported release capabilities stay visible in the backlog. A green checkpoint does not imply a complete 0.1 runtime.
 - Prefer measured baselines to speculative performance gates.
 
 ## How to resume
@@ -195,3 +194,7 @@ C3.4 keeps the fixed launcher but passes checked canonical executable/arguments 
 ### D041 — Provider-scoped GLM defaults and one transport implementation
 
 The user selected `zai/glm-5.3-flash` for Vercel and `z-ai/glm-5.3-flash` for OpenRouter, including provider testing. C3.5 deliberately replaces the prior Gemini default and advances the configuration revision to c3.5. Provider-specific defaults and fixed credential destinations share one resolver; HTTP/SSE mechanics are reused while adapter mappings remain separate. OpenRouter inspection is available before its C3.6 adapter; unavailable execution rejects before credentials/effects. See the [selection contract](contracts/c3-provider-selection.md).
+
+### D042 — Normalize OpenRouter accounting once without floating-point money
+
+C3.6 enables OpenRouter through the shared gateway and treats its repeated terminal usage choice as accounting, not a second finish. Read cache counters and the account charge only when reported; parse raw decimal cost into micro-USD with a documented upward adjustment below one micro-USD per call. Never infer prices, sum upstream costs or attest hard ceilings. Exact key/destination scope and cancellation remain shared. See the [adapter contract](contracts/c3-openrouter.md).

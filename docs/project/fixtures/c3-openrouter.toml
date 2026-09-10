@@ -7,4 +7,4 @@ sources = [{kind = "environment", name = "OPENROUTER_API_KEY"}]
 [options.model]
 provider = "openrouter"
 # Omission selects z-ai/glm-5.3-flash and the fixed OpenRouter endpoint.
-# Offline inspection works at C3.5; execution requires the C3.6 adapter.
+# C3.6 supports execution; ordinary tests use synthetic loopback fixtures.

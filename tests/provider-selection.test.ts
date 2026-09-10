@@ -64,7 +64,7 @@ test('P01 default and explicit Vercel selection share real CLI/ACP round trips a
  } finally {await gateway.close();await rm(cwd,{recursive:true,force:true});}
 });
 
-test('P01 OpenRouter defaults inspect offline but unavailable execution cannot reach credentials, trace or fixture endpoint', {timeout:15000},async()=>{
+test('P01 OpenRouter defaults inspect offline and unavailable Open Responses cannot reach credentials, trace or fixture endpoint', {timeout:15000},async()=>{
  const cwd=await realpath(await mkdtemp(join(tmpdir(),'pablo-p01-unavailable-')));let requests=0;
  const gateway=await server((_req,res)=>{requests++;res.end();});
  try {
@@ -74,10 +74,11 @@ test('P01 OpenRouter defaults inspect offline but unavailable execution cannot r
   const inspected=JSON.parse((await exec(binary,['config','explain',...configured],{env,timeout:5000})).stdout);
   assert.equal(inspected.config.options.model.id,'z-ai/glm-5.3-flash');assert.equal(inspected.config.options.model.endpoint,'https://openrouter.ai/api/v1/chat/completions');
   assert(!JSON.stringify(inspected).includes('private-'));
+  await writeFile(file,(await readFile(file,'utf8')).replace('provider="openrouter"','provider="open_responses"'));
   for(const command of [['run','task'],['acp','--stdio']]) {
-   for(const args of [['--provider','openrouter','--env-file',join(cwd,'never-read.env')],configured,[...configured,'--fixture-endpoint',gateway.url+'/v1/chat/completions']]) {
+   for(const args of [['--provider','open_responses','--env-file',join(cwd,'never-read.env')],configured,[...configured,'--fixture-endpoint',gateway.url+'/v1/chat/completions']]) {
     await assert.rejects(exec(binary,[...command,...args],{env,timeout:5000}),e=>{
-     const error=e as {stdout:string,stderr:string,code:number};assert.equal(error.code,2);assert.equal(error.stdout,'');assert.match(error.stderr,/provider_unavailable|config_unsupported_feature/);assert.match(error.stderr,/C3.6/);assert(!error.stderr.includes('private'));return true;
+     const error=e as {stdout:string,stderr:string,code:number};assert.equal(error.code,2);assert.equal(error.stdout,'');assert.match(error.stderr,/provider_unavailable|config_unsupported_feature/);assert.match(error.stderr,/C3.9/);assert(!error.stderr.includes('private'));return true;
     });
    }
   }

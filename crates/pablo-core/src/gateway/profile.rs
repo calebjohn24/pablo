@@ -49,13 +49,11 @@ impl GatewayKind {
         }
     }
     pub fn available(self) -> bool {
-        self == Self::Vercel
+        self.ensure_available().is_ok()
     }
     pub fn ensure_available(self) -> Result<(), &'static str> {
-        if self.available() {
-            Ok(())
-        } else {
-            Err("provider_unavailable: openrouter (C3.6)")
+        match self {
+            Self::Vercel | Self::Openrouter => Ok(()),
         }
     }
 }
@@ -96,7 +94,7 @@ impl ModelProfile {
                 text_streaming: provider.available(),
                 tool_calls: provider.available(),
                 reported_usage: provider.available(),
-                reported_cost: false,
+                reported_cost: provider == GatewayKind::Openrouter,
                 hard_accounting_bounds: false,
             },
         })
@@ -108,7 +106,7 @@ mod tests {
     use super::*;
     use crate::{Provider, gateway::GatewayProvider};
     #[tokio::test]
-    async fn provider_factories_keep_unavailable_adapters_and_fixture_destinations_closed() {
+    async fn provider_factories_keep_credentials_and_fixture_destinations_scoped() {
         let provider =
             GatewayProvider::selected(GatewayKind::Vercel, "synthetic-unread-key").unwrap();
         assert_eq!(provider.name(), "vercel");
@@ -119,12 +117,22 @@ mod tests {
             None
         );
         assert!(GatewayProvider::selected(GatewayKind::Openrouter, "invalid private key").is_err());
+        let router =
+            GatewayProvider::selected(GatewayKind::Openrouter, "synthetic-unread-key").unwrap();
+        assert_eq!(router.name(), "openrouter");
+        assert_eq!(
+            router
+                .accounting_bounds(OPENROUTER_DEFAULT_MODEL, 1024)
+                .cost_microusd,
+            None
+        );
+        assert!("open_responses".parse::<GatewayKind>().is_err());
         assert!(
             GatewayProvider::local_fixture_for(
                 GatewayKind::Openrouter,
                 "http://127.0.0.1:1/fixture"
             )
-            .is_err()
+            .is_ok()
         );
         for endpoint in [
             "https://openrouter.ai/api/v1/chat/completions",
@@ -133,7 +141,9 @@ mod tests {
             "http://user:private@127.0.0.1:1234/fixture",
             "http://127.0.0.1:1234/#fragment",
         ] {
-            assert!(GatewayProvider::local_fixture_for(GatewayKind::Vercel, endpoint).is_err());
+            for kind in [GatewayKind::Vercel, GatewayKind::Openrouter] {
+                assert!(GatewayProvider::local_fixture_for(kind, endpoint).is_err());
+            }
         }
         assert!(
             GatewayProvider::local_fixture_for(GatewayKind::Vercel, "http://127.0.0.1:1/fixture")

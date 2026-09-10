@@ -15,7 +15,7 @@ pub struct Options {
     pub json: bool,
     pub trace_path: Option<PathBuf>,
     pub env_file: Option<PathBuf>,
-    provider: Option<pablo_core::gateway::GatewayKind>,
+    pub provider: Option<pablo_core::gateway::GatewayKind>,
     pub no_shell: bool,
     pub no_filesystem: bool,
     pub allow_write: bool,
@@ -433,10 +433,6 @@ impl Options {
 
 /// Parse privately; never mutate the process environment, source a shell file,
 /// search parent directories, or include parser errors (which contain values).
-pub fn gateway_key(path: Option<&Path>) -> Result<String, String> {
-    provider_key(pablo_core::gateway::GatewayKind::Vercel, path)
-}
-
 pub fn provider_key(
     kind: pablo_core::gateway::GatewayKind,
     path: Option<&Path>,

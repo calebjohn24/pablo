@@ -1,6 +1,6 @@
 # C3.5 provider selection and transport
 
-Frozen before implementation, with the user's explicit model choice applied.
+Frozen for C3.5 before implementation, with the user's explicit model choice applied. The [C3.6 adapter contract](c3-openrouter.md) now enables OpenRouter execution and extends its accounting capabilities; the C3.5 availability statements below are historical.
 Deployment schema remains v1 and contract revision becomes `c3.5`.
 
 - Provider selection is `vercel` (default) or `openrouter`, through `--provider`, `options.model.provider` and Rust `GatewayKind`. Vercel defaults to `zai/glm-5.3-flash`; OpenRouter defaults to `z-ai/glm-5.3-flash`. Explicit model IDs override the provider default. Provider tests and live smoke commands use these selected models; deterministic fixtures still make no paid calls.

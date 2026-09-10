@@ -15,7 +15,7 @@ export const content = 'synthetic-task-content-c15';
 export const traceState = 'pablofixture=parent';
 export function cleanEnv(): NodeJS.ProcessEnv {
   return Object.fromEntries(Object.entries(process.env).filter(([key]) =>
-    !key.startsWith('OTEL_') && !key.startsWith('PABLO_') && !['AI_GATEWAY_API_KEY', 'VERCEL_AI_GATEWAY'].includes(key)));
+    !key.startsWith('OTEL_') && !key.startsWith('PABLO_') && !['AI_GATEWAY_API_KEY', 'VERCEL_AI_GATEWAY', 'OPENROUTER_API_KEY'].includes(key)));
 }
 export async function server(handler: (req: IncomingMessage, res: ServerResponse) => Promise<void> | void) {
   const errors: unknown[] = [];
