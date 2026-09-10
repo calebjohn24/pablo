@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-10T18:26:49.611Z",
+  "updated_at": "2026-09-10T18:28:58.042Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.9",
-  "next_action": "Merge verified C3.8, then activate C3.9 for the native Open Responses adapter and actual core/CLI/ACP OR02. Preserve private continuation, endpoint/header credential scope, closed unsupported-content errors, GLM gateway defaults and unlimited filesystem work; rebuild and compare matched performance before merge.",
-  "latest_log_entry": "LOG-0070",
+  "next_action": "Activate C3.9 on feat/c3-open-responses from merged C3.8 base acaa7dd. Implement the frozen OR01 native adapter and OR02 core/CLI/ACP proofs, including private continuation and configured endpoint/header scope. Preserve gateway GLM defaults and unlimited filesystem work. Rebuild, run affected regressions and compare matched release performance before merging.",
+  "latest_log_entry": "LOG-0071",
   "checkpoints": [
     {
       "id": "C1.0",
