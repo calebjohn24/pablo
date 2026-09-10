@@ -268,7 +268,22 @@ pub(crate) fn config(config: &Value, request: &ResolveRequest) -> Result<(), Con
         .unwrap()
         .parse()
         .map_err(|_| error("config_invalid_value", "/config/options/model/provider"))?;
-    if options["model"]["endpoint"] != provider.endpoint() {
+    if provider == crate::gateway::GatewayKind::OpenResponses {
+        super::admission::responses_profile(&options["model"])?;
+        if options["limits"]["max_output_tokens"]
+            .as_u64()
+            .is_none_or(|n| n < 16)
+        {
+            return Err(error(
+                "config_invalid_value",
+                "/options/limits/max_output_tokens",
+            ));
+        }
+    } else if options["model"]["endpoint"] != provider.endpoint()
+        || ["capability_profile", "auth_header", "auth_scheme"]
+            .iter()
+            .any(|field| options["model"].get(field).is_some())
+    {
         return Err(error(
             "config_invalid_value",
             "/config/options/model/endpoint",

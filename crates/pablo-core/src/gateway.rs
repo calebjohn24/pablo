@@ -12,6 +12,8 @@ use crate::{
 
 mod openrouter;
 mod profile;
+mod responses;
+pub use responses::{OpenResponsesProfile, OpenResponsesProvider};
 mod transport;
 pub use profile::{
     GatewayCapabilities, GatewayKind, ModelProfile, OPENROUTER_DEFAULT_MODEL, OPENROUTER_ENDPOINT,
@@ -24,6 +26,13 @@ const MAX_CALLS: u64 = 128;
 
 /// No Debug implementation: the credential is never a diagnostic value.
 pub struct GatewayProvider {
+    backend: Backend,
+}
+enum Backend {
+    Chat(ChatProvider),
+    Responses(OpenResponsesProvider),
+}
+struct ChatProvider {
     kind: GatewayKind,
     transport: transport::Transport,
 }
@@ -33,15 +42,22 @@ impl GatewayProvider {
     }
     pub fn selected(kind: GatewayKind, key: &str) -> Result<Self, &'static str> {
         kind.ensure_available()?;
+        if kind == GatewayKind::OpenResponses {
+            return Err(
+                "Open Responses requires configured endpoint, model and capability profile",
+            );
+        }
         Ok(Self {
-            kind,
-            transport: transport::Transport::new(kind.endpoint(), key, false).map_err(|e| {
-                if kind == GatewayKind::Openrouter && e == "invalid AI_GATEWAY_API_KEY" {
-                    "invalid OPENROUTER_API_KEY"
-                } else {
-                    e
-                }
-            })?,
+            backend: Backend::Chat(ChatProvider {
+                kind,
+                transport: transport::Transport::new(kind.endpoint(), key, false).map_err(|e| {
+                    if kind == GatewayKind::Openrouter && e == "invalid AI_GATEWAY_API_KEY" {
+                        "invalid OPENROUTER_API_KEY"
+                    } else {
+                        e
+                    }
+                })?,
+            }),
         })
     }
     pub fn local_fixture(endpoint: &str) -> Result<Self, &'static str> {
@@ -50,27 +66,75 @@ impl GatewayProvider {
     /// Host-only override. No real credential argument exists on this path.
     pub fn local_fixture_for(kind: GatewayKind, endpoint: &str) -> Result<Self, &'static str> {
         kind.ensure_available()?;
+        if kind == GatewayKind::OpenResponses {
+            return Err("Open Responses requires a configured fixture profile");
+        }
         Ok(Self {
-            kind,
-            transport: transport::Transport::new(endpoint, "pablo-local-fixture", true)?,
+            backend: Backend::Chat(ChatProvider {
+                kind,
+                transport: transport::Transport::new(endpoint, "pablo-local-fixture", true)?,
+            }),
         })
+    }
+    pub fn configured(profile: &ModelProfile, key: &str) -> Result<Self, &'static str> {
+        if let Some(responses) = &profile.open_responses {
+            Ok(Self {
+                backend: Backend::Responses(OpenResponsesProvider::new(responses.clone(), key)?),
+            })
+        } else {
+            Self::selected(profile.provider, key)
+        }
+    }
+    pub fn configured_fixture(
+        profile: &ModelProfile,
+        endpoint: &str,
+    ) -> Result<Self, &'static str> {
+        if let Some(responses) = &profile.open_responses {
+            Ok(Self {
+                backend: Backend::Responses(OpenResponsesProvider::local_fixture(
+                    responses.clone(),
+                    endpoint,
+                )?),
+            })
+        } else {
+            Self::local_fixture_for(profile.provider, endpoint)
+        }
     }
 }
 
 impl Provider for GatewayProvider {
+    fn validate_model(&self, model: &str, max_output_tokens: u32) -> Result<(), &'static str> {
+        match &self.backend {
+            Backend::Responses(p) => p.validate_model(model, max_output_tokens),
+            Backend::Chat(_) => Ok(()),
+        }
+    }
+    fn profile_identity(&self) -> Option<crate::ProviderIdentity> {
+        match &self.backend {
+            Backend::Responses(p) => p.profile_identity(),
+            Backend::Chat(_) => None,
+        }
+    }
     fn name(&self) -> &'static str {
-        self.kind.name()
+        match &self.backend {
+            Backend::Chat(p) => p.kind.name(),
+            Backend::Responses(p) => p.name(),
+        }
     }
 
     fn stream<'a>(
         &'a self,
         request: ModelRequest<'a>,
     ) -> BoxFuture<'a, Result<ProviderStream<'a>, ProviderError>> {
+        let chat = match &self.backend {
+            Backend::Chat(p) => p,
+            Backend::Responses(p) => return p.stream(request),
+        };
         Box::pin(async move {
-            let body = request_body(&request, self.kind)?;
+            let body = request_body(&request, chat.kind)?;
             // The runtime selects against the absolute deadline and cancellation
             // while opening and polling this stream. Dropping it drops the socket.
-            let reader = self.transport.open(body, request.deadline).await?;
+            let reader = chat.transport.open(body, request.deadline).await?;
             let state = ResponseStream {
                 reader,
                 bytes: [0; 4096],
@@ -78,7 +142,7 @@ impl Provider for GatewayProvider {
                 available: 0,
                 decoder: SseDecoder::default(),
                 completion: Completion {
-                    kind: self.kind,
+                    kind: chat.kind,
                     ..Completion::default()
                 },
                 stopped: false,
@@ -122,6 +186,12 @@ fn native_name(name: &str) -> Option<&'static str> {
 }
 
 fn request_body(request: &ModelRequest<'_>, kind: GatewayKind) -> Result<Vec<u8>, ProviderError> {
+    if !request.continuations.is_empty() {
+        return Err(ProviderError {
+            code: FailureCode::UnsupportedProviderContent,
+            delivery: DeliveryCertainty::NotSent,
+        });
+    }
     let mut messages = Vec::new();
     if !request.instructions.is_empty() {
         messages.push(json!({"role":"system", "content":request.instructions}));

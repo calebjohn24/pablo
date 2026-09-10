@@ -1,4 +1,4 @@
-# C3.9 contract example; intentionally unsupported by the C3.8 loader.
+# C3.9 runnable configuration shape. Replace example endpoint/model before live use.
 schema_version = 1
 
 [credentials.responses]

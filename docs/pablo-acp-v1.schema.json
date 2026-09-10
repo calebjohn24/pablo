@@ -197,6 +197,7 @@
                 "provider_rejected",
                 "provider_transport",
                 "malformed_stream",
+                "unsupported_provider_content",
                 "event_sink_io",
                 "invalid_tool_arguments",
                 "tool_execution",
@@ -273,6 +274,12 @@
         "trace_flags": {
           "type": "string",
           "pattern": "^[0-9a-f]{2}$"
+        },
+        "deployment": {
+          "$ref": "#/$defs/deployment"
+        },
+        "model_profile": {
+          "$ref": "#/$defs/model_profile"
         }
       },
       "required": [
@@ -347,6 +354,12 @@
         },
         "task": {
           "$ref": "#/$defs/task"
+        },
+        "deployment": {
+          "$ref": "#/$defs/deployment"
+        },
+        "model_profile": {
+          "$ref": "#/$defs/model_profile"
         }
       },
       "required": [
@@ -595,6 +608,67 @@
           }
         }
       ]
+    },
+    "deployment": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "contract_revision": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "fingerprint": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "schema_version",
+        "contract_revision",
+        "fingerprint"
+      ],
+      "additionalProperties": false
+    },
+    "model_profile": {
+      "type": "object",
+      "properties": {
+        "protocol": {
+          "const": "open-responses-http-sse"
+        },
+        "revision": {
+          "const": "92c12d96d7b61d6d15e2214daa5e9c6000ab6e1c"
+        },
+        "capability_profile": {
+          "const": "open-responses-text-tools-v1"
+        },
+        "endpoint": {
+          "type": "string",
+          "maxLength": 4096
+        },
+        "requested_model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "resolved_model": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        }
+      },
+      "required": [
+        "protocol",
+        "revision",
+        "capability_profile",
+        "endpoint",
+        "requested_model",
+        "resolved_model"
+      ],
+      "additionalProperties": false
     }
   }
 }

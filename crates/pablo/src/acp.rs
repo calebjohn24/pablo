@@ -62,6 +62,9 @@ fn correlation(event: &RunEvent, first: u64) -> Value {
     if let Some(identity) = &event.deployment {
         value["deployment"] = serde_json::to_value(identity).expect("bounded identity");
     }
+    if let Some(profile) = &event.model_profile {
+        value["model_profile"] = serde_json::to_value(profile).expect("bounded provider identity");
+    }
     value
 }
 
@@ -703,6 +706,7 @@ mod tests {
 
     fn event(seq: u64, kind: EventKind) -> RunEvent {
         RunEvent {
+            model_profile: None,
             deployment: None,
             accounting: None,
             schema_version: "c1.2".into(),

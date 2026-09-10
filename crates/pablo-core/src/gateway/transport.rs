@@ -14,9 +14,19 @@ pub(super) struct Transport {
     client: Client,
     endpoint: Url,
     authorization: header::HeaderValue,
+    auth_header: header::HeaderName,
 }
 impl Transport {
     pub(super) fn new(endpoint: &str, key: &str, local: bool) -> Result<Self, &'static str> {
+        Self::with_auth(endpoint, key, local, "Authorization", false)
+    }
+    pub(super) fn with_auth(
+        endpoint: &str,
+        key: &str,
+        local: bool,
+        auth_header: &str,
+        raw: bool,
+    ) -> Result<Self, &'static str> {
         let endpoint = Url::parse(endpoint).map_err(|_| "invalid gateway endpoint")?;
         if local
             && !(endpoint.scheme() == "http"
@@ -35,8 +45,14 @@ impl Transport {
         if key.is_empty() || key.len() > 8192 || key.chars().any(char::is_whitespace) {
             return Err("invalid AI_GATEWAY_API_KEY");
         }
-        let mut authorization = header::HeaderValue::from_str(&format!("Bearer {key}"))
-            .map_err(|_| "invalid AI_GATEWAY_API_KEY")?;
+        let auth_header = header::HeaderName::from_bytes(auth_header.as_bytes())
+            .map_err(|_| "invalid authentication header")?;
+        let mut authorization = header::HeaderValue::from_str(&if raw {
+            key.to_owned()
+        } else {
+            format!("Bearer {key}")
+        })
+        .map_err(|_| "invalid AI_GATEWAY_API_KEY")?;
         authorization.set_sensitive(true);
         let client = Client::builder()
             .redirect(reqwest::redirect::Policy::none())
@@ -49,6 +65,7 @@ impl Transport {
             client,
             endpoint,
             authorization,
+            auth_header,
         })
     }
     pub(super) async fn open(
@@ -59,7 +76,7 @@ impl Transport {
         let response = self
             .client
             .post(self.endpoint.clone())
-            .header(header::AUTHORIZATION, self.authorization.clone())
+            .header(self.auth_header.clone(), self.authorization.clone())
             .header(header::CONTENT_TYPE, "application/json")
             .header(header::ACCEPT, "text/event-stream")
             .timeout(deadline.saturating_duration_since(tokio::time::Instant::now()))
@@ -112,8 +129,13 @@ pub(super) struct SseDecoder {
     total: usize,
     frames: usize,
     skip_lf: bool,
+    event: Option<Vec<u8>>,
+    completed_event: Option<Vec<u8>>,
 }
 impl SseDecoder {
+    pub(super) fn take_event(&mut self) -> Option<Vec<u8>> {
+        self.completed_event.take()
+    }
     pub(super) fn push(&mut self, byte: u8) -> Result<Option<Vec<u8>>, ProviderError> {
         self.total += 1;
         self.frame_bytes += 1;
@@ -136,8 +158,10 @@ impl SseDecoder {
                 return Err(malformed());
             }
             if self.data.is_empty() {
+                self.event = None;
                 return Ok(None);
             }
+            self.completed_event = self.event.take();
             self.data.pop(); // Last data-field newline.
             return Ok(Some(std::mem::take(&mut self.data)));
         }
@@ -146,6 +170,9 @@ impl SseDecoder {
             self.data
                 .extend_from_slice(value.strip_prefix(b" ").unwrap_or(value));
             self.data.push(b'\n');
+        } else if self.line == b"event" || self.line.starts_with(b"event:") {
+            let value = self.line.get(6..).unwrap_or_default();
+            self.event = Some(value.strip_prefix(b" ").unwrap_or(value).to_vec());
         }
         self.line.clear();
         Ok(None)

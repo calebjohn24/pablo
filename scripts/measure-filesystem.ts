@@ -7,14 +7,15 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { withPablo, taskOf } from '../examples/acp-client.ts';
 import { body, cleanEnv, server } from '../tests/fixtures/telemetry.ts';
+import { responsesEvents, responsesWire } from '../tests/fixtures/open-responses.ts';
 // @ts-expect-error Dependency-free Node helper is JavaScript.
 import { sourceFingerprint } from './lib/source-fingerprint.mjs';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const provider=process.env.PABLO_MEASURE_PROVIDER ?? 'vercel';
-assert(provider==='vercel'||provider==='openrouter');
-const model=provider==='vercel'?'zai/glm-5.3-flash':'z-ai/glm-5.3-flash';
+assert(provider==='vercel'||provider==='openrouter'||provider==='open_responses');
+const model=provider==='vercel'?'zai/glm-5.3-flash':provider==='openrouter'?'z-ai/glm-5.3-flash':'fixture-text-tools-v1';
 const binary=resolve(process.env.PABLO_MEASURE_BINARY ?? join(root,'target/release/pablo'));
-const configured=process.env.PABLO_MEASURE_CONFIGURED==='1';
+const configured=process.env.PABLO_MEASURE_CONFIGURED==='1'||provider==='open_responses';
 const destination=resolve(process.argv[2] ?? join(root,`.pablo/measurements/c2.5-filesystem-${process.platform}-${process.arch}.json`));
 const cwd=await realpath(await mkdtemp(join(tmpdir(),'pablo-fs-measure-')));
 const content='a'.repeat(128*1024-1)+'\n';const hash=(s:string)=>createHash('sha256').update(s).digest('hex');
@@ -32,6 +33,13 @@ const gateway=await server(async(req,res)=>{
   const request=JSON.parse((await body(req)).toString());requests++;
   assert.equal(request.model,model);
   res.writeHead(200,{'content-type':'text/event-stream'});
+  if(provider==='open_responses'){
+    if(request.input.at(-1).type==='function_call_output'){
+      const result=JSON.parse(request.input.at(-1).output);assert.equal(result.status,'completed');current.check(result.filesystem);
+      res.end(responsesWire(responsesEvents(request,{chunks:['verified']})));
+    }else res.end(responsesWire(responsesEvents(request,{call:{id:'fs_measure',name:current.tool,arguments:JSON.stringify(current.args)}})));
+    return;
+  }
   if(request.messages.at(-1).role==='tool') {
     const result=JSON.parse(request.messages.at(-1).content);assert.equal(result.status,'completed');current.check(result.filesystem);
     res.end(frame({content:'verified'})+finish);
@@ -51,11 +59,12 @@ write=true
 [options.model]
 provider="${provider}"
 id="${model}"
+${provider==='open_responses'?'endpoint="https://responses.example.test/v1/responses"\ncapability_profile="open-responses-text-tools-v1"':''}
 [options.limits]
 max_model_calls=2
 max_tool_calls=1
 `);
-  const options=configured?['--config',entry,'--bind',`workspace=${cwd}`,'--fixture-endpoint',gateway.url+'/v1/chat/completions']:[...(provider==='openrouter'?['--provider',provider]:[]),'--no-shell','--allow-write','--model',model,'--max-model-calls','2','--max-tool-calls','1'];
+  const options=configured?['--config',entry,'--bind',`workspace=${cwd}`,'--fixture-endpoint',gateway.url+(provider==='open_responses'?'/v1/responses':'/v1/chat/completions')]:[...(provider==='openrouter'?['--provider',provider]:[]),'--no-shell','--allow-write','--model',model,'--max-model-calls','2','--max-tool-calls','1'];
   await writeFile(join(cwd,'read.txt'),content);await writeFile(join(cwd,'write.txt'),content);await writeFile(join(cwd,'edit.txt'),'needle'+content);
   await mkdir(join(cwd,'listing'));await mkdir(join(cwd,'search'));
   for(let i=0;i<1000;i++) await writeFile(join(cwd,'listing',String(i).padStart(4,'0')),'');
@@ -63,7 +72,7 @@ max_tool_calls=1
   const measurements:Record<string,unknown>={};
   for(const workload of workloads) {
     current=workload;const promptMs:number[]=[];const toolMs:number[]=[];let start=0;let toolElapsed=0;
-    await withPablo({binary,args:options,env:{...cleanEnv(),PABLO_FIXTURE_ENDPOINT:gateway.url+'/v1/chat/completions'},onUpdate:n=>{
+    await withPablo({binary,args:options,env:{...cleanEnv(),PABLO_FIXTURE_ENDPOINT:gateway.url+(provider==='open_responses'?'/v1/responses':'/v1/chat/completions')},onUpdate:n=>{
       const meta=n._meta?.['pablo/v1'] as any;
       if(n.update.sessionUpdate==='tool_call') start=meta.timestamp_unix_micros;
       if(n.update.sessionUpdate==='tool_call_update' && n.update.status==='completed') toolElapsed=(meta.timestamp_unix_micros-start)/1000;

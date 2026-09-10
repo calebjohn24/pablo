@@ -9,6 +9,9 @@ use tokio::time::Instant;
 
 use crate::{DeliveryCertainty, FailureCode, FinishReason, Message, Usage, tool::ToolDescriptor};
 use tokio_util::sync::CancellationToken;
+mod continuation;
+pub(crate) use continuation::ContinuationScope;
+pub use continuation::{Continuation, ContinuationEntry};
 
 /// No credentials are serialized or copied into a request. Adapters own them.
 pub struct ModelRequest<'a> {
@@ -16,6 +19,12 @@ pub struct ModelRequest<'a> {
     pub input: &'a str,
     pub instructions: &'a str,
     pub messages: &'a [Message],
+    pub continuations: &'a [ContinuationEntry],
+    /// Remaining allowance for this response's retained output projection.
+    pub max_continuation_bytes: usize,
+    pub max_context_bytes: usize,
+    pub max_tool_input_bytes: usize,
+    pub max_output_bytes: usize,
     pub tools: &'a [ToolDescriptor],
     /// Ask for a final answer when no further tool result can be consumed.
     /// The runtime still enforces its limits if a provider ignores this hint.
@@ -28,6 +37,11 @@ pub struct ModelRequest<'a> {
 
 #[derive(Clone, Debug)]
 pub enum ProviderEvent {
+    /// Safe returned model identity; raw response metadata is never forwarded.
+    ResolvedModel(String),
+    /// Private output state, at most once immediately before Finished. The
+    /// runtime commits it only after successful stream validation and EOF.
+    Continuation(Continuation),
     /// Trusted adapter-reported actual charge, once per call before Finished.
     Cost {
         microusd: u64,
@@ -67,6 +81,12 @@ pub struct AccountingBounds {
 /// Futures and streams must yield promptly; dropping them cancels owned work.
 /// Adapters must bound frame allocation before creating normalized deltas.
 pub trait Provider: Send + Sync {
+    fn validate_model(&self, _model: &str, _max_output_tokens: u32) -> Result<(), &'static str> {
+        Ok(())
+    }
+    fn profile_identity(&self) -> Option<crate::contracts::ProviderIdentity> {
+        None
+    }
     /// An adapter attests enforcement for this model/request shape, including
     /// all delivery paths. Observed usage or estimated pricing is insufficient.
     /// The default deliberately cannot support hard aggregate ceilings.

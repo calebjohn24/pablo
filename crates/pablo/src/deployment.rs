@@ -25,15 +25,16 @@ pub struct Bootstrap {
 pub struct Secrets {
     provider: Option<deployment::ScopedCredential>,
     kind: pablo_core::gateway::GatewayKind,
+    profile: pablo_core::gateway::ModelProfile,
     pub headers: Option<deployment::ScopedCredential>,
 }
 impl Secrets {
     pub fn read(prepared: &deployment::PreparedRun, bootstrap: &Bootstrap) -> Result<Self, String> {
-        let kind = prepared
+        let profile = prepared
             .deployment()
             .model_profile()
-            .map_err(|e| e.to_string())?
-            .provider;
+            .map_err(|e| e.to_string())?;
+        let kind = profile.provider;
         kind.ensure_available()?;
         let provider = if bootstrap.fixture_endpoint.is_some() {
             None
@@ -57,6 +58,7 @@ impl Secrets {
             provider,
             headers,
             kind,
+            profile,
         })
     }
     pub fn provider(
@@ -64,17 +66,20 @@ impl Secrets {
         bootstrap: &Bootstrap,
     ) -> Result<pablo_core::gateway::GatewayProvider, String> {
         if let Some(endpoint) = &bootstrap.fixture_endpoint {
-            return pablo_core::gateway::GatewayProvider::local_fixture_for(self.kind, endpoint)
-                .map_err(|_| "config_invalid_value at /fixture_endpoint".into());
+            return pablo_core::gateway::GatewayProvider::configured_fixture(
+                &self.profile,
+                endpoint,
+            )
+            .map_err(|_| "config_invalid_value at /fixture_endpoint".into());
         }
         let secret = self
             .provider
             .as_ref()
             .ok_or("config_credential_missing at /options/model/credential")?;
         let value = secret
-            .expose_for(self.kind.credential_consumer(), self.kind.endpoint())
+            .expose_for(self.kind.credential_consumer(), &self.profile.endpoint)
             .map_err(|e| e.to_string())?;
-        pablo_core::gateway::GatewayProvider::selected(self.kind, value)
+        pablo_core::gateway::GatewayProvider::configured(&self.profile, value)
             .map_err(|_| "config_credential_invalid at /options/model/credential".into())
     }
     pub fn same_private_values(&self, other: &Self) -> bool {
@@ -85,6 +90,7 @@ impl Secrets {
             _ => false,
         };
         self.kind == other.kind
+            && self.profile == other.profile
             && same(&self.provider, &other.provider)
             && same(&self.headers, &other.headers)
     }

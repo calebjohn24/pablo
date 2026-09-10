@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:pablo:deployment:1:c3.5",
+  "$id": "urn:pablo:deployment:1:c3.9",
   "title": "Pablo deployment v1 \u2014 C3.5 configuration contract",
   "description": "TOML-to-JSON shape. See c3-deployment-config.md for semantic checks and implementation availability.",
   "type": "object",
@@ -743,7 +743,8 @@
             "provider": {
               "enum": [
                 "vercel",
-                "openrouter"
+                "openrouter",
+                "open_responses"
               ]
             },
             "id": {
@@ -753,13 +754,27 @@
               "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
             },
             "endpoint": {
-              "enum": [
-                "https://ai-gateway.vercel.sh/v1/chat/completions",
-                "https://openrouter.ai/api/v1/chat/completions"
-              ]
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
             },
             "credential": {
               "$ref": "#/$defs/name"
+            },
+            "capability_profile": {
+              "const": "open-responses-text-tools-v1"
+            },
+            "auth_header": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9!#$%&'*+.^_`|~-]+$"
+            },
+            "auth_scheme": {
+              "enum": [
+                "bearer",
+                "raw"
+              ]
             }
           }
         },
@@ -1072,7 +1087,8 @@
           "enum": [
             "provider.vercel",
             "provider.openrouter",
-            "otel.headers"
+            "otel.headers",
+            "provider.open_responses"
           ]
         },
         "sources": {
@@ -1200,7 +1216,8 @@
             "provider": {
               "enum": [
                 "vercel",
-                "openrouter"
+                "openrouter",
+                "open_responses"
               ]
             },
             "id": {
@@ -1210,13 +1227,27 @@
               "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
             },
             "endpoint": {
-              "enum": [
-                "https://ai-gateway.vercel.sh/v1/chat/completions",
-                "https://openrouter.ai/api/v1/chat/completions"
-              ]
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
             },
             "credential": {
               "$ref": "#/$defs/name"
+            },
+            "capability_profile": {
+              "const": "open-responses-text-tools-v1"
+            },
+            "auth_header": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9!#$%&'*+.^_`|~-]+$"
+            },
+            "auth_scheme": {
+              "enum": [
+                "bearer",
+                "raw"
+              ]
             }
           },
           "required": [
@@ -1549,7 +1580,8 @@
           "enum": [
             "provider.vercel",
             "provider.openrouter",
-            "otel.headers"
+            "otel.headers",
+            "provider.open_responses"
           ]
         },
         "sources": {

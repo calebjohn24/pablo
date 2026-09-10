@@ -148,11 +148,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Some(prepared) => prepared.spec().clone(),
             None => options.spec()?,
         };
-        let kind = match &prepared {
-            Some(prepared) => prepared.deployment().model_profile()?.provider,
-            None => options.provider.unwrap_or_default(),
+        let provider = match &prepared {
+            Some(prepared) => GatewayProvider::configured_fixture(
+                &prepared.deployment().model_profile()?,
+                &endpoint,
+            )?,
+            None => {
+                GatewayProvider::local_fixture_for(options.provider.unwrap_or_default(), &endpoint)?
+            }
         };
-        let provider = GatewayProvider::local_fixture_for(kind, &endpoint)?;
         let tools = match &prepared {
             Some(prepared) => prepared.tools()?,
             None => options.tools()?,
