@@ -123,3 +123,20 @@ See [the attempt contract](project/contracts/c3-model-routes.md#f03-attempt-obse
 and the `model_route` definition in the extension schema. Notifications share the
 existing bounded queue and acknowledged physical-write path. Non-opted clients
 receive no new notification method or route metadata.
+
+### Negotiated compaction
+
+C3.12a adds `pablo/compaction-v1`, requiring `pablo/v1`. Opted-in peers receive
+`_pablo/compaction` notifications for `context.compaction.started` and
+`context.compaction.finished`, with session/type/correlation and a bounded
+`compaction-v1` record. The terminal correlation includes the latest record.
+Notifications share physical-write acknowledgment with ordinary updates.
+
+Summary text appears only on successful completion with explicit content capture;
+otherwise `summary` is null and `summary_bytes` describes its size. Capture requires
+a trace destination, such as `{base="workspace",path="{session_id}.jsonl"}`.
+Private provider continuation is never exposed. Summary deltas do not become agent
+answer chunks. Peers without the capability keep existing shapes; each new session
+has fresh history and compaction allowance. The task schema remains `c2.3`.
+See [the contract](project/contracts/c3-compaction.md) and the reference client's
+`onCompaction` callback.

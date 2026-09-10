@@ -19,7 +19,9 @@ use tokio::time::{Instant, sleep_until};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
+mod compaction;
 mod routing;
+use compaction::{TaskState, context_bytes, estimate_bytes};
 
 #[derive(Debug)]
 pub enum RunError {
@@ -68,6 +70,7 @@ struct Attempt<'a> {
     model: &'a str,
     max_output_tokens: u32,
     ledger: crate::task::Ledger,
+    window_tokens: Option<u64>,
 }
 fn attempts<'a>(
     spec: &'a RunSpec,
@@ -93,6 +96,7 @@ fn attempts<'a>(
                     .validate_model(model, max_output_tokens)
                     .map_err(RunError::InvalidSpec)?;
                 Ok(Attempt {
+                    window_tokens: entry.profile().context_window_tokens,
                     provider: provider.as_ref(),
                     model,
                     max_output_tokens,
@@ -108,6 +112,7 @@ fn attempts<'a>(
             .collect()
     } else {
         Ok(vec![Attempt {
+            window_tokens: spec.context.window_tokens,
             provider,
             model: &spec.model,
             max_output_tokens: spec.limits.max_output_tokens,
@@ -235,6 +240,8 @@ where
         let mut lifecycle = Lifecycle {
             model_profile: None,
             model_route: None,
+            compaction: None,
+            extra_closing: 0,
             deployment: self.deployment.clone(),
             sink,
             run_id,
@@ -310,68 +317,76 @@ where
 
     async fn drive(&self, execution: &Execution<'_>, lifecycle: &mut Lifecycle<'_>) -> RunOutcome {
         let spec = execution.spec;
-        let mut history = vec![Message::User {
-            text: spec.input.clone(),
-        }];
-        let mut ids = HashSet::new();
-        let mut continuations: Vec<crate::provider::ContinuationEntry> = Vec::new();
-        let mut remaining_tools = spec.limits.max_tool_calls;
-        let mut remaining_models = spec.limits.max_model_calls;
-        let mut selected = 0;
-        let mut operation = 0_u64;
+        let mut state = TaskState::new(execution);
 
-        loop {
+        'generation: loop {
             if let Some(outcome) = execution.stop() {
                 return outcome;
             }
-            let mut context_bytes =
-                serde_json::to_vec(&(&spec.instructions, &history, execution.tools.descriptors()))
-                    .expect("serializable request")
-                    .len();
-            // Replace the public assistant projection's charge with its complete
-            // private wire projection. Never charge the same logical item twice.
-            for entry in &continuations {
-                let projected = serde_json::to_vec(&history[entry.message_index])
-                    .expect("serializable history")
-                    .len();
-                context_bytes = context_bytes.saturating_sub(projected);
-                let Some(total) = context_bytes.checked_add(entry.value.bytes()) else {
-                    return limit(LimitKind::ContextBytes);
-                };
-                context_bytes = total;
+            let context_bytes = context_bytes(execution, &state.history, &state.continuations);
+            let estimated_bytes = estimate_bytes(execution, context_bytes, state.history.len());
+            let tokens = state.calibration[state.selected].estimate(estimated_bytes);
+            let attempt = &execution.attempts[state.selected];
+            let near = context_bytes as u64
+                >= spec.context.usable(spec.limits.max_context_bytes as u64)
+                || attempt.window_tokens.is_some_and(|cap| {
+                    tokens.saturating_add(u64::from(attempt.max_output_tokens))
+                        >= spec.context.usable(cap)
+                });
+            if spec.context.enabled
+                && !state.compacted
+                && near
+                && state.split(spec.context.keep_recent_turns).is_some()
+            {
+                if let Err(outcome) = self
+                    .compact(execution, lifecycle, &mut state, "threshold")
+                    .await
+                {
+                    return outcome;
+                }
+                continue;
             }
             if context_bytes > spec.limits.max_context_bytes {
                 return limit(LimitKind::ContextBytes);
             }
-            operation += 1; // Each operation consumes bounded native event slots.
+            state.operation += 1; // Each state.operation consumes bounded native event slots.
             let mut attempts_used = 0;
             let progress = loop {
                 lifecycle.model_route = execution.route.map(|route| {
                     Box::new(ModelRouteRecord::selected(
                         route,
-                        selected,
-                        operation,
+                        state.selected,
+                        state.operation,
                         attempts_used + 1,
                     ))
                 });
                 if let Some(outcome) = execution.stop() {
                     return outcome;
                 }
-                if let Some(remaining) = &mut remaining_models {
+                if let Some(remaining) = &mut state.remaining_models {
                     if *remaining == 0 {
                         return limit(LimitKind::ModelCalls);
                     }
                     *remaining -= 1;
                 }
-                let attempt = &execution.attempts[selected];
-                if !attempt
-                    .provider
-                    .accepts_history(attempt.model, &history, &continuations)
-                {
+                let attempt = &execution.attempts[state.selected];
+                if !attempt.provider.accepts_history(
+                    attempt.model,
+                    &state.history,
+                    &state.continuations,
+                ) {
                     return RunOutcome::Failed {
                         code: FailureCode::ContinuationIncompatible,
                         delivery: DeliveryCertainty::NotSent,
                     };
+                }
+                if attempt.window_tokens.is_some_and(|cap| {
+                    state.calibration[state.selected]
+                        .estimate(estimated_bytes)
+                        .saturating_add(u64::from(attempt.max_output_tokens))
+                        > cap
+                }) {
+                    return limit(LimitKind::ContextBytes);
                 }
                 let deadline = execution.route_policy.map_or(execution.deadline, |p| {
                     Instant::now()
@@ -380,23 +395,53 @@ where
                         .min(execution.deadline)
                 });
                 let input = ModelInput {
+                    summary: false,
+                    max_output_bytes: spec.limits.max_output_bytes,
+                    parent: execution.root,
                     attempt,
                     deadline,
-                    history: &history,
-                    continuations: &continuations,
+                    history: &state.history,
+                    continuations: &state.continuations,
                     remaining_context: spec.limits.max_context_bytes - context_bytes,
-                    allow_tool_calls: remaining_tools != Some(0)
-                        && remaining_models != Some(0)
+                    allow_tool_calls: state.remaining_tools != Some(0)
+                        && state.remaining_models != Some(0)
                         && !execution.tools.descriptors().is_empty(),
                 };
                 let mut progress = ModelProgress::default();
                 attempts_used += 1;
-                match self
-                    .model(execution, lifecycle, &input, &mut progress, &mut ids)
-                    .await
-                {
+                let result = self
+                    .model(execution, lifecycle, &input, &mut progress, &mut state.ids)
+                    .await;
+                state.calibration[state.selected]
+                    .observe(estimated_bytes, progress.usage.input_tokens);
+                match result {
                     Ok(()) => break progress,
                     Err(outcome) => {
+                        if matches!(
+                            outcome,
+                            RunOutcome::Failed {
+                                code: FailureCode::ContextOverflow,
+                                ..
+                            }
+                        ) && spec.context.enabled
+                            && !state.compacted
+                            && !progress.closing_failed
+                            && progress.chunks == 0
+                            && progress.pending.is_empty()
+                            && progress.tool_calls.is_empty()
+                        {
+                            if let Err(outcome) = self
+                                .compact(execution, lifecycle, &mut state, "overflow")
+                                .await
+                            {
+                                return outcome;
+                            }
+                            state.recovering = true;
+                            continue 'generation;
+                        }
+                        if state.recovering {
+                            return outcome;
+                        }
                         let eligible = execution.route_policy.is_some_and(|policy| {
                             progress.retry_class.is_some_and(|class| {
                                 policy.eligible_errors.iter().any(|e| e == class)
@@ -408,15 +453,16 @@ where
                             || progress.chunks != 0
                             || !progress.pending.is_empty()
                             || !progress.tool_calls.is_empty()
-                            || selected + 1 >= execution.attempts.len()
+                            || state.selected + 1 >= execution.attempts.len()
                         {
                             return outcome;
                         }
-                        selected += 1;
+                        state.selected += 1;
                     }
                 }
             };
 
+            state.recovering = false;
             if let Some(outcome) = execution.stop() {
                 return outcome;
             }
@@ -427,22 +473,25 @@ where
                     usage: lifecycle.accounting.usage.clone(),
                 };
             }
-            if remaining_tools
+            if state
+                .remaining_tools
                 .is_some_and(|remaining| progress.tool_calls.len() > remaining as usize)
             {
                 return limit(LimitKind::ToolCalls);
             }
             // Do not perform an effectful tool call without budget to consume its result.
-            if remaining_models == Some(0) {
+            if state.remaining_models == Some(0) {
                 return limit(LimitKind::ModelCalls);
             }
             if let Some(value) = progress.continuation {
-                continuations.push(crate::provider::ContinuationEntry {
-                    message_index: history.len(),
-                    value,
-                });
+                state
+                    .continuations
+                    .push(crate::provider::ContinuationEntry {
+                        message_index: state.history.len(),
+                        value,
+                    });
             }
-            history.push(Message::Assistant {
+            state.history.push(Message::Assistant {
                 text: progress.output,
                 tool_calls: progress.tool_calls.clone(),
             });
@@ -454,10 +503,10 @@ where
                     Ok(result) => result,
                     Err(outcome) => return outcome,
                 };
-                if let Some(remaining) = &mut remaining_tools {
+                if let Some(remaining) = &mut state.remaining_tools {
                     *remaining -= 1;
                 }
-                history.push(Message::Tool {
+                state.history.push(Message::Tool {
                     call_id: call.id,
                     name: call.name,
                     result,
@@ -482,7 +531,7 @@ where
             record.phase = "started".into();
         }
         let started = telemetry::now();
-        let model = execution.root.with_span(
+        let model = input.parent.with_span(
             self.tracer
                 .span_builder(format!("chat {}", input.attempt.model))
                 .with_kind(SpanKind::Client)
@@ -499,9 +548,9 @@ where
                     KeyValue::new("gen_ai.conversation.id", lifecycle.session_id.clone()),
                     KeyValue::new("pablo.run.id", lifecycle.run_id.clone()),
                 ])
-                .start_with_context(&self.tracer, execution.root),
+                .start_with_context(&self.tracer, input.parent),
         );
-        let parent = execution.root.span().span_context().span_id().to_string();
+        let parent = input.parent.span().span_context().span_id().to_string();
         if let Some(profile) = &lifecycle.model_profile {
             model.span().set_attribute(KeyValue::new(
                 "pablo.provider.protocol",
@@ -516,6 +565,14 @@ where
                 profile.capability_profile.clone(),
             ));
         }
+        model.span().set_attribute(KeyValue::new(
+            "pablo.model.purpose",
+            if input.summary {
+                "compaction"
+            } else {
+                "generation"
+            },
+        ));
         let mut result = match lifecycle.emit(
             EventKind::ModelStarted {
                 provider: input.attempt.provider.name().into(),
@@ -568,6 +625,7 @@ where
         };
         let closing = lifecycle.emit(finish_event, &model, Some(&parent), finished, true);
         if closing.is_err() {
+            progress.closing_failed = true;
             progress.retry_class = None;
         }
         let result = result.and(closing); // Preserve the first failure, including delivery certainty.
@@ -752,6 +810,7 @@ where
 
 #[derive(Default)]
 struct ModelProgress {
+    closing_failed: bool,
     delivery: Option<DeliveryCertainty>,
     retry_class: Option<&'static str>,
     continuation: Option<crate::provider::Continuation>,
@@ -771,6 +830,9 @@ struct PendingCall {
 }
 
 struct ModelInput<'a> {
+    summary: bool,
+    max_output_bytes: usize,
+    parent: &'a Context,
     attempt: &'a Attempt<'a>,
     deadline: Instant,
     history: &'a [Message],
@@ -788,7 +850,7 @@ async fn consume(
     ids: &mut HashSet<String>,
 ) -> Result<(), RunOutcome> {
     let spec = execution.spec;
-    let parent = execution.root.span().span_context().span_id().to_string();
+    let parent = input.parent.span().span_context().span_id().to_string();
     let request = ModelRequest {
         model: input.attempt.model,
         input: &spec.input,
@@ -798,7 +860,7 @@ async fn consume(
         max_continuation_bytes: input.remaining_context,
         max_context_bytes: spec.limits.max_context_bytes,
         max_tool_input_bytes: spec.limits.max_tool_input_bytes,
-        max_output_bytes: spec.limits.max_output_bytes,
+        max_output_bytes: input.max_output_bytes,
         tools: execution.tools.descriptors(),
         allow_tool_calls: input.allow_tool_calls,
         max_output_tokens: input.attempt.max_output_tokens,
@@ -894,25 +956,28 @@ async fn consume(
                 }
             }
             Some(Ok(ProviderEvent::TextDelta(text))) => {
-                if text.len()
-                    > spec
-                        .limits
-                        .max_output_bytes
-                        .saturating_sub(progress.output.len())
-                {
+                if text.len() > input.max_output_bytes.saturating_sub(progress.output.len()) {
                     return Err(limit(LimitKind::OutputBytes));
                 }
-                lifecycle.emit(
-                    EventKind::TextDelta { text: text.clone() },
-                    model,
-                    Some(&parent),
-                    telemetry::now(),
-                    false,
-                )?;
+                if !input.summary {
+                    lifecycle.emit(
+                        EventKind::TextDelta { text: text.clone() },
+                        model,
+                        Some(&parent),
+                        telemetry::now(),
+                        false,
+                    )?;
+                }
                 progress.output.push_str(&text);
                 progress.chunks += 1;
             }
             Some(Ok(ProviderEvent::ToolCallStart { id, name })) => {
+                if input.summary {
+                    if let Some(record) = &mut lifecycle.compaction {
+                        record.reason = Some("tool_call_during_summary".into());
+                    }
+                    return Err(failed(FailureCode::CompactionFailed));
+                }
                 if id.is_empty()
                     || id.len() > 128
                     || id.chars().any(char::is_control)
@@ -1029,6 +1094,7 @@ fn attempt_timeout(execution: &Execution<'_>, progress: &mut ModelProgress) -> R
 }
 
 fn validate(spec: &RunSpec, provider: &dyn Provider) -> Result<(), RunError> {
+    spec.context.validate().map_err(RunError::InvalidSpec)?;
     provider
         .validate_model(&spec.model, spec.limits.max_output_tokens)
         .map_err(RunError::InvalidSpec)?;
@@ -1100,6 +1166,8 @@ pub fn validate_run(
 }
 
 struct Lifecycle<'a> {
+    compaction: Option<Box<crate::context::CompactionRecord>>,
+    extra_closing: u64,
     model_route: Option<Box<ModelRouteRecord>>,
     model_profile: Option<ProviderIdentity>,
     deployment: Option<crate::deployment::DeploymentIdentity>,
@@ -1114,7 +1182,7 @@ struct Lifecycle<'a> {
 
 impl Lifecycle<'_> {
     fn can_start_operation(&self) -> bool {
-        self.seq < self.max_events - 2
+        self.seq < self.max_events.saturating_sub(2 + self.extra_closing)
     }
     fn event(
         &self,
@@ -1126,6 +1194,20 @@ impl Lifecycle<'_> {
         let span = context.span();
         let identity = span.span_context();
         RunEvent {
+            compaction: (matches!(
+                kind,
+                EventKind::CompactionStarted
+                    | EventKind::CompactionFinished { .. }
+                    | EventKind::RunFinished { .. }
+            ) || matches!(
+                kind,
+                EventKind::ModelStarted { .. } | EventKind::ModelFinished { .. }
+            ) && self
+                .compaction
+                .as_ref()
+                .is_some_and(|r| r.status == "running"))
+            .then(|| self.compaction.clone())
+            .flatten(),
             model_route: matches!(
                 kind,
                 EventKind::ModelStarted { .. }
@@ -1167,7 +1249,7 @@ impl Lifecycle<'_> {
         closing: bool,
     ) -> Result<(), RunOutcome> {
         // Reserve model.finished and run.finished, even when deltas exhaust the budget.
-        if !closing && self.seq >= self.max_events - 2 {
+        if !closing && self.seq >= self.max_events.saturating_sub(2 + self.extra_closing) {
             return Err(RunOutcome::LimitExceeded {
                 limit: LimitKind::Events,
             });

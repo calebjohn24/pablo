@@ -543,7 +543,11 @@ impl Completion {
             "error" | "response.failed" => {
                 return Err(ProviderError {
                     retry_class: None,
-                    code: FailureCode::ProviderRejected,
+                    code: if super::transport::context_overflow(&value) {
+                        FailureCode::ContextOverflow
+                    } else {
+                        FailureCode::ProviderRejected
+                    },
                     delivery: DeliveryCertainty::ResponseReceived,
                 });
             }

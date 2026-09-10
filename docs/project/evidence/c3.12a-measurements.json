@@ -1,0 +1,2961 @@
+{
+  "checkpoint": "C3.12a",
+  "reports": {
+    "baseline-ordinary": {
+      "schema_version": 1,
+      "checkpoint": "C3.12a",
+      "timestamp": "2026-09-10T23:09:23.345Z",
+      "source_sha256": "d4f9cf85de487aa976f9f3d77a5ba3bb9c227a054ae6d62d564d678ba892c1c3",
+      "harness_sha256": "63d149f604496e4b7c6a681517a435b5da3ca3c8225cf0b206c2dbb43673b008",
+      "platform": {
+        "os": "darwin",
+        "arch": "arm64",
+        "kernel": "25.5.0",
+        "cpu": "Apple M4 Pro",
+        "logical_cpus": 14,
+        "memory_bytes": 25769803776,
+        "node": "v24.11.0",
+        "rust": "rustc 1.98.1 (48a229cea 2026-09-01)",
+        "environment": "local host"
+      },
+      "build": {
+        "profile": "lto = \"thin\"\ncodegen-units = 1\nstrip = \"symbols\"",
+        "binary_bytes": 11430960,
+        "stripped_binary_bytes": 11430976,
+        "strip_method": "platform strip on a copy; timings use original release executable",
+        "binary_sha256": "d8651501ec46b7e0038599120d2c4055696b686861a81f9ab708c3c2ba5aa82e"
+      },
+      "method": {
+        "provider": "vercel",
+        "model": "zai/glm-5.3-flash",
+        "route_events": false,
+        "configuration": "explicit deployment file; re-resolved per admitted task",
+        "samples": 30,
+        "warmup": 5,
+        "cache": "warm filesystem; no forced cache eviction",
+        "workload": "two local HTTP/SSE calls, one bare printf shell command, 32 x 16-byte output deltas",
+        "startup": "Node monotonic spawn to first loopback provider request arrival; separate --version process wall time",
+        "baseline": "direct core run_with_tools in measurement host; SDK/provider/tool construction excluded from core_run_ms",
+        "acp": "official TS SDK; one new process/session/prompt per sample; prompt includes per-run provider/tool/SDK setup; total excludes deliberate RSS wait and session creation",
+        "first_delta": "server write of one text delta to TS client update; local HTTP/SSE and ACP; provider waits 40 ms before finishing",
+        "reuse": "up to 40 measured independent sessions per process after five warm-up tasks; prompt timing excludes session creation; same HTTP/shell workload",
+        "rss": "ps RSS in KiB 50 ms after ACP initialize; one fresh process per sample",
+        "events": "normalized ProviderEvent yield to inline TextDelta sink entry; includes measurement mutex/clock; 1000 x 32-byte deltas per run",
+        "trace": "same event workload with/without metadata-only buffered JSONL; includes writer flush but excludes file creation; no fsync",
+        "limits": "single-run warm-cache microbenchmarks; no network/TLS/model latency; no concurrency or remote provider claim"
+      },
+      "stats": {
+        "version_process_ms": {
+          "n": 30,
+          "min": 3.6596669999998994,
+          "p50": 4.4434580000001915,
+          "p95": 8.037167000000409,
+          "p99": 8.072999999999865,
+          "max": 8.072999999999865
+        },
+        "cli_provider_ready_ms": {
+          "n": 30,
+          "min": 8.498042000000169,
+          "p50": 9.594959000000017,
+          "p95": 13.516875000000255,
+          "p99": 13.653540999999677,
+          "max": 13.653540999999677
+        },
+        "cli_total_ms": {
+          "n": 30,
+          "min": 15.48849999999993,
+          "p50": 17.71820899999966,
+          "p95": 23.23358400000052,
+          "p99": 28.488124999999854,
+          "max": 28.488124999999854
+        },
+        "core_run_ms": {
+          "n": 30,
+          "min": 7.372167,
+          "p50": 8.619209,
+          "p95": 14.192333,
+          "p99": 14.506958000000001,
+          "max": 14.506958000000001
+        },
+        "core_host_total_ms": {
+          "n": 30,
+          "min": 16.2690419999999,
+          "p50": 18.323750000000018,
+          "p95": 24.485875000000306,
+          "p99": 25.29333399999996,
+          "max": 25.29333399999996
+        },
+        "acp_initialize_ms": {
+          "n": 30,
+          "min": 7.770457999999962,
+          "p50": 8.49004100000002,
+          "p95": 13.591749999999593,
+          "p99": 14.904332999999497,
+          "max": 14.904332999999497
+        },
+        "acp_prompt_ms": {
+          "n": 30,
+          "min": 8.247916999999688,
+          "p50": 9.099208999999973,
+          "p95": 14.867625000000317,
+          "p99": 21.00183299999935,
+          "max": 21.00183299999935
+        },
+        "acp_total_ms": {
+          "n": 30,
+          "min": 17.657873999999538,
+          "p50": 18.992791999999554,
+          "p95": 25.569916999999805,
+          "p99": 31.640707999998995,
+          "max": 31.640707999998995
+        },
+        "acp_first_text_ms": {
+          "n": 30,
+          "min": 8.123999999999796,
+          "p50": 8.89325000000008,
+          "p95": 14.706833000000188,
+          "p99": 20.887249999999767,
+          "max": 20.887249999999767
+        },
+        "idle_rss_kib": {
+          "n": 30,
+          "min": 15296,
+          "p50": 15600,
+          "p95": 16048,
+          "p99": 16160,
+          "max": 16160
+        },
+        "acp_first_delta_delivery_ms": {
+          "n": 30,
+          "min": 0.17599999999947613,
+          "p50": 0.2515419999999722,
+          "p95": 0.34737500000028376,
+          "p99": 0.4875000000001819,
+          "max": 0.4875000000001819
+        },
+        "acp_warm_prompt_ms": {
+          "n": 30,
+          "min": 7.1570840000003955,
+          "p50": 8.241500000000087,
+          "p95": 9.046292000000903,
+          "p99": 9.36095800000112,
+          "max": 9.36095800000112
+        },
+        "acp_warm_first_text_ms": {
+          "n": 30,
+          "min": 6.901374999999462,
+          "p50": 8.135083000001032,
+          "p95": 8.796916999999667,
+          "p99": 9.270833000000493,
+          "max": 9.270833000000493
+        },
+        "warm_idle_rss_kib": {
+          "n": 30,
+          "min": 17136,
+          "p50": 17200,
+          "p95": 17200,
+          "p99": 17200,
+          "max": 17200
+        }
+      },
+      "events": {
+        "mode": "events",
+        "chunks_per_run": 1000,
+        "bytes_per_chunk": 32,
+        "warmup_pairs": 5,
+        "samples": 30,
+        "event_latency_ns": {
+          "n": 30000,
+          "min": 125,
+          "p50": 208,
+          "p95": 416,
+          "p99": 458,
+          "max": 26250
+        },
+        "no_trace_ms": {
+          "n": 30,
+          "min": 0.523625,
+          "p50": 0.560083,
+          "p95": 1.0935409999999999,
+          "p99": 1.163583,
+          "max": 1.163583
+        },
+        "trace_ms": {
+          "n": 30,
+          "min": 0.948125,
+          "p50": 1.052334,
+          "p95": 2.277292,
+          "p99": 3.0218749999999996,
+          "max": 3.0218749999999996
+        },
+        "trace_bytes_per_run": 390882
+      },
+      "comparisons": {
+        "acp_prompt_minus_core_p50_ms": 0.4799999999999738,
+        "acp_prompt_over_core_p50_ratio": 1.055689565016926,
+        "acp_total_minus_core_host_p50_ms": 0.6690419999995356,
+        "trace_p50_overhead_percent": 87.88893788956283
+      }
+    },
+    "ordinary": {
+      "schema_version": 1,
+      "checkpoint": "C3.12a",
+      "timestamp": "2026-09-10T23:09:35.460Z",
+      "source_sha256": "0388702aaa1cde5ba87f4f1861716e3089a902b57f938f6ce37809d1f8ac9783",
+      "harness_sha256": "63d149f604496e4b7c6a681517a435b5da3ca3c8225cf0b206c2dbb43673b008",
+      "platform": {
+        "os": "darwin",
+        "arch": "arm64",
+        "kernel": "25.5.0",
+        "cpu": "Apple M4 Pro",
+        "logical_cpus": 14,
+        "memory_bytes": 25769803776,
+        "node": "v24.11.0",
+        "rust": "rustc 1.98.1 (48a229cea 2026-09-01)",
+        "environment": "local host"
+      },
+      "build": {
+        "profile": "lto = \"thin\"\ncodegen-units = 1\nstrip = \"symbols\"",
+        "binary_bytes": 11497776,
+        "stripped_binary_bytes": 11497792,
+        "strip_method": "platform strip on a copy; timings use original release executable",
+        "binary_sha256": "bd38c0e62538dd5cc07811aedc5541d548fe1ca59926701efd61f60478ccd09e"
+      },
+      "method": {
+        "provider": "vercel",
+        "model": "zai/glm-5.3-flash",
+        "route_events": false,
+        "configuration": "explicit deployment file; re-resolved per admitted task",
+        "samples": 30,
+        "warmup": 5,
+        "cache": "warm filesystem; no forced cache eviction",
+        "workload": "two local HTTP/SSE calls, one bare printf shell command, 32 x 16-byte output deltas",
+        "startup": "Node monotonic spawn to first loopback provider request arrival; separate --version process wall time",
+        "baseline": "direct core run_with_tools in measurement host; SDK/provider/tool construction excluded from core_run_ms",
+        "acp": "official TS SDK; one new process/session/prompt per sample; prompt includes per-run provider/tool/SDK setup; total excludes deliberate RSS wait and session creation",
+        "first_delta": "server write of one text delta to TS client update; local HTTP/SSE and ACP; provider waits 40 ms before finishing",
+        "reuse": "up to 40 measured independent sessions per process after five warm-up tasks; prompt timing excludes session creation; same HTTP/shell workload",
+        "rss": "ps RSS in KiB 50 ms after ACP initialize; one fresh process per sample",
+        "events": "normalized ProviderEvent yield to inline TextDelta sink entry; includes measurement mutex/clock; 1000 x 32-byte deltas per run",
+        "trace": "same event workload with/without metadata-only buffered JSONL; includes writer flush but excludes file creation; no fsync",
+        "limits": "single-run warm-cache microbenchmarks; no network/TLS/model latency; no concurrency or remote provider claim"
+      },
+      "stats": {
+        "version_process_ms": {
+          "n": 30,
+          "min": 3.56933300000037,
+          "p50": 4.27520899999945,
+          "p95": 8.349625000000742,
+          "p99": 9.60529200000019,
+          "max": 9.60529200000019
+        },
+        "cli_provider_ready_ms": {
+          "n": 30,
+          "min": 8.317833000000064,
+          "p50": 9.53991700000006,
+          "p95": 13.070709000000534,
+          "p99": 14.855875000000196,
+          "max": 14.855875000000196
+        },
+        "cli_total_ms": {
+          "n": 30,
+          "min": 16.020541999999296,
+          "p50": 17.796542000000045,
+          "p95": 26.95720799999981,
+          "p99": 27.205832999999984,
+          "max": 27.205832999999984
+        },
+        "core_run_ms": {
+          "n": 30,
+          "min": 7.162208,
+          "p50": 8.655332999999999,
+          "p95": 14.29275,
+          "p99": 18.972333000000003,
+          "max": 18.972333000000003
+        },
+        "core_host_total_ms": {
+          "n": 30,
+          "min": 16.310583000000406,
+          "p50": 18.65745799999968,
+          "p95": 30.320708000000195,
+          "p99": 31.118790999999874,
+          "max": 31.118790999999874
+        },
+        "acp_initialize_ms": {
+          "n": 30,
+          "min": 7.512375000000247,
+          "p50": 8.30475000000024,
+          "p95": 13.10716699999989,
+          "p99": 16.420249999999214,
+          "max": 16.420249999999214
+        },
+        "acp_prompt_ms": {
+          "n": 30,
+          "min": 8.233416999999463,
+          "p50": 9.10241700000006,
+          "p95": 16.724625000000287,
+          "p99": 28.640958999998475,
+          "max": 28.640958999998475
+        },
+        "acp_total_ms": {
+          "n": 30,
+          "min": 16.601292000000285,
+          "p50": 18.591083999999682,
+          "p95": 32.527916999999434,
+          "p99": 41.940208999998504,
+          "max": 41.940208999998504
+        },
+        "acp_first_text_ms": {
+          "n": 30,
+          "min": 8.114166000000296,
+          "p50": 8.980666999999812,
+          "p95": 16.517624999999953,
+          "p99": 27.389458999999988,
+          "max": 27.389458999999988
+        },
+        "idle_rss_kib": {
+          "n": 30,
+          "min": 15712,
+          "p50": 15792,
+          "p95": 16320,
+          "p99": 16720,
+          "max": 16720
+        },
+        "acp_first_delta_delivery_ms": {
+          "n": 30,
+          "min": 0.20470800000020972,
+          "p50": 0.2372920000002523,
+          "p95": 0.43975000000000364,
+          "p99": 0.5264580000002752,
+          "max": 0.5264580000002752
+        },
+        "acp_warm_prompt_ms": {
+          "n": 30,
+          "min": 6.9652920000007725,
+          "p50": 8.155665999998746,
+          "p95": 13.75945899999897,
+          "p99": 16.271624999999403,
+          "max": 16.271624999999403
+        },
+        "acp_warm_first_text_ms": {
+          "n": 30,
+          "min": 6.811208000000988,
+          "p50": 8.050540999998702,
+          "p95": 13.328541999999288,
+          "p99": 15.74633300000096,
+          "max": 15.74633300000096
+        },
+        "warm_idle_rss_kib": {
+          "n": 30,
+          "min": 17136,
+          "p50": 17152,
+          "p95": 17152,
+          "p99": 17152,
+          "max": 17152
+        }
+      },
+      "events": {
+        "mode": "events",
+        "chunks_per_run": 1000,
+        "bytes_per_chunk": 32,
+        "warmup_pairs": 5,
+        "samples": 30,
+        "event_latency_ns": {
+          "n": 30000,
+          "min": 83,
+          "p50": 167,
+          "p95": 375,
+          "p99": 417,
+          "max": 23667
+        },
+        "no_trace_ms": {
+          "n": 30,
+          "min": 0.48575,
+          "p50": 0.5135,
+          "p95": 1.0527920000000002,
+          "p99": 1.068041,
+          "max": 1.068041
+        },
+        "trace_ms": {
+          "n": 30,
+          "min": 0.923917,
+          "p50": 0.969541,
+          "p95": 1.5290830000000002,
+          "p99": 2.047,
+          "max": 2.047
+        },
+        "trace_bytes_per_run": 390882
+      },
+      "comparisons": {
+        "acp_prompt_minus_core_p50_ms": 0.44708400000006066,
+        "acp_prompt_over_core_p50_ratio": 1.0516541651257163,
+        "acp_total_minus_core_host_p50_ms": -0.06637399999999616,
+        "trace_p50_overhead_percent": 88.81032132424538
+      }
+    },
+    "baseline-fallback": {
+      "schema_version": 1,
+      "checkpoint": "C3.12a",
+      "timestamp": "2026-09-10T23:09:47.263Z",
+      "source_sha256": "d4f9cf85de487aa976f9f3d77a5ba3bb9c227a054ae6d62d564d678ba892c1c3",
+      "harness_sha256": "63d149f604496e4b7c6a681517a435b5da3ca3c8225cf0b206c2dbb43673b008",
+      "platform": {
+        "os": "darwin",
+        "arch": "arm64",
+        "kernel": "25.5.0",
+        "cpu": "Apple M4 Pro",
+        "logical_cpus": 14,
+        "memory_bytes": 25769803776,
+        "node": "v24.11.0",
+        "rust": "rustc 1.98.1 (48a229cea 2026-09-01)",
+        "environment": "local host"
+      },
+      "build": {
+        "profile": "lto = \"thin\"\ncodegen-units = 1\nstrip = \"symbols\"",
+        "binary_bytes": 11430960,
+        "stripped_binary_bytes": 11430976,
+        "strip_method": "platform strip on a copy; timings use original release executable",
+        "binary_sha256": "d8651501ec46b7e0038599120d2c4055696b686861a81f9ab708c3c2ba5aa82e"
+      },
+      "method": {
+        "provider": "open_responses",
+        "model": "fixture-text-tools-v1",
+        "route_events": false,
+        "configuration": "ordered route; initial HTTP 503 then sticky second entry; three calls and one real tool",
+        "samples": 30,
+        "warmup": 5,
+        "cache": "warm filesystem; no forced cache eviction",
+        "workload": "three local HTTP calls including one 503, two SSE responses, one bare printf shell command, 32 x 16-byte output deltas",
+        "startup": "Node monotonic spawn to first loopback provider request arrival; separate --version process wall time",
+        "baseline": "direct core run_with_tools in measurement host; SDK/provider/tool construction excluded from core_run_ms",
+        "acp": "official TS SDK; one new process/session/prompt per sample; prompt includes per-run provider/tool/SDK setup; total excludes deliberate RSS wait and session creation",
+        "first_delta": "server write of one text delta to TS client update; local HTTP/SSE and ACP; provider waits 40 ms before finishing",
+        "reuse": "up to 40 measured independent sessions per process after five warm-up tasks; prompt timing excludes session creation; same HTTP/shell workload",
+        "rss": "ps RSS in KiB 50 ms after ACP initialize; one fresh process per sample",
+        "events": "normalized ProviderEvent yield to inline TextDelta sink entry; includes measurement mutex/clock; 1000 x 32-byte deltas per run",
+        "trace": "same event workload with/without metadata-only buffered JSONL; includes writer flush but excludes file creation; no fsync",
+        "limits": "single-run warm-cache microbenchmarks; no network/TLS/model latency; no concurrency or remote provider claim"
+      },
+      "stats": {
+        "version_process_ms": {
+          "n": 30,
+          "min": 3.493083000000297,
+          "p50": 4.339874999999665,
+          "p95": 10.096207999999933,
+          "p99": 13.084250000000793,
+          "max": 13.084250000000793
+        },
+        "cli_provider_ready_ms": {
+          "n": 30,
+          "min": 8.851458000000093,
+          "p50": 9.89862499999981,
+          "p95": 14.486084000000119,
+          "p99": 16.713708999999653,
+          "max": 16.713708999999653
+        },
+        "cli_total_ms": {
+          "n": 30,
+          "min": 17.136583999999857,
+          "p50": 19.684625000000324,
+          "p95": 28.279375000000073,
+          "p99": 32.07304199999999,
+          "max": 32.07304199999999
+        },
+        "core_run_ms": {
+          "n": 30,
+          "min": 8.101584,
+          "p50": 9.671459,
+          "p95": 16.767541,
+          "p99": 26.816083000000003,
+          "max": 26.816083000000003
+        },
+        "core_host_total_ms": {
+          "n": 30,
+          "min": 16.51312499999949,
+          "p50": 20.084124999999858,
+          "p95": 32.788040999999794,
+          "p99": 37.058708000000024,
+          "max": 37.058708000000024
+        },
+        "acp_initialize_ms": {
+          "n": 30,
+          "min": 7.862999999999374,
+          "p50": 8.51616600000034,
+          "p95": 10.335833999999977,
+          "p99": 14.67029199999979,
+          "max": 14.67029199999979
+        },
+        "acp_prompt_ms": {
+          "n": 30,
+          "min": 9.737957999999935,
+          "p50": 10.644916000000194,
+          "p95": 17.194749999999658,
+          "p99": 17.61595899999884,
+          "max": 17.61595899999884
+        },
+        "acp_total_ms": {
+          "n": 30,
+          "min": 18.72520799999893,
+          "p50": 20.545666999999412,
+          "p95": 26.833498999998483,
+          "p99": 27.081168000000616,
+          "max": 27.081168000000616
+        },
+        "acp_first_text_ms": {
+          "n": 30,
+          "min": 9.550207999999884,
+          "p50": 10.395709000000352,
+          "p95": 16.971333999999842,
+          "p99": 17.323041999999987,
+          "max": 17.323041999999987
+        },
+        "idle_rss_kib": {
+          "n": 30,
+          "min": 15552,
+          "p50": 15664,
+          "p95": 16240,
+          "p99": 16336,
+          "max": 16336
+        },
+        "acp_first_delta_delivery_ms": {
+          "n": 30,
+          "min": 0.26583299999947485,
+          "p50": 0.31850000000031287,
+          "p95": 0.5566250000010768,
+          "p99": 0.8184579999997368,
+          "max": 0.8184579999997368
+        },
+        "acp_warm_prompt_ms": {
+          "n": 30,
+          "min": 8.258166999999958,
+          "p50": 9.314250000001266,
+          "p95": 14.790667000001122,
+          "p99": 16.593000000000757,
+          "max": 16.593000000000757
+        },
+        "acp_warm_first_text_ms": {
+          "n": 30,
+          "min": 8.015292000000045,
+          "p50": 9.009915999999066,
+          "p95": 14.62408300000061,
+          "p99": 16.110000000000582,
+          "max": 16.110000000000582
+        },
+        "warm_idle_rss_kib": {
+          "n": 30,
+          "min": 17152,
+          "p50": 17184,
+          "p95": 17200,
+          "p99": 17200,
+          "max": 17200
+        }
+      },
+      "events": {
+        "mode": "events",
+        "chunks_per_run": 1000,
+        "bytes_per_chunk": 32,
+        "warmup_pairs": 5,
+        "samples": 30,
+        "event_latency_ns": {
+          "n": 30000,
+          "min": 125,
+          "p50": 208,
+          "p95": 375,
+          "p99": 458,
+          "max": 34417
+        },
+        "no_trace_ms": {
+          "n": 30,
+          "min": 0.541292,
+          "p50": 0.5609999999999999,
+          "p95": 0.932833,
+          "p99": 1.184208,
+          "max": 1.184208
+        },
+        "trace_ms": {
+          "n": 30,
+          "min": 0.9528749999999999,
+          "p50": 1.0296669999999999,
+          "p95": 1.1345,
+          "p99": 1.181584,
+          "max": 1.181584
+        },
+        "trace_bytes_per_run": 390882
+      },
+      "comparisons": {
+        "acp_prompt_minus_core_p50_ms": 0.9734570000001934,
+        "acp_prompt_over_core_p50_ratio": 1.100652548907067,
+        "acp_total_minus_core_host_p50_ms": 0.4615419999995538,
+        "trace_p50_overhead_percent": 83.54135472370767
+      }
+    },
+    "fallback": {
+      "schema_version": 1,
+      "checkpoint": "C3.12a",
+      "timestamp": "2026-09-10T23:09:59.328Z",
+      "source_sha256": "0388702aaa1cde5ba87f4f1861716e3089a902b57f938f6ce37809d1f8ac9783",
+      "harness_sha256": "63d149f604496e4b7c6a681517a435b5da3ca3c8225cf0b206c2dbb43673b008",
+      "platform": {
+        "os": "darwin",
+        "arch": "arm64",
+        "kernel": "25.5.0",
+        "cpu": "Apple M4 Pro",
+        "logical_cpus": 14,
+        "memory_bytes": 25769803776,
+        "node": "v24.11.0",
+        "rust": "rustc 1.98.1 (48a229cea 2026-09-01)",
+        "environment": "local host"
+      },
+      "build": {
+        "profile": "lto = \"thin\"\ncodegen-units = 1\nstrip = \"symbols\"",
+        "binary_bytes": 11497776,
+        "stripped_binary_bytes": 11497792,
+        "strip_method": "platform strip on a copy; timings use original release executable",
+        "binary_sha256": "bd38c0e62538dd5cc07811aedc5541d548fe1ca59926701efd61f60478ccd09e"
+      },
+      "method": {
+        "provider": "open_responses",
+        "model": "fixture-text-tools-v1",
+        "route_events": false,
+        "configuration": "ordered route; initial HTTP 503 then sticky second entry; three calls and one real tool",
+        "samples": 30,
+        "warmup": 5,
+        "cache": "warm filesystem; no forced cache eviction",
+        "workload": "three local HTTP calls including one 503, two SSE responses, one bare printf shell command, 32 x 16-byte output deltas",
+        "startup": "Node monotonic spawn to first loopback provider request arrival; separate --version process wall time",
+        "baseline": "direct core run_with_tools in measurement host; SDK/provider/tool construction excluded from core_run_ms",
+        "acp": "official TS SDK; one new process/session/prompt per sample; prompt includes per-run provider/tool/SDK setup; total excludes deliberate RSS wait and session creation",
+        "first_delta": "server write of one text delta to TS client update; local HTTP/SSE and ACP; provider waits 40 ms before finishing",
+        "reuse": "up to 40 measured independent sessions per process after five warm-up tasks; prompt timing excludes session creation; same HTTP/shell workload",
+        "rss": "ps RSS in KiB 50 ms after ACP initialize; one fresh process per sample",
+        "events": "normalized ProviderEvent yield to inline TextDelta sink entry; includes measurement mutex/clock; 1000 x 32-byte deltas per run",
+        "trace": "same event workload with/without metadata-only buffered JSONL; includes writer flush but excludes file creation; no fsync",
+        "limits": "single-run warm-cache microbenchmarks; no network/TLS/model latency; no concurrency or remote provider claim"
+      },
+      "stats": {
+        "version_process_ms": {
+          "n": 30,
+          "min": 3.5155000000004293,
+          "p50": 4.262291999999434,
+          "p95": 6.732165999999779,
+          "p99": 7.933708999999908,
+          "max": 7.933708999999908
+        },
+        "cli_provider_ready_ms": {
+          "n": 30,
+          "min": 8.910249999999905,
+          "p50": 9.74679100000003,
+          "p95": 13.44570799999974,
+          "p99": 14.846042000000125,
+          "max": 14.846042000000125
+        },
+        "cli_total_ms": {
+          "n": 30,
+          "min": 18.284750000000713,
+          "p50": 19.159708999999566,
+          "p95": 30.388416999999663,
+          "p99": 30.748458000000028,
+          "max": 30.748458000000028
+        },
+        "core_run_ms": {
+          "n": 30,
+          "min": 8.546375,
+          "p50": 9.62525,
+          "p95": 16.357708,
+          "p99": 34.257999999999996,
+          "max": 34.257999999999996
+        },
+        "core_host_total_ms": {
+          "n": 30,
+          "min": 17.84354200000007,
+          "p50": 19.96641600000021,
+          "p95": 29.807416000000103,
+          "p99": 44.29900000000043,
+          "max": 44.29900000000043
+        },
+        "acp_initialize_ms": {
+          "n": 30,
+          "min": 7.5002919999997175,
+          "p50": 8.375,
+          "p95": 13.372499999999945,
+          "p99": 15.450917000000118,
+          "max": 15.450917000000118
+        },
+        "acp_prompt_ms": {
+          "n": 30,
+          "min": 9.643625000000611,
+          "p50": 10.847374999999829,
+          "p95": 17.616291999999703,
+          "p99": 27.696207999999388,
+          "max": 27.696207999999388
+        },
+        "acp_total_ms": {
+          "n": 30,
+          "min": 19.256915999999364,
+          "p50": 20.65229199999976,
+          "p95": 27.318958999999268,
+          "p99": 38.32549899999958,
+          "max": 38.32549899999958
+        },
+        "acp_first_text_ms": {
+          "n": 30,
+          "min": 9.426417000000583,
+          "p50": 10.642624999999953,
+          "p95": 17.385458999999173,
+          "p99": 27.455707999999504,
+          "max": 27.455707999999504
+        },
+        "idle_rss_kib": {
+          "n": 30,
+          "min": 15776,
+          "p50": 15888,
+          "p95": 16352,
+          "p99": 16544,
+          "max": 16544
+        },
+        "acp_first_delta_delivery_ms": {
+          "n": 30,
+          "min": 0.25420800000028976,
+          "p50": 0.31433399999991707,
+          "p95": 0.710667000000285,
+          "p99": 0.7136669999999867,
+          "max": 0.7136669999999867
+        },
+        "acp_warm_prompt_ms": {
+          "n": 30,
+          "min": 8.255458999999973,
+          "p50": 9.315583999999944,
+          "p95": 17.08849999999984,
+          "p99": 59.46641699999964,
+          "max": 59.46641699999964
+        },
+        "acp_warm_first_text_ms": {
+          "n": 30,
+          "min": 8.070417000000816,
+          "p50": 9.012167000000773,
+          "p95": 16.698625000000902,
+          "p99": 59.152000000000044,
+          "max": 59.152000000000044
+        },
+        "warm_idle_rss_kib": {
+          "n": 30,
+          "min": 17408,
+          "p50": 17504,
+          "p95": 17520,
+          "p99": 17520,
+          "max": 17520
+        }
+      },
+      "events": {
+        "mode": "events",
+        "chunks_per_run": 1000,
+        "bytes_per_chunk": 32,
+        "warmup_pairs": 5,
+        "samples": 30,
+        "event_latency_ns": {
+          "n": 30000,
+          "min": 83,
+          "p50": 167,
+          "p95": 208,
+          "p99": 209,
+          "max": 25541
+        },
+        "no_trace_ms": {
+          "n": 30,
+          "min": 0.48383299999999996,
+          "p50": 0.508208,
+          "p95": 0.553,
+          "p99": 0.6155,
+          "max": 0.6155
+        },
+        "trace_ms": {
+          "n": 30,
+          "min": 0.905125,
+          "p50": 0.959833,
+          "p95": 1.021334,
+          "p99": 1.045125,
+          "max": 1.045125
+        },
+        "trace_bytes_per_run": 390882
+      },
+      "comparisons": {
+        "acp_prompt_minus_core_p50_ms": 1.2221249999998296,
+        "acp_prompt_over_core_p50_ratio": 1.1269707280330203,
+        "acp_total_minus_core_host_p50_ms": 0.6858759999995527,
+        "trace_p50_overhead_percent": 88.86617290558199
+      }
+    },
+    "vercel-threshold": {
+      "schema_version": 1,
+      "checkpoint": "C3.12a",
+      "timestamp": "2026-09-10T23:10:01.071Z",
+      "source_sha256": "0388702aaa1cde5ba87f4f1861716e3089a902b57f938f6ce37809d1f8ac9783",
+      "harness_sha256": "9234190d48464237a8910f89064d590ed35a38f0a6d80a708af0daa3c53eb57c",
+      "platform": {
+        "os": "darwin",
+        "arch": "arm64",
+        "kernel": "25.5.0",
+        "cpu": "Apple M4 Pro",
+        "node": "v24.11.0"
+      },
+      "build": {
+        "binary_bytes": 11497776,
+        "binary_sha256": "bd38c0e62538dd5cc07811aedc5541d548fe1ca59926701efd61f60478ccd09e"
+      },
+      "method": {
+        "provider": "vercel",
+        "model": "zai/glm-5.3-flash",
+        "trigger": "threshold",
+        "samples": 30,
+        "warmup": 5,
+        "workload": "three actual 6000-byte file reads, one bounded summary, final continuation; overflow adds one HTTP 400",
+        "timing": "core/CLI buffered redacted JSONL; fresh processes; ACP fresh sessions in one warm process with negotiated notifications and redacted trace; rotated paths, monotonic host/request clocks, native UTC span timestamps",
+        "limits": "loopback synthetic latency only; no live model throughput or summary quality claim; no private reasoning fixture in this performance workload"
+      },
+      "stats": {
+        "acp_warm_prompt_ms": {
+          "n": 30,
+          "min": 1.9446659999999838,
+          "p50": 2.47524999999996,
+          "p95": 6.3809159999999565,
+          "p99": 6.5145840000000135,
+          "max": 6.5145840000000135
+        },
+        "acp_before_bytes": {
+          "n": 30,
+          "min": 21909,
+          "p50": 21909,
+          "p95": 21909,
+          "p99": 21909,
+          "max": 21909
+        },
+        "acp_after_bytes": {
+          "n": 30,
+          "min": 9106,
+          "p50": 9106,
+          "p95": 9106,
+          "p99": 9106,
+          "max": 9106
+        },
+        "acp_reduction_percent": {
+          "n": 30,
+          "min": 58.43717193847277,
+          "p50": 58.43717193847277,
+          "p95": 58.43717193847277,
+          "p99": 58.43717193847277,
+          "max": 58.43717193847277
+        },
+        "acp_summary_request_to_generation_ms": {
+          "n": 30,
+          "min": 0.2153750000000514,
+          "p50": 0.2562910000000329,
+          "p95": 0.6269589999999425,
+          "p99": 2.2559170000001814,
+          "max": 2.2559170000001814
+        },
+        "acp_compaction_notification_ms": {
+          "n": 30,
+          "min": 0.12141700000006495,
+          "p50": 0.2754579999999578,
+          "p95": 0.8387500000000045,
+          "p99": 2.260291000000052,
+          "max": 2.260291000000052
+        },
+        "core_process_ms": {
+          "n": 30,
+          "min": 10.3784169999999,
+          "p50": 12.856915999999956,
+          "p95": 32.571957999999995,
+          "p99": 56.83245800000009,
+          "max": 56.83245800000009
+        },
+        "core_run_ms": {
+          "n": 30,
+          "min": 2.0757499999999998,
+          "p50": 3.031125,
+          "p95": 8.480042000000001,
+          "p99": 22.013958,
+          "max": 22.013958
+        },
+        "core_before_bytes": {
+          "n": 30,
+          "min": 21909,
+          "p50": 21909,
+          "p95": 21909,
+          "p99": 21909,
+          "max": 21909
+        },
+        "core_after_bytes": {
+          "n": 30,
+          "min": 9106,
+          "p50": 9106,
+          "p95": 9106,
+          "p99": 9106,
+          "max": 9106
+        },
+        "core_reduction_percent": {
+          "n": 30,
+          "min": 58.43717193847277,
+          "p50": 58.43717193847277,
+          "p95": 58.43717193847277,
+          "p99": 58.43717193847277,
+          "max": 58.43717193847277
+        },
+        "core_compaction_ms": {
+          "n": 30,
+          "min": 0.205,
+          "p50": 0.272,
+          "p95": 0.833,
+          "p99": 0.854,
+          "max": 0.854
+        },
+        "core_summary_request_to_generation_ms": {
+          "n": 30,
+          "min": 0.4932499999999891,
+          "p50": 0.78875000000005,
+          "p95": 1.5392910000000484,
+          "p99": 1.6610000000000582,
+          "max": 1.6610000000000582
+        },
+        "cli_process_ms": {
+          "n": 30,
+          "min": 11.268000000000029,
+          "p50": 13.613791999999876,
+          "p95": 24.757749999999987,
+          "p99": 29.054208000000017,
+          "max": 29.054208000000017
+        },
+        "cli_before_bytes": {
+          "n": 30,
+          "min": 21909,
+          "p50": 21909,
+          "p95": 21909,
+          "p99": 21909,
+          "max": 21909
+        },
+        "cli_after_bytes": {
+          "n": 30,
+          "min": 9106,
+          "p50": 9106,
+          "p95": 9106,
+          "p99": 9106,
+          "max": 9106
+        },
+        "cli_reduction_percent": {
+          "n": 30,
+          "min": 58.43717193847277,
+          "p50": 58.43717193847277,
+          "p95": 58.43717193847277,
+          "p99": 58.43717193847277,
+          "max": 58.43717193847277
+        },
+        "cli_compaction_ms": {
+          "n": 30,
+          "min": 0.217,
+          "p50": 0.295,
+          "p95": 0.873,
+          "p99": 1.19,
+          "max": 1.19
+        },
+        "cli_summary_request_to_generation_ms": {
+          "n": 30,
+          "min": 0.4041669999999158,
+          "p50": 0.785874999999919,
+          "p95": 1.4518339999999625,
+          "p99": 1.743624999999838,
+          "max": 1.743624999999838
+        }
+      }
+    },
+    "vercel-overflow": {
+      "schema_version": 1,
+      "checkpoint": "C3.12a",
+      "timestamp": "2026-09-10T23:10:02.425Z",
+      "source_sha256": "0388702aaa1cde5ba87f4f1861716e3089a902b57f938f6ce37809d1f8ac9783",
+      "harness_sha256": "9234190d48464237a8910f89064d590ed35a38f0a6d80a708af0daa3c53eb57c",
+      "platform": {
+        "os": "darwin",
+        "arch": "arm64",
+        "kernel": "25.5.0",
+        "cpu": "Apple M4 Pro",
+        "node": "v24.11.0"
+      },
+      "build": {
+        "binary_bytes": 11497776,
+        "binary_sha256": "bd38c0e62538dd5cc07811aedc5541d548fe1ca59926701efd61f60478ccd09e"
+      },
+      "method": {
+        "provider": "vercel",
+        "model": "zai/glm-5.3-flash",
+        "trigger": "overflow",
+        "samples": 30,
+        "warmup": 5,
+        "workload": "three actual 6000-byte file reads, one bounded summary, final continuation; overflow adds one HTTP 400",
+        "timing": "core/CLI buffered redacted JSONL; fresh processes; ACP fresh sessions in one warm process with negotiated notifications and redacted trace; rotated paths, monotonic host/request clocks, native UTC span timestamps",
+        "limits": "loopback synthetic latency only; no live model throughput or summary quality claim; no private reasoning fixture in this performance workload"
+      },
+      "stats": {
+        "acp_warm_prompt_ms": {
+          "n": 30,
+          "min": 1.999749999999949,
+          "p50": 2.7704159999999547,
+          "p95": 4.641957999999988,
+          "p99": 5.437208000000055,
+          "max": 5.437208000000055
+        },
+        "acp_before_bytes": {
+          "n": 30,
+          "min": 21909,
+          "p50": 21909,
+          "p95": 21909,
+          "p99": 21909,
+          "max": 21909
+        },
+        "acp_after_bytes": {
+          "n": 30,
+          "min": 9106,
+          "p50": 9106,
+          "p95": 9106,
+          "p99": 9106,
+          "max": 9106
+        },
+        "acp_reduction_percent": {
+          "n": 30,
+          "min": 58.43717193847277,
+          "p50": 58.43717193847277,
+          "p95": 58.43717193847277,
+          "p99": 58.43717193847277,
+          "max": 58.43717193847277
+        },
+        "acp_summary_request_to_generation_ms": {
+          "n": 30,
+          "min": 0.17258300000003146,
+          "p50": 0.22925000000009277,
+          "p95": 0.5527499999999463,
+          "p99": 1.3318749999999682,
+          "max": 1.3318749999999682
+        },
+        "acp_overflow_to_recovery_ms": {
+          "n": 30,
+          "min": 0.39612499999998363,
+          "p50": 0.6030000000000655,
+          "p95": 1.2835000000000036,
+          "p99": 2.158457999999996,
+          "max": 2.158457999999996
+        },
+        "acp_compaction_notification_ms": {
+          "n": 30,
+          "min": 0.19712500000014188,
+          "p50": 0.29754199999996445,
+          "p95": 0.5845410000000584,
+          "p99": 0.6247080000000551,
+          "max": 0.6247080000000551
+        },
+        "core_process_ms": {
+          "n": 30,
+          "min": 11.171124999999961,
+          "p50": 13.367666999999983,
+          "p95": 30.290541000000076,
+          "p99": 30.398833999999965,
+          "max": 30.398833999999965
+        },
+        "core_run_ms": {
+          "n": 30,
+          "min": 2.4270419999999997,
+          "p50": 3.040292,
+          "p95": 7.113875,
+          "p99": 11.328,
+          "max": 11.328
+        },
+        "core_before_bytes": {
+          "n": 30,
+          "min": 21909,
+          "p50": 21909,
+          "p95": 21909,
+          "p99": 21909,
+          "max": 21909
+        },
+        "core_after_bytes": {
+          "n": 30,
+          "min": 9106,
+          "p50": 9106,
+          "p95": 9106,
+          "p99": 9106,
+          "max": 9106
+        },
+        "core_reduction_percent": {
+          "n": 30,
+          "min": 58.43717193847277,
+          "p50": 58.43717193847277,
+          "p95": 58.43717193847277,
+          "p99": 58.43717193847277,
+          "max": 58.43717193847277
+        },
+        "core_compaction_ms": {
+          "n": 30,
+          "min": 0.205,
+          "p50": 0.26,
+          "p95": 1.14,
+          "p99": 1.566,
+          "max": 1.566
+        },
+        "core_summary_request_to_generation_ms": {
+          "n": 30,
+          "min": 0.43887500000005275,
+          "p50": 0.6516670000000886,
+          "p95": 1.6933330000000524,
+          "p99": 1.8478750000000446,
+          "max": 1.8478750000000446
+        },
+        "core_overflow_to_recovery_ms": {
+          "n": 30,
+          "min": 0.6679999999998927,
+          "p50": 0.9531670000000076,
+          "p95": 2.391040999999973,
+          "p99": 2.947167000000036,
+          "max": 2.947167000000036
+        },
+        "cli_process_ms": {
+          "n": 30,
+          "min": 11.312708000000043,
+          "p50": 12.829375000000027,
+          "p95": 19.283957999999984,
+          "p99": 22.918667000000028,
+          "max": 22.918667000000028
+        },
+        "cli_before_bytes": {
+          "n": 30,
+          "min": 21909,
+          "p50": 21909,
+          "p95": 21909,
+          "p99": 21909,
+          "max": 21909
+        },
+        "cli_after_bytes": {
+          "n": 30,
+          "min": 9106,
+          "p50": 9106,
+          "p95": 9106,
+          "p99": 9106,
+          "max": 9106
+        },
+        "cli_reduction_percent": {
+          "n": 30,
+          "min": 58.43717193847277,
+          "p50": 58.43717193847277,
+          "p95": 58.43717193847277,
+          "p99": 58.43717193847277,
+          "max": 58.43717193847277
+        },
+        "cli_compaction_ms": {
+          "n": 30,
+          "min": 0.203,
+          "p50": 0.268,
+          "p95": 0.871,
+          "p99": 1.063,
+          "max": 1.063
+        },
+        "cli_summary_request_to_generation_ms": {
+          "n": 30,
+          "min": 0.42529100000001563,
+          "p50": 0.6359589999999571,
+          "p95": 1.0589579999999614,
+          "p99": 1.1197500000000673,
+          "max": 1.1197500000000673
+        },
+        "cli_overflow_to_recovery_ms": {
+          "n": 30,
+          "min": 0.6655410000000188,
+          "p50": 0.9129590000000007,
+          "p95": 1.9589160000000447,
+          "p99": 2.1150829999999132,
+          "max": 2.1150829999999132
+        }
+      }
+    },
+    "openrouter-threshold": {
+      "schema_version": 1,
+      "checkpoint": "C3.12a",
+      "timestamp": "2026-09-10T23:10:04.103Z",
+      "source_sha256": "0388702aaa1cde5ba87f4f1861716e3089a902b57f938f6ce37809d1f8ac9783",
+      "harness_sha256": "9234190d48464237a8910f89064d590ed35a38f0a6d80a708af0daa3c53eb57c",
+      "platform": {
+        "os": "darwin",
+        "arch": "arm64",
+        "kernel": "25.5.0",
+        "cpu": "Apple M4 Pro",
+        "node": "v24.11.0"
+      },
+      "build": {
+        "binary_bytes": 11497776,
+        "binary_sha256": "bd38c0e62538dd5cc07811aedc5541d548fe1ca59926701efd61f60478ccd09e"
+      },
+      "method": {
+        "provider": "openrouter",
+        "model": "z-ai/glm-5.3-flash",
+        "trigger": "threshold",
+        "samples": 30,
+        "warmup": 5,
+        "workload": "three actual 6000-byte file reads, one bounded summary, final continuation; overflow adds one HTTP 400",
+        "timing": "core/CLI buffered redacted JSONL; fresh processes; ACP fresh sessions in one warm process with negotiated notifications and redacted trace; rotated paths, monotonic host/request clocks, native UTC span timestamps",
+        "limits": "loopback synthetic latency only; no live model throughput or summary quality claim; no private reasoning fixture in this performance workload"
+      },
+      "stats": {
+        "acp_warm_prompt_ms": {
+          "n": 30,
+          "min": 2.072166999999922,
+          "p50": 2.992040999999972,
+          "p95": 10.708707999999888,
+          "p99": 16.905042000000037,
+          "max": 16.905042000000037
+        },
+        "acp_before_bytes": {
+          "n": 30,
+          "min": 21909,
+          "p50": 21909,
+          "p95": 21909,
+          "p99": 21909,
+          "max": 21909
+        },
+        "acp_after_bytes": {
+          "n": 30,
+          "min": 9106,
+          "p50": 9106,
+          "p95": 9106,
+          "p99": 9106,
+          "max": 9106
+        },
+        "acp_reduction_percent": {
+          "n": 30,
+          "min": 58.43717193847277,
+          "p50": 58.43717193847277,
+          "p95": 58.43717193847277,
+          "p99": 58.43717193847277,
+          "max": 58.43717193847277
+        },
+        "acp_summary_request_to_generation_ms": {
+          "n": 30,
+          "min": 0.21012500000006185,
+          "p50": 0.3070830000000342,
+          "p95": 0.9969579999999496,
+          "p99": 4.721375000000023,
+          "max": 4.721375000000023
+        },
+        "acp_compaction_notification_ms": {
+          "n": 30,
+          "min": 0.002208999999993466,
+          "p50": 0.31483300000002146,
+          "p95": 0.978917000000024,
+          "p99": 1.24837500000001,
+          "max": 1.24837500000001
+        },
+        "core_process_ms": {
+          "n": 30,
+          "min": 12.109749999999963,
+          "p50": 15.467375000000061,
+          "p95": 30.286542000000054,
+          "p99": 75.14166599999999,
+          "max": 75.14166599999999
+        },
+        "core_run_ms": {
+          "n": 30,
+          "min": 2.422292,
+          "p50": 3.3918749999999998,
+          "p95": 6.3156669999999995,
+          "p99": 12.915332999999999,
+          "max": 12.915332999999999
+        },
+        "core_before_bytes": {
+          "n": 30,
+          "min": 21909,
+          "p50": 21909,
+          "p95": 21909,
+          "p99": 21909,
+          "max": 21909
+        },
+        "core_after_bytes": {
+          "n": 30,
+          "min": 9106,
+          "p50": 9106,
+          "p95": 9106,
+          "p99": 9106,
+          "max": 9106
+        },
+        "core_reduction_percent": {
+          "n": 30,
+          "min": 58.43717193847277,
+          "p50": 58.43717193847277,
+          "p95": 58.43717193847277,
+          "p99": 58.43717193847277,
+          "max": 58.43717193847277
+        },
+        "core_compaction_ms": {
+          "n": 30,
+          "min": 0.215,
+          "p50": 0.307,
+          "p95": 1.001,
+          "p99": 1.268,
+          "max": 1.268
+        },
+        "core_summary_request_to_generation_ms": {
+          "n": 30,
+          "min": 0.5290410000000065,
+          "p50": 0.8589170000000195,
+          "p95": 1.834957999999915,
+          "p99": 2.322584000000006,
+          "max": 2.322584000000006
+        },
+        "cli_process_ms": {
+          "n": 30,
+          "min": 12.134000000000015,
+          "p50": 15.737541000000078,
+          "p95": 31.603417000000036,
+          "p99": 37.72108300000002,
+          "max": 37.72108300000002
+        },
+        "cli_before_bytes": {
+          "n": 30,
+          "min": 21909,
+          "p50": 21909,
+          "p95": 21909,
+          "p99": 21909,
+          "max": 21909
+        },
+        "cli_after_bytes": {
+          "n": 30,
+          "min": 9106,
+          "p50": 9106,
+          "p95": 9106,
+          "p99": 9106,
+          "max": 9106
+        },
+        "cli_reduction_percent": {
+          "n": 30,
+          "min": 58.43717193847277,
+          "p50": 58.43717193847277,
+          "p95": 58.43717193847277,
+          "p99": 58.43717193847277,
+          "max": 58.43717193847277
+        },
+        "cli_compaction_ms": {
+          "n": 30,
+          "min": 0.246,
+          "p50": 0.38,
+          "p95": 1.826,
+          "p99": 2.24,
+          "max": 2.24
+        },
+        "cli_summary_request_to_generation_ms": {
+          "n": 30,
+          "min": 0.6524579999999105,
+          "p50": 0.9508749999999964,
+          "p95": 3.144834000000003,
+          "p99": 5.326874999999973,
+          "max": 5.326874999999973
+        }
+      }
+    },
+    "openrouter-overflow": {
+      "schema_version": 1,
+      "checkpoint": "C3.12a",
+      "timestamp": "2026-09-10T23:10:05.546Z",
+      "source_sha256": "0388702aaa1cde5ba87f4f1861716e3089a902b57f938f6ce37809d1f8ac9783",
+      "harness_sha256": "9234190d48464237a8910f89064d590ed35a38f0a6d80a708af0daa3c53eb57c",
+      "platform": {
+        "os": "darwin",
+        "arch": "arm64",
+        "kernel": "25.5.0",
+        "cpu": "Apple M4 Pro",
+        "node": "v24.11.0"
+      },
+      "build": {
+        "binary_bytes": 11497776,
+        "binary_sha256": "bd38c0e62538dd5cc07811aedc5541d548fe1ca59926701efd61f60478ccd09e"
+      },
+      "method": {
+        "provider": "openrouter",
+        "model": "z-ai/glm-5.3-flash",
+        "trigger": "overflow",
+        "samples": 30,
+        "warmup": 5,
+        "workload": "three actual 6000-byte file reads, one bounded summary, final continuation; overflow adds one HTTP 400",
+        "timing": "core/CLI buffered redacted JSONL; fresh processes; ACP fresh sessions in one warm process with negotiated notifications and redacted trace; rotated paths, monotonic host/request clocks, native UTC span timestamps",
+        "limits": "loopback synthetic latency only; no live model throughput or summary quality claim; no private reasoning fixture in this performance workload"
+      },
+      "stats": {
+        "acp_warm_prompt_ms": {
+          "n": 30,
+          "min": 2.4016670000000886,
+          "p50": 2.888082999999938,
+          "p95": 6.755375000000072,
+          "p99": 7.258416000000011,
+          "max": 7.258416000000011
+        },
+        "acp_before_bytes": {
+          "n": 30,
+          "min": 21909,
+          "p50": 21909,
+          "p95": 21909,
+          "p99": 21909,
+          "max": 21909
+        },
+        "acp_after_bytes": {
+          "n": 30,
+          "min": 9106,
+          "p50": 9106,
+          "p95": 9106,
+          "p99": 9106,
+          "max": 9106
+        },
+        "acp_reduction_percent": {
+          "n": 30,
+          "min": 58.43717193847277,
+          "p50": 58.43717193847277,
+          "p95": 58.43717193847277,
+          "p99": 58.43717193847277,
+          "max": 58.43717193847277
+        },
+        "acp_summary_request_to_generation_ms": {
+          "n": 30,
+          "min": 0.17791600000009566,
+          "p50": 0.2535000000000309,
+          "p95": 0.42233299999998053,
+          "p99": 0.5599579999999946,
+          "max": 0.5599579999999946
+        },
+        "acp_overflow_to_recovery_ms": {
+          "n": 30,
+          "min": 0.4368339999999762,
+          "p50": 0.5872080000000324,
+          "p95": 0.8090409999999792,
+          "p99": 1.233916000000022,
+          "max": 1.233916000000022
+        },
+        "acp_compaction_notification_ms": {
+          "n": 30,
+          "min": 0.22424999999998363,
+          "p50": 0.2862920000000031,
+          "p95": 0.42404099999998834,
+          "p99": 0.65137500000003,
+          "max": 0.65137500000003
+        },
+        "core_process_ms": {
+          "n": 30,
+          "min": 12.789874999999938,
+          "p50": 13.911458000000039,
+          "p95": 18.856707999999912,
+          "p99": 19.441958000000113,
+          "max": 19.441958000000113
+        },
+        "core_run_ms": {
+          "n": 30,
+          "min": 2.977916,
+          "p50": 3.607417,
+          "p95": 7.587083,
+          "p99": 8.892000000000001,
+          "max": 8.892000000000001
+        },
+        "core_before_bytes": {
+          "n": 30,
+          "min": 21909,
+          "p50": 21909,
+          "p95": 21909,
+          "p99": 21909,
+          "max": 21909
+        },
+        "core_after_bytes": {
+          "n": 30,
+          "min": 9106,
+          "p50": 9106,
+          "p95": 9106,
+          "p99": 9106,
+          "max": 9106
+        },
+        "core_reduction_percent": {
+          "n": 30,
+          "min": 58.43717193847277,
+          "p50": 58.43717193847277,
+          "p95": 58.43717193847277,
+          "p99": 58.43717193847277,
+          "max": 58.43717193847277
+        },
+        "core_compaction_ms": {
+          "n": 30,
+          "min": 0.223,
+          "p50": 0.325,
+          "p95": 0.822,
+          "p99": 1.098,
+          "max": 1.098
+        },
+        "core_summary_request_to_generation_ms": {
+          "n": 30,
+          "min": 0.6165839999999889,
+          "p50": 0.8674169999999322,
+          "p95": 1.3121250000000373,
+          "p99": 1.6390420000000177,
+          "max": 1.6390420000000177
+        },
+        "core_overflow_to_recovery_ms": {
+          "n": 30,
+          "min": 0.9255410000000097,
+          "p50": 1.291749999999979,
+          "p95": 1.9709589999999935,
+          "p99": 3.657167000000072,
+          "max": 3.657167000000072
+        },
+        "cli_process_ms": {
+          "n": 30,
+          "min": 12.569291999999905,
+          "p50": 14.218500000000063,
+          "p95": 19.463999999999942,
+          "p99": 23.400458999999955,
+          "max": 23.400458999999955
+        },
+        "cli_before_bytes": {
+          "n": 30,
+          "min": 21909,
+          "p50": 21909,
+          "p95": 21909,
+          "p99": 21909,
+          "max": 21909
+        },
+        "cli_after_bytes": {
+          "n": 30,
+          "min": 9106,
+          "p50": 9106,
+          "p95": 9106,
+          "p99": 9106,
+          "max": 9106
+        },
+        "cli_reduction_percent": {
+          "n": 30,
+          "min": 58.43717193847277,
+          "p50": 58.43717193847277,
+          "p95": 58.43717193847277,
+          "p99": 58.43717193847277,
+          "max": 58.43717193847277
+        },
+        "cli_compaction_ms": {
+          "n": 30,
+          "min": 0.232,
+          "p50": 0.312,
+          "p95": 0.901,
+          "p99": 1.186,
+          "max": 1.186
+        },
+        "cli_summary_request_to_generation_ms": {
+          "n": 30,
+          "min": 0.5803329999998823,
+          "p50": 0.8476249999999936,
+          "p95": 2.1810839999999985,
+          "p99": 2.594959000000017,
+          "max": 2.594959000000017
+        },
+        "cli_overflow_to_recovery_ms": {
+          "n": 30,
+          "min": 0.885082999999895,
+          "p50": 1.211334000000079,
+          "p95": 3.051125000000013,
+          "p99": 3.327625000000012,
+          "max": 3.327625000000012
+        }
+      }
+    },
+    "open_responses-threshold": {
+      "schema_version": 1,
+      "checkpoint": "C3.12a",
+      "timestamp": "2026-09-10T23:10:07.026Z",
+      "source_sha256": "0388702aaa1cde5ba87f4f1861716e3089a902b57f938f6ce37809d1f8ac9783",
+      "harness_sha256": "9234190d48464237a8910f89064d590ed35a38f0a6d80a708af0daa3c53eb57c",
+      "platform": {
+        "os": "darwin",
+        "arch": "arm64",
+        "kernel": "25.5.0",
+        "cpu": "Apple M4 Pro",
+        "node": "v24.11.0"
+      },
+      "build": {
+        "binary_bytes": 11497776,
+        "binary_sha256": "bd38c0e62538dd5cc07811aedc5541d548fe1ca59926701efd61f60478ccd09e"
+      },
+      "method": {
+        "provider": "open_responses",
+        "model": "fixture-text-tools-v1",
+        "trigger": "threshold",
+        "samples": 30,
+        "warmup": 5,
+        "workload": "three actual 6000-byte file reads, one bounded summary, final continuation; overflow adds one HTTP 400",
+        "timing": "core/CLI buffered redacted JSONL; fresh processes; ACP fresh sessions in one warm process with negotiated notifications and redacted trace; rotated paths, monotonic host/request clocks, native UTC span timestamps",
+        "limits": "loopback synthetic latency only; no live model throughput or summary quality claim; no private reasoning fixture in this performance workload"
+      },
+      "stats": {
+        "acp_warm_prompt_ms": {
+          "n": 30,
+          "min": 3.122292000000016,
+          "p50": 3.693708000000015,
+          "p95": 6.295999999999992,
+          "p99": 7.978208999999879,
+          "max": 7.978208999999879
+        },
+        "acp_before_bytes": {
+          "n": 30,
+          "min": 21996,
+          "p50": 21996,
+          "p95": 21996,
+          "p99": 21996,
+          "max": 21996
+        },
+        "acp_after_bytes": {
+          "n": 30,
+          "min": 9135,
+          "p50": 9135,
+          "p95": 9135,
+          "p99": 9135,
+          "max": 9135
+        },
+        "acp_reduction_percent": {
+          "n": 30,
+          "min": 58.46972176759411,
+          "p50": 58.46972176759411,
+          "p95": 58.46972176759411,
+          "p99": 58.46972176759411,
+          "max": 58.46972176759411
+        },
+        "acp_summary_request_to_generation_ms": {
+          "n": 30,
+          "min": 0.36141699999996035,
+          "p50": 0.48458400000004076,
+          "p95": 1.015999999999849,
+          "p99": 1.1487500000000068,
+          "max": 1.1487500000000068
+        },
+        "acp_compaction_notification_ms": {
+          "n": 30,
+          "min": 0.3738749999999982,
+          "p50": 0.5170829999999569,
+          "p95": 1.064834000000019,
+          "p99": 1.3158750000000055,
+          "max": 1.3158750000000055
+        },
+        "core_process_ms": {
+          "n": 30,
+          "min": 12.684875000000147,
+          "p50": 14.648792000000071,
+          "p95": 18.443458000000078,
+          "p99": 20.63474999999994,
+          "max": 20.63474999999994
+        },
+        "core_run_ms": {
+          "n": 30,
+          "min": 3.382959,
+          "p50": 4.192291,
+          "p95": 7.638875,
+          "p99": 10.30975,
+          "max": 10.30975
+        },
+        "core_before_bytes": {
+          "n": 30,
+          "min": 21996,
+          "p50": 21996,
+          "p95": 21996,
+          "p99": 21996,
+          "max": 21996
+        },
+        "core_after_bytes": {
+          "n": 30,
+          "min": 9135,
+          "p50": 9135,
+          "p95": 9135,
+          "p99": 9135,
+          "max": 9135
+        },
+        "core_reduction_percent": {
+          "n": 30,
+          "min": 58.46972176759411,
+          "p50": 58.46972176759411,
+          "p95": 58.46972176759411,
+          "p99": 58.46972176759411,
+          "max": 58.46972176759411
+        },
+        "core_compaction_ms": {
+          "n": 30,
+          "min": 0.436,
+          "p50": 0.52,
+          "p95": 1.545,
+          "p99": 1.734,
+          "max": 1.734
+        },
+        "core_summary_request_to_generation_ms": {
+          "n": 30,
+          "min": 0.6809590000000298,
+          "p50": 1.0235000000000127,
+          "p95": 1.9101670000000013,
+          "p99": 2.2609999999999673,
+          "max": 2.2609999999999673
+        },
+        "cli_process_ms": {
+          "n": 30,
+          "min": 12.378250000000094,
+          "p50": 14.022041999999828,
+          "p95": 19.47050000000013,
+          "p99": 20.73087499999997,
+          "max": 20.73087499999997
+        },
+        "cli_before_bytes": {
+          "n": 30,
+          "min": 21996,
+          "p50": 21996,
+          "p95": 21996,
+          "p99": 21996,
+          "max": 21996
+        },
+        "cli_after_bytes": {
+          "n": 30,
+          "min": 9135,
+          "p50": 9135,
+          "p95": 9135,
+          "p99": 9135,
+          "max": 9135
+        },
+        "cli_reduction_percent": {
+          "n": 30,
+          "min": 58.46972176759411,
+          "p50": 58.46972176759411,
+          "p95": 58.46972176759411,
+          "p99": 58.46972176759411,
+          "max": 58.46972176759411
+        },
+        "cli_compaction_ms": {
+          "n": 30,
+          "min": 0.431,
+          "p50": 0.542,
+          "p95": 1.215,
+          "p99": 1.274,
+          "max": 1.274
+        },
+        "cli_summary_request_to_generation_ms": {
+          "n": 30,
+          "min": 0.6775840000000244,
+          "p50": 0.9514169999999922,
+          "p95": 1.9487920000001395,
+          "p99": 2.0061249999999973,
+          "max": 2.0061249999999973
+        }
+      }
+    },
+    "open_responses-overflow": {
+      "schema_version": 1,
+      "checkpoint": "C3.12a",
+      "timestamp": "2026-09-10T23:10:08.541Z",
+      "source_sha256": "0388702aaa1cde5ba87f4f1861716e3089a902b57f938f6ce37809d1f8ac9783",
+      "harness_sha256": "9234190d48464237a8910f89064d590ed35a38f0a6d80a708af0daa3c53eb57c",
+      "platform": {
+        "os": "darwin",
+        "arch": "arm64",
+        "kernel": "25.5.0",
+        "cpu": "Apple M4 Pro",
+        "node": "v24.11.0"
+      },
+      "build": {
+        "binary_bytes": 11497776,
+        "binary_sha256": "bd38c0e62538dd5cc07811aedc5541d548fe1ca59926701efd61f60478ccd09e"
+      },
+      "method": {
+        "provider": "open_responses",
+        "model": "fixture-text-tools-v1",
+        "trigger": "overflow",
+        "samples": 30,
+        "warmup": 5,
+        "workload": "three actual 6000-byte file reads, one bounded summary, final continuation; overflow adds one HTTP 400",
+        "timing": "core/CLI buffered redacted JSONL; fresh processes; ACP fresh sessions in one warm process with negotiated notifications and redacted trace; rotated paths, monotonic host/request clocks, native UTC span timestamps",
+        "limits": "loopback synthetic latency only; no live model throughput or summary quality claim; no private reasoning fixture in this performance workload"
+      },
+      "stats": {
+        "acp_warm_prompt_ms": {
+          "n": 30,
+          "min": 3.1124160000001666,
+          "p50": 3.9281250000000227,
+          "p95": 6.606750000000034,
+          "p99": 13.134541000000013,
+          "max": 13.134541000000013
+        },
+        "acp_before_bytes": {
+          "n": 30,
+          "min": 21996,
+          "p50": 21996,
+          "p95": 21996,
+          "p99": 21996,
+          "max": 21996
+        },
+        "acp_after_bytes": {
+          "n": 30,
+          "min": 9135,
+          "p50": 9135,
+          "p95": 9135,
+          "p99": 9135,
+          "max": 9135
+        },
+        "acp_reduction_percent": {
+          "n": 30,
+          "min": 58.46972176759411,
+          "p50": 58.46972176759411,
+          "p95": 58.46972176759411,
+          "p99": 58.46972176759411,
+          "max": 58.46972176759411
+        },
+        "acp_summary_request_to_generation_ms": {
+          "n": 30,
+          "min": 0.3752079999999296,
+          "p50": 0.45829200000002857,
+          "p95": 1.145208000000025,
+          "p99": 1.2125409999999874,
+          "max": 1.2125409999999874
+        },
+        "acp_overflow_to_recovery_ms": {
+          "n": 30,
+          "min": 0.6032500000001164,
+          "p50": 0.7562090000000126,
+          "p95": 1.938415999999961,
+          "p99": 2.6329169999999067,
+          "max": 2.6329169999999067
+        },
+        "acp_compaction_notification_ms": {
+          "n": 30,
+          "min": 0.3857499999999163,
+          "p50": 0.47179099999993923,
+          "p95": 1.4810410000000047,
+          "p99": 1.7983749999999645,
+          "max": 1.7983749999999645
+        },
+        "core_process_ms": {
+          "n": 30,
+          "min": 13.189542000000074,
+          "p50": 14.385667000000012,
+          "p95": 19.096625000000017,
+          "p99": 25.069541999999956,
+          "max": 25.069541999999956
+        },
+        "core_run_ms": {
+          "n": 30,
+          "min": 3.828583,
+          "p50": 4.276375,
+          "p95": 6.383958000000001,
+          "p99": 7.5411660000000005,
+          "max": 7.5411660000000005
+        },
+        "core_before_bytes": {
+          "n": 30,
+          "min": 21996,
+          "p50": 21996,
+          "p95": 21996,
+          "p99": 21996,
+          "max": 21996
+        },
+        "core_after_bytes": {
+          "n": 30,
+          "min": 9135,
+          "p50": 9135,
+          "p95": 9135,
+          "p99": 9135,
+          "max": 9135
+        },
+        "core_reduction_percent": {
+          "n": 30,
+          "min": 58.46972176759411,
+          "p50": 58.46972176759411,
+          "p95": 58.46972176759411,
+          "p99": 58.46972176759411,
+          "max": 58.46972176759411
+        },
+        "core_compaction_ms": {
+          "n": 30,
+          "min": 0.379,
+          "p50": 0.451,
+          "p95": 0.749,
+          "p99": 1.013,
+          "max": 1.013
+        },
+        "core_summary_request_to_generation_ms": {
+          "n": 30,
+          "min": 0.732665999999881,
+          "p50": 0.976791999999989,
+          "p95": 1.3307079999999587,
+          "p99": 1.45049999999992,
+          "max": 1.45049999999992
+        },
+        "core_overflow_to_recovery_ms": {
+          "n": 30,
+          "min": 0.9506659999999556,
+          "p50": 1.2479589999999803,
+          "p95": 1.7190840000000662,
+          "p99": 2.0787920000000213,
+          "max": 2.0787920000000213
+        },
+        "cli_process_ms": {
+          "n": 30,
+          "min": 13.05099999999993,
+          "p50": 14.736750000000029,
+          "p95": 26.961624999999913,
+          "p99": 30.445084000000065,
+          "max": 30.445084000000065
+        },
+        "cli_before_bytes": {
+          "n": 30,
+          "min": 21996,
+          "p50": 21996,
+          "p95": 21996,
+          "p99": 21996,
+          "max": 21996
+        },
+        "cli_after_bytes": {
+          "n": 30,
+          "min": 9135,
+          "p50": 9135,
+          "p95": 9135,
+          "p99": 9135,
+          "max": 9135
+        },
+        "cli_reduction_percent": {
+          "n": 30,
+          "min": 58.46972176759411,
+          "p50": 58.46972176759411,
+          "p95": 58.46972176759411,
+          "p99": 58.46972176759411,
+          "max": 58.46972176759411
+        },
+        "cli_compaction_ms": {
+          "n": 30,
+          "min": 0.356,
+          "p50": 0.463,
+          "p95": 1.141,
+          "p99": 1.231,
+          "max": 1.231
+        },
+        "cli_summary_request_to_generation_ms": {
+          "n": 30,
+          "min": 0.7239169999998012,
+          "p50": 1.0060419999999795,
+          "p95": 1.7529160000000275,
+          "p99": 1.8344579999999837,
+          "max": 1.8344579999999837
+        },
+        "cli_overflow_to_recovery_ms": {
+          "n": 30,
+          "min": 0.9478339999998298,
+          "p50": 1.2989999999999782,
+          "p95": 2.4477079999999773,
+          "p99": 2.506040999999982,
+          "max": 2.506040999999982
+        }
+      }
+    },
+    "ordinary-reverse": {
+      "schema_version": 1,
+      "checkpoint": "C3.12a",
+      "timestamp": "2026-09-10T23:10:19.594Z",
+      "source_sha256": "0388702aaa1cde5ba87f4f1861716e3089a902b57f938f6ce37809d1f8ac9783",
+      "harness_sha256": "63d149f604496e4b7c6a681517a435b5da3ca3c8225cf0b206c2dbb43673b008",
+      "platform": {
+        "os": "darwin",
+        "arch": "arm64",
+        "kernel": "25.5.0",
+        "cpu": "Apple M4 Pro",
+        "logical_cpus": 14,
+        "memory_bytes": 25769803776,
+        "node": "v24.11.0",
+        "rust": "rustc 1.98.1 (48a229cea 2026-09-01)",
+        "environment": "local host"
+      },
+      "build": {
+        "profile": "lto = \"thin\"\ncodegen-units = 1\nstrip = \"symbols\"",
+        "binary_bytes": 11497776,
+        "stripped_binary_bytes": 11497792,
+        "strip_method": "platform strip on a copy; timings use original release executable",
+        "binary_sha256": "bd38c0e62538dd5cc07811aedc5541d548fe1ca59926701efd61f60478ccd09e"
+      },
+      "method": {
+        "provider": "vercel",
+        "model": "zai/glm-5.3-flash",
+        "route_events": false,
+        "configuration": "explicit deployment file; re-resolved per admitted task",
+        "samples": 30,
+        "warmup": 5,
+        "cache": "warm filesystem; no forced cache eviction",
+        "workload": "two local HTTP/SSE calls, one bare printf shell command, 32 x 16-byte output deltas",
+        "startup": "Node monotonic spawn to first loopback provider request arrival; separate --version process wall time",
+        "baseline": "direct core run_with_tools in measurement host; SDK/provider/tool construction excluded from core_run_ms",
+        "acp": "official TS SDK; one new process/session/prompt per sample; prompt includes per-run provider/tool/SDK setup; total excludes deliberate RSS wait and session creation",
+        "first_delta": "server write of one text delta to TS client update; local HTTP/SSE and ACP; provider waits 40 ms before finishing",
+        "reuse": "up to 40 measured independent sessions per process after five warm-up tasks; prompt timing excludes session creation; same HTTP/shell workload",
+        "rss": "ps RSS in KiB 50 ms after ACP initialize; one fresh process per sample",
+        "events": "normalized ProviderEvent yield to inline TextDelta sink entry; includes measurement mutex/clock; 1000 x 32-byte deltas per run",
+        "trace": "same event workload with/without metadata-only buffered JSONL; includes writer flush but excludes file creation; no fsync",
+        "limits": "single-run warm-cache microbenchmarks; no network/TLS/model latency; no concurrency or remote provider claim"
+      },
+      "stats": {
+        "version_process_ms": {
+          "n": 30,
+          "min": 3.5787499999996726,
+          "p50": 4.3691660000001775,
+          "p95": 5.373291999999765,
+          "p99": 5.6279160000003685,
+          "max": 5.6279160000003685
+        },
+        "cli_provider_ready_ms": {
+          "n": 30,
+          "min": 8.35633400000006,
+          "p50": 9.513792000000649,
+          "p95": 15.073875000000044,
+          "p99": 15.429750000000013,
+          "max": 15.429750000000013
+        },
+        "cli_total_ms": {
+          "n": 30,
+          "min": 15.679250000000138,
+          "p50": 18.120957999999973,
+          "p95": 26.866833999999926,
+          "p99": 29.79333399999996,
+          "max": 29.79333399999996
+        },
+        "core_run_ms": {
+          "n": 30,
+          "min": 7.080333,
+          "p50": 8.533084,
+          "p95": 13.357667,
+          "p99": 14.339125,
+          "max": 14.339125
+        },
+        "core_host_total_ms": {
+          "n": 30,
+          "min": 16.161167000000205,
+          "p50": 18.262792000000445,
+          "p95": 23.7009579999999,
+          "p99": 30.518082999999933,
+          "max": 30.518082999999933
+        },
+        "acp_initialize_ms": {
+          "n": 30,
+          "min": 7.489542000000256,
+          "p50": 8.484292000000096,
+          "p95": 12.020582999999988,
+          "p99": 13.986750000000029,
+          "max": 13.986750000000029
+        },
+        "acp_prompt_ms": {
+          "n": 30,
+          "min": 8.412708999999268,
+          "p50": 9.159000000000106,
+          "p95": 14.306417000000692,
+          "p99": 16.024083000000246,
+          "max": 16.024083000000246
+        },
+        "acp_total_ms": {
+          "n": 30,
+          "min": 17.23883299999943,
+          "p50": 18.577500000000327,
+          "p95": 23.894500000000335,
+          "p99": 25.482332999999926,
+          "max": 25.482332999999926
+        },
+        "acp_first_text_ms": {
+          "n": 30,
+          "min": 8.267624999999953,
+          "p50": 9.033792000000176,
+          "p95": 13.930750000000444,
+          "p99": 15.858833000000232,
+          "max": 15.858833000000232
+        },
+        "idle_rss_kib": {
+          "n": 30,
+          "min": 15680,
+          "p50": 15824,
+          "p95": 16368,
+          "p99": 16384,
+          "max": 16384
+        },
+        "acp_first_delta_delivery_ms": {
+          "n": 30,
+          "min": 0.18633299999964947,
+          "p50": 0.24733300000025338,
+          "p95": 0.4594999999999345,
+          "p99": 0.5443329999998241,
+          "max": 0.5443329999998241
+        },
+        "acp_warm_prompt_ms": {
+          "n": 30,
+          "min": 6.890999999999622,
+          "p50": 8.14691700000003,
+          "p95": 9.741375000001426,
+          "p99": 13.820541000000958,
+          "max": 13.820541000000958
+        },
+        "acp_warm_first_text_ms": {
+          "n": 30,
+          "min": 6.828292000000147,
+          "p50": 8.011791999999332,
+          "p95": 9.668209000001298,
+          "p99": 13.711583000000246,
+          "max": 13.711583000000246
+        },
+        "warm_idle_rss_kib": {
+          "n": 30,
+          "min": 17056,
+          "p50": 17120,
+          "p95": 17120,
+          "p99": 17120,
+          "max": 17120
+        }
+      },
+      "events": {
+        "mode": "events",
+        "chunks_per_run": 1000,
+        "bytes_per_chunk": 32,
+        "warmup_pairs": 5,
+        "samples": 30,
+        "event_latency_ns": {
+          "n": 30000,
+          "min": 83,
+          "p50": 167,
+          "p95": 209,
+          "p99": 416,
+          "max": 30583
+        },
+        "no_trace_ms": {
+          "n": 30,
+          "min": 0.494333,
+          "p50": 0.5249579999999999,
+          "p95": 0.63075,
+          "p99": 0.8580420000000001,
+          "max": 0.8580420000000001
+        },
+        "trace_ms": {
+          "n": 30,
+          "min": 0.911709,
+          "p50": 0.969542,
+          "p95": 1.13825,
+          "p99": 1.542209,
+          "max": 1.542209
+        },
+        "trace_bytes_per_run": 390882
+      },
+      "comparisons": {
+        "acp_prompt_minus_core_p50_ms": 0.6259160000001049,
+        "acp_prompt_over_core_p50_ratio": 1.0733516744942515,
+        "acp_total_minus_core_host_p50_ms": 0.3147079999998823,
+        "trace_p50_overhead_percent": 84.68944182201245
+      }
+    },
+    "baseline-ordinary-reverse": {
+      "schema_version": 1,
+      "checkpoint": "C3.12a",
+      "timestamp": "2026-09-10T23:10:31.087Z",
+      "source_sha256": "d4f9cf85de487aa976f9f3d77a5ba3bb9c227a054ae6d62d564d678ba892c1c3",
+      "harness_sha256": "63d149f604496e4b7c6a681517a435b5da3ca3c8225cf0b206c2dbb43673b008",
+      "platform": {
+        "os": "darwin",
+        "arch": "arm64",
+        "kernel": "25.5.0",
+        "cpu": "Apple M4 Pro",
+        "logical_cpus": 14,
+        "memory_bytes": 25769803776,
+        "node": "v24.11.0",
+        "rust": "rustc 1.98.1 (48a229cea 2026-09-01)",
+        "environment": "local host"
+      },
+      "build": {
+        "profile": "lto = \"thin\"\ncodegen-units = 1\nstrip = \"symbols\"",
+        "binary_bytes": 11430960,
+        "stripped_binary_bytes": 11430976,
+        "strip_method": "platform strip on a copy; timings use original release executable",
+        "binary_sha256": "d8651501ec46b7e0038599120d2c4055696b686861a81f9ab708c3c2ba5aa82e"
+      },
+      "method": {
+        "provider": "vercel",
+        "model": "zai/glm-5.3-flash",
+        "route_events": false,
+        "configuration": "explicit deployment file; re-resolved per admitted task",
+        "samples": 30,
+        "warmup": 5,
+        "cache": "warm filesystem; no forced cache eviction",
+        "workload": "two local HTTP/SSE calls, one bare printf shell command, 32 x 16-byte output deltas",
+        "startup": "Node monotonic spawn to first loopback provider request arrival; separate --version process wall time",
+        "baseline": "direct core run_with_tools in measurement host; SDK/provider/tool construction excluded from core_run_ms",
+        "acp": "official TS SDK; one new process/session/prompt per sample; prompt includes per-run provider/tool/SDK setup; total excludes deliberate RSS wait and session creation",
+        "first_delta": "server write of one text delta to TS client update; local HTTP/SSE and ACP; provider waits 40 ms before finishing",
+        "reuse": "up to 40 measured independent sessions per process after five warm-up tasks; prompt timing excludes session creation; same HTTP/shell workload",
+        "rss": "ps RSS in KiB 50 ms after ACP initialize; one fresh process per sample",
+        "events": "normalized ProviderEvent yield to inline TextDelta sink entry; includes measurement mutex/clock; 1000 x 32-byte deltas per run",
+        "trace": "same event workload with/without metadata-only buffered JSONL; includes writer flush but excludes file creation; no fsync",
+        "limits": "single-run warm-cache microbenchmarks; no network/TLS/model latency; no concurrency or remote provider claim"
+      },
+      "stats": {
+        "version_process_ms": {
+          "n": 30,
+          "min": 3.7450840000001335,
+          "p50": 4.450166000000081,
+          "p95": 5.933542000000671,
+          "p99": 7.351791999999477,
+          "max": 7.351791999999477
+        },
+        "cli_provider_ready_ms": {
+          "n": 30,
+          "min": 8.554250000000138,
+          "p50": 9.748583000000508,
+          "p95": 17.272542000000158,
+          "p99": 27.508375000000342,
+          "max": 27.508375000000342
+        },
+        "cli_total_ms": {
+          "n": 30,
+          "min": 15.638374999999542,
+          "p50": 17.898375000000215,
+          "p95": 30.432792000000063,
+          "p99": 51.16016599999966,
+          "max": 51.16016599999966
+        },
+        "core_run_ms": {
+          "n": 30,
+          "min": 7.116959,
+          "p50": 8.577375,
+          "p95": 15.045207999999999,
+          "p99": 18.913875,
+          "max": 18.913875
+        },
+        "core_host_total_ms": {
+          "n": 30,
+          "min": 15.751082999999198,
+          "p50": 18.274249999999938,
+          "p95": 31.9267090000003,
+          "p99": 31.986125000000357,
+          "max": 31.986125000000357
+        },
+        "acp_initialize_ms": {
+          "n": 30,
+          "min": 7.289541999999528,
+          "p50": 8.40670799999998,
+          "p95": 10.281999999999243,
+          "p99": 10.388459000000239,
+          "max": 10.388459000000239
+        },
+        "acp_prompt_ms": {
+          "n": 30,
+          "min": 8.12387499999977,
+          "p50": 8.885333000000173,
+          "p95": 14.223166999999194,
+          "p99": 15.28991600000063,
+          "max": 15.28991600000063
+        },
+        "acp_total_ms": {
+          "n": 30,
+          "min": 16.23433299999988,
+          "p50": 18.556041000000278,
+          "p95": 23.49449999999979,
+          "p99": 24.205167000000074,
+          "max": 24.205167000000074
+        },
+        "acp_first_text_ms": {
+          "n": 30,
+          "min": 8.01712499999985,
+          "p50": 8.679125000000568,
+          "p95": 14.172874999999294,
+          "p99": 15.210332999999991,
+          "max": 15.210332999999991
+        },
+        "idle_rss_kib": {
+          "n": 30,
+          "min": 15504,
+          "p50": 15584,
+          "p95": 16384,
+          "p99": 16432,
+          "max": 16432
+        },
+        "acp_first_delta_delivery_ms": {
+          "n": 30,
+          "min": 0.20420800000010786,
+          "p50": 0.2369579999999587,
+          "p95": 0.43800000000010186,
+          "p99": 0.4644590000000335,
+          "max": 0.4644590000000335
+        },
+        "acp_warm_prompt_ms": {
+          "n": 30,
+          "min": 7.006750000000466,
+          "p50": 8.153292000000874,
+          "p95": 14.707582999999431,
+          "p99": 17.050750000000335,
+          "max": 17.050750000000335
+        },
+        "acp_warm_first_text_ms": {
+          "n": 30,
+          "min": 6.892708000001221,
+          "p50": 7.929917000001296,
+          "p95": 14.552749999998923,
+          "p99": 16.66254200000003,
+          "max": 16.66254200000003
+        },
+        "warm_idle_rss_kib": {
+          "n": 30,
+          "min": 17200,
+          "p50": 17248,
+          "p95": 17248,
+          "p99": 17248,
+          "max": 17248
+        }
+      },
+      "events": {
+        "mode": "events",
+        "chunks_per_run": 1000,
+        "bytes_per_chunk": 32,
+        "warmup_pairs": 5,
+        "samples": 30,
+        "event_latency_ns": {
+          "n": 30000,
+          "min": 125,
+          "p50": 208,
+          "p95": 375,
+          "p99": 417,
+          "max": 130625
+        },
+        "no_trace_ms": {
+          "n": 30,
+          "min": 0.524042,
+          "p50": 0.5713750000000001,
+          "p95": 1.2407080000000001,
+          "p99": 1.459417,
+          "max": 1.459417
+        },
+        "trace_ms": {
+          "n": 30,
+          "min": 0.9749169999999999,
+          "p50": 1.09425,
+          "p95": 2.961417,
+          "p99": 6.043333,
+          "max": 6.043333
+        },
+        "trace_bytes_per_run": 390882
+      },
+      "comparisons": {
+        "acp_prompt_minus_core_p50_ms": 0.30795800000017337,
+        "acp_prompt_over_core_p50_ratio": 1.0359035252627025,
+        "acp_total_minus_core_host_p50_ms": 0.2817910000003394,
+        "trace_p50_overhead_percent": 91.5117042222708
+      }
+    },
+    "fallback-reverse": {
+      "schema_version": 1,
+      "checkpoint": "C3.12a",
+      "timestamp": "2026-09-10T23:10:43.233Z",
+      "source_sha256": "0388702aaa1cde5ba87f4f1861716e3089a902b57f938f6ce37809d1f8ac9783",
+      "harness_sha256": "63d149f604496e4b7c6a681517a435b5da3ca3c8225cf0b206c2dbb43673b008",
+      "platform": {
+        "os": "darwin",
+        "arch": "arm64",
+        "kernel": "25.5.0",
+        "cpu": "Apple M4 Pro",
+        "logical_cpus": 14,
+        "memory_bytes": 25769803776,
+        "node": "v24.11.0",
+        "rust": "rustc 1.98.1 (48a229cea 2026-09-01)",
+        "environment": "local host"
+      },
+      "build": {
+        "profile": "lto = \"thin\"\ncodegen-units = 1\nstrip = \"symbols\"",
+        "binary_bytes": 11497776,
+        "stripped_binary_bytes": 11497792,
+        "strip_method": "platform strip on a copy; timings use original release executable",
+        "binary_sha256": "bd38c0e62538dd5cc07811aedc5541d548fe1ca59926701efd61f60478ccd09e"
+      },
+      "method": {
+        "provider": "open_responses",
+        "model": "fixture-text-tools-v1",
+        "route_events": false,
+        "configuration": "ordered route; initial HTTP 503 then sticky second entry; three calls and one real tool",
+        "samples": 30,
+        "warmup": 5,
+        "cache": "warm filesystem; no forced cache eviction",
+        "workload": "three local HTTP calls including one 503, two SSE responses, one bare printf shell command, 32 x 16-byte output deltas",
+        "startup": "Node monotonic spawn to first loopback provider request arrival; separate --version process wall time",
+        "baseline": "direct core run_with_tools in measurement host; SDK/provider/tool construction excluded from core_run_ms",
+        "acp": "official TS SDK; one new process/session/prompt per sample; prompt includes per-run provider/tool/SDK setup; total excludes deliberate RSS wait and session creation",
+        "first_delta": "server write of one text delta to TS client update; local HTTP/SSE and ACP; provider waits 40 ms before finishing",
+        "reuse": "up to 40 measured independent sessions per process after five warm-up tasks; prompt timing excludes session creation; same HTTP/shell workload",
+        "rss": "ps RSS in KiB 50 ms after ACP initialize; one fresh process per sample",
+        "events": "normalized ProviderEvent yield to inline TextDelta sink entry; includes measurement mutex/clock; 1000 x 32-byte deltas per run",
+        "trace": "same event workload with/without metadata-only buffered JSONL; includes writer flush but excludes file creation; no fsync",
+        "limits": "single-run warm-cache microbenchmarks; no network/TLS/model latency; no concurrency or remote provider claim"
+      },
+      "stats": {
+        "version_process_ms": {
+          "n": 30,
+          "min": 3.8597500000000764,
+          "p50": 4.39850000000024,
+          "p95": 7.553916000000072,
+          "p99": 10.361167000000023,
+          "max": 10.361167000000023
+        },
+        "cli_provider_ready_ms": {
+          "n": 30,
+          "min": 8.7821670000003,
+          "p50": 10.32916699999987,
+          "p95": 13.616208999999799,
+          "p99": 14.892082999999957,
+          "max": 14.892082999999957
+        },
+        "cli_total_ms": {
+          "n": 30,
+          "min": 17.95850000000064,
+          "p50": 19.779333999999835,
+          "p95": 31.199457999999822,
+          "p99": 31.975916999999754,
+          "max": 31.975916999999754
+        },
+        "core_run_ms": {
+          "n": 30,
+          "min": 8.764166,
+          "p50": 9.926791000000001,
+          "p95": 16.1495,
+          "p99": 16.560583,
+          "max": 16.560583
+        },
+        "core_host_total_ms": {
+          "n": 30,
+          "min": 18.30370800000037,
+          "p50": 19.888666999999714,
+          "p95": 27.705833999999868,
+          "p99": 28.92337499999985,
+          "max": 28.92337499999985
+        },
+        "acp_initialize_ms": {
+          "n": 30,
+          "min": 8.331624999999804,
+          "p50": 8.81879200000003,
+          "p95": 12.243166000000201,
+          "p99": 12.703333999999813,
+          "max": 12.703333999999813
+        },
+        "acp_prompt_ms": {
+          "n": 30,
+          "min": 9.924125000000004,
+          "p50": 11.338582999999744,
+          "p95": 18.48254200000065,
+          "p99": 21.19720799999959,
+          "max": 21.19720799999959
+        },
+        "acp_total_ms": {
+          "n": 30,
+          "min": 19.242373999999927,
+          "p50": 22.820541000000958,
+          "p95": 29.595166999999947,
+          "p99": 31.109249999999975,
+          "max": 31.109249999999975
+        },
+        "acp_first_text_ms": {
+          "n": 30,
+          "min": 9.707417000000078,
+          "p50": 11.129915999999866,
+          "p95": 18.285542000000532,
+          "p99": 20.965082999999595,
+          "max": 20.965082999999595
+        },
+        "idle_rss_kib": {
+          "n": 30,
+          "min": 15728,
+          "p50": 15936,
+          "p95": 16480,
+          "p99": 16736,
+          "max": 16736
+        },
+        "acp_first_delta_delivery_ms": {
+          "n": 30,
+          "min": 0.27387500000077125,
+          "p50": 0.3248750000002474,
+          "p95": 0.6607919999996739,
+          "p99": 0.6923330000008718,
+          "max": 0.6923330000008718
+        },
+        "acp_warm_prompt_ms": {
+          "n": 30,
+          "min": 8.121000000001004,
+          "p50": 9.20824999999968,
+          "p95": 16.051040999998804,
+          "p99": 18.95970800000032,
+          "max": 18.95970800000032
+        },
+        "acp_warm_first_text_ms": {
+          "n": 30,
+          "min": 7.94629200000054,
+          "p50": 8.94591600000058,
+          "p95": 15.679540999999517,
+          "p99": 18.700125000001208,
+          "max": 18.700125000001208
+        },
+        "warm_idle_rss_kib": {
+          "n": 30,
+          "min": 17296,
+          "p50": 17520,
+          "p95": 17536,
+          "p99": 17536,
+          "max": 17536
+        }
+      },
+      "events": {
+        "mode": "events",
+        "chunks_per_run": 1000,
+        "bytes_per_chunk": 32,
+        "warmup_pairs": 5,
+        "samples": 30,
+        "event_latency_ns": {
+          "n": 30000,
+          "min": 83,
+          "p50": 167,
+          "p95": 209,
+          "p99": 209,
+          "max": 30500
+        },
+        "no_trace_ms": {
+          "n": 30,
+          "min": 0.450708,
+          "p50": 0.507042,
+          "p95": 0.5509580000000001,
+          "p99": 0.5960829999999999,
+          "max": 0.5960829999999999
+        },
+        "trace_ms": {
+          "n": 30,
+          "min": 0.8988750000000001,
+          "p50": 0.971792,
+          "p95": 1.331875,
+          "p99": 1.373417,
+          "max": 1.373417
+        },
+        "trace_bytes_per_run": 390882
+      },
+      "comparisons": {
+        "acp_prompt_minus_core_p50_ms": 1.4117919999997426,
+        "acp_prompt_over_core_p50_ratio": 1.142220381188618,
+        "acp_total_minus_core_host_p50_ms": 2.931874000001244,
+        "trace_p50_overhead_percent": 91.65907360731458
+      }
+    },
+    "baseline-fallback-reverse": {
+      "schema_version": 1,
+      "checkpoint": "C3.12a",
+      "timestamp": "2026-09-10T23:10:55.025Z",
+      "source_sha256": "d4f9cf85de487aa976f9f3d77a5ba3bb9c227a054ae6d62d564d678ba892c1c3",
+      "harness_sha256": "63d149f604496e4b7c6a681517a435b5da3ca3c8225cf0b206c2dbb43673b008",
+      "platform": {
+        "os": "darwin",
+        "arch": "arm64",
+        "kernel": "25.5.0",
+        "cpu": "Apple M4 Pro",
+        "logical_cpus": 14,
+        "memory_bytes": 25769803776,
+        "node": "v24.11.0",
+        "rust": "rustc 1.98.1 (48a229cea 2026-09-01)",
+        "environment": "local host"
+      },
+      "build": {
+        "profile": "lto = \"thin\"\ncodegen-units = 1\nstrip = \"symbols\"",
+        "binary_bytes": 11430960,
+        "stripped_binary_bytes": 11430976,
+        "strip_method": "platform strip on a copy; timings use original release executable",
+        "binary_sha256": "d8651501ec46b7e0038599120d2c4055696b686861a81f9ab708c3c2ba5aa82e"
+      },
+      "method": {
+        "provider": "open_responses",
+        "model": "fixture-text-tools-v1",
+        "route_events": false,
+        "configuration": "ordered route; initial HTTP 503 then sticky second entry; three calls and one real tool",
+        "samples": 30,
+        "warmup": 5,
+        "cache": "warm filesystem; no forced cache eviction",
+        "workload": "three local HTTP calls including one 503, two SSE responses, one bare printf shell command, 32 x 16-byte output deltas",
+        "startup": "Node monotonic spawn to first loopback provider request arrival; separate --version process wall time",
+        "baseline": "direct core run_with_tools in measurement host; SDK/provider/tool construction excluded from core_run_ms",
+        "acp": "official TS SDK; one new process/session/prompt per sample; prompt includes per-run provider/tool/SDK setup; total excludes deliberate RSS wait and session creation",
+        "first_delta": "server write of one text delta to TS client update; local HTTP/SSE and ACP; provider waits 40 ms before finishing",
+        "reuse": "up to 40 measured independent sessions per process after five warm-up tasks; prompt timing excludes session creation; same HTTP/shell workload",
+        "rss": "ps RSS in KiB 50 ms after ACP initialize; one fresh process per sample",
+        "events": "normalized ProviderEvent yield to inline TextDelta sink entry; includes measurement mutex/clock; 1000 x 32-byte deltas per run",
+        "trace": "same event workload with/without metadata-only buffered JSONL; includes writer flush but excludes file creation; no fsync",
+        "limits": "single-run warm-cache microbenchmarks; no network/TLS/model latency; no concurrency or remote provider claim"
+      },
+      "stats": {
+        "version_process_ms": {
+          "n": 30,
+          "min": 3.7779999999997926,
+          "p50": 4.555832999998529,
+          "p95": 5.836749999999483,
+          "p99": 6.183416000000761,
+          "max": 6.183416000000761
+        },
+        "cli_provider_ready_ms": {
+          "n": 30,
+          "min": 8.915416999999934,
+          "p50": 10.14366599999994,
+          "p95": 14.282124999999724,
+          "p99": 18.698499999999967,
+          "max": 18.698499999999967
+        },
+        "cli_total_ms": {
+          "n": 30,
+          "min": 18.622041000000536,
+          "p50": 19.402416999999332,
+          "p95": 26.807667000000038,
+          "p99": 28.02058399999987,
+          "max": 28.02058399999987
+        },
+        "core_run_ms": {
+          "n": 30,
+          "min": 9.012416,
+          "p50": 9.630708,
+          "p95": 16.999042,
+          "p99": 39.622667,
+          "max": 39.622667
+        },
+        "core_host_total_ms": {
+          "n": 30,
+          "min": 18.670333000000028,
+          "p50": 20.47608300000047,
+          "p95": 29.320208999999977,
+          "p99": 49.9345000000003,
+          "max": 49.9345000000003
+        },
+        "acp_initialize_ms": {
+          "n": 30,
+          "min": 8.040667000000212,
+          "p50": 9.003707999999278,
+          "p95": 10.349959000000126,
+          "p99": 17.272000000000844,
+          "max": 17.272000000000844
+        },
+        "acp_prompt_ms": {
+          "n": 30,
+          "min": 10.045667000000321,
+          "p50": 11.031874999999673,
+          "p95": 18.536459000000832,
+          "p99": 22.369791000000077,
+          "max": 22.369791000000077
+        },
+        "acp_total_ms": {
+          "n": 30,
+          "min": 19.900583000000097,
+          "p50": 21.585166000000754,
+          "p95": 28.960125999999946,
+          "p99": 31.782500000000255,
+          "max": 31.782500000000255
+        },
+        "acp_first_text_ms": {
+          "n": 30,
+          "min": 9.787833000000319,
+          "p50": 10.838166999999885,
+          "p95": 17.41595899999993,
+          "p99": 21.814250000000357,
+          "max": 21.814250000000357
+        },
+        "idle_rss_kib": {
+          "n": 30,
+          "min": 15552,
+          "p50": 15648,
+          "p95": 16240,
+          "p99": 16336,
+          "max": 16336
+        },
+        "acp_first_delta_delivery_ms": {
+          "n": 30,
+          "min": 0.2601669999994556,
+          "p50": 0.3331659999994372,
+          "p95": 0.5232079999996131,
+          "p99": 0.8819170000001577,
+          "max": 0.8819170000001577
+        },
+        "acp_warm_prompt_ms": {
+          "n": 30,
+          "min": 7.918665999999575,
+          "p50": 9.23791700000038,
+          "p95": 15.330791000000318,
+          "p99": 15.433208000000377,
+          "max": 15.433208000000377
+        },
+        "acp_warm_first_text_ms": {
+          "n": 30,
+          "min": 7.710957999999664,
+          "p50": 9.015459000000192,
+          "p95": 15.036540999999488,
+          "p99": 15.07037499999933,
+          "max": 15.07037499999933
+        },
+        "warm_idle_rss_kib": {
+          "n": 30,
+          "min": 17072,
+          "p50": 17088,
+          "p95": 17104,
+          "p99": 17104,
+          "max": 17104
+        }
+      },
+      "events": {
+        "mode": "events",
+        "chunks_per_run": 1000,
+        "bytes_per_chunk": 32,
+        "warmup_pairs": 5,
+        "samples": 30,
+        "event_latency_ns": {
+          "n": 30000,
+          "min": 125,
+          "p50": 208,
+          "p95": 250,
+          "p99": 292,
+          "max": 21833
+        },
+        "no_trace_ms": {
+          "n": 30,
+          "min": 0.5499580000000001,
+          "p50": 0.5601659999999999,
+          "p95": 0.655708,
+          "p99": 0.705459,
+          "max": 0.705459
+        },
+        "trace_ms": {
+          "n": 30,
+          "min": 0.982709,
+          "p50": 1.026916,
+          "p95": 1.253709,
+          "p99": 1.515625,
+          "max": 1.515625
+        },
+        "trace_bytes_per_run": 390882
+      },
+      "comparisons": {
+        "acp_prompt_minus_core_p50_ms": 1.4011669999996723,
+        "acp_prompt_over_core_p50_ratio": 1.145489511259159,
+        "acp_total_minus_core_host_p50_ms": 1.1090830000002825,
+        "trace_p50_overhead_percent": 83.3235148152512
+      }
+    },
+    "baseline-filesystem": {
+      "checkpoint": "C3.12a",
+      "timestamp": "2026-09-10T23:10:56.148Z",
+      "platform": "darwin/arm64",
+      "source_sha256": "d4f9cf85de487aa976f9f3d77a5ba3bb9c227a054ae6d62d564d678ba892c1c3",
+      "binary_sha256": "d8651501ec46b7e0038599120d2c4055696b686861a81f9ab708c3c2ba5aa82e",
+      "method": {
+        "provider": "vercel",
+        "model": "zai/glm-5.3-flash",
+        "configuration": "explicit single-entry model route; re-resolved per task",
+        "samples": 30,
+        "warmup": 5,
+        "cache": "warm filesystem; no forced eviction",
+        "prompt": "two loopback HTTP/SSE calls plus one real filesystem tool and ACP envelope delivery; fresh sessions in reused process",
+        "tool": "native tool.started to tool.finished timestamps; includes joined worker and filesystem work",
+        "search_bytes": 1048700,
+        "setup": "fixture construction and process/catalog/SDK setup excluded from measured warm samples",
+        "baseline": "new capability workload; no equivalent C1 native filesystem tool"
+      },
+      "measurements": {
+        "read_128k": {
+          "prompt_ms": {
+            "n": 30,
+            "p50": 1.7786669999999845,
+            "p95": 3.4676660000000084,
+            "p99": 4.226499999999987,
+            "min": 1.539041999999995,
+            "max": 4.226499999999987
+          },
+          "tool_ms": {
+            "n": 30,
+            "p50": 0.148,
+            "p95": 0.333,
+            "p99": 0.459,
+            "min": 0.134,
+            "max": 0.459
+          }
+        },
+        "list_1000": {
+          "prompt_ms": {
+            "n": 30,
+            "p50": 2.5392499999999814,
+            "p95": 3.507583000000011,
+            "p99": 4.23516699999999,
+            "min": 2.223000000000013,
+            "max": 4.23516699999999
+          },
+          "tool_ms": {
+            "n": 30,
+            "p50": 1.237,
+            "p95": 1.848,
+            "p99": 1.851,
+            "min": 1.061,
+            "max": 1.851
+          }
+        },
+        "search_1m": {
+          "prompt_ms": {
+            "n": 30,
+            "p50": 3.456457999999998,
+            "p95": 4.513250000000085,
+            "p99": 4.9254589999999325,
+            "min": 3.100332999999978,
+            "max": 4.9254589999999325
+          },
+          "tool_ms": {
+            "n": 30,
+            "p50": 2.424,
+            "p95": 2.737,
+            "p99": 3.261,
+            "min": 2.219,
+            "max": 3.261
+          }
+        },
+        "replace_128k": {
+          "prompt_ms": {
+            "n": 30,
+            "p50": 2.622624999999971,
+            "p95": 3.3920000000000528,
+            "p99": 5.175542000000064,
+            "min": 2.30762500000003,
+            "max": 5.175542000000064
+          },
+          "tool_ms": {
+            "n": 30,
+            "p50": 0.588,
+            "p95": 0.927,
+            "p99": 1.069,
+            "min": 0.508,
+            "max": 1.069
+          }
+        },
+        "edit_128k": {
+          "prompt_ms": {
+            "n": 30,
+            "p50": 1.419334000000049,
+            "p95": 2.084208999999987,
+            "p99": 2.5830839999999853,
+            "min": 1.3355420000000322,
+            "max": 2.5830839999999853
+          },
+          "tool_ms": {
+            "n": 30,
+            "p50": 0.47,
+            "p95": 0.968,
+            "p99": 1.031,
+            "min": 0.415,
+            "max": 1.031
+          }
+        }
+      }
+    },
+    "filesystem": {
+      "checkpoint": "C3.12a",
+      "timestamp": "2026-09-10T23:10:57.029Z",
+      "platform": "darwin/arm64",
+      "source_sha256": "0388702aaa1cde5ba87f4f1861716e3089a902b57f938f6ce37809d1f8ac9783",
+      "binary_sha256": "bd38c0e62538dd5cc07811aedc5541d548fe1ca59926701efd61f60478ccd09e",
+      "method": {
+        "provider": "vercel",
+        "model": "zai/glm-5.3-flash",
+        "configuration": "explicit single-entry model route; re-resolved per task",
+        "samples": 30,
+        "warmup": 5,
+        "cache": "warm filesystem; no forced eviction",
+        "prompt": "two loopback HTTP/SSE calls plus one real filesystem tool and ACP envelope delivery; fresh sessions in reused process",
+        "tool": "native tool.started to tool.finished timestamps; includes joined worker and filesystem work",
+        "search_bytes": 1048700,
+        "setup": "fixture construction and process/catalog/SDK setup excluded from measured warm samples",
+        "baseline": "new capability workload; no equivalent C1 native filesystem tool"
+      },
+      "measurements": {
+        "read_128k": {
+          "prompt_ms": {
+            "n": 30,
+            "p50": 1.751958000000002,
+            "p95": 4.860957999999982,
+            "p99": 5.695334000000003,
+            "min": 1.4835829999999532,
+            "max": 5.695334000000003
+          },
+          "tool_ms": {
+            "n": 30,
+            "p50": 0.147,
+            "p95": 0.513,
+            "p99": 0.694,
+            "min": 0.137,
+            "max": 0.694
+          }
+        },
+        "list_1000": {
+          "prompt_ms": {
+            "n": 30,
+            "p50": 2.8688339999999926,
+            "p95": 6.693125000000009,
+            "p99": 6.998125000000016,
+            "min": 2.4038750000000277,
+            "max": 6.998125000000016
+          },
+          "tool_ms": {
+            "n": 30,
+            "p50": 1.408,
+            "p95": 3.165,
+            "p99": 3.249,
+            "min": 1.09,
+            "max": 3.249
+          }
+        },
+        "search_1m": {
+          "prompt_ms": {
+            "n": 30,
+            "p50": 3.505583999999999,
+            "p95": 3.9605000000000246,
+            "p99": 4.191624999999931,
+            "min": 3.1327499999999873,
+            "max": 4.191624999999931
+          },
+          "tool_ms": {
+            "n": 30,
+            "p50": 2.392,
+            "p95": 2.642,
+            "p99": 2.734,
+            "min": 2.222,
+            "max": 2.734
+          }
+        },
+        "replace_128k": {
+          "prompt_ms": {
+            "n": 30,
+            "p50": 2.670082999999977,
+            "p95": 3.659582999999998,
+            "p99": 4.983042000000069,
+            "min": 2.2481669999999667,
+            "max": 4.983042000000069
+          },
+          "tool_ms": {
+            "n": 30,
+            "p50": 0.616,
+            "p95": 0.89,
+            "p99": 1.002,
+            "min": 0.518,
+            "max": 1.002
+          }
+        },
+        "edit_128k": {
+          "prompt_ms": {
+            "n": 30,
+            "p50": 1.6571669999999585,
+            "p95": 3.188541999999984,
+            "p99": 3.80279100000007,
+            "min": 1.3929580000000215,
+            "max": 3.80279100000007
+          },
+          "tool_ms": {
+            "n": 30,
+            "p50": 0.558,
+            "p95": 0.907,
+            "p99": 1.418,
+            "min": 0.441,
+            "max": 1.418
+          }
+        }
+      }
+    }
+  }
+}

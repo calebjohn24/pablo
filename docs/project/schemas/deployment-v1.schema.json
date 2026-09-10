@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:pablo:deployment:1:c3.11",
-  "title": "Pablo deployment v1 \u2014 C3.11 contract",
+  "$id": "urn:pablo:deployment:1:c3.12a",
+  "title": "Pablo deployment v1 \u2014 C3.12a contract",
   "description": "TOML-to-JSON shape. See c3-deployment-config.md for semantic checks and implementation availability.",
   "type": "object",
   "additionalProperties": false,
@@ -775,6 +775,18 @@
                 "bearer",
                 "raw"
               ]
+            },
+            "context_window_tokens": {
+              "oneOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 1000000000
+                },
+                {
+                  "$ref": "#/$defs/unset"
+                }
+              ]
             }
           }
         },
@@ -1013,6 +1025,35 @@
         },
         "model_route": {
           "$ref": "#/$defs/name"
+        },
+        "context": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "safety_margin_percent": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            },
+            "max_summary_tokens": {
+              "type": "integer",
+              "minimum": 16,
+              "maximum": 65536
+            },
+            "max_summary_bytes": {
+              "type": "integer",
+              "minimum": 256,
+              "maximum": 1048576
+            },
+            "keep_recent_turns": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32
+            }
+          },
+          "additionalProperties": false
         }
       }
     },
@@ -1271,6 +1312,18 @@
                 "bearer",
                 "raw"
               ]
+            },
+            "context_window_tokens": {
+              "oneOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 1000000000
+                },
+                {
+                  "$ref": "#/$defs/unset"
+                }
+              ]
             }
           },
           "required": [
@@ -1518,6 +1571,42 @@
         },
         "model_route": {
           "$ref": "#/$defs/name"
+        },
+        "context": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "safety_margin_percent": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            },
+            "max_summary_tokens": {
+              "type": "integer",
+              "minimum": 16,
+              "maximum": 65536
+            },
+            "max_summary_bytes": {
+              "type": "integer",
+              "minimum": 256,
+              "maximum": 1048576
+            },
+            "keep_recent_turns": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "safety_margin_percent",
+            "max_summary_tokens",
+            "max_summary_bytes",
+            "keep_recent_turns"
+          ]
         }
       },
       "required": [
@@ -1529,7 +1618,8 @@
         "interfaces",
         "otel",
         "limits",
-        "policy"
+        "policy",
+        "context"
       ]
     },
     "resolvedCredentialSource": {
@@ -2205,6 +2295,18 @@
               "type": "boolean"
             }
           }
+        },
+        "context_window_tokens": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000000
+            },
+            {
+              "$ref": "#/$defs/unset"
+            }
+          ]
         }
       }
     },
@@ -2276,6 +2378,18 @@
           "required": [
             "text_streaming",
             "tool_calls"
+          ]
+        },
+        "context_window_tokens": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000000
+            },
+            {
+              "$ref": "#/$defs/unset"
+            }
           ]
         }
       },

@@ -170,6 +170,9 @@ impl Serialize for RedactedEvent<'_> {
         map.serialize_entry("span_id", &e.span_id)?;
         map.serialize_entry("parent_span_id", &e.parent_span_id)?;
         map.serialize_entry("trace_flags", &e.trace_flags)?;
+        if let Some(compaction) = &e.compaction {
+            map.serialize_entry("compaction", compaction)?;
+        }
         if let Some(route) = &e.model_route {
             map.serialize_entry("model_route", route)?;
         }
@@ -183,6 +186,15 @@ impl Serialize for RedactedEvent<'_> {
             map.serialize_entry("accounting", accounting)?;
         }
         match &e.kind {
+            EventKind::CompactionStarted => {
+                map.serialize_entry("type", "context.compaction.started")?
+            }
+            EventKind::CompactionFinished { summary_bytes, .. } => {
+                map.serialize_entry("type", "context.compaction.finished")?;
+                map.serialize_entry("summary", &())?;
+                map.serialize_entry("summary_bytes", summary_bytes)?;
+                map.serialize_entry("content_redacted", &true)?;
+            }
             EventKind::RunStarted => map.serialize_entry("type", "run.started")?,
             EventKind::ModelStarted { provider, model } => {
                 map.serialize_entry("type", "model.started")?;

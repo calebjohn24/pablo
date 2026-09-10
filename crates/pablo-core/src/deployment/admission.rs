@@ -128,13 +128,14 @@ impl ResolvedDeployment {
             .unwrap()
             .parse()
             .map_err(|_| error("config_invalid_value", "/options/model/provider"))?;
-        if kind == crate::gateway::GatewayKind::OpenResponses {
-            return Ok(crate::gateway::ModelProfile::responses(responses_profile(
-                model,
-            )?));
-        }
-        crate::gateway::ModelProfile::resolve(kind, model["id"].as_str())
-            .map_err(|_| error("config_invalid_value", "/options/model/id"))
+        let mut profile = if kind == crate::gateway::GatewayKind::OpenResponses {
+            crate::gateway::ModelProfile::responses(responses_profile(model)?)
+        } else {
+            crate::gateway::ModelProfile::resolve(kind, model["id"].as_str())
+                .map_err(|_| error("config_invalid_value", "/options/model/id"))?
+        };
+        profile.context_window_tokens = model["context_window_tokens"].as_u64();
+        Ok(profile)
     }
     pub fn prepare_run(&self, input: RunInput) -> Result<PreparedRun, ConfigError> {
         let options = self.options();
@@ -282,6 +283,9 @@ impl ResolvedDeployment {
             workspace,
             self.selected_model()["id"].as_str().unwrap(),
         );
+        spec.context = serde_json::from_value(options["context"].clone())
+            .map_err(|_| error("config_invalid_value", "/options/context"))?;
+        spec.context.window_tokens = self.model_profile()?.context_window_tokens;
         spec.session_id = input.session_id;
         spec.instructions = options["run"]["instructions"].as_str().unwrap().into();
         spec.limits = serde_json::from_value(limits)

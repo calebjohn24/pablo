@@ -15,6 +15,8 @@ pub struct RunSpec {
     pub model: String,
     pub session_id: Option<String>,
     pub limits: RunLimits,
+    #[serde(default)]
+    pub context: crate::context::ContextSettings,
     pub trace: TraceSettings,
 }
 
@@ -27,6 +29,7 @@ impl RunSpec {
             model: model.into(),
             session_id: None,
             limits: RunLimits::default(),
+            context: crate::context::ContextSettings::default(),
             trace: TraceSettings::default(),
         }
     }
@@ -124,6 +127,8 @@ pub enum DeliveryCertainty {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum FailureCode {
+    ContextOverflow,
+    CompactionFailed,
     ModelAttemptTimedOut,
     ContinuationIncompatible,
     UnsupportedProviderContent,
@@ -266,6 +271,8 @@ pub struct ModelRouteRecord {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RunEvent {
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub compaction: Option<Box<crate::context::CompactionRecord>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model_route: Option<Box<ModelRouteRecord>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model_profile: Option<ProviderIdentity>,
@@ -290,6 +297,13 @@ pub struct RunEvent {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum EventKind {
+    #[serde(rename = "context.compaction.started")]
+    CompactionStarted,
+    #[serde(rename = "context.compaction.finished")]
+    CompactionFinished {
+        summary: Option<String>,
+        summary_bytes: usize,
+    },
     #[serde(rename = "run.started")]
     RunStarted,
     #[serde(rename = "model.started")]

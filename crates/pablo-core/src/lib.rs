@@ -3,6 +3,7 @@
 //! Hosts inject telemetry and consume events as they happen. No process-global
 //! providers, network exporters, environment files, or worker tasks are installed.
 
+pub mod context;
 pub mod contracts;
 pub mod deployment;
 pub mod events;

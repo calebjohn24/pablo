@@ -382,7 +382,9 @@
                 "invalid_tool_arguments",
                 "tool_execution",
                 "tool_cleanup",
-                "accounting_bound_violated"
+                "accounting_bound_violated",
+                "context_overflow",
+                "compaction_failed"
               ]
             },
             "delivery": {
