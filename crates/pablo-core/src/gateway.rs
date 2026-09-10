@@ -353,7 +353,11 @@ impl Completion {
         if value.get("error").is_some() {
             return Err(ProviderError {
                 retry_class: None,
-                code: FailureCode::ProviderRejected,
+                code: if transport::context_overflow(&value) {
+                    FailureCode::ContextOverflow
+                } else {
+                    FailureCode::ProviderRejected
+                },
                 delivery: DeliveryCertainty::ResponseReceived,
             });
         }

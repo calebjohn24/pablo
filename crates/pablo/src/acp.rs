@@ -35,6 +35,7 @@ struct State {
     extended: bool,
     task_extended: bool,
     route_extended: bool,
+    compaction_extended: bool,
     session: Option<(wire::SessionId, std::path::PathBuf)>,
     prompted: bool,
     prompt_active: bool,
@@ -168,7 +169,7 @@ async fn serve_streams(
                     .is_some_and(|message| {
                         matches!(
                             message.method,
-                            Some("session/update" | "_pablo/model_attempt")
+                            Some("session/update" | "_pablo/model_attempt" | "_pablo/compaction")
                         )
                     });
             tokio::time::timeout(WRITE_TIMEOUT, async {
@@ -224,9 +225,17 @@ async fn serve_streams(
                             .as_ref()
                             .and_then(|m| m.get("pablo/model-route-v1"))
                             == Some(&json!(true));
+                    state.compaction_extended = state.extended
+                        && request
+                            .client_capabilities
+                            .meta
+                            .as_ref()
+                            .and_then(|m| m.get("pablo/compaction-v1"))
+                            == Some(&json!(true));
                     let mut capabilities = meta(json!(true));
                     capabilities.insert("pablo/task-v1".into(), json!(true));
                     capabilities.insert("pablo/model-route-v1".into(), json!(true));
+                    capabilities.insert("pablo/compaction-v1".into(), json!(true));
                     let caps = wire::AgentCapabilities::new().meta(capabilities);
                     responder.respond(
                         wire::InitializeResponse::new(
@@ -321,7 +330,7 @@ async fn serve_streams(
                         Ok(input) => input,
                         Err(error) => return responder.respond_with_error(error),
                     };
-                    let (cwd, extended, task_extended, route_extended) = {
+                    let (cwd, extended, task_extended, route_extended, compaction_extended) = {
                         let mut s = state.lock().unwrap();
                         let Some((id, cwd)) = &s.session else {
                             return responder.respond_with_error(invalid("create a session first"));
@@ -336,7 +345,13 @@ async fn serve_streams(
                         }
                         let cwd = cwd.clone();
                         s.prompted = true;
-                        (cwd, s.extended, s.task_extended, s.route_extended)
+                        (
+                            cwd,
+                            s.extended,
+                            s.task_extended,
+                            s.route_extended,
+                            s.compaction_extended,
+                        )
                     };
                     let prepared = match options.prepare_run(
                         Some(input.clone()),
@@ -391,6 +406,7 @@ async fn serve_streams(
                     } else {
                         opentelemetry::Context::new()
                     };
+                    let capture_content = spec.trace.capture_content;
                     let (tx, rx) = async_channel::bounded(QUEUE_EVENTS);
                     let cancel = cancellation.child_token();
                     let (completed, outcome) = tokio::sync::oneshot::channel();
@@ -428,8 +444,15 @@ async fn serve_streams(
                     let sender = cx.clone();
                     cx.spawn(async move {
                         let request_cancel = responder.cancellation();
-                        let forwarding =
-                            forward_events(rx, &sender, &written, extended, route_extended);
+                        let forwarding = forward_events(
+                            rx,
+                            &sender,
+                            &written,
+                            extended,
+                            route_extended,
+                            compaction_extended,
+                            capture_content,
+                        );
                         tokio::pin!(forwarding);
                         let terminal = tokio::select! {
                             result = &mut forwarding => result,
@@ -450,6 +473,7 @@ async fn serve_streams(
                             extended,
                             task_extended,
                             route_extended,
+                            compaction_extended,
                             cancel.is_cancelled(),
                         ))
                     })
@@ -594,6 +618,8 @@ async fn forward_events(
     written: &Written,
     extended: bool,
     route_extended: bool,
+    compaction_extended: bool,
+    capture_content: bool,
 ) -> Result<Option<RunEvent>, Error> {
     let mut events = EventStream::new(rx);
     let mut terminal = None;
@@ -603,6 +629,36 @@ async fn forward_events(
             terminal = Some(event.clone());
         }
         let mut notification_sent = false;
+        if compaction_extended
+            && matches!(
+                event.kind,
+                EventKind::CompactionStarted | EventKind::CompactionFinished { .. }
+            )
+        {
+            let mut details = correlation(&event, first);
+            details["compaction"] =
+                serde_json::to_value(&event.compaction).map_err(|_| Error::internal_error())?;
+            let (kind, summary, summary_bytes) = match &event.kind {
+                EventKind::CompactionFinished {
+                    summary,
+                    summary_bytes,
+                } => (
+                    "context.compaction.finished",
+                    if capture_content {
+                        summary.as_deref()
+                    } else {
+                        None
+                    },
+                    *summary_bytes,
+                ),
+                _ => ("context.compaction.started", None, 0),
+            };
+            let params=serde_json::value::to_raw_value(&json!({"sessionId":event.session_id,"type":kind,"pablo/v1":details,"summary":summary,"summary_bytes":summary_bytes,"content_redacted":!capture_content})).map_err(|_|Error::internal_error())?;
+            cx.send_notification(wire::AgentNotification::ExtNotification(
+                wire::ExtNotification::new("_pablo/compaction", Arc::from(params)),
+            ))?;
+            notification_sent = true;
+        }
         if route_extended
             && event.model_route.is_some()
             && matches!(
@@ -690,6 +746,7 @@ fn prompt_response(
     extended: bool,
     task_extended: bool,
     route_extended: bool,
+    compaction_extended: bool,
     cancelled: bool,
 ) -> Result<wire::PromptResponse, Error> {
     let outcome = outcome.map_err(|message| {
@@ -705,6 +762,10 @@ fn prompt_response(
     if route_extended && terminal.model_route.is_some() {
         details["model_route"] =
             serde_json::to_value(&terminal.model_route).map_err(|_| Error::internal_error())?;
+    }
+    if compaction_extended && terminal.compaction.is_some() {
+        details["compaction"] =
+            serde_json::to_value(&terminal.compaction).map_err(|_| Error::internal_error())?;
     }
     if task_extended {
         details["task"] = serde_json::to_value(
@@ -754,6 +815,7 @@ mod tests {
     fn event(seq: u64, kind: EventKind) -> RunEvent {
         RunEvent {
             model_route: None,
+            compaction: None,
             model_profile: None,
             deployment: None,
             accounting: None,

@@ -1,14 +1,7 @@
 {
   "schema_version": 1,
-  "contract_revision": "c3.11",
+  "contract_revision": "c3.12a",
   "config": {
-    "deployment": {
-      "locked": true,
-      "allowed_run_overrides": [
-        "input",
-        "limits.max_run_duration_ms"
-      ]
-    },
     "options": {
       "run": {
         "workspace": {
@@ -22,7 +15,10 @@
         "provider": "vercel",
         "id": "zai/glm-5.3-flash",
         "endpoint": "https://ai-gateway.vercel.sh/v1/chat/completions",
-        "credential": "gateway"
+        "credential": "gateway",
+        "context_window_tokens": {
+          "unset": true
+        }
       },
       "limits": {
         "max_model_calls": 4,
@@ -57,8 +53,8 @@
       },
       "policy": {
         "read_roots": {
-          "default": "allow",
           "allow": [],
+          "default": "allow",
           "deny": []
         }
       },
@@ -93,7 +89,21 @@
         "max_export_batch_size": 512,
         "schedule_delay_ms": 5000,
         "export_timeout_ms": 30000
+      },
+      "context": {
+        "enabled": true,
+        "safety_margin_percent": 10,
+        "max_summary_tokens": 1024,
+        "max_summary_bytes": 16384,
+        "keep_recent_turns": 1
       }
+    },
+    "deployment": {
+      "locked": true,
+      "allowed_run_overrides": [
+        "input",
+        "limits.max_run_duration_ms"
+      ]
     },
     "credentials": {
       "gateway": {
@@ -108,50 +118,51 @@
     },
     "authority": [
       {
-        "id": "production.ceiling",
-        "workspace_roots": [
-          {
-            "base": "binding",
-            "name": "workspace",
-            "path": "."
-          }
-        ],
-        "tool_names": [
-          "fs.read",
-          "fs.list",
-          "fs.search"
-        ],
-        "model_ids": [
-          "zai/glm-5.3-flash"
-        ],
-        "provider_endpoints": [
-          "https://ai-gateway.vercel.sh/v1/chat/completions"
-        ],
+        "capture_content": false,
         "credential_ids": [
           "gateway"
         ],
-        "capture_content": false,
+        "id": "production.ceiling",
         "limits": {
           "max_model_calls": 4,
-          "max_tool_calls": 8,
-          "max_run_duration_ms": 600000
+          "max_run_duration_ms": 600000,
+          "max_tool_calls": 8
         },
+        "model_ids": [
+          "zai/glm-5.3-flash"
+        ],
         "policy": {
           "write_roots": {
             "default": "deny",
             "allow": [],
             "deny": []
           }
-        }
+        },
+        "provider_endpoints": [
+          "https://ai-gateway.vercel.sh/v1/chat/completions"
+        ],
+        "tool_names": [
+          "fs.read",
+          "fs.list",
+          "fs.search"
+        ],
+        "workspace_roots": [
+          {
+            "base": "binding",
+            "name": "workspace",
+            "path": "."
+          }
+        ]
       }
     ]
   },
+  "fingerprint": "sha256:07bd7a25edbd738a01dd2ff131473de4104a910736c9ed6daf0098f3de208987",
   "sources": [
     {
       "id": "source-0000",
       "kind": "defaults",
       "locator": "deployment-defaults-v1.json",
-      "digest": "sha256:f4ac8d9a9f1c6b2d7e76818f9496c10519979771d5126fdcc9a4dce2a538f7b2"
+      "digest": "sha256:00e232263628a8010bb5634cc92b9a8176ef04f91b96b65b1610b7c74de2dd5d"
     },
     {
       "id": "source-0001",
@@ -391,6 +402,36 @@
         "operation": "set"
       }
     ],
+    "/config/options/context/enabled": [
+      {
+        "source": "source-0000",
+        "operation": "default"
+      }
+    ],
+    "/config/options/context/keep_recent_turns": [
+      {
+        "source": "source-0000",
+        "operation": "default"
+      }
+    ],
+    "/config/options/context/max_summary_bytes": [
+      {
+        "source": "source-0000",
+        "operation": "default"
+      }
+    ],
+    "/config/options/context/max_summary_tokens": [
+      {
+        "source": "source-0000",
+        "operation": "default"
+      }
+    ],
+    "/config/options/context/safety_margin_percent": [
+      {
+        "source": "source-0000",
+        "operation": "default"
+      }
+    ],
     "/config/options/filesystem/enabled": [
       {
         "source": "source-0000",
@@ -526,6 +567,18 @@
       }
     ],
     "/config/options/limits/max_total_tokens": [
+      {
+        "source": "source-0000",
+        "operation": "default"
+      }
+    ],
+    "/config/options/model/context_window_tokens": [
+      {
+        "source": "source-0000",
+        "operation": "default"
+      }
+    ],
+    "/config/options/model/context_window_tokens/unset": [
       {
         "source": "source-0000",
         "operation": "default"
@@ -794,6 +847,5 @@
       }
     ]
   },
-  "fingerprint": "sha256:032d4bd96a06de830ee5dc5e743cf69211ddd2975dd14b9e37a71c9c28a6fdb9",
-  "input_fingerprint": "sha256:f33cf3214a5c7a8ddec49f3ed4f12834154159b6d6f387e437b70e190f5dce74"
+  "input_fingerprint": "sha256:8afb9782dc4a052e3be6e1b9d2da3f0876dc56a37c2a8b474a1e6fc397fe2be1"
 }

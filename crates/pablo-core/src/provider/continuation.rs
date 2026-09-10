@@ -40,6 +40,7 @@ impl Continuation {
 
 /// Associates a private output projection with one assistant history entry.
 /// The runtime creates entries only after successful stream completion.
+#[derive(Clone)]
 pub struct ContinuationEntry {
     pub(crate) message_index: usize,
     pub(crate) value: Continuation,

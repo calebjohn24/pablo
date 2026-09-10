@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-10T20:42:22.859Z",
+  "updated_at": "2026-09-10T23:12:16.088Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.12a",
-  "next_action": "Merge verified C3.12, then activate C3.12a for basic provider-neutral context compaction with one summary pass, one overflow recovery and shared budgets; retain matched performance checks.",
-  "latest_log_entry": "LOG-0080",
+  "next_checkpoint": "C3.13",
+  "next_action": "Merge verified C3.12a, then activate C3.13 final-output schema validation with shared root budgets and continued performance checks.",
+  "latest_log_entry": "LOG-0083",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -393,9 +393,11 @@
       "depends_on": [
         "C3.12"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0083"
+      ]
     },
     {
       "id": "C3.13",

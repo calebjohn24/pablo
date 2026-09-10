@@ -11,7 +11,10 @@
     "provider": "vercel",
     "id": "zai/glm-5.3-flash",
     "endpoint": "https://ai-gateway.vercel.sh/v1/chat/completions",
-    "credential": "gateway"
+    "credential": "gateway",
+    "context_window_tokens": {
+      "unset": true
+    }
   },
   "limits": {
     "max_model_calls": "unlimited",
@@ -76,5 +79,12 @@
     "max_export_batch_size": 512,
     "schedule_delay_ms": 5000,
     "export_timeout_ms": 30000
+  },
+  "context": {
+    "enabled": true,
+    "safety_margin_percent": 10,
+    "max_summary_tokens": 1024,
+    "max_summary_bytes": 16384,
+    "keep_recent_turns": 1
   }
 }

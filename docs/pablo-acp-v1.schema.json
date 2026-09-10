@@ -202,7 +202,9 @@
                 "invalid_tool_arguments",
                 "tool_execution",
                 "tool_cleanup",
-                "accounting_bound_violated"
+                "accounting_bound_violated",
+                "context_overflow",
+                "compaction_failed"
               ]
             },
             "delivery": {
@@ -283,6 +285,9 @@
         },
         "model_route": {
           "$ref": "#/$defs/model_route"
+        },
+        "compaction": {
+          "$ref": "#/$defs/compaction"
         }
       },
       "required": [
@@ -366,6 +371,9 @@
         },
         "model_route": {
           "$ref": "#/$defs/model_route"
+        },
+        "compaction": {
+          "$ref": "#/$defs/compaction"
         }
       },
       "required": [
@@ -763,7 +771,9 @@
                 "invalid_tool_arguments",
                 "tool_execution",
                 "tool_cleanup",
-                "accounting_bound_violated"
+                "accounting_bound_violated",
+                "context_overflow",
+                "compaction_failed"
               ]
             },
             {
@@ -833,6 +843,91 @@
         "limit",
         "retry_class",
         "accounting"
+      ],
+      "additionalProperties": false
+    },
+    "compaction": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": "compaction-v1"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "trigger": {
+          "enum": [
+            "threshold",
+            "overflow"
+          ]
+        },
+        "status": {
+          "enum": [
+            "running",
+            "completed",
+            "cancelled",
+            "timed_out",
+            "failed",
+            "limit_exceeded",
+            "policy_denied"
+          ]
+        },
+        "before_bytes": {
+          "$ref": "#/$defs/decimal"
+        },
+        "after_bytes": {
+          "$ref": "#/$defs/nullable_decimal"
+        },
+        "before_estimated_tokens": {
+          "$ref": "#/$defs/decimal"
+        },
+        "after_estimated_tokens": {
+          "$ref": "#/$defs/nullable_decimal"
+        },
+        "window_tokens": {
+          "$ref": "#/$defs/nullable_decimal"
+        },
+        "removed_turns": {
+          "$ref": "#/$defs/decimal"
+        },
+        "replaced_history_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "reason": {
+          "enum": [
+            null,
+            "summary_unavailable_or_invalid",
+            "cancelled",
+            "timed_out",
+            "failed",
+            "limit_exceeded",
+            "policy_denied",
+            "no_history",
+            "summary_input_too_large",
+            "empty_summary",
+            "summary_not_smaller_or_too_large",
+            "summary_model_unsupported",
+            "summary_bounds_unsupported",
+            "event_delivery_failed",
+            "tool_call_during_summary"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "id",
+        "trigger",
+        "status",
+        "before_bytes",
+        "after_bytes",
+        "before_estimated_tokens",
+        "after_estimated_tokens",
+        "window_tokens",
+        "removed_turns",
+        "replaced_history_sha256",
+        "reason"
       ],
       "additionalProperties": false
     }

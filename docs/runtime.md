@@ -98,3 +98,32 @@ terminal keeps only the latest entry/selection and final top-level accounting.
 CLI traces retain the ordered ledger under either content policy. This optional
 native metadata leaves the closed task envelope unchanged. See the
 [F03 attempt contract](project/contracts/c3-model-routes.md#f03-attempt-observability--model-route-v1).
+
+## Basic context compaction
+
+C3.12a enables one bounded summary pass per task when history approaches a declared
+context capacity or the root byte ceiling. A recognized provider overflow can use
+that same allowance and one recovery request. The summary uses the current model
+and existing budgets, with tools disabled. Original task/instructions and recent
+complete tool turns remain; completed effects are never replayed. Failed compaction
+preserves the original history and settles explicitly. See [CP01/CP02](project/contracts/c3-compaction.md)
+for estimation, admission, private continuation and event details.
+
+Deployment files configure `options.context`; an operator may set
+`options.model.context_window_tokens` or the corresponding named profile field.
+Capacity defaults to unknown. Direct Rust hosts use `RunSpec.context`, including
+`window_tokens`; routed runs use each selected profile's capacity.
+
+```toml
+[options.context]
+enabled = true
+max_summary_tokens = 1024
+max_summary_bytes = 16384
+keep_recent_turns = 1
+safety_margin_percent = 10
+```
+
+Native compaction events report identity, trigger, before/after sizes and a hash of
+replaced history. A valid summary is visible to live core sinks; stored JSONL
+requires explicit `options.trace.capture_content=true` plus a trace destination.
+Summary text is excluded from ordinary answer deltas and OTel.

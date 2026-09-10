@@ -116,6 +116,8 @@ pub(super) fn complete(config: &mut Value) -> Result<(), ConfigError> {
                     .or_insert_with(|| "Authorization".into());
                 map.entry("auth_scheme").or_insert_with(|| "bearer".into());
             }
+            map.entry("context_window_tokens")
+                .or_insert_with(|| json!({"unset":true}));
             let options = map.entry("model_options").or_insert_with(|| json!({}));
             options
                 .as_object_mut()
@@ -221,6 +223,7 @@ fn entry(config: &Value, name: &str, model: &Value) -> Result<RouteEntry, Config
         let id = model["id"].as_str().ok_or_else(|| invalid(&path))?;
         ModelProfile::resolve(kind, Some(id)).map_err(|_| invalid(&path))?
     };
+    profile.context_window_tokens = model["context_window_tokens"].as_u64();
     let credential = model["credential"].as_str().ok_or_else(|| invalid(&path))?;
     if config["credentials"][credential]["consumer"] != kind.credential_consumer().name() {
         return Err(invalid("/credentials"));

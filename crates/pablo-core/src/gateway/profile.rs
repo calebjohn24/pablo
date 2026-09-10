@@ -65,6 +65,8 @@ impl GatewayKind {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct ModelProfile {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub context_window_tokens: Option<u64>,
     pub provider: GatewayKind,
     pub model: String,
     pub endpoint: String,
@@ -97,6 +99,7 @@ impl ModelProfile {
             return Err("model must be a nonempty provider/model identifier");
         }
         Ok(Self {
+            context_window_tokens: None,
             provider,
             model: model.into(),
             endpoint: provider.endpoint().into(),
@@ -114,6 +117,7 @@ impl ModelProfile {
     }
     pub fn responses(profile: super::OpenResponsesProfile) -> Self {
         Self {
+            context_window_tokens: None,
             provider: GatewayKind::OpenResponses,
             model: profile.model().into(),
             endpoint: profile.endpoint().into(),

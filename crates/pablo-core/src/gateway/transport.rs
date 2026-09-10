@@ -73,7 +73,7 @@ impl Transport {
         body: Vec<u8>,
         deadline: tokio::time::Instant,
     ) -> Result<Pin<Box<dyn AsyncRead + Send>>, ProviderError> {
-        let response = self
+        let mut response = self
             .client
             .post(self.endpoint.clone())
             .header(self.auth_header.clone(), self.authorization.clone())
@@ -93,14 +93,36 @@ impl Transport {
                 },
             })?;
         if !response.status().is_success() {
-            // Do not read or serialize gateway error bodies.
+            let status = response.status().as_u16();
+            let mut code = FailureCode::ProviderRejected;
+            // Only a small private machine-code envelope is inspected. Neither
+            // its text nor transport diagnostics become public error content.
+            if matches!(status, 400 | 413) {
+                let mut bytes = Vec::new();
+                let complete = loop {
+                    match response.chunk().await {
+                        Ok(Some(chunk)) if chunk.len() <= 8192usize.saturating_sub(bytes.len()) => {
+                            bytes.extend_from_slice(&chunk)
+                        }
+                        Ok(None) => break true,
+                        _ => break false,
+                    }
+                };
+                if complete
+                    && serde_json::from_slice::<serde_json::Value>(&bytes)
+                        .ok()
+                        .is_some_and(|v| context_overflow(&v))
+                {
+                    code = FailureCode::ContextOverflow;
+                }
+            }
             return Err(ProviderError {
-                retry_class: match response.status().as_u16() {
+                retry_class: match status {
                     429 => Some(crate::provider::RetryClass::RateLimited),
                     502..=504 => Some(crate::provider::RetryClass::ServiceUnavailable),
                     _ => None,
                 },
-                code: FailureCode::ProviderRejected,
+                code,
                 delivery: DeliveryCertainty::ResponseReceived,
             });
         }
@@ -183,6 +205,43 @@ impl SseDecoder {
         self.line.clear();
         Ok(None)
     }
+}
+
+/// Closed, bounded provider error classification; never search free-form text.
+pub(super) fn context_overflow(value: &serde_json::Value) -> bool {
+    fn check(value: &serde_json::Value, depth: u8) -> bool {
+        if ["code", "type", "error_type"].iter().any(|key| {
+            matches!(
+                value[*key].as_str(),
+                Some("context_length_exceeded" | "context_window_exceeded")
+            )
+        }) {
+            return true;
+        }
+        if depth == 0 {
+            return false;
+        }
+        for child in [
+            value.get("error"),
+            value.pointer("/response/error"),
+            value.get("cause"),
+        ] {
+            if child.is_some_and(|v| check(v, depth - 1)) {
+                return true;
+            }
+        }
+        if let Some(raw) = value
+            .pointer("/metadata/raw")
+            .and_then(serde_json::Value::as_str)
+            .filter(|v| v.len() <= 8192)
+        {
+            return serde_json::from_str::<serde_json::Value>(raw)
+                .ok()
+                .is_some_and(|v| check(&v, depth - 1));
+        }
+        false
+    }
+    check(value, 3)
 }
 
 #[cfg(test)]
