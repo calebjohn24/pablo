@@ -12,7 +12,7 @@ Each row inherits owner C3.3, availability `c3.1` contract / C3.2 resolver / C3.
 | --- | --- | --- |
 | `run.workspace` | Path; explicit deployments default to binding `workspace`, path `.` | `RunSpec.workspace`; cannot be relative to itself; legacy CLI resolves invocation cwd, ACP uses `session/new.cwd`, Rust supplies its workspace |
 | `run.instructions` | String, exact current CLI instruction in defaults JSON | `RunSpec.instructions`; at most 1 MiB; local inspection only. A configured embedded run uses this same value; raw `RunSpec::new` retains its empty instruction default |
-| `model.provider` | Enum `vercel` (default), `openrouter` | C3.5 selection/inspection; OpenRouter admission fails until C3.6. [Provider contract](c3-provider-selection.md) defines adapter availability and capabilities |
+| `model.provider` | Enum `vercel` (default), `openrouter` | C3.5 selection/inspection; C3.6 OpenRouter streaming execution. [Provider contract](c3-provider-selection.md) defines adapter availability and capabilities |
 | `model.id` | Nonempty string; Vercel `zai/glm-5.3-flash`, OpenRouter `z-ai/glm-5.3-flash` | C3.5 follows the user-selected defaults for runs and provider testing; explicit IDs override defaults; at most 256 UTF-8 bytes without whitespace/control. Catalog presence does not claim live acceptance |
 | `model.endpoint` | Provider-owned literal chat-completions URL | Vercel `https://ai-gateway.vercel.sh/v1/chat/completions`; OpenRouter `https://openrouter.ai/api/v1/chat/completions`. Omission follows selection; explicit cross-provider/arbitrary endpoints reject |
 | `model.credential` | Name, `gateway` | Must refer to one matching `provider.vercel` or `provider.openrouter` record; explicit presets declare it; compatibility mode synthesizes legacy references privately |
@@ -64,7 +64,7 @@ These namespaces are reserved and rejected by the baseline schema. The listed ow
 
 | Reserved surface | Owner and availability gate | Required options and authority coverage |
 | --- | --- | --- |
-| OpenRouter execution / Open Responses selection and execution | OpenRouter C3.6; Open Responses C3.8–C3.9 | C3.5 provider selection and shared transport are implemented; each new adapter owns its verified mapping/capabilities, endpoint/credential scope and protocol fields |
+| Open Responses selection and execution | C3.8–C3.9 | Vercel/OpenRouter selection and execution are implemented through the shared transport; each new adapter owns its verified mapping/capabilities, endpoint/credential scope and protocol fields |
 | `models`, `routes`, `model_route` | C3.10 contracts, C3.11 execution / F01–F03 | Named exact profiles and ordered route, attempt/deadline policy, transient classes/uncertain-delivery opt-in, one retry owner, compatible continuation, child subset rules and accounting |
 | `output` | C3.13 validation; C3.14 repair | Local schema reference/digest, supported Draft 2020-12 subset and work bounds, output mode, one-repair choice/feedback budget; envelope stdout remains separate |
 | `mcp` | C3.15 contracts; C3.16 stdio, C3.17 HTTP, C3.18 integration | Named servers; executable/argv/cwd/cleared env or endpoint; scoped credential refs; required/optional startup; exact server/tool catalog/policy; request/result/progress/process/concurrency/startup/cleanup bounds |

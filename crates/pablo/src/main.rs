@@ -15,7 +15,7 @@ use pablo_core::{
     telemetry,
 };
 
-const HELP: &str = "pablo — headless Rust runtime\n\nUsage:\n  pablo \"TASK\" [RUN OPTIONS...]\n  pablo run \"TASK\" [--json] [--workspace PATH] [--provider vercel|openrouter] [--model ID] [--no-shell]\n                 [--env-file PATH] [--timeout SECONDS] [--tool-timeout SECONDS]\n                 [--max-tool-calls N] [--max-model-calls N]\n                 [--max-total-tokens N] [--max-cost-microusd N]\n                 [--trace PATH] [--capture-content]\n  pablo acp --stdio [--provider vercel|openrouter] [--model ID] [--no-shell] [--env-file PATH]\n                  [--max-tool-calls N] [--max-model-calls N]\n                 [--max-total-tokens N] [--max-cost-microusd N]\n                  [--timeout SECONDS] [--tool-timeout SECONDS] [--trace PATH] [--capture-content]\n  pablo demo [--trace PATH] [--capture-content]\n  CLI trace context: --traceparent VALUE [--tracestate VALUE] (run/demo)\n  pablo --version\n  pablo --help\n\n--json writes one task envelope plus LF; output remains a string.\nRun sends one task to Vercel AI Gateway using direct HTTP.\nDefault provider: vercel. Models: Vercel zai/glm-5.3-flash; OpenRouter z-ai/glm-5.3-flash (adapter pending C3.6). Workspace: current directory.\nReads AI_GATEWAY_API_KEY (alias VERCEL_AI_GATEWAY) from the environment\nor .env in the invoking directory.\nShell and filesystem reads are enabled for run/ACP; use --no-shell and --no-filesystem for text only. Use --allow-write to enable revision-checked write/edit; --policy PATH sets tool, launcher and filesystem-root rules. Ctrl-C cancels and cleans up.\nDefaults: 3600 seconds per run, 900 seconds per shell call. Timeouts accept 1–86400.\nModel and tool call counts are unlimited by default; use --max-*-calls to cap them.\nHard aggregate token/cost ceilings require an attested adapter; the live gateway currently rejects them before delivery.\nEach run/session is a fresh task (no saved chat history).\nACP reuses its process across successive sessions; use {session_id} in --trace paths for separate files.\nDemo is offline. Trace files must be new; native content is off by default.\nNetwork telemetry is off by default; set OTEL_TRACES_EXPORTER=otlp for OTLP/HTTP Protobuf.\n";
+const HELP: &str = "pablo — headless Rust runtime\n\nUsage:\n  pablo \"TASK\" [RUN OPTIONS...]\n  pablo run \"TASK\" [--json] [--workspace PATH] [--provider vercel|openrouter] [--model ID] [--no-shell]\n                 [--env-file PATH] [--timeout SECONDS] [--tool-timeout SECONDS]\n                 [--max-tool-calls N] [--max-model-calls N]\n                 [--max-total-tokens N] [--max-cost-microusd N]\n                 [--trace PATH] [--capture-content]\n  pablo acp --stdio [--provider vercel|openrouter] [--model ID] [--no-shell] [--env-file PATH]\n                  [--max-tool-calls N] [--max-model-calls N]\n                 [--max-total-tokens N] [--max-cost-microusd N]\n                  [--timeout SECONDS] [--tool-timeout SECONDS] [--trace PATH] [--capture-content]\n  pablo demo [--trace PATH] [--capture-content]\n  CLI trace context: --traceparent VALUE [--tracestate VALUE] (run/demo)\n  pablo --version\n  pablo --help\n\n--json writes one task envelope plus LF; output remains a string.\nRun sends one task to the selected gateway using direct HTTP.\nDefault provider: vercel. Models: Vercel zai/glm-5.3-flash; OpenRouter z-ai/glm-5.3-flash. Workspace: current directory.\nReads AI_GATEWAY_API_KEY (alias VERCEL_AI_GATEWAY) for Vercel, or OPENROUTER_API_KEY for OpenRouter, from the environment\nor .env in the invoking directory.\nShell and filesystem reads are enabled for run/ACP; use --no-shell and --no-filesystem for text only. Use --allow-write to enable revision-checked write/edit; --policy PATH sets tool, launcher and filesystem-root rules. Ctrl-C cancels and cleans up.\nDefaults: 3600 seconds per run, 900 seconds per shell call. Timeouts accept 1–86400.\nModel and tool call counts are unlimited by default; use --max-*-calls to cap them.\nHard aggregate token/cost ceilings require an attested adapter; the live gateway currently rejects them before delivery.\nEach run/session is a fresh task (no saved chat history).\nACP reuses its process across successive sessions; use {session_id} in --trace paths for separate files.\nDemo is offline. Trace files must be new; native content is off by default.\nNetwork telemetry is off by default; set OTEL_TRACES_EXPORTER=otlp for OTLP/HTTP Protobuf.\n";
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> ExitCode {
@@ -95,14 +95,19 @@ async fn execute(
         Box::new(secrets.provider(options.deployment.as_ref().unwrap())?)
     } else if options.live {
         if let Some(endpoint) = std::env::var_os("PABLO_FIXTURE_ENDPOINT") {
-            Box::new(GatewayProvider::local_fixture(
+            Box::new(GatewayProvider::local_fixture_for(
+                options.provider.unwrap_or_default(),
                 endpoint.to_str().ok_or("invalid fixture endpoint")?,
             )?)
         } else {
             *stage = TaskErrorCode::CredentialUnavailable;
-            Box::new(GatewayProvider::vercel(&config::gateway_key(
-                options.env_file.as_deref(),
-            )?)?)
+            Box::new(GatewayProvider::selected(
+                options.provider.unwrap_or_default(),
+                &config::provider_key(
+                    options.provider.unwrap_or_default(),
+                    options.env_file.as_deref(),
+                )?,
+            )?)
         }
     } else {
         Box::new(ScriptedProvider::text(["Hello ", "from ", "pablo.\n"]))

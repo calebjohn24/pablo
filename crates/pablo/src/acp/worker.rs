@@ -78,9 +78,18 @@ struct Resources {
 impl Resources {
     fn new(options: &Options) -> Result<Self, String> {
         let provider = if let Some(endpoint) = std::env::var_os("PABLO_FIXTURE_ENDPOINT") {
-            GatewayProvider::local_fixture(endpoint.to_str().ok_or("invalid fixture endpoint")?)?
+            GatewayProvider::local_fixture_for(
+                options.provider.unwrap_or_default(),
+                endpoint.to_str().ok_or("invalid fixture endpoint")?,
+            )?
         } else {
-            GatewayProvider::vercel(&crate::config::gateway_key(options.env_file.as_deref())?)?
+            GatewayProvider::selected(
+                options.provider.unwrap_or_default(),
+                &crate::config::provider_key(
+                    options.provider.unwrap_or_default(),
+                    options.env_file.as_deref(),
+                )?,
+            )?
         };
         let tools = options.tools()?;
         Ok(Self {

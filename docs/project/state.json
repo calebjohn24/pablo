@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-10T17:19:10.750Z",
+  "updated_at": "2026-09-10T17:47:27.665Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.6",
-  "next_action": "Merge the verified C3.5 PR, then activate C3.6 for OpenRouter streamed tool calls and P02 with z-ai/glm-5.3-flash. Preserve Vercel zai/glm-5.3-flash defaults, unlimited filesystem work, credential isolation and cancellation. Live OpenRouter CLI/ACP acceptance belongs to C3.7 and remains unclaimed.",
-  "latest_log_entry": "LOG-0064",
+  "next_checkpoint": "C3.7",
+  "next_action": "Merge verified C3.6, then activate C3.7 for actual OpenRouter CLI/ACP file-read acceptance with z-ai/glm-5.3-flash. Privately resolve credentials, retain sanitized usage/build/profile evidence and do not substitute mocks. Preserve Vercel defaults and unlimited filesystem work; C3.8 is independently ready after C3.6 if a concrete live-acceptance blocker must be recorded.",
+  "latest_log_entry": "LOG-0066",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -302,9 +302,11 @@
       "depends_on": [
         "C3.5"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0066"
+      ]
     },
     {
       "id": "C3.7",

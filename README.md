@@ -4,7 +4,7 @@ A small, headless Rust agent runtime for applications doing arbitrary work.
 
 The focused [C1 spike](docs/project/cycles/001-first-spike.md) and [C2 cycle](docs/project/cycles/002-single-agent-completion.md) are complete. C2 implements bounded filesystem tools, machine-readable task output, static policy and accounting, with acceptance on macOS arm64 and [native Linux x86_64](docs/project/evidence/c2.5-linux-x64.md). This is not a published release. The [architecture brief](docs/context.md) describes the larger product; section 29.1 defines the 0.1 release contract. The project-state command reports checkpoint progress across retained cycles.
 
-The selected [C3 plan](docs/project/cycles/003-extensibility-and-release.md) covers declarative deployment configuration, ordered model fallback, shell command rules, providers, MCP, Skills, structured output, temporary children, A2A, a basic TUI and release delivery in small checkpoints. Otto integration remains deferred. The [deployment contract and examples](docs/project/contracts/c3-deployment-config.md) are specified; the loader and those capabilities remain planned. The commands below describe the existing C2 runtime.
+The selected [C3 plan](docs/project/cycles/003-extensibility-and-release.md) covers declarative deployment configuration, ordered model fallback, shell command rules, providers, MCP, Skills, structured output, temporary children, A2A, a basic TUI and release delivery in small checkpoints. Otto integration remains deferred. Deployment loading/inspection, shell command rules and Vercel/OpenRouter gateways are implemented; later capabilities remain checkpointed in the plan. See the [deployment contract and examples](docs/project/contracts/c3-deployment-config.md).
 
 ## Run a real task
 
@@ -14,7 +14,16 @@ From the project directory:
 cargo run --locked -p pablo -- run "Read README.md and summarize what Pablo can do."
 ```
 
-Pablo loads your gateway key from the ignored `.env`, streams the answer, and shows shell activity in the terminal. Both `AI_GATEWAY_API_KEY` and your existing `VERCEL_AI_GATEWAY` name work. It uses direct HTTPS through a Rust HTTP client; no Vercel SDK is installed. The default provider is Vercel with model `zai/glm-5.3-flash`; `--provider vercel` selects it explicitly. OpenRouter configurations default to `z-ai/glm-5.3-flash` and can be inspected offline; execution becomes available in C3.6. These are also the selected provider-testing models.
+Pablo loads your gateway key from the ignored `.env`, streams the answer, and shows shell activity in the terminal. Both `AI_GATEWAY_API_KEY` and your existing `VERCEL_AI_GATEWAY` name work. It uses direct HTTPS through a Rust HTTP client; no Vercel SDK is installed. The default provider is Vercel with model `zai/glm-5.3-flash`; `--provider vercel` selects it explicitly. OpenRouter uses `z-ai/glm-5.3-flash` with `--provider openrouter`, reading only `OPENROUTER_API_KEY` from the environment or selected credential file. These are also the selected provider-testing models.
+
+With `OPENROUTER_API_KEY` supplied privately in the environment or ignored `.env`:
+
+```sh
+cargo run --locked -p pablo -- run "Read README.md and summarize it." --provider openrouter --model z-ai/glm-5.3-flash --no-shell
+cargo run --locked -p pablo -- acp --stdio --provider openrouter --model z-ai/glm-5.3-flash --no-shell
+```
+
+These commands contact OpenRouter. Ordinary regression tests use local HTTP/SSE fixtures; actual live CLI/ACP acceptance remains C3.7. [Adapter details](docs/project/contracts/c3-openrouter.md) describe cost granularity and capability limits.
 
 To work in a different folder while keeping credentials in this project:
 
