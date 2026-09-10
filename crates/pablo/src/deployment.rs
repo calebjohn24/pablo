@@ -24,18 +24,22 @@ pub struct Bootstrap {
 
 pub struct Secrets {
     provider: Option<deployment::ScopedCredential>,
+    kind: pablo_core::gateway::GatewayKind,
     pub headers: Option<deployment::ScopedCredential>,
 }
 impl Secrets {
     pub fn read(prepared: &deployment::PreparedRun, bootstrap: &Bootstrap) -> Result<Self, String> {
+        let kind = prepared
+            .deployment()
+            .model_profile()
+            .map_err(|e| e.to_string())?
+            .provider;
+        kind.ensure_available()?;
         let provider = if bootstrap.fixture_endpoint.is_some() {
             None
         } else {
             prepared
-                .credential(
-                    deployment::CredentialConsumer::Vercel,
-                    &deployment::ProcessCredentials,
-                )
+                .credential(kind.credential_consumer(), &deployment::ProcessCredentials)
                 .map_err(|e| e.to_string())?
         };
         let otel = &prepared.deployment().options()["otel"];
@@ -49,14 +53,18 @@ impl Secrets {
         } else {
             None
         };
-        Ok(Self { provider, headers })
+        Ok(Self {
+            provider,
+            headers,
+            kind,
+        })
     }
     pub fn provider(
         &self,
         bootstrap: &Bootstrap,
     ) -> Result<pablo_core::gateway::GatewayProvider, String> {
         if let Some(endpoint) = &bootstrap.fixture_endpoint {
-            return pablo_core::gateway::GatewayProvider::local_fixture(endpoint)
+            return pablo_core::gateway::GatewayProvider::local_fixture_for(self.kind, endpoint)
                 .map_err(|_| "config_invalid_value at /fixture_endpoint".into());
         }
         let secret = self
@@ -64,12 +72,9 @@ impl Secrets {
             .as_ref()
             .ok_or("config_credential_missing at /options/model/credential")?;
         let value = secret
-            .expose_for(
-                deployment::CredentialConsumer::Vercel,
-                pablo_core::gateway::VERCEL_ENDPOINT,
-            )
+            .expose_for(self.kind.credential_consumer(), self.kind.endpoint())
             .map_err(|e| e.to_string())?;
-        pablo_core::gateway::GatewayProvider::vercel(value)
+        pablo_core::gateway::GatewayProvider::selected(self.kind, value)
             .map_err(|_| "config_credential_invalid at /options/model/credential".into())
     }
     pub fn same_private_values(&self, other: &Self) -> bool {
@@ -79,7 +84,9 @@ impl Secrets {
             (Some(a), Some(b)) => a.same_private_value(b),
             _ => false,
         };
-        same(&self.provider, &other.provider) && same(&self.headers, &other.headers)
+        self.kind == other.kind
+            && same(&self.provider, &other.provider)
+            && same(&self.headers, &other.headers)
     }
 }
 

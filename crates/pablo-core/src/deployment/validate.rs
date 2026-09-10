@@ -263,8 +263,22 @@ pub(crate) fn config(config: &Value, request: &ResolveRequest) -> Result<(), Con
             "/config/options/otel/max_export_batch_size",
         ));
     }
+    let provider: crate::gateway::GatewayKind = options["model"]["provider"]
+        .as_str()
+        .unwrap()
+        .parse()
+        .map_err(|_| error("config_invalid_value", "/config/options/model/provider"))?;
+    if options["model"]["endpoint"] != provider.endpoint() {
+        return Err(error(
+            "config_invalid_value",
+            "/config/options/model/endpoint",
+        ));
+    }
     for (id, consumer) in [
-        (options["model"]["credential"].as_str(), "provider.vercel"),
+        (
+            options["model"]["credential"].as_str(),
+            provider.credential_consumer().name(),
+        ),
         (options["otel"]["headers"].as_str(), "otel.headers"),
     ] {
         if let Some(id) = id

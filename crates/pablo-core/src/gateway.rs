@@ -1,82 +1,58 @@
 //! Direct Vercel chat-completions transport. Credentials stay adapter-owned.
-use std::{collections::BTreeMap, collections::VecDeque, io, pin::Pin, time::Duration};
+use std::{collections::BTreeMap, collections::VecDeque, pin::Pin};
 
-use futures_util::{TryStreamExt, future::BoxFuture, stream};
-use reqwest::{Client, Url, header};
+use futures_util::{future::BoxFuture, stream};
 use serde_json::{Value, json};
 use tokio::io::{AsyncRead, AsyncReadExt};
-use tokio_util::io::StreamReader;
 
 use crate::{
     DeliveryCertainty, FailureCode, FinishReason, Message, Provider, Usage,
     provider::{ModelRequest, ProviderError, ProviderEvent, ProviderStream},
 };
 
+mod profile;
+mod transport;
+pub use profile::{
+    GatewayCapabilities, GatewayKind, ModelProfile, OPENROUTER_DEFAULT_MODEL, OPENROUTER_ENDPOINT,
+    VERCEL_DEFAULT_MODEL,
+};
+use transport::{MAX_REQUEST, SseDecoder};
+
 pub const VERCEL_ENDPOINT: &str = "https://ai-gateway.vercel.sh/v1/chat/completions";
-const MAX_FRAME: usize = 32 * 1024 * 1024;
-const MAX_RESPONSE: usize = 128 * 1024 * 1024;
-const MAX_REQUEST: usize = 128 * 1024 * 1024;
-const MAX_FRAMES: usize = 1_000_000;
 const MAX_CALLS: u64 = 128;
 
 /// No Debug implementation: the credential is never a diagnostic value.
 pub struct GatewayProvider {
-    client: Client,
-    endpoint: Url,
-    authorization: header::HeaderValue,
+    kind: GatewayKind,
+    transport: transport::Transport,
 }
-
 impl GatewayProvider {
     pub fn vercel(key: &str) -> Result<Self, &'static str> {
-        Self::configured(VERCEL_ENDPOINT, key, false)
+        Self::selected(GatewayKind::Vercel, key)
     }
-
-    /// Host-only fixture override. Only literal loopback HTTP is accepted.
-    /// The CLI supplies a synthetic key here, never its Vercel credential.
-    pub fn local_fixture(endpoint: &str) -> Result<Self, &'static str> {
-        Self::configured(endpoint, "pablo-local-fixture", true)
-    }
-
-    fn configured(endpoint: &str, key: &str, local: bool) -> Result<Self, &'static str> {
-        let endpoint = Url::parse(endpoint).map_err(|_| "invalid gateway endpoint")?;
-        if local
-            && !(endpoint.scheme() == "http"
-                && endpoint
-                    .host_str()
-                    .is_some_and(|host| matches!(host, "127.0.0.1" | "[::1]"))
-                && endpoint.username().is_empty()
-                && endpoint.password().is_none()
-                && endpoint.query().is_none()
-                && endpoint.fragment().is_none())
-        {
-            return Err(
-                "fixture endpoint must use literal loopback HTTP without credentials or query",
-            );
-        }
-        if key.is_empty() || key.len() > 8192 || key.chars().any(char::is_whitespace) {
-            return Err("invalid AI_GATEWAY_API_KEY");
-        }
-        let mut authorization = header::HeaderValue::from_str(&format!("Bearer {key}"))
-            .map_err(|_| "invalid AI_GATEWAY_API_KEY")?;
-        authorization.set_sensitive(true);
-        let client = Client::builder()
-            .redirect(reqwest::redirect::Policy::none())
-            .retry(reqwest::retry::never())
-            .no_proxy()
-            .connect_timeout(Duration::from_secs(60))
-            .build()
-            .map_err(|_| "cannot initialize gateway transport")?;
+    pub fn selected(kind: GatewayKind, key: &str) -> Result<Self, &'static str> {
+        kind.ensure_available()?;
         Ok(Self {
-            client,
-            endpoint,
-            authorization,
+            kind,
+            transport: transport::Transport::new(kind.endpoint(), key, false)?,
+        })
+    }
+    pub fn local_fixture(endpoint: &str) -> Result<Self, &'static str> {
+        Self::local_fixture_for(GatewayKind::Vercel, endpoint)
+    }
+    /// Host-only override. No real credential argument exists on this path.
+    pub fn local_fixture_for(kind: GatewayKind, endpoint: &str) -> Result<Self, &'static str> {
+        kind.ensure_available()?;
+        Ok(Self {
+            kind,
+            transport: transport::Transport::new(endpoint, "pablo-local-fixture", true)?,
         })
     }
 }
 
 impl Provider for GatewayProvider {
     fn name(&self) -> &'static str {
-        "vercel"
+        self.kind.name()
     }
 
     fn stream<'a>(
@@ -87,57 +63,9 @@ impl Provider for GatewayProvider {
             let body = request_body(&request)?;
             // The runtime selects against the absolute deadline and cancellation
             // while opening and polling this stream. Dropping it drops the socket.
-            let response = self
-                .client
-                .post(self.endpoint.clone())
-                .header(header::AUTHORIZATION, self.authorization.clone())
-                .header(header::CONTENT_TYPE, "application/json")
-                .header(header::ACCEPT, "text/event-stream")
-                .timeout(
-                    request
-                        .deadline
-                        .saturating_duration_since(tokio::time::Instant::now()),
-                )
-                .body(body)
-                .send()
-                .await
-                .map_err(|error| ProviderError {
-                    code: FailureCode::ProviderTransport,
-                    delivery: if error.is_connect() || error.is_builder() {
-                        DeliveryCertainty::NotSent
-                    } else {
-                        DeliveryCertainty::MayHaveBeenSent
-                    },
-                })?;
-            if !response.status().is_success() {
-                // Do not read or serialize gateway error bodies.
-                return Err(ProviderError {
-                    code: FailureCode::ProviderRejected,
-                    delivery: DeliveryCertainty::ResponseReceived,
-                });
-            }
-            if !response
-                .headers()
-                .get(header::CONTENT_TYPE)
-                .and_then(|value| value.to_str().ok())
-                .is_some_and(|value| {
-                    value
-                        .split(';')
-                        .next()
-                        .unwrap_or("")
-                        .trim()
-                        .eq_ignore_ascii_case("text/event-stream")
-                })
-            {
-                return Err(malformed());
-            }
-            let reader = StreamReader::new(
-                response
-                    .bytes_stream()
-                    .map_err(|_| io::Error::other("gateway stream failed")),
-            );
+            let reader = self.transport.open(body, request.deadline).await?;
             let state = ResponseStream {
-                reader: Box::pin(reader),
+                reader,
                 bytes: [0; 4096],
                 cursor: 0,
                 available: 0,
@@ -250,54 +178,6 @@ fn malformed() -> ProviderError {
     ProviderError {
         code: FailureCode::MalformedStream,
         delivery: DeliveryCertainty::ResponseReceived,
-    }
-}
-
-#[derive(Default)]
-struct SseDecoder {
-    line: Vec<u8>,
-    data: Vec<u8>,
-    frame_bytes: usize,
-    total: usize,
-    frames: usize,
-    skip_lf: bool,
-}
-impl SseDecoder {
-    fn push(&mut self, byte: u8) -> Result<Option<Vec<u8>>, ProviderError> {
-        self.total += 1;
-        self.frame_bytes += 1;
-        if self.total > MAX_RESPONSE || self.frame_bytes > MAX_FRAME {
-            return Err(malformed());
-        }
-        if self.skip_lf && byte == b'\n' {
-            self.skip_lf = false;
-            return Ok(None);
-        }
-        self.skip_lf = byte == b'\r';
-        if byte != b'\n' && byte != b'\r' {
-            self.line.push(byte);
-            return Ok(None);
-        }
-        if self.line.is_empty() {
-            self.frame_bytes = 0;
-            self.frames += 1;
-            if self.frames > MAX_FRAMES {
-                return Err(malformed());
-            }
-            if self.data.is_empty() {
-                return Ok(None);
-            }
-            self.data.pop(); // Last data-field newline.
-            return Ok(Some(std::mem::take(&mut self.data)));
-        }
-        if self.line == b"data" || self.line.starts_with(b"data:") {
-            let value = self.line.get(5..).unwrap_or_default();
-            self.data
-                .extend_from_slice(value.strip_prefix(b" ").unwrap_or(value));
-            self.data.push(b'\n');
-        }
-        self.line.clear();
-        Ok(None)
     }
 }
 
@@ -499,36 +379,6 @@ fn counter(value: Option<&Value>) -> Result<Option<u64>, ProviderError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn sse_supports_cr_lf_comments_multiline_data_and_bounds() {
-        for newline in ["\n", "\r\n", "\r"] {
-            let input = format!(
-                ": keepalive{newline}{newline}event: message{newline}data: {{\"a\":{newline}data: 1}}{newline}{newline}"
-            );
-            let mut decoder = SseDecoder::default();
-            let frames: Vec<_> = input
-                .bytes()
-                .filter_map(|b| decoder.push(b).unwrap())
-                .collect();
-            assert_eq!(frames, [b"{\"a\":\n1}".to_vec()]);
-        }
-        let mut decoder = SseDecoder::default();
-        for _ in 0..MAX_FRAME {
-            decoder.push(b'x').unwrap();
-        }
-        assert!(decoder.push(b'x').is_err());
-        let mut decoder = SseDecoder::default();
-        for _ in 0..MAX_FRAMES {
-            decoder.push(b'\n').unwrap();
-        }
-        assert!(decoder.push(b'\n').is_err());
-        let mut decoder = SseDecoder {
-            total: MAX_RESPONSE,
-            ..Default::default()
-        };
-        assert!(decoder.push(b'x').is_err());
-    }
 
     #[test]
     fn usage_is_reported_once_after_finish_and_missing_fields_stay_unknown() {

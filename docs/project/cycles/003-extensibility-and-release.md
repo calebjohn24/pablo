@@ -103,7 +103,7 @@ Extract only the transport/configuration seams required for a second gateway. Fr
 
 Acceptance:
 
-- P01 passes: current Vercel CLI/ACP behavior and default remain compatible; explicit provider selection resolves identically for CLI, ACP host configuration and Rust embedding. An unavailable adapter fails before delivery until its implementation lands.
+- P01 passes: current Vercel CLI/ACP behavior remains compatible; the user-selected GLM-5.3-Flash defaults supersede the prior Gemini default (D041); explicit provider selection resolves identically for CLI, ACP host configuration and Rust embedding. An unavailable adapter fails before delivery until its implementation lands.
 - Credentials remain adapter-owned; synthetic fixture endpoints cannot receive real gateway credentials. Reuse the existing HTTP client, bounded SSE machinery and cancellation path; ordered fallback is introduced and verified at C3.10–C3.12.
 - Record an officially verified candidate OpenRouter profile and mapping/fixture expectations for C3.6. Run existing Vercel offline regressions and the shared implementation checks; no paid call is required here.
 

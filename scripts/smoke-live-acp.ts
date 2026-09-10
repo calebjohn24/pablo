@@ -101,7 +101,7 @@ try {
   assert.equal(models.length, 2);
   assert.equal(finished.length, 2);
   assert.equal(shells.length, filesystem ? 0 : 1);
-  assert(models.every(e => e.provider === 'vercel' && e.model === (model ?? 'google/gemini-3.8-flash')));
+  assert(models.every(e => e.provider === 'vercel' && e.model === (model ?? 'zai/glm-5.3-flash')));
   const tools = records.filter(e=>e.type === "tool.started");
   assert.equal(tools.length,1);assert.equal(tools[0].call.name, filesystem ? "fs.read" : "shell.run");
   assert(models[0].seq < tools[0].seq && tools[0].seq < models[1].seq);

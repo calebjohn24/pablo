@@ -26,7 +26,7 @@ allow = []
 id = "production.ceiling"
 workspace_roots = [{ base = "binding", name = "workspace", path = "." }]
 tool_names = ["fs.read", "fs.list", "fs.search"]
-model_ids = ["google/gemini-3.8-flash"]
+model_ids = ["zai/glm-5.3-flash"]
 provider_endpoints = ["https://ai-gateway.vercel.sh/v1/chat/completions"]
 credential_ids = ["gateway"]
 capture_content = false

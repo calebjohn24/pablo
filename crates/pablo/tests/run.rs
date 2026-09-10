@@ -151,7 +151,7 @@ fn end_user_executable_reads_real_evidence_over_fragmented_http() {
         assert!(headers.contains("Bearer pablo-local-fixture"));
         assert!(!headers.contains("synthetic-private"));
         assert_eq!(body["stream"], true);
-        assert_eq!(body["model"], "google/gemini-3.8-flash");
+        assert_eq!(body["model"], "zai/glm-5.3-flash");
         assert_eq!(body["parallel_tool_calls"], false);
         assert_eq!(body["tools"][0]["function"]["name"], "shell_run");
         serve(

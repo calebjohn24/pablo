@@ -191,3 +191,7 @@ Read [working instructions](../../AGENTS.md), run `node scripts/project.mjs cont
 ### D040 — Match literal executable identity and argv before shell launch
 
 C3.4 keeps the fixed launcher but passes checked canonical executable/arguments through a constant positional-argument wrapper. Optional command, canonical cwd and environment-name rules intersect with every authority layer; missing command rules retain legacy shell interpretation. This prevents quoting/operator/alias bypass without claiming an OS sandbox or script digest trust. Schema v1 advances to contract revision c3.4; old presets retain behavior while rendered identities change. See the [contract](contracts/c3-shell-commands.md).
+
+### D041 — Provider-scoped GLM defaults and one transport implementation
+
+The user selected `zai/glm-5.3-flash` for Vercel and `z-ai/glm-5.3-flash` for OpenRouter, including provider testing. C3.5 deliberately replaces the prior Gemini default and advances the configuration revision to c3.5. Provider-specific defaults and fixed credential destinations share one resolver; HTTP/SSE mechanics are reused while adapter mappings remain separate. OpenRouter inspection is available before its C3.6 adapter; unavailable execution rejects before credentials/effects. See the [selection contract](contracts/c3-provider-selection.md).

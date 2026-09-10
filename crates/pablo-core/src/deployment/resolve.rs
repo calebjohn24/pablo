@@ -161,6 +161,7 @@ pub fn load(request: ResolveRequest) -> Result<LoadedDeployment, ConfigError> {
     let mut secret_names: HashSet<&str> = [
         "AI_GATEWAY_API_KEY",
         "VERCEL_AI_GATEWAY",
+        "OPENROUTER_API_KEY",
         "OTEL_EXPORTER_OTLP_HEADERS",
         "OTEL_EXPORTER_OTLP_TRACES_HEADERS",
     ]
@@ -227,6 +228,7 @@ impl LoadedDeployment {
             resolver.mark("/config/deployment/locked", &source, "constrain")?;
         }
         resolver.apply_overrides(locked)?;
+        resolver.complete_model()?;
         resolver.complete_policies()?;
         resolver.complete_aliases()?;
         input::resolved_shape(&resolver.config)?;
@@ -659,6 +661,24 @@ impl Resolver {
                 &mut self.provenance,
                 &mut self.origins,
             )?;
+        }
+        Ok(())
+    }
+    fn complete_model(&mut self) -> Result<(), ConfigError> {
+        let kind: crate::gateway::GatewayKind = self.config["options"]["model"]["provider"]
+            .as_str()
+            .unwrap()
+            .parse()
+            .map_err(|_| error("config_invalid_value", "/options/model/provider"))?;
+        for (field, value) in [("id", kind.default_model()), ("endpoint", kind.endpoint())] {
+            let path = format!("/config/options/model/{field}");
+            if self
+                .provenance
+                .get(&path)
+                .is_some_and(|origins| origins.iter().all(|o| o.operation == "default"))
+            {
+                self.config["options"]["model"][field] = value.into();
+            }
         }
         Ok(())
     }

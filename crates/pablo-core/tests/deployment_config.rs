@@ -1234,7 +1234,7 @@ fn unknown_unsupported_and_schema_versions_are_explicit_and_redacted() {
     assert_eq!(e.code, "config_unsupported_feature");
     assert_eq!(e.owner, Some("C3.15"));
     error(
-        f.document(json!({"options":{"model":{"provider":"openrouter"}}})),
+        f.document(json!({"options":{"model":{"provider":"open_responses"}}})),
         "config_unsupported_feature",
     );
     for version in [Value::Null, json!(0), json!(2), json!("1")] {
@@ -1795,4 +1795,128 @@ fn shell_configuration_rejects_unknown_invalid_inactive_and_duplicate_rules() {
     assert!(deployment::resolve(f.document(json!({"authority":[{"id":"root","shell":{"environment":{"values":{"PABLO_TASK_A":"x"}}}}]}))).is_err());
     error(f.document(json!({"options":{"policy":{"tools":{"default":"allow","allow":[{"id":"valid","value":"shell.run"}]}},"shell":{"commands":{"default":"deny","allow":[good.clone()]}}}})),"config_conflict");
     error(f.document(json!({"options":{"shell":{"commands":{"default":"deny","allow":[good.clone()]}}},"authority":[{"id":"root","shell":{"commands":{"default":"deny","allow":[good]}}}]})),"config_conflict");
+}
+
+#[test]
+fn provider_defaults_metadata_authority_and_unavailable_admission_are_shared() {
+    use pablo_core::gateway::{GatewayKind, ModelProfile};
+    let f = Fixture::new();
+    for kind in [GatewayKind::Vercel, GatewayKind::Openrouter] {
+        let consumer = if kind == GatewayKind::Vercel {
+            "provider.vercel"
+        } else {
+            "provider.openrouter"
+        };
+        let resolved=f.resolve(json!({"options":{"model":{"provider":kind.name()}},"credentials":{"gateway":{"consumer":consumer,"sources":[{"kind":"environment","name":"UNREAD_SYNTHETIC_KEY"}]}}}));
+        assert_eq!(
+            resolved.model_profile().unwrap(),
+            ModelProfile::resolve(kind, None).unwrap()
+        );
+        assert_eq!(resolved.options()["model"]["id"], kind.default_model());
+        assert_eq!(resolved.options()["model"]["endpoint"], kind.endpoint());
+        f.write("rendered.toml", &resolved.render().unwrap());
+        assert_eq!(
+            deployment::resolve(f.request("rendered.toml"))
+                .unwrap()
+                .fingerprint(),
+            resolved.fingerprint()
+        );
+        let admitted = resolved.prepare_run(deployment::RunInput {
+            input: "synthetic".into(),
+            workspace: Some(f.0.clone()),
+            session_id: None,
+        });
+        if kind == GatewayKind::Vercel {
+            assert_eq!(admitted.unwrap().spec().model, kind.default_model());
+        } else {
+            let error = admitted.unwrap_err();
+            assert_eq!(error.code, "config_unsupported_feature");
+            assert_eq!(error.owner, Some("C3.6"));
+        }
+        assert!(
+            !resolved
+                .model_profile()
+                .unwrap()
+                .capabilities
+                .hard_accounting_bounds
+        );
+    }
+    f.write(
+        "openrouter.toml",
+        include_str!("../../../docs/project/fixtures/c3-openrouter.toml"),
+    );
+    let file = deployment::resolve(f.request("openrouter.toml")).unwrap();
+    assert_eq!(file.model_profile().unwrap().model, "z-ai/glm-5.3-flash");
+    error(
+        f.document(json!({"options":{"model":{"provider":"openrouter"}}})),
+        "config_invalid_value",
+    );
+    error(f.document(json!({"options":{"model":{"endpoint":"https://openrouter.ai/api/v1/chat/completions"}}})),"config_invalid_value");
+    error(
+        f.document(json!({"options":{"model":{"endpoint":"https://private.invalid/private"}}})),
+        "config_invalid_value",
+    );
+    for name in [
+        "OPENROUTER_API_KEY",
+        "AI_GATEWAY_API_KEY",
+        "VERCEL_AI_GATEWAY",
+    ] {
+        error(
+            f.document(json!({"environment":{name:{"option":"otel.service_name"}}})),
+            "config_invalid_value",
+        );
+    }
+    let resolved=f.resolve(json!({"authority":[{"id":"provider.ceiling","provider_endpoints":["https://ai-gateway.vercel.sh/v1/chat/completions"]}]}));
+    // Explicit endpoint replacement cannot cross the original authority.
+    let mut overrides = serde_json::Map::new();
+    overrides.insert(
+        "model.endpoint".into(),
+        json!("https://openrouter.ai/api/v1/chat/completions"),
+    );
+    assert!(resolved.with_overrides(overrides).is_err());
+}
+
+#[test]
+fn provider_switches_recompute_only_defaults_and_preserve_explicit_values_and_authority() {
+    let f = Fixture::new();
+    let credentials = json!({"gateway":{"consumer":"provider.vercel","sources":[{"kind":"environment","name":"VERCEL_SYNTHETIC"}]},"router":{"consumer":"provider.openrouter","sources":[{"kind":"environment","name":"ROUTER_SYNTHETIC"}]}});
+    let configured = f.resolve(json!({"credentials":credentials}));
+    let overrides = serde_json::Map::from_iter([
+        ("model.provider".into(), json!("openrouter")),
+        ("model.credential".into(), json!("router")),
+    ]);
+    let router = configured.with_overrides(overrides.clone()).unwrap();
+    assert_eq!(router.options()["model"]["id"], "z-ai/glm-5.3-flash");
+    assert_eq!(
+        router.options()["model"]["endpoint"],
+        pablo_core::gateway::OPENROUTER_ENDPOINT
+    );
+    let vercel = router
+        .with_overrides(serde_json::Map::from_iter([
+            ("model.provider".into(), json!("vercel")),
+            ("model.credential".into(), json!("gateway")),
+        ]))
+        .unwrap();
+    assert_eq!(vercel.options()["model"]["id"], "zai/glm-5.3-flash");
+    let configured =
+        f.resolve(json!({"credentials":credentials,"options":{"model":{"id":"explicit/model"}}}));
+    assert_eq!(
+        configured
+            .with_overrides(overrides.clone())
+            .unwrap()
+            .options()["model"]["id"],
+        "explicit/model"
+    );
+    let configured=f.resolve(json!({"credentials":credentials,"options":{"model":{"endpoint":pablo_core::gateway::VERCEL_ENDPOINT}}}));
+    assert_eq!(
+        configured
+            .with_overrides(overrides.clone())
+            .unwrap_err()
+            .code,
+        "config_invalid_value"
+    );
+    let configured=f.resolve(json!({"credentials":credentials,"authority":[{"id":"host","provider_endpoints":[pablo_core::gateway::VERCEL_ENDPOINT]}]}));
+    let error = configured.with_overrides(overrides).unwrap_err();
+    assert_eq!(error.code, "config_authority_violation");
+    assert_eq!(error.authority_id.as_deref(), Some("host"));
 }

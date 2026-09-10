@@ -9,7 +9,7 @@
   },
   "model": {
     "provider": "vercel",
-    "id": "google/gemini-3.8-flash",
+    "id": "zai/glm-5.3-flash",
     "endpoint": "https://ai-gateway.vercel.sh/v1/chat/completions",
     "credential": "gateway"
   },

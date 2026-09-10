@@ -10,12 +10,14 @@ pub const MAX_CREDENTIAL_BYTES: usize = 65_536;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CredentialConsumer {
     Vercel,
+    OpenRouter,
     OtelHeaders,
 }
 impl CredentialConsumer {
-    fn name(self) -> &'static str {
+    pub(crate) fn name(self) -> &'static str {
         match self {
             Self::Vercel => "provider.vercel",
+            Self::OpenRouter => "provider.openrouter",
             Self::OtelHeaders => "otel.headers",
         }
     }
@@ -84,7 +86,7 @@ impl PreparedRun {
         let config = self.deployment().config();
         let options = self.deployment().options();
         let (reference, destination) = match consumer {
-            CredentialConsumer::Vercel => (
+            CredentialConsumer::Vercel | CredentialConsumer::OpenRouter => (
                 &options["model"]["credential"],
                 options["model"]["endpoint"].as_str().unwrap(),
             ),
@@ -102,8 +104,15 @@ impl PreparedRun {
         let diagnostic = || error("config_credential_invalid", &format!("/credentials/{id}"));
         let record = &config["credentials"][id];
         if record["consumer"] != consumer.name()
-            || consumer == CredentialConsumer::Vercel
-                && destination != crate::gateway::VERCEL_ENDPOINT
+            || matches!(
+                consumer,
+                CredentialConsumer::Vercel | CredentialConsumer::OpenRouter
+            ) && destination
+                != match consumer {
+                    CredentialConsumer::Vercel => crate::gateway::VERCEL_ENDPOINT,
+                    CredentialConsumer::OpenRouter => crate::gateway::OPENROUTER_ENDPOINT,
+                    CredentialConsumer::OtelHeaders => unreachable!(),
+                }
         {
             return Err(error("config_credential_scope", "/credentials"));
         }
@@ -156,10 +165,12 @@ impl PreparedRun {
             {
                 return Err(diagnostic());
             }
-            if consumer == CredentialConsumer::Vercel
-                && (value.len() > 8192
-                    || value.chars().any(char::is_whitespace)
-                    || reqwest::header::HeaderValue::from_str(&value).is_err())
+            if matches!(
+                consumer,
+                CredentialConsumer::Vercel | CredentialConsumer::OpenRouter
+            ) && (value.len() > 8192
+                || value.chars().any(char::is_whitespace)
+                || reqwest::header::HeaderValue::from_str(&value).is_err())
             {
                 return Err(diagnostic());
             }

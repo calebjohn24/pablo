@@ -484,7 +484,7 @@ async function referenceCli(t: TestContext, f: Awaited<ReturnType<typeof fixture
 test('Gemini defaults complete five sequential tools through both Rust CLI and ACP', { timeout: 20000 }, async t => {
   for (const mode of ['run', 'acp'] as const) await t.test(mode, async t => {
     const f = await fixture(t, async (body, res, call) => {
-      assert.equal(body.model, 'google/gemini-3.8-flash');
+      assert.equal(body.model, 'zai/glm-5.3-flash');
       assert.equal(body.tool_choice, 'auto');
       assert.ok(!body.messages[0].content.includes('at most two'));
       const outputs = body.messages.filter((m: any) => m.role === 'tool').map((m: any) => JSON.parse(m.content).shell.stdout);
