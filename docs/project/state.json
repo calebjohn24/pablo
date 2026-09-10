@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-10T19:50:52.824Z",
+  "updated_at": "2026-09-10T19:52:38.625Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.11",
-  "next_action": "Merge verified C3.10, then activate C3.11 for sticky forward-only runtime fallback and distinct attempt deadlines. F02 must prove eligible first failure, second success, no third contact/tool replay and per-attempt shared-budget identity. Preserve exact credential/continuation scope, GLM defaults and unlimited filesystem work; repeat matched performance.",
-  "latest_log_entry": "LOG-0076",
+  "next_action": "Activate C3.11 on feat/c3-model-fallback from merged C3.10 base e613933. Implement sticky forward-only fallback and distinct attempt deadlines; prove eligible first failure, second success, no third contact/tool replay and per-attempt shared-budget identity. Preserve exact credential/continuation scope, GLM defaults and unlimited filesystem work; repeat matched performance.",
+  "latest_log_entry": "LOG-0077",
   "checkpoints": [
     {
       "id": "C1.0",
