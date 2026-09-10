@@ -12,10 +12,11 @@ import { responsesEvents, responsesWire } from '../tests/fixtures/open-responses
 import { sourceFingerprint } from './lib/source-fingerprint.mjs';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const provider=process.env.PABLO_MEASURE_PROVIDER ?? 'vercel';
+const routed=process.env.PABLO_MEASURE_ROUTED==='1';
 assert(provider==='vercel'||provider==='openrouter'||provider==='open_responses');
 const model=provider==='vercel'?'zai/glm-5.3-flash':provider==='openrouter'?'z-ai/glm-5.3-flash':'fixture-text-tools-v1';
 const binary=resolve(process.env.PABLO_MEASURE_BINARY ?? join(root,'target/release/pablo'));
-const configured=process.env.PABLO_MEASURE_CONFIGURED==='1'||provider==='open_responses';
+const configured=routed||process.env.PABLO_MEASURE_CONFIGURED==='1'||provider==='open_responses';
 const destination=resolve(process.argv[2] ?? join(root,`.pablo/measurements/c2.5-filesystem-${process.platform}-${process.arch}.json`));
 const cwd=await realpath(await mkdtemp(join(tmpdir(),'pablo-fs-measure-')));
 const content='a'.repeat(128*1024-1)+'\n';const hash=(s:string)=>createHash('sha256').update(s).digest('hex');
@@ -49,6 +50,7 @@ const stats=(values:number[])=>{const s=values.toSorted((a,b)=>a-b);return {n:s.
 try {
   const entry=join(cwd,'deployment.toml');
   if(configured)await writeFile(entry,`schema_version=1
+${routed?'[options]\nmodel_route="measured"\n[options.routes.measured]\nentries=[{model="measured"}]':''}
 [credentials.gateway]
 consumer="provider.${provider}"
 sources=[{kind="environment",name="UNREAD_FIXTURE_KEY"}]
@@ -56,7 +58,8 @@ sources=[{kind="environment",name="UNREAD_FIXTURE_KEY"}]
 enabled=false
 [options.filesystem]
 write=true
-[options.model]
+[options.${routed?'models.measured':'model'}]
+${routed?'credential="gateway"':''}
 provider="${provider}"
 id="${model}"
 ${provider==='open_responses'?'endpoint="https://responses.example.test/v1/responses"\ncapability_profile="open-responses-text-tools-v1"':''}
@@ -87,6 +90,6 @@ max_tool_calls=1
     });
     measurements[workload.name]={prompt_ms:stats(promptMs),tool_ms:stats(toolMs),prompt_samples_ms:promptMs,tool_samples_ms:toolMs};
   }
-  const report={checkpoint:process.env.PABLO_MEASURE_CHECKPOINT ?? 'C2.5',timestamp:new Date().toISOString(),platform:`${process.platform}/${process.arch}`,source_sha256:process.env.PABLO_MEASURE_SOURCE_SHA256 ?? await sourceFingerprint(root),binary_sha256:createHash('sha256').update(await readFile(binary)).digest('hex'),method:{provider,model,configuration:configured?'explicit deployment file; re-resolved per task':'legacy invocation',samples:30,warmup:5,cache:'warm filesystem; no forced eviction',prompt:'two loopback HTTP/SSE calls plus one real filesystem tool and ACP envelope delivery; fresh sessions in reused process',tool:'native tool.started to tool.finished timestamps; includes joined worker and filesystem work',search_bytes:1048700,setup:'fixture construction and process/catalog/SDK setup excluded from measured warm samples',baseline:'new capability workload; no equivalent C1 native filesystem tool'},measurements};
+  const report={checkpoint:process.env.PABLO_MEASURE_CHECKPOINT ?? 'C2.5',timestamp:new Date().toISOString(),platform:`${process.platform}/${process.arch}`,source_sha256:process.env.PABLO_MEASURE_SOURCE_SHA256 ?? await sourceFingerprint(root),binary_sha256:createHash('sha256').update(await readFile(binary)).digest('hex'),method:{provider,model,configuration:routed?'explicit single-entry model route; re-resolved per task':configured?'explicit deployment file; re-resolved per task':'legacy invocation',samples:30,warmup:5,cache:'warm filesystem; no forced eviction',prompt:'two loopback HTTP/SSE calls plus one real filesystem tool and ACP envelope delivery; fresh sessions in reused process',tool:'native tool.started to tool.finished timestamps; includes joined worker and filesystem work',search_bytes:1048700,setup:'fixture construction and process/catalog/SDK setup excluded from measured warm samples',baseline:'new capability workload; no equivalent C1 native filesystem tool'},measurements};
   await mkdir(dirname(destination),{recursive:true});await writeFile(destination,JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify({destination,measurements:Object.fromEntries(Object.entries(measurements).map(([k,v])=>[k,{prompt_ms:(v as any).prompt_ms,tool_ms:(v as any).tool_ms}]))}));
 } finally {await gateway.close();await rm(cwd,{recursive:true,force:true});}

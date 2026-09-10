@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_revision": "c3.9",
+  "contract_revision": "c3.10",
   "config": {
     "deployment": {
       "locked": true,
@@ -794,6 +794,6 @@
       }
     ]
   },
-  "fingerprint": "sha256:bfff34f3565ffd3044403235e80bd2cc5777c3046e39d8a8bc747dd92ece9d3a",
-  "input_fingerprint": "sha256:ac88a16a6a7e7a37299275ab6552e24fafa35275f3ff71c78eb8d420121bc7ac"
+  "fingerprint": "sha256:642d3592bd5e7959c96b488ed877da501aca615f6e22806c537ac4967d265a49",
+  "input_fingerprint": "sha256:2c79a23358f282043cb15b3c427c78f5aca96ccd8c1e000ee3486fbd9395653d"
 }

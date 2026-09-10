@@ -18,6 +18,7 @@ import { sourceFingerprint } from './lib/source-fingerprint.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const provider=process.env.PABLO_MEASURE_PROVIDER ?? 'vercel';
+const routed=process.env.PABLO_MEASURE_ROUTED==='1';
 assert(provider==='vercel'||provider==='openrouter'||provider==='open_responses');
 const model=provider==='vercel'?'zai/glm-5.3-flash':provider==='openrouter'?'z-ai/glm-5.3-flash':'fixture-text-tools-v1';
 const count = Number(process.argv[2] ?? 30);
@@ -26,7 +27,7 @@ const binary = resolve(process.env.PABLO_MEASURE_BINARY ?? join(root, 'target/re
 const direct = resolve(process.env.PABLO_MEASURE_DIRECT ?? join(root, 'target/release/examples/measure'));
 const reuse = process.env.PABLO_MEASURE_REUSE !== '0';
 const restricted = process.env.PABLO_MEASURE_RESTRICTED === '1';
-const configured = process.env.PABLO_MEASURE_CONFIGURED === '1' || restricted || provider==='open_responses';
+const configured = routed || process.env.PABLO_MEASURE_CONFIGURED === '1' || restricted || provider==='open_responses';
 const absoluteCommand = process.env.PABLO_MEASURE_ABSOLUTE_COMMAND === '1';
 const destination = resolve(process.argv[3] ?? join(root, `.pablo/measurements/c2.5-${process.platform}-${process.arch}.json`));
 const cwd = await realpath(await mkdtemp(join(tmpdir(), 'pablo-measure-')));
@@ -90,10 +91,12 @@ const entry=join(cwd,'deployment.toml');
 const options = configured ? ['--config',entry,'--bind',`workspace=${cwd}`,'--fixture-endpoint',endpoint] : [...(provider==='openrouter'?['--provider',provider]:[]),'--model', model, '--max-model-calls', '2', '--max-tool-calls', '1'];
 try {
   if(configured) await writeFile(entry,`schema_version=1
+${routed?'[options]\nmodel_route="measured"\n[options.routes.measured]\nentries=[{model="measured"}]':''}
 [credentials.gateway]
 consumer="provider.${provider}"
 sources=[{kind="environment",name="UNREAD_FIXTURE_KEY"}]
-[options.model]
+[options.${routed?'models.measured':'model'}]
+${routed?'credential="gateway"':''}
 provider="${provider}"
 id="${model}"
 ${provider==='open_responses'?'endpoint="https://responses.example.test/v1/responses"\ncapability_profile="open-responses-text-tools-v1"':''}
@@ -206,7 +209,7 @@ ${restricted ? `[options.shell.commands]\ndefault="deny"\nallow=[{id="measure.pr
       environment: process.env.PABLO_MEASURE_ENVIRONMENT ?? 'local host' },
     build: { profile: process.env.PABLO_MEASURE_BUILD ?? (await readFile(join(root, 'Cargo.toml'), 'utf8')).split('[profile.release]')[1].trim(), binary_bytes: (await stat(binary)).size, stripped_binary_bytes: (await stat(stripped)).size, strip_method: 'platform strip on a copy; timings use original release executable',
       binary_sha256: createHash('sha256').update(await readFile(binary)).digest('hex') },
-    method: { provider, model, configuration: restricted ? 'explicit deployment file with exact printf executable/argv allowlist' : configured ? 'explicit deployment file; re-resolved per admitted task' : 'legacy invocation', samples: count, warmup: 5, cache: 'warm filesystem; no forced cache eviction',
+    method: { provider, model, configuration: routed ? 'explicit single-entry model route; re-resolved per task' : restricted ? 'explicit deployment file with exact printf executable/argv allowlist' : configured ? 'explicit deployment file; re-resolved per admitted task' : 'legacy invocation', samples: count, warmup: 5, cache: 'warm filesystem; no forced cache eviction',
       workload: `two local HTTP/SSE calls, one ${absoluteCommand ? 'explicit /usr/bin/printf' : 'bare printf'} shell command, 32 x 16-byte output deltas`,
       startup: 'Node monotonic spawn to first loopback provider request arrival; separate --version process wall time',
       baseline: 'direct core run_with_tools in measurement host; SDK/provider/tool construction excluded from core_run_ms',

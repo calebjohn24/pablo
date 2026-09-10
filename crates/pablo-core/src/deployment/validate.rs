@@ -71,6 +71,13 @@ pub(crate) fn declarations(value: &Value, path: &str) -> Result<(), ConfigError>
             endpoint(value, &format!("{path}{option}"))?;
         }
     }
+    if let Some(models) = value.pointer("/options/models").and_then(Value::as_object) {
+        for (name, model) in models {
+            if let Some(value) = model.get("endpoint") {
+                endpoint(value, &format!("{path}/options/models/{name}/endpoint"))?;
+            }
+        }
+    }
     if let Some(layers) = value.get("authority").and_then(Value::as_array) {
         for (index, layer) in layers.iter().enumerate() {
             if let Some(shell) = layer.get("shell") {
@@ -263,13 +270,19 @@ pub(crate) fn config(config: &Value, request: &ResolveRequest) -> Result<(), Con
             "/config/options/otel/max_export_batch_size",
         ));
     }
-    let provider: crate::gateway::GatewayKind = options["model"]["provider"]
+    let selected_route = super::routes::resolve(config)?;
+    let model = if let Some(route) = &selected_route {
+        &options["models"][route.entries()[0].name()]
+    } else {
+        &options["model"]
+    };
+    let provider: crate::gateway::GatewayKind = model["provider"]
         .as_str()
         .unwrap()
         .parse()
         .map_err(|_| error("config_invalid_value", "/config/options/model/provider"))?;
     if provider == crate::gateway::GatewayKind::OpenResponses {
-        super::admission::responses_profile(&options["model"])?;
+        super::admission::responses_profile(model)?;
         if options["limits"]["max_output_tokens"]
             .as_u64()
             .is_none_or(|n| n < 16)
@@ -279,10 +292,10 @@ pub(crate) fn config(config: &Value, request: &ResolveRequest) -> Result<(), Con
                 "/options/limits/max_output_tokens",
             ));
         }
-    } else if options["model"]["endpoint"] != provider.endpoint()
+    } else if model["endpoint"] != provider.endpoint()
         || ["capability_profile", "auth_header", "auth_scheme"]
             .iter()
-            .any(|field| options["model"].get(field).is_some())
+            .any(|field| model.get(field).is_some())
     {
         return Err(error(
             "config_invalid_value",
@@ -291,7 +304,7 @@ pub(crate) fn config(config: &Value, request: &ResolveRequest) -> Result<(), Con
     }
     for (id, consumer) in [
         (
-            options["model"]["credential"].as_str(),
+            model["credential"].as_str(),
             provider.credential_consumer().name(),
         ),
         (options["otel"]["headers"].as_str(), "otel.headers"),
@@ -360,15 +373,15 @@ pub(crate) fn config(config: &Value, request: &ResolveRequest) -> Result<(), Con
             }
             for (field, values) in [
                 ("tool_names", tools.clone()),
-                ("model_ids", vec![options["model"]["id"].as_str().unwrap()]),
+                ("model_ids", vec![model["id"].as_str().unwrap()]),
                 (
                     "provider_endpoints",
-                    vec![options["model"]["endpoint"].as_str().unwrap()],
+                    vec![model["endpoint"].as_str().unwrap()],
                 ),
                 (
                     "credential_ids",
                     [
-                        options["model"]["credential"].as_str(),
+                        model["credential"].as_str(),
                         options["otel"]["headers"].as_str(),
                     ]
                     .into_iter()

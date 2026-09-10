@@ -87,13 +87,13 @@ impl PreparedRun {
     ) -> Result<Option<ScopedCredential>, ConfigError> {
         let config = self.deployment().config();
         let options = self.deployment().options();
+        let model = self.deployment().selected_model();
         let (reference, destination) = match consumer {
             CredentialConsumer::Vercel
             | CredentialConsumer::OpenRouter
-            | CredentialConsumer::OpenResponses => (
-                &options["model"]["credential"],
-                options["model"]["endpoint"].as_str().unwrap(),
-            ),
+            | CredentialConsumer::OpenResponses => {
+                (&model["credential"], model["endpoint"].as_str().unwrap())
+            }
             CredentialConsumer::OtelHeaders => (
                 &options["otel"]["headers"],
                 options["otel"]["endpoint"].as_str().unwrap(),
