@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-10T20:42:22.859Z",
+  "updated_at": "2026-09-10T20:44:03.431Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.12a",
-  "next_action": "Merge verified C3.12, then activate C3.12a for basic provider-neutral context compaction with one summary pass, one overflow recovery and shared budgets; retain matched performance checks.",
-  "latest_log_entry": "LOG-0080",
+  "next_action": "Activate C3.12a on feat/c3-basic-compaction; freeze provider-neutral context options, summary/history and overflow/privacy contracts, then implement CP01/CP02 with shared budgets and matched performance.",
+  "latest_log_entry": "LOG-0081",
   "checkpoints": [
     {
       "id": "C1.0",
