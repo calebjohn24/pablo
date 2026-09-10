@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-10T19:17:51.650Z",
+  "updated_at": "2026-09-10T19:19:26.091Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.10",
-  "next_action": "Merge verified C3.9, then activate C3.10 to freeze named model profiles and ordered routes before fallback execution. Preserve explicit endpoint/credential authority and private continuation compatibility. Keep GLM defaults/unlimited filesystem work; revisit measured listing/replacement increases at C3.39.",
-  "latest_log_entry": "LOG-0073",
+  "next_action": "Activate C3.10 on feat/c3-model-routes-contracts from merged C3.9 base cd5c6c7. Freeze named model profiles and ordered routes, preserving exact credential/model authority and private-continuation compatibility before C3.11 execution. Preserve GLM defaults and unlimited filesystem work; retain C3.39 timing follow-up.",
+  "latest_log_entry": "LOG-0074",
   "checkpoints": [
     {
       "id": "C1.0",
