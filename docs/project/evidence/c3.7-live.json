@@ -1,0 +1,103 @@
+{
+  "checkpoint": "C3.7",
+  "timestamp": "2026-09-10T18:04:35.870Z",
+  "results": [
+    {
+      "surface": "cli",
+      "result": "passed",
+      "elapsed_ms": 2294.534209,
+      "provider": "openrouter",
+      "model": "z-ai/glm-5.3-flash",
+      "binary": "target/release/pablo",
+      "binary_sha256": "00ca1d0236cd0a4d3d9500e7d48faa2fed240e280449bfcba136c91caa55a3a2",
+      "source_sha256": "bf4172f125a3fc65ec53f0c84ace3b69cae11643776bd53491a47f773e72def1",
+      "config_fingerprint": "sha256:85bf7282182964911e4983564ce1d9e5d871e618009adec5e741950b82337843",
+      "platform": "darwin/arm64",
+      "node": "v24.11.0",
+      "rust": "rustc 1.98.1 (48a229cea 2026-09-01)",
+      "accounting": {
+        "model_calls": "2",
+        "tool_calls": "1",
+        "usage": {
+          "input_tokens": "1076",
+          "output_tokens": "125",
+          "cache_read_input_tokens": "704",
+          "cache_write_input_tokens": "0"
+        },
+        "cost_microusd": "141",
+        "charged_tokens": null,
+        "charged_cost_microusd": null
+      },
+      "per_call_usage": [
+        {
+          "input_tokens": 774,
+          "output_tokens": 43,
+          "cache_read_input_tokens": 704,
+          "cache_write_input_tokens": 0
+        },
+        {
+          "input_tokens": 302,
+          "output_tokens": 82,
+          "cache_read_input_tokens": 0,
+          "cache_write_input_tokens": 0
+        }
+      ],
+      "exact_evidence": true,
+      "model_tool_model": true,
+      "one_terminal": true,
+      "no_shell": true,
+      "credential_source": "explicit dotenv reference; executable-only resolution",
+      "trace_redacted": true,
+      "workspace_removed": true
+    },
+    {
+      "surface": "acp",
+      "result": "passed",
+      "elapsed_ms": 1924.3165419999996,
+      "provider": "openrouter",
+      "model": "z-ai/glm-5.3-flash",
+      "binary": "target/release/pablo",
+      "binary_sha256": "00ca1d0236cd0a4d3d9500e7d48faa2fed240e280449bfcba136c91caa55a3a2",
+      "source_sha256": "bf4172f125a3fc65ec53f0c84ace3b69cae11643776bd53491a47f773e72def1",
+      "config_fingerprint": "sha256:d948aafe644d2b6d3f676fdf37d93b2ae7a87d0c2485d838531cd8429fd01c53",
+      "platform": "darwin/arm64",
+      "node": "v24.11.0",
+      "rust": "rustc 1.98.1 (48a229cea 2026-09-01)",
+      "accounting": {
+        "model_calls": "2",
+        "tool_calls": "1",
+        "usage": {
+          "input_tokens": "1082",
+          "output_tokens": "128",
+          "cache_read_input_tokens": "0",
+          "cache_write_input_tokens": "0"
+        },
+        "cost_microusd": "228",
+        "charged_tokens": null,
+        "charged_cost_microusd": null
+      },
+      "per_call_usage": [
+        {
+          "input_tokens": 774,
+          "output_tokens": 42,
+          "cache_read_input_tokens": 0,
+          "cache_write_input_tokens": 0
+        },
+        {
+          "input_tokens": 308,
+          "output_tokens": 86,
+          "cache_read_input_tokens": 0,
+          "cache_write_input_tokens": 0
+        }
+      ],
+      "exact_evidence": true,
+      "model_tool_model": true,
+      "one_terminal": true,
+      "no_shell": true,
+      "credential_source": "explicit dotenv reference; executable-only resolution",
+      "trace_redacted": true,
+      "workspace_removed": true
+    }
+  ],
+  "binary_size_bytes": 11231136
+}
