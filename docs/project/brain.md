@@ -192,7 +192,7 @@ C3.8 freezes release 2026-04-24 at upstream 92c12d96d7b61d6d15e2214daa5e9c6000ab
 
 ### D044 — Resolve exact ordered routes before allowing fallback
 
-C3.10 names profiles and composes ordered routes offline, validating every entry's capabilities, credential destination and authority. Children can retain only exact inherited entries in order. Sticky, forward-only runtime selection and one retry owner prevent hidden repeated attempts; all attempts consume root budgets and incompatible private continuation stops fallback. C3.11 executes fallback and distinct attempt deadlines through runtime-owned selection, with all-entry credential/accounting preflight and independent profile/root token clamping. ACP resource reuse never retains a task cursor; incompatible history stops before dispatch. See [F01/F02](contracts/c3-model-routes.md).
+C3.10 names profiles and composes ordered routes offline, validating every entry's capabilities, credential destination and authority. Children can retain only exact inherited entries in order. Sticky, forward-only runtime selection and one retry owner prevent hidden repeated attempts; all attempts consume root budgets and incompatible private continuation stops fallback. C3.11 executes fallback and distinct attempt deadlines through runtime-owned selection, with all-entry credential/accounting preflight and independent profile/root token clamping. ACP resource reuse never retains a task cursor; incompatible history stops before dispatch. C3.12 streams bounded attempt records with negotiated ACP notifications and preserves received-delivery evidence, preventing false refunds or uncertainty-policy bypass. See [F01/F02/F03](contracts/c3-model-routes.md).
 
 ### D045 — Basic compaction belongs in C3
 

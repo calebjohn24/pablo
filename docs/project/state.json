@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-10T20:19:27.868Z",
+  "updated_at": "2026-09-10T20:42:22.859Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.12",
-  "next_action": "Merge verified C3.11, then activate C3.12 for the full fallback failure/selection ledger, all-provider transitions and allowance races. Preserve conservative unknown charges, exact credential/continuation scope, GLM defaults and unlimited filesystem work; repeat matched performance. C3.12a basic compaction is now selected after C3.12 and before C3.13.",
-  "latest_log_entry": "LOG-0078",
+  "next_checkpoint": "C3.12a",
+  "next_action": "Merge verified C3.12, then activate C3.12a for basic provider-neutral context compaction with one summary pass, one overflow recovery and shared budgets; retain matched performance checks.",
+  "latest_log_entry": "LOG-0080",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -380,9 +380,11 @@
       "depends_on": [
         "C3.11"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0080"
+      ]
     },
     {
       "id": "C3.12a",

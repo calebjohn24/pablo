@@ -240,9 +240,33 @@ pub struct ProviderIdentity {
     pub resolved_model: Option<String>,
 }
 
+/// Bounded latest route selection; finished events form the streamed attempt ledger.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ModelRouteRecord {
+    pub schema_version: String,
+    pub route: String,
+    pub entry: String,
+    pub entry_index: usize,
+    pub provider: String,
+    pub model: String,
+    pub operation: String,
+    pub attempt: usize,
+    pub selection_reason: String,
+    pub phase: String,
+    pub dispatched: bool,
+    pub delivery: DeliveryCertainty,
+    pub status: Option<String>,
+    pub failure_code: Option<FailureCode>,
+    pub limit: Option<LimitKind>,
+    pub retry_class: Option<String>,
+    pub accounting: Option<Box<crate::task::Accounting>>,
+}
+
 /// Live events contain content. JsonlSink applies its independent capture policy.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RunEvent {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_route: Option<Box<ModelRouteRecord>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model_profile: Option<ProviderIdentity>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
