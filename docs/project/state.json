@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-10T20:19:27.868Z",
+  "updated_at": "2026-09-10T20:21:14.837Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.12",
-  "next_action": "Merge verified C3.11, then activate C3.12 for the full fallback failure/selection ledger, all-provider transitions and allowance races. Preserve conservative unknown charges, exact credential/continuation scope, GLM defaults and unlimited filesystem work; repeat matched performance. C3.12a basic compaction is now selected after C3.12 and before C3.13.",
-  "latest_log_entry": "LOG-0078",
+  "next_action": "Activate C3.12 on feat/c3-fallback-accounting from merged C3.11 base d7c0456. Add precise per-attempt/selection failure metadata and F03 exhaustion, uncertainty, cancellation, credential, continuation and root-allowance races across providers. Preserve shared budgets, GLM defaults and unlimited filesystem work; repeat matched performance. Then implement C3.12a basic compaction before C3.13.",
+  "latest_log_entry": "LOG-0079",
   "checkpoints": [
     {
       "id": "C1.0",
