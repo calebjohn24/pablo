@@ -1,0 +1,4 @@
+# Preserve exact CRLF protocol fixtures and hash-pinned upstream bytes.
+*.sse -text whitespace=cr-at-eol,-blank-at-eof
+# Upstream formatting is unmodified and verified by SHA-256, including whitespace.
+upstream/* -text -whitespace

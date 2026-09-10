@@ -1,0 +1,1355 @@
+{
+  "contract": "OR01",
+  "upstream_revision": "92c12d96d7b61d6d15e2214daa5e9c6000ab6e1c",
+  "profile": "open-responses-text-tools-v1",
+  "turns": [
+    {
+      "request": {
+        "model": "fixture-text-tools-v1",
+        "instructions": "Read evidence with the supplied tools.",
+        "input": [
+          {
+            "type": "message",
+            "role": "user",
+            "content": [
+              {
+                "type": "input_text",
+                "text": "Read both evidence files, then answer."
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "type": "function",
+            "name": "fs_read",
+            "description": "Read a workspace file.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path"
+              ],
+              "additionalProperties": false
+            },
+            "strict": false
+          }
+        ],
+        "tool_choice": "auto",
+        "parallel_tool_calls": false,
+        "stream": true,
+        "store": false,
+        "background": false,
+        "truncation": "disabled",
+        "include": [
+          "reasoning.encrypted_content"
+        ],
+        "max_output_tokens": 4096
+      },
+      "events": [
+        {
+          "type": "response.created",
+          "sequence_number": 0,
+          "response": {
+            "id": "resp_fixture_1",
+            "object": "response",
+            "created_at": 1789056000,
+            "completed_at": null,
+            "status": "in_progress",
+            "incomplete_details": null,
+            "model": "fixture-text-tools-v1",
+            "previous_response_id": null,
+            "instructions": "Read evidence with the supplied tools.",
+            "output": [],
+            "error": null,
+            "tools": [
+              {
+                "type": "function",
+                "name": "fs_read",
+                "description": "Read a workspace file.",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            ],
+            "tool_choice": "auto",
+            "truncation": "disabled",
+            "parallel_tool_calls": false,
+            "text": {
+              "format": {
+                "type": "text"
+              }
+            },
+            "top_p": 1,
+            "presence_penalty": 0,
+            "frequency_penalty": 0,
+            "top_logprobs": 0,
+            "temperature": 1,
+            "reasoning": null,
+            "usage": null,
+            "max_output_tokens": 4096,
+            "max_tool_calls": null,
+            "store": false,
+            "background": false,
+            "service_tier": "default",
+            "metadata": {},
+            "safety_identifier": null,
+            "prompt_cache_key": null
+          }
+        },
+        {
+          "type": "response.in_progress",
+          "sequence_number": 1,
+          "response": {
+            "id": "resp_fixture_1",
+            "object": "response",
+            "created_at": 1789056000,
+            "completed_at": null,
+            "status": "in_progress",
+            "incomplete_details": null,
+            "model": "fixture-text-tools-v1",
+            "previous_response_id": null,
+            "instructions": "Read evidence with the supplied tools.",
+            "output": [],
+            "error": null,
+            "tools": [
+              {
+                "type": "function",
+                "name": "fs_read",
+                "description": "Read a workspace file.",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            ],
+            "tool_choice": "auto",
+            "truncation": "disabled",
+            "parallel_tool_calls": false,
+            "text": {
+              "format": {
+                "type": "text"
+              }
+            },
+            "top_p": 1,
+            "presence_penalty": 0,
+            "frequency_penalty": 0,
+            "top_logprobs": 0,
+            "temperature": 1,
+            "reasoning": null,
+            "usage": null,
+            "max_output_tokens": 4096,
+            "max_tool_calls": null,
+            "store": false,
+            "background": false,
+            "service_tier": "default",
+            "metadata": {},
+            "safety_identifier": null,
+            "prompt_cache_key": null
+          }
+        },
+        {
+          "type": "response.output_item.added",
+          "sequence_number": 2,
+          "output_index": 0,
+          "item": {
+            "type": "reasoning",
+            "id": "rs_fixture_1",
+            "summary": []
+          }
+        },
+        {
+          "type": "response.output_item.done",
+          "sequence_number": 3,
+          "output_index": 0,
+          "item": {
+            "type": "reasoning",
+            "id": "rs_fixture_1",
+            "summary": [],
+            "encrypted_content": "opaque-synthetic-state-1"
+          }
+        },
+        {
+          "type": "response.output_item.added",
+          "sequence_number": 4,
+          "output_index": 1,
+          "item": {
+            "type": "message",
+            "id": "msg_commentary",
+            "status": "in_progress",
+            "role": "assistant",
+            "phase": "commentary",
+            "content": []
+          }
+        },
+        {
+          "type": "response.content_part.added",
+          "sequence_number": 5,
+          "item_id": "msg_commentary",
+          "output_index": 1,
+          "content_index": 0,
+          "part": {
+            "type": "output_text",
+            "text": "",
+            "annotations": []
+          }
+        },
+        {
+          "type": "response.output_text.delta",
+          "sequence_number": 6,
+          "item_id": "msg_commentary",
+          "output_index": 1,
+          "content_index": 0,
+          "delta": "Inspec"
+        },
+        {
+          "type": "response.output_text.delta",
+          "sequence_number": 7,
+          "item_id": "msg_commentary",
+          "output_index": 1,
+          "content_index": 0,
+          "delta": "ting. "
+        },
+        {
+          "type": "response.output_text.done",
+          "sequence_number": 8,
+          "item_id": "msg_commentary",
+          "output_index": 1,
+          "content_index": 0,
+          "text": "Inspecting. "
+        },
+        {
+          "type": "response.content_part.done",
+          "sequence_number": 9,
+          "item_id": "msg_commentary",
+          "output_index": 1,
+          "content_index": 0,
+          "part": {
+            "type": "output_text",
+            "text": "Inspecting. ",
+            "annotations": []
+          }
+        },
+        {
+          "type": "response.output_item.done",
+          "sequence_number": 10,
+          "output_index": 1,
+          "item": {
+            "type": "message",
+            "id": "msg_commentary",
+            "status": "completed",
+            "role": "assistant",
+            "phase": "commentary",
+            "content": [
+              {
+                "type": "output_text",
+                "text": "Inspecting. ",
+                "annotations": []
+              }
+            ]
+          }
+        },
+        {
+          "type": "response.output_item.added",
+          "sequence_number": 11,
+          "output_index": 2,
+          "item": {
+            "type": "function_call",
+            "id": "fc_fixture_1",
+            "call_id": "call_fixture_1",
+            "name": "fs_read",
+            "arguments": "",
+            "status": "in_progress"
+          }
+        },
+        {
+          "type": "response.function_call_arguments.delta",
+          "sequence_number": 12,
+          "item_id": "fc_fixture_1",
+          "output_index": 2,
+          "delta": "{\"path\""
+        },
+        {
+          "type": "response.function_call_arguments.delta",
+          "sequence_number": 13,
+          "item_id": "fc_fixture_1",
+          "output_index": 2,
+          "delta": ":\"first.txt\"}"
+        },
+        {
+          "type": "response.function_call_arguments.done",
+          "sequence_number": 14,
+          "item_id": "fc_fixture_1",
+          "output_index": 2,
+          "arguments": "{\"path\":\"first.txt\"}"
+        },
+        {
+          "type": "response.output_item.done",
+          "sequence_number": 15,
+          "output_index": 2,
+          "item": {
+            "type": "function_call",
+            "id": "fc_fixture_1",
+            "call_id": "call_fixture_1",
+            "name": "fs_read",
+            "arguments": "{\"path\":\"first.txt\"}",
+            "status": "completed"
+          }
+        },
+        {
+          "type": "response.completed",
+          "sequence_number": 16,
+          "response": {
+            "id": "resp_fixture_1",
+            "object": "response",
+            "created_at": 1789056000,
+            "completed_at": 1789056001,
+            "status": "completed",
+            "incomplete_details": null,
+            "model": "fixture-text-tools-v1",
+            "previous_response_id": null,
+            "instructions": "Read evidence with the supplied tools.",
+            "output": [
+              {
+                "type": "reasoning",
+                "id": "rs_fixture_1",
+                "summary": [],
+                "encrypted_content": "opaque-synthetic-state-1"
+              },
+              {
+                "type": "message",
+                "id": "msg_commentary",
+                "status": "completed",
+                "role": "assistant",
+                "phase": "commentary",
+                "content": [
+                  {
+                    "type": "output_text",
+                    "text": "Inspecting. ",
+                    "annotations": []
+                  }
+                ]
+              },
+              {
+                "type": "function_call",
+                "id": "fc_fixture_1",
+                "call_id": "call_fixture_1",
+                "name": "fs_read",
+                "arguments": "{\"path\":\"first.txt\"}",
+                "status": "completed"
+              }
+            ],
+            "error": null,
+            "tools": [
+              {
+                "type": "function",
+                "name": "fs_read",
+                "description": "Read a workspace file.",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            ],
+            "tool_choice": "auto",
+            "truncation": "disabled",
+            "parallel_tool_calls": false,
+            "text": {
+              "format": {
+                "type": "text"
+              }
+            },
+            "top_p": 1,
+            "presence_penalty": 0,
+            "frequency_penalty": 0,
+            "top_logprobs": 0,
+            "temperature": 1,
+            "reasoning": null,
+            "usage": {
+              "input_tokens": 100,
+              "output_tokens": 20,
+              "total_tokens": 120,
+              "input_tokens_details": {
+                "cached_tokens": 40
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 5
+              }
+            },
+            "max_output_tokens": 4096,
+            "max_tool_calls": null,
+            "store": false,
+            "background": false,
+            "service_tier": "default",
+            "metadata": {},
+            "safety_identifier": null,
+            "prompt_cache_key": null
+          }
+        }
+      ],
+      "done": "[DONE]",
+      "expected": {
+        "text": "Inspecting. ",
+        "tool_calls": [
+          {
+            "id": "call_fixture_1",
+            "name": "fs.read",
+            "arguments": "{\"path\":\"first.txt\"}"
+          }
+        ],
+        "finish": "tool_calls",
+        "usage": {
+          "input_tokens": 100,
+          "output_tokens": 20,
+          "cache_read_input_tokens": 40,
+          "cache_write_input_tokens": null
+        },
+        "cost_microusd": null
+      },
+      "tool_results": [
+        {
+          "type": "function_call_output",
+          "call_id": "call_fixture_1",
+          "output": "{\"status\":\"completed\",\"filesystem\":{\"operation\":\"read\",\"text\":\"Alpha\"}}"
+        }
+      ]
+    },
+    {
+      "request": {
+        "model": "fixture-text-tools-v1",
+        "instructions": "Read evidence with the supplied tools.",
+        "input": [
+          {
+            "type": "message",
+            "role": "user",
+            "content": [
+              {
+                "type": "input_text",
+                "text": "Read both evidence files, then answer."
+              }
+            ]
+          },
+          {
+            "type": "reasoning",
+            "id": "rs_fixture_1",
+            "summary": [],
+            "encrypted_content": "opaque-synthetic-state-1"
+          },
+          {
+            "type": "message",
+            "id": "msg_commentary",
+            "status": "completed",
+            "role": "assistant",
+            "phase": "commentary",
+            "content": [
+              {
+                "type": "output_text",
+                "text": "Inspecting. ",
+                "annotations": []
+              }
+            ]
+          },
+          {
+            "type": "function_call",
+            "id": "fc_fixture_1",
+            "call_id": "call_fixture_1",
+            "name": "fs_read",
+            "arguments": "{\"path\":\"first.txt\"}",
+            "status": "completed"
+          },
+          {
+            "type": "function_call_output",
+            "call_id": "call_fixture_1",
+            "output": "{\"status\":\"completed\",\"filesystem\":{\"operation\":\"read\",\"text\":\"Alpha\"}}"
+          }
+        ],
+        "tools": [
+          {
+            "type": "function",
+            "name": "fs_read",
+            "description": "Read a workspace file.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path"
+              ],
+              "additionalProperties": false
+            },
+            "strict": false
+          }
+        ],
+        "tool_choice": "auto",
+        "parallel_tool_calls": false,
+        "stream": true,
+        "store": false,
+        "background": false,
+        "truncation": "disabled",
+        "include": [
+          "reasoning.encrypted_content"
+        ],
+        "max_output_tokens": 4096
+      },
+      "events": [
+        {
+          "type": "response.created",
+          "sequence_number": 0,
+          "response": {
+            "id": "resp_fixture_2",
+            "object": "response",
+            "created_at": 1789056000,
+            "completed_at": null,
+            "status": "in_progress",
+            "incomplete_details": null,
+            "model": "fixture-text-tools-v1",
+            "previous_response_id": null,
+            "instructions": "Read evidence with the supplied tools.",
+            "output": [],
+            "error": null,
+            "tools": [
+              {
+                "type": "function",
+                "name": "fs_read",
+                "description": "Read a workspace file.",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            ],
+            "tool_choice": "auto",
+            "truncation": "disabled",
+            "parallel_tool_calls": false,
+            "text": {
+              "format": {
+                "type": "text"
+              }
+            },
+            "top_p": 1,
+            "presence_penalty": 0,
+            "frequency_penalty": 0,
+            "top_logprobs": 0,
+            "temperature": 1,
+            "reasoning": null,
+            "usage": null,
+            "max_output_tokens": 4096,
+            "max_tool_calls": null,
+            "store": false,
+            "background": false,
+            "service_tier": "default",
+            "metadata": {},
+            "safety_identifier": null,
+            "prompt_cache_key": null
+          }
+        },
+        {
+          "type": "response.in_progress",
+          "sequence_number": 1,
+          "response": {
+            "id": "resp_fixture_2",
+            "object": "response",
+            "created_at": 1789056000,
+            "completed_at": null,
+            "status": "in_progress",
+            "incomplete_details": null,
+            "model": "fixture-text-tools-v1",
+            "previous_response_id": null,
+            "instructions": "Read evidence with the supplied tools.",
+            "output": [],
+            "error": null,
+            "tools": [
+              {
+                "type": "function",
+                "name": "fs_read",
+                "description": "Read a workspace file.",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            ],
+            "tool_choice": "auto",
+            "truncation": "disabled",
+            "parallel_tool_calls": false,
+            "text": {
+              "format": {
+                "type": "text"
+              }
+            },
+            "top_p": 1,
+            "presence_penalty": 0,
+            "frequency_penalty": 0,
+            "top_logprobs": 0,
+            "temperature": 1,
+            "reasoning": null,
+            "usage": null,
+            "max_output_tokens": 4096,
+            "max_tool_calls": null,
+            "store": false,
+            "background": false,
+            "service_tier": "default",
+            "metadata": {},
+            "safety_identifier": null,
+            "prompt_cache_key": null
+          }
+        },
+        {
+          "type": "response.output_item.added",
+          "sequence_number": 2,
+          "output_index": 0,
+          "item": {
+            "type": "reasoning",
+            "id": "rs_fixture_2",
+            "summary": []
+          }
+        },
+        {
+          "type": "response.reasoning_summary_part.added",
+          "sequence_number": 3,
+          "item_id": "rs_fixture_2",
+          "output_index": 0,
+          "summary_index": 0,
+          "part": {
+            "type": "summary_text",
+            "text": ""
+          }
+        },
+        {
+          "type": "response.reasoning_summary_text.delta",
+          "sequence_number": 4,
+          "item_id": "rs_fixture_2",
+          "output_index": 0,
+          "summary_index": 0,
+          "delta": "synthetic-private-summary"
+        },
+        {
+          "type": "response.reasoning_summary_text.done",
+          "sequence_number": 5,
+          "item_id": "rs_fixture_2",
+          "output_index": 0,
+          "summary_index": 0,
+          "text": "synthetic-private-summary"
+        },
+        {
+          "type": "response.reasoning_summary_part.done",
+          "sequence_number": 6,
+          "item_id": "rs_fixture_2",
+          "output_index": 0,
+          "summary_index": 0,
+          "part": {
+            "type": "summary_text",
+            "text": "synthetic-private-summary"
+          }
+        },
+        {
+          "type": "response.output_item.done",
+          "sequence_number": 7,
+          "output_index": 0,
+          "item": {
+            "type": "reasoning",
+            "id": "rs_fixture_2",
+            "summary": [
+              {
+                "type": "summary_text",
+                "text": "synthetic-private-summary"
+              }
+            ],
+            "encrypted_content": "opaque-synthetic-state-2"
+          }
+        },
+        {
+          "type": "response.output_item.added",
+          "sequence_number": 8,
+          "output_index": 1,
+          "item": {
+            "type": "function_call",
+            "id": "fc_fixture_2",
+            "call_id": "call_fixture_2",
+            "name": "fs_read",
+            "arguments": "",
+            "status": "in_progress"
+          }
+        },
+        {
+          "type": "response.function_call_arguments.delta",
+          "sequence_number": 9,
+          "item_id": "fc_fixture_2",
+          "output_index": 1,
+          "delta": "{\"path\""
+        },
+        {
+          "type": "response.function_call_arguments.delta",
+          "sequence_number": 10,
+          "item_id": "fc_fixture_2",
+          "output_index": 1,
+          "delta": ":\"second.txt\"}"
+        },
+        {
+          "type": "response.function_call_arguments.done",
+          "sequence_number": 11,
+          "item_id": "fc_fixture_2",
+          "output_index": 1,
+          "arguments": "{\"path\":\"second.txt\"}"
+        },
+        {
+          "type": "response.output_item.done",
+          "sequence_number": 12,
+          "output_index": 1,
+          "item": {
+            "type": "function_call",
+            "id": "fc_fixture_2",
+            "call_id": "call_fixture_2",
+            "name": "fs_read",
+            "arguments": "{\"path\":\"second.txt\"}",
+            "status": "completed"
+          }
+        },
+        {
+          "type": "response.completed",
+          "sequence_number": 13,
+          "response": {
+            "id": "resp_fixture_2",
+            "object": "response",
+            "created_at": 1789056000,
+            "completed_at": 1789056001,
+            "status": "completed",
+            "incomplete_details": null,
+            "model": "fixture-text-tools-v1",
+            "previous_response_id": null,
+            "instructions": "Read evidence with the supplied tools.",
+            "output": [
+              {
+                "type": "reasoning",
+                "id": "rs_fixture_2",
+                "summary": [
+                  {
+                    "type": "summary_text",
+                    "text": "synthetic-private-summary"
+                  }
+                ],
+                "encrypted_content": "opaque-synthetic-state-2"
+              },
+              {
+                "type": "function_call",
+                "id": "fc_fixture_2",
+                "call_id": "call_fixture_2",
+                "name": "fs_read",
+                "arguments": "{\"path\":\"second.txt\"}",
+                "status": "completed"
+              }
+            ],
+            "error": null,
+            "tools": [
+              {
+                "type": "function",
+                "name": "fs_read",
+                "description": "Read a workspace file.",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            ],
+            "tool_choice": "auto",
+            "truncation": "disabled",
+            "parallel_tool_calls": false,
+            "text": {
+              "format": {
+                "type": "text"
+              }
+            },
+            "top_p": 1,
+            "presence_penalty": 0,
+            "frequency_penalty": 0,
+            "top_logprobs": 0,
+            "temperature": 1,
+            "reasoning": null,
+            "usage": {
+              "input_tokens": 150,
+              "output_tokens": 30,
+              "total_tokens": 180,
+              "input_tokens_details": {
+                "cached_tokens": 80
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 9
+              }
+            },
+            "max_output_tokens": 4096,
+            "max_tool_calls": null,
+            "store": false,
+            "background": false,
+            "service_tier": "default",
+            "metadata": {},
+            "safety_identifier": null,
+            "prompt_cache_key": null
+          }
+        }
+      ],
+      "done": "[DONE]",
+      "expected": {
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "call_fixture_2",
+            "name": "fs.read",
+            "arguments": "{\"path\":\"second.txt\"}"
+          }
+        ],
+        "finish": "tool_calls",
+        "usage": {
+          "input_tokens": 150,
+          "output_tokens": 30,
+          "cache_read_input_tokens": 80,
+          "cache_write_input_tokens": null
+        },
+        "cost_microusd": null
+      },
+      "tool_results": [
+        {
+          "type": "function_call_output",
+          "call_id": "call_fixture_2",
+          "output": "{\"status\":\"completed\",\"filesystem\":{\"operation\":\"read\",\"text\":\"βeta 🌱\"}}"
+        }
+      ]
+    },
+    {
+      "request": {
+        "model": "fixture-text-tools-v1",
+        "instructions": "Read evidence with the supplied tools.",
+        "input": [
+          {
+            "type": "message",
+            "role": "user",
+            "content": [
+              {
+                "type": "input_text",
+                "text": "Read both evidence files, then answer."
+              }
+            ]
+          },
+          {
+            "type": "reasoning",
+            "id": "rs_fixture_1",
+            "summary": [],
+            "encrypted_content": "opaque-synthetic-state-1"
+          },
+          {
+            "type": "message",
+            "id": "msg_commentary",
+            "status": "completed",
+            "role": "assistant",
+            "phase": "commentary",
+            "content": [
+              {
+                "type": "output_text",
+                "text": "Inspecting. ",
+                "annotations": []
+              }
+            ]
+          },
+          {
+            "type": "function_call",
+            "id": "fc_fixture_1",
+            "call_id": "call_fixture_1",
+            "name": "fs_read",
+            "arguments": "{\"path\":\"first.txt\"}",
+            "status": "completed"
+          },
+          {
+            "type": "function_call_output",
+            "call_id": "call_fixture_1",
+            "output": "{\"status\":\"completed\",\"filesystem\":{\"operation\":\"read\",\"text\":\"Alpha\"}}"
+          },
+          {
+            "type": "reasoning",
+            "id": "rs_fixture_2",
+            "summary": [
+              {
+                "type": "summary_text",
+                "text": "synthetic-private-summary"
+              }
+            ],
+            "encrypted_content": "opaque-synthetic-state-2"
+          },
+          {
+            "type": "function_call",
+            "id": "fc_fixture_2",
+            "call_id": "call_fixture_2",
+            "name": "fs_read",
+            "arguments": "{\"path\":\"second.txt\"}",
+            "status": "completed"
+          },
+          {
+            "type": "function_call_output",
+            "call_id": "call_fixture_2",
+            "output": "{\"status\":\"completed\",\"filesystem\":{\"operation\":\"read\",\"text\":\"βeta 🌱\"}}"
+          }
+        ],
+        "tools": [
+          {
+            "type": "function",
+            "name": "fs_read",
+            "description": "Read a workspace file.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path"
+              ],
+              "additionalProperties": false
+            },
+            "strict": false
+          }
+        ],
+        "tool_choice": "auto",
+        "parallel_tool_calls": false,
+        "stream": true,
+        "store": false,
+        "background": false,
+        "truncation": "disabled",
+        "include": [
+          "reasoning.encrypted_content"
+        ],
+        "max_output_tokens": 4096
+      },
+      "events": [
+        {
+          "type": "response.created",
+          "sequence_number": 0,
+          "response": {
+            "id": "resp_fixture_3",
+            "object": "response",
+            "created_at": 1789056000,
+            "completed_at": null,
+            "status": "in_progress",
+            "incomplete_details": null,
+            "model": "fixture-text-tools-v1",
+            "previous_response_id": null,
+            "instructions": "Read evidence with the supplied tools.",
+            "output": [],
+            "error": null,
+            "tools": [
+              {
+                "type": "function",
+                "name": "fs_read",
+                "description": "Read a workspace file.",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            ],
+            "tool_choice": "auto",
+            "truncation": "disabled",
+            "parallel_tool_calls": false,
+            "text": {
+              "format": {
+                "type": "text"
+              }
+            },
+            "top_p": 1,
+            "presence_penalty": 0,
+            "frequency_penalty": 0,
+            "top_logprobs": 0,
+            "temperature": 1,
+            "reasoning": null,
+            "usage": null,
+            "max_output_tokens": 4096,
+            "max_tool_calls": null,
+            "store": false,
+            "background": false,
+            "service_tier": "default",
+            "metadata": {},
+            "safety_identifier": null,
+            "prompt_cache_key": null
+          }
+        },
+        {
+          "type": "response.in_progress",
+          "sequence_number": 1,
+          "response": {
+            "id": "resp_fixture_3",
+            "object": "response",
+            "created_at": 1789056000,
+            "completed_at": null,
+            "status": "in_progress",
+            "incomplete_details": null,
+            "model": "fixture-text-tools-v1",
+            "previous_response_id": null,
+            "instructions": "Read evidence with the supplied tools.",
+            "output": [],
+            "error": null,
+            "tools": [
+              {
+                "type": "function",
+                "name": "fs_read",
+                "description": "Read a workspace file.",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            ],
+            "tool_choice": "auto",
+            "truncation": "disabled",
+            "parallel_tool_calls": false,
+            "text": {
+              "format": {
+                "type": "text"
+              }
+            },
+            "top_p": 1,
+            "presence_penalty": 0,
+            "frequency_penalty": 0,
+            "top_logprobs": 0,
+            "temperature": 1,
+            "reasoning": null,
+            "usage": null,
+            "max_output_tokens": 4096,
+            "max_tool_calls": null,
+            "store": false,
+            "background": false,
+            "service_tier": "default",
+            "metadata": {},
+            "safety_identifier": null,
+            "prompt_cache_key": null
+          }
+        },
+        {
+          "type": "response.output_item.added",
+          "sequence_number": 2,
+          "output_index": 0,
+          "item": {
+            "type": "message",
+            "id": "msg_final",
+            "status": "in_progress",
+            "role": "assistant",
+            "phase": "final_answer",
+            "content": []
+          }
+        },
+        {
+          "type": "response.content_part.added",
+          "sequence_number": 3,
+          "item_id": "msg_final",
+          "output_index": 0,
+          "content_index": 0,
+          "part": {
+            "type": "output_text",
+            "text": "",
+            "annotations": []
+          }
+        },
+        {
+          "type": "response.output_text.delta",
+          "sequence_number": 4,
+          "item_id": "msg_final",
+          "output_index": 0,
+          "content_index": 0,
+          "delta": "Alp"
+        },
+        {
+          "type": "response.output_text.delta",
+          "sequence_number": 5,
+          "item_id": "msg_final",
+          "output_index": 0,
+          "content_index": 0,
+          "delta": "ha "
+        },
+        {
+          "type": "response.output_text.done",
+          "sequence_number": 6,
+          "item_id": "msg_final",
+          "output_index": 0,
+          "content_index": 0,
+          "text": "Alpha "
+        },
+        {
+          "type": "response.content_part.done",
+          "sequence_number": 7,
+          "item_id": "msg_final",
+          "output_index": 0,
+          "content_index": 0,
+          "part": {
+            "type": "output_text",
+            "text": "Alpha ",
+            "annotations": []
+          }
+        },
+        {
+          "type": "response.content_part.added",
+          "sequence_number": 8,
+          "item_id": "msg_final",
+          "output_index": 0,
+          "content_index": 1,
+          "part": {
+            "type": "output_text",
+            "text": "",
+            "annotations": []
+          }
+        },
+        {
+          "type": "response.output_text.delta",
+          "sequence_number": 9,
+          "item_id": "msg_final",
+          "output_index": 0,
+          "content_index": 1,
+          "delta": "βet"
+        },
+        {
+          "type": "response.output_text.delta",
+          "sequence_number": 10,
+          "item_id": "msg_final",
+          "output_index": 0,
+          "content_index": 1,
+          "delta": "a 🌱"
+        },
+        {
+          "type": "response.output_text.done",
+          "sequence_number": 11,
+          "item_id": "msg_final",
+          "output_index": 0,
+          "content_index": 1,
+          "text": "βeta 🌱"
+        },
+        {
+          "type": "response.content_part.done",
+          "sequence_number": 12,
+          "item_id": "msg_final",
+          "output_index": 0,
+          "content_index": 1,
+          "part": {
+            "type": "output_text",
+            "text": "βeta 🌱",
+            "annotations": []
+          }
+        },
+        {
+          "type": "response.output_item.done",
+          "sequence_number": 13,
+          "output_index": 0,
+          "item": {
+            "type": "message",
+            "id": "msg_final",
+            "status": "completed",
+            "role": "assistant",
+            "phase": "final_answer",
+            "content": [
+              {
+                "type": "output_text",
+                "text": "Alpha ",
+                "annotations": []
+              },
+              {
+                "type": "output_text",
+                "text": "βeta 🌱",
+                "annotations": []
+              }
+            ]
+          }
+        },
+        {
+          "type": "response.completed",
+          "sequence_number": 14,
+          "response": {
+            "id": "resp_fixture_3",
+            "object": "response",
+            "created_at": 1789056000,
+            "completed_at": 1789056001,
+            "status": "completed",
+            "incomplete_details": null,
+            "model": "fixture-text-tools-v1",
+            "previous_response_id": null,
+            "instructions": "Read evidence with the supplied tools.",
+            "output": [
+              {
+                "type": "message",
+                "id": "msg_final",
+                "status": "completed",
+                "role": "assistant",
+                "phase": "final_answer",
+                "content": [
+                  {
+                    "type": "output_text",
+                    "text": "Alpha ",
+                    "annotations": []
+                  },
+                  {
+                    "type": "output_text",
+                    "text": "βeta 🌱",
+                    "annotations": []
+                  }
+                ]
+              }
+            ],
+            "error": null,
+            "tools": [
+              {
+                "type": "function",
+                "name": "fs_read",
+                "description": "Read a workspace file.",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": false
+              }
+            ],
+            "tool_choice": "auto",
+            "truncation": "disabled",
+            "parallel_tool_calls": false,
+            "text": {
+              "format": {
+                "type": "text"
+              }
+            },
+            "top_p": 1,
+            "presence_penalty": 0,
+            "frequency_penalty": 0,
+            "top_logprobs": 0,
+            "temperature": 1,
+            "reasoning": null,
+            "usage": {
+              "input_tokens": 200,
+              "output_tokens": 40,
+              "total_tokens": 240,
+              "input_tokens_details": {
+                "cached_tokens": 120
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 0
+              }
+            },
+            "max_output_tokens": 4096,
+            "max_tool_calls": null,
+            "store": false,
+            "background": false,
+            "service_tier": "default",
+            "metadata": {},
+            "safety_identifier": null,
+            "prompt_cache_key": null
+          }
+        }
+      ],
+      "done": "[DONE]",
+      "expected": {
+        "text": "Alpha βeta 🌱",
+        "tool_calls": [],
+        "finish": "stop",
+        "usage": {
+          "input_tokens": 200,
+          "output_tokens": 40,
+          "cache_read_input_tokens": 120,
+          "cache_write_input_tokens": null
+        },
+        "cost_microusd": null
+      },
+      "tool_results": []
+    }
+  ],
+  "aggregate_usage": {
+    "input_tokens": 450,
+    "output_tokens": 90,
+    "cache_read_input_tokens": 240,
+    "cache_write_input_tokens": null
+  },
+  "private_sentinels": [
+    "opaque-synthetic-state-1",
+    "opaque-synthetic-state-2",
+    "synthetic-private-summary"
+  ]
+}

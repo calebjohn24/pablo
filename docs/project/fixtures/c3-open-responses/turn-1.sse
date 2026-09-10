@@ -1,0 +1,55 @@
+: fixture keepalive
+
+event: response.created
+data: {"type":"response.created","sequence_number":0,"response":{"id":"resp_fixture_1","object":"response","created_at":1789056000,"completed_at":null,"status":"in_progress","incomplete_details":null,"model":"fixture-text-tools-v1","previous_response_id":null,"instructions":"Read evidence with the supplied tools.","output":[],"error":null,"tools":[{"type":"function","name":"fs_read","description":"Read a workspace file.","parameters":{"type":"object","properties":{"path":{"type":"string"}},"required":["path"],"additionalProperties":false},"strict":false}],"tool_choice":"auto","truncation":"disabled","parallel_tool_calls":false,"text":{"format":{"type":"text"}},"top_p":1,"presence_penalty":0,"frequency_penalty":0,"top_logprobs":0,"temperature":1,"reasoning":null,"usage":null,"max_output_tokens":4096,"max_tool_calls":null,"store":false,"background":false,"service_tier":"default","metadata":{},"safety_identifier":null,"prompt_cache_key":null}}
+
+event: response.in_progress
+data: {"type":"response.in_progress","sequence_number":1,"response":{"id":"resp_fixture_1","object":"response","created_at":1789056000,"completed_at":null,"status":"in_progress","incomplete_details":null,"model":"fixture-text-tools-v1","previous_response_id":null,"instructions":"Read evidence with the supplied tools.","output":[],"error":null,"tools":[{"type":"function","name":"fs_read","description":"Read a workspace file.","parameters":{"type":"object","properties":{"path":{"type":"string"}},"required":["path"],"additionalProperties":false},"strict":false}],"tool_choice":"auto","truncation":"disabled","parallel_tool_calls":false,"text":{"format":{"type":"text"}},"top_p":1,"presence_penalty":0,"frequency_penalty":0,"top_logprobs":0,"temperature":1,"reasoning":null,"usage":null,"max_output_tokens":4096,"max_tool_calls":null,"store":false,"background":false,"service_tier":"default","metadata":{},"safety_identifier":null,"prompt_cache_key":null}}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":2,"output_index":0,"item":{"type":"reasoning","id":"rs_fixture_1","summary":[]}}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","sequence_number":3,"output_index":0,"item":{"type":"reasoning","id":"rs_fixture_1","summary":[],"encrypted_content":"opaque-synthetic-state-1"}}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":4,"output_index":1,"item":{"type":"message","id":"msg_commentary","status":"in_progress","role":"assistant","phase":"commentary","content":[]}}
+
+event: response.content_part.added
+data: {"type":"response.content_part.added","sequence_number":5,"item_id":"msg_commentary","output_index":1,"content_index":0,"part":{"type":"output_text","text":"","annotations":[]}}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","sequence_number":6,"item_id":"msg_commentary","output_index":1,"content_index":0,"delta":"Inspec"}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","sequence_number":7,"item_id":"msg_commentary","output_index":1,"content_index":0,"delta":"ting. "}
+
+event: response.output_text.done
+data: {"type":"response.output_text.done","sequence_number":8,"item_id":"msg_commentary","output_index":1,"content_index":0,"text":"Inspecting. "}
+
+event: response.content_part.done
+data: {"type":"response.content_part.done","sequence_number":9,"item_id":"msg_commentary","output_index":1,"content_index":0,"part":{"type":"output_text","text":"Inspecting. ","annotations":[]}}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","sequence_number":10,"output_index":1,"item":{"type":"message","id":"msg_commentary","status":"completed","role":"assistant","phase":"commentary","content":[{"type":"output_text","text":"Inspecting. ","annotations":[]}]}}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":11,"output_index":2,"item":{"type":"function_call","id":"fc_fixture_1","call_id":"call_fixture_1","name":"fs_read","arguments":"","status":"in_progress"}}
+
+event: response.function_call_arguments.delta
+data: {"type":"response.function_call_arguments.delta","sequence_number":12,"item_id":"fc_fixture_1","output_index":2,"delta":"{\"path\""}
+
+event: response.function_call_arguments.delta
+data: {"type":"response.function_call_arguments.delta","sequence_number":13,"item_id":"fc_fixture_1","output_index":2,"delta":":\"first.txt\"}"}
+
+event: response.function_call_arguments.done
+data: {"type":"response.function_call_arguments.done","sequence_number":14,"item_id":"fc_fixture_1","output_index":2,"arguments":"{\"path\":\"first.txt\"}"}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","sequence_number":15,"output_index":2,"item":{"type":"function_call","id":"fc_fixture_1","call_id":"call_fixture_1","name":"fs_read","arguments":"{\"path\":\"first.txt\"}","status":"completed"}}
+
+event: response.completed
+data: {"type":"response.completed","sequence_number":16,"response":{"id":"resp_fixture_1","object":"response","created_at":1789056000,"completed_at":1789056001,"status":"completed","incomplete_details":null,"model":"fixture-text-tools-v1","previous_response_id":null,"instructions":"Read evidence with the supplied tools.","output":[{"type":"reasoning","id":"rs_fixture_1","summary":[],"encrypted_content":"opaque-synthetic-state-1"},{"type":"message","id":"msg_commentary","status":"completed","role":"assistant","phase":"commentary","content":[{"type":"output_text","text":"Inspecting. ","annotations":[]}]},{"type":"function_call","id":"fc_fixture_1","call_id":"call_fixture_1","name":"fs_read","arguments":"{\"path\":\"first.txt\"}","status":"completed"}],"error":null,"tools":[{"type":"function","name":"fs_read","description":"Read a workspace file.","parameters":{"type":"object","properties":{"path":{"type":"string"}},"required":["path"],"additionalProperties":false},"strict":false}],"tool_choice":"auto","truncation":"disabled","parallel_tool_calls":false,"text":{"format":{"type":"text"}},"top_p":1,"presence_penalty":0,"frequency_penalty":0,"top_logprobs":0,"temperature":1,"reasoning":null,"usage":{"input_tokens":100,"output_tokens":20,"total_tokens":120,"input_tokens_details":{"cached_tokens":40},"output_tokens_details":{"reasoning_tokens":5}},"max_output_tokens":4096,"max_tool_calls":null,"store":false,"background":false,"service_tier":"default","metadata":{},"safety_identifier":null,"prompt_cache_key":null}}
+
+data: [DONE]
+

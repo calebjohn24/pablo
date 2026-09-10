@@ -1,0 +1,455 @@
+[
+  {
+    "event": {
+      "type": "response.completed",
+      "sequence_number": 14,
+      "response": {
+        "id": "resp_fixture_3",
+        "object": "response",
+        "created_at": 1789056000,
+        "completed_at": 1789056001,
+        "status": "completed",
+        "incomplete_details": null,
+        "model": "fixture-text-tools-v1",
+        "previous_response_id": null,
+        "instructions": "Read evidence with the supplied tools.",
+        "output": [],
+        "error": null,
+        "tools": [
+          {
+            "type": "function",
+            "name": "fs_read",
+            "description": "Read a workspace file.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path"
+              ],
+              "additionalProperties": false
+            },
+            "strict": false
+          }
+        ],
+        "tool_choice": "auto",
+        "truncation": "disabled",
+        "parallel_tool_calls": false,
+        "text": {
+          "format": {
+            "type": "text"
+          }
+        },
+        "top_p": 1,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_logprobs": 0,
+        "temperature": 1,
+        "reasoning": null,
+        "usage": {
+          "input_tokens": 200,
+          "output_tokens": 40,
+          "total_tokens": 240,
+          "input_tokens_details": {
+            "cached_tokens": 120
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "max_output_tokens": 4096,
+        "max_tool_calls": null,
+        "store": false,
+        "background": false,
+        "service_tier": "default",
+        "metadata": {},
+        "safety_identifier": null,
+        "prompt_cache_key": null
+      }
+    },
+    "expected": {
+      "finish": "stop",
+      "error": null
+    }
+  },
+  {
+    "event": {
+      "type": "response.incomplete",
+      "sequence_number": 14,
+      "response": {
+        "id": "resp_fixture_3",
+        "object": "response",
+        "created_at": 1789056000,
+        "completed_at": null,
+        "status": "incomplete",
+        "incomplete_details": {
+          "reason": "max_output_tokens"
+        },
+        "model": "fixture-text-tools-v1",
+        "previous_response_id": null,
+        "instructions": "Read evidence with the supplied tools.",
+        "output": [],
+        "error": null,
+        "tools": [
+          {
+            "type": "function",
+            "name": "fs_read",
+            "description": "Read a workspace file.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path"
+              ],
+              "additionalProperties": false
+            },
+            "strict": false
+          }
+        ],
+        "tool_choice": "auto",
+        "truncation": "disabled",
+        "parallel_tool_calls": false,
+        "text": {
+          "format": {
+            "type": "text"
+          }
+        },
+        "top_p": 1,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_logprobs": 0,
+        "temperature": 1,
+        "reasoning": null,
+        "usage": {
+          "input_tokens": 200,
+          "output_tokens": 40,
+          "total_tokens": 240,
+          "input_tokens_details": {
+            "cached_tokens": 120
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "max_output_tokens": 4096,
+        "max_tool_calls": null,
+        "store": false,
+        "background": false,
+        "service_tier": "default",
+        "metadata": {},
+        "safety_identifier": null,
+        "prompt_cache_key": null
+      }
+    },
+    "expected": {
+      "finish": "length",
+      "error": null
+    }
+  },
+  {
+    "event": {
+      "type": "response.incomplete",
+      "sequence_number": 14,
+      "response": {
+        "id": "resp_fixture_3",
+        "object": "response",
+        "created_at": 1789056000,
+        "completed_at": null,
+        "status": "incomplete",
+        "incomplete_details": {
+          "reason": "content_filter"
+        },
+        "model": "fixture-text-tools-v1",
+        "previous_response_id": null,
+        "instructions": "Read evidence with the supplied tools.",
+        "output": [],
+        "error": null,
+        "tools": [
+          {
+            "type": "function",
+            "name": "fs_read",
+            "description": "Read a workspace file.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path"
+              ],
+              "additionalProperties": false
+            },
+            "strict": false
+          }
+        ],
+        "tool_choice": "auto",
+        "truncation": "disabled",
+        "parallel_tool_calls": false,
+        "text": {
+          "format": {
+            "type": "text"
+          }
+        },
+        "top_p": 1,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_logprobs": 0,
+        "temperature": 1,
+        "reasoning": null,
+        "usage": {
+          "input_tokens": 200,
+          "output_tokens": 40,
+          "total_tokens": 240,
+          "input_tokens_details": {
+            "cached_tokens": 120
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "max_output_tokens": 4096,
+        "max_tool_calls": null,
+        "store": false,
+        "background": false,
+        "service_tier": "default",
+        "metadata": {},
+        "safety_identifier": null,
+        "prompt_cache_key": null
+      }
+    },
+    "expected": {
+      "finish": null,
+      "error": "unsupported_provider_content"
+    }
+  },
+  {
+    "event": {
+      "type": "response.failed",
+      "sequence_number": 14,
+      "response": {
+        "id": "resp_fixture_3",
+        "object": "response",
+        "created_at": 1789056000,
+        "completed_at": null,
+        "status": "failed",
+        "incomplete_details": null,
+        "model": "fixture-text-tools-v1",
+        "previous_response_id": null,
+        "instructions": "Read evidence with the supplied tools.",
+        "output": [],
+        "error": {
+          "code": "server_error",
+          "message": "synthetic private server error"
+        },
+        "tools": [
+          {
+            "type": "function",
+            "name": "fs_read",
+            "description": "Read a workspace file.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path"
+              ],
+              "additionalProperties": false
+            },
+            "strict": false
+          }
+        ],
+        "tool_choice": "auto",
+        "truncation": "disabled",
+        "parallel_tool_calls": false,
+        "text": {
+          "format": {
+            "type": "text"
+          }
+        },
+        "top_p": 1,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_logprobs": 0,
+        "temperature": 1,
+        "reasoning": null,
+        "usage": {
+          "input_tokens": 200,
+          "output_tokens": 40,
+          "total_tokens": 240,
+          "input_tokens_details": {
+            "cached_tokens": 120
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "max_output_tokens": 4096,
+        "max_tool_calls": null,
+        "store": false,
+        "background": false,
+        "service_tier": "default",
+        "metadata": {},
+        "safety_identifier": null,
+        "prompt_cache_key": null
+      }
+    },
+    "expected": {
+      "finish": null,
+      "error": "provider_rejected"
+    }
+  },
+  {
+    "event": {
+      "type": "response.completed",
+      "sequence_number": 14,
+      "response": {
+        "id": "resp_fixture_3",
+        "object": "response",
+        "created_at": 1789056000,
+        "completed_at": 1789056001,
+        "status": "completed",
+        "incomplete_details": null,
+        "model": "fixture-text-tools-v1",
+        "previous_response_id": null,
+        "instructions": "Read evidence with the supplied tools.",
+        "output": [],
+        "error": null,
+        "tools": [
+          {
+            "type": "function",
+            "name": "fs_read",
+            "description": "Read a workspace file.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path"
+              ],
+              "additionalProperties": false
+            },
+            "strict": false
+          }
+        ],
+        "tool_choice": "auto",
+        "truncation": "disabled",
+        "parallel_tool_calls": false,
+        "text": {
+          "format": {
+            "type": "text"
+          }
+        },
+        "top_p": 1,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_logprobs": 0,
+        "temperature": 1,
+        "reasoning": null,
+        "usage": null,
+        "max_output_tokens": 4096,
+        "max_tool_calls": null,
+        "store": false,
+        "background": false,
+        "service_tier": "default",
+        "metadata": {},
+        "safety_identifier": null,
+        "prompt_cache_key": null
+      }
+    },
+    "expected": {
+      "finish": "stop",
+      "error": null
+    }
+  },
+  {
+    "event": {
+      "type": "response.completed",
+      "sequence_number": 14,
+      "response": {
+        "id": "resp_fixture_3",
+        "object": "response",
+        "created_at": 1789056000,
+        "completed_at": 1789056001,
+        "status": "completed",
+        "incomplete_details": null,
+        "model": "fixture-text-tools-v1",
+        "previous_response_id": null,
+        "instructions": "Read evidence with the supplied tools.",
+        "output": [],
+        "error": null,
+        "tools": [
+          {
+            "type": "function",
+            "name": "fs_read",
+            "description": "Read a workspace file.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path"
+              ],
+              "additionalProperties": false
+            },
+            "strict": false
+          }
+        ],
+        "tool_choice": "auto",
+        "truncation": "disabled",
+        "parallel_tool_calls": false,
+        "text": {
+          "format": {
+            "type": "text"
+          }
+        },
+        "top_p": 1,
+        "presence_penalty": 0,
+        "frequency_penalty": 0,
+        "top_logprobs": 0,
+        "temperature": 1,
+        "reasoning": null,
+        "usage": {
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0,
+          "input_tokens_details": {
+            "cached_tokens": 0
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "max_output_tokens": 4096,
+        "max_tool_calls": null,
+        "store": false,
+        "background": false,
+        "service_tier": "default",
+        "metadata": {},
+        "safety_identifier": null,
+        "prompt_cache_key": null
+      }
+    },
+    "expected": {
+      "finish": "stop",
+      "error": null
+    }
+  }
+]

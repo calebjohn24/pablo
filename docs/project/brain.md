@@ -1,7 +1,5 @@
 # Project brain
 
-## Purpose
-
 Pablo is a small headless Rust agent runtime for applications doing arbitrary work. Hosts own their sandboxes, business state, approvals, and user experience. CLI and protocol clients share one runtime lifecycle.
 
 This file holds durable context. [State](state.json) reports current progress, [the log](log.jsonl) records history, and [cycle C3](cycles/003-extensibility-and-release.md) defines the selected work. Completed [C1](cycles/001-first-spike.md) and [C2](cycles/002-single-agent-completion.md) plans/evidence remain historical. Run `node scripts/project.mjs context` for a focused handoff.
@@ -16,8 +14,6 @@ Private source remote: [calebjohn24/pablo](https://github.com/calebjohn24/pablo)
 - Sections 19 and 21: providers and native OTel instrumentation.
 - Sections 28, 31, and 32: performance baselines, release acceptance, tests.
 - [Backlog](backlog.md): preserved later slices and when to consider them.
-
-## Accepted decisions
 
 ### D001 — One checkpoint per implementation session
 
@@ -198,3 +194,7 @@ The user selected `zai/glm-5.3-flash` for Vercel and `z-ai/glm-5.3-flash` for Op
 ### D042 — Normalize OpenRouter accounting once without floating-point money
 
 C3.6 enables OpenRouter through the shared gateway and treats its repeated terminal usage choice as accounting, not a second finish. Read cache counters and the account charge only when reported; parse raw decimal cost into micro-USD with a documented upward adjustment below one micro-USD per call. Never infer prices, sum upstream costs or attest hard ceilings. Exact key/destination scope and cancellation remain shared. See the [adapter contract](contracts/c3-openrouter.md). [C3.7](evidence/c3.7.md) proves live CLI/ACP file reads with the selected GLM model; explicit file-only credential selection prevents stale environment keys from shadowing a replacement.
+
+### D043 — Pin Open Responses and retain task-scoped continuation
+
+C3.8 freezes release 2026-04-24 at upstream 92c12d96d7b61d6d15e2214daa5e9c6000ab6e1c. Named HTTP/SSE events and complete ordered items are required; private opaque reasoning, summaries and assistant phase survive subsequent tool turns within their original endpoint/model scope. Unrepresentable raw reasoning rejects instead of disappearing. Configured capabilities are operator declarations, not remote attestations. See [OR01](contracts/c3-open-responses.md); C3.9 owns runtime implementation.
