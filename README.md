@@ -23,7 +23,14 @@ cargo run --locked -p pablo -- run "Read README.md and summarize it." --provider
 cargo run --locked -p pablo -- acp --stdio --provider openrouter --model z-ai/glm-5.3-flash --no-shell
 ```
 
-These commands contact OpenRouter. Ordinary regression tests use local HTTP/SSE fixtures; actual live CLI/ACP acceptance remains C3.7. [Adapter details](docs/project/contracts/c3-openrouter.md) describe cost granularity and capability limits.
+These commands contact OpenRouter. Ordinary regression tests use local HTTP/SSE fixtures. The explicit paid [C3.7 live check](docs/project/evidence/c3.7.md) exercises CLI and the TypeScript ACP client with fresh file evidence:
+
+```sh
+cargo build --release --locked -p pablo
+node scripts/smoke-live-openrouter.ts target/release/pablo .env
+```
+
+The explicit credential-file argument selects only that file, so an older environment key cannot override it. The executable privately resolves the credential; the harness prints sanitized timing/usage summaries and removes its temporary workspaces. Each task permits one file read and two model calls with a 90-second deadline. [Adapter details](docs/project/contracts/c3-openrouter.md) describe cost granularity and capability limits.
 
 To work in a different folder while keeping credentials in this project:
 
