@@ -19,6 +19,8 @@ use tokio::time::{Instant, sleep_until};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
+mod routing;
+
 #[derive(Debug)]
 pub enum RunError {
     InvalidSpec(&'static str),
@@ -53,6 +55,7 @@ pub struct Runtime<T> {
 struct Execution<'a> {
     attempts: Vec<Attempt<'a>>,
     route_policy: Option<&'a crate::deployment::RoutePolicy>,
+    route: Option<&'a crate::deployment::ResolvedRoute>,
     spec: &'a RunSpec,
     tools: &'a ToolRegistry,
     cancellation: &'a CancellationToken,
@@ -231,6 +234,7 @@ where
         }
         let mut lifecycle = Lifecycle {
             model_profile: None,
+            model_route: None,
             deployment: self.deployment.clone(),
             sink,
             run_id,
@@ -244,6 +248,7 @@ where
         let execution = Execution {
             attempts,
             route_policy: provider.route().map(|r| r.resolved.policy()),
+            route: provider.route().map(|r| &r.resolved),
             spec,
             tools,
             cancellation,
@@ -274,6 +279,12 @@ where
             }
             Ok(()) => self.drive(&execution, &mut lifecycle).await,
         };
+        if let Some(record) = &mut lifecycle.model_route
+            && record.phase == "selected"
+        {
+            record.phase = "blocked".into();
+            record.outcome(Some(&outcome));
+        }
         let finished = telemetry::now();
         telemetry::outcome(&root, &outcome);
         let terminal = lifecycle.event(
@@ -307,6 +318,7 @@ where
         let mut remaining_tools = spec.limits.max_tool_calls;
         let mut remaining_models = spec.limits.max_model_calls;
         let mut selected = 0;
+        let mut operation = 0_u64;
 
         loop {
             if let Some(outcome) = execution.stop() {
@@ -331,8 +343,17 @@ where
             if context_bytes > spec.limits.max_context_bytes {
                 return limit(LimitKind::ContextBytes);
             }
+            operation += 1; // Each operation consumes bounded native event slots.
             let mut attempts_used = 0;
             let progress = loop {
+                lifecycle.model_route = execution.route.map(|route| {
+                    Box::new(ModelRouteRecord::selected(
+                        route,
+                        selected,
+                        operation,
+                        attempts_used + 1,
+                    ))
+                });
                 if let Some(outcome) = execution.stop() {
                     return outcome;
                 }
@@ -457,6 +478,9 @@ where
         if !lifecycle.can_start_operation() {
             return Err(limit(LimitKind::Events));
         }
+        if let Some(record) = &mut lifecycle.model_route {
+            record.phase = "started".into();
+        }
         let started = telemetry::now();
         let model = execution.root.with_span(
             self.tracer
@@ -522,6 +546,14 @@ where
                 progress.retry_class = None;
                 result = Err(outcome);
             }
+        }
+        if let Some(record) = &mut lifecycle.model_route {
+            record.phase = "finished".into();
+            record.dispatched = progress.dispatched;
+            record.delivery = progress.delivery.unwrap_or(DeliveryCertainty::NotSent);
+            record.retry_class = progress.retry_class.map(str::to_owned);
+            record.accounting = Some(Box::new(lifecycle.accounting.clone()));
+            record.outcome(result.as_ref().err());
         }
         let finished = telemetry::now();
         let finish_event = EventKind::ModelFinished {
@@ -720,6 +752,7 @@ where
 
 #[derive(Default)]
 struct ModelProgress {
+    delivery: Option<DeliveryCertainty>,
     retry_class: Option<&'static str>,
     continuation: Option<crate::provider::Continuation>,
     cost_microusd: Option<u64>,
@@ -784,6 +817,7 @@ async fn consume(
         .ok_or_else(|| limit(LimitKind::ModelCalls))?;
     progress.dispatched = true;
     lifecycle.delivery = DeliveryCertainty::MayHaveBeenSent;
+    progress.delivery = Some(DeliveryCertainty::MayHaveBeenSent);
     let opened = tokio::select! {
         biased;
         _ = execution.cancellation.cancelled() => return Err(RunOutcome::Cancelled),
@@ -791,6 +825,7 @@ async fn consume(
         result = input.attempt.provider.stream(request) => result,
     };
     let mut stream = opened.map_err(|error| {
+        progress.delivery = Some(error.delivery);
         progress.retry_class = error.fallback_class();
         RunOutcome::Failed {
             code: error.code,
@@ -811,6 +846,7 @@ async fn consume(
         };
         if matches!(next, Some(Ok(_))) {
             lifecycle.delivery = DeliveryCertainty::ResponseReceived;
+            progress.delivery = Some(DeliveryCertainty::ResponseReceived);
         }
         if next.is_some() {
             frames += 1;
@@ -819,7 +855,11 @@ async fn consume(
             }
         }
         match next {
-            Some(Err(error)) => {
+            Some(Err(mut error)) => {
+                if progress.delivery == Some(DeliveryCertainty::ResponseReceived) {
+                    error.delivery = DeliveryCertainty::ResponseReceived;
+                }
+                progress.delivery = Some(error.delivery);
                 progress.retry_class = error.fallback_class();
                 return Err(RunOutcome::Failed {
                     code: error.code,
@@ -982,7 +1022,9 @@ fn attempt_timeout(execution: &Execution<'_>, progress: &mut ModelProgress) -> R
     progress.retry_class = Some("transport_uncertain");
     RunOutcome::Failed {
         code: FailureCode::ModelAttemptTimedOut,
-        delivery: DeliveryCertainty::MayHaveBeenSent,
+        delivery: progress
+            .delivery
+            .unwrap_or(DeliveryCertainty::MayHaveBeenSent),
     }
 }
 
@@ -1058,6 +1100,7 @@ pub fn validate_run(
 }
 
 struct Lifecycle<'a> {
+    model_route: Option<Box<ModelRouteRecord>>,
     model_profile: Option<ProviderIdentity>,
     deployment: Option<crate::deployment::DeploymentIdentity>,
     sink: &'a mut dyn EventSink,
@@ -1083,6 +1126,14 @@ impl Lifecycle<'_> {
         let span = context.span();
         let identity = span.span_context();
         RunEvent {
+            model_route: matches!(
+                kind,
+                EventKind::ModelStarted { .. }
+                    | EventKind::ModelFinished { .. }
+                    | EventKind::RunFinished { .. }
+            )
+            .then(|| self.model_route.clone())
+            .flatten(),
             model_profile: matches!(
                 kind,
                 EventKind::ModelStarted { .. } | EventKind::ModelFinished { .. }

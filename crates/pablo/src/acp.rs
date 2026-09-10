@@ -34,6 +34,7 @@ struct State {
     initialized: bool,
     extended: bool,
     task_extended: bool,
+    route_extended: bool,
     session: Option<(wire::SessionId, std::path::PathBuf)>,
     prompted: bool,
     prompt_active: bool,
@@ -155,15 +156,21 @@ async fn serve_streams(
                 return Err(io::Error::other("ACP output frame limit exceeded"));
             }
             // Borrow only the method; skip the payload without materializing a
-            // second JSON tree just to acknowledge a session/update write.
+            // second JSON tree just to acknowledge an event notification write.
             #[derive(serde::Deserialize)]
             struct Message<'a> {
                 #[serde(borrow)]
                 method: Option<&'a str>,
             }
-            let notification = serde_json::from_str::<Message<'_>>(&line)
-                .ok()
-                .is_some_and(|message| message.method == Some("session/update"));
+            let notification =
+                serde_json::from_str::<Message<'_>>(&line)
+                    .ok()
+                    .is_some_and(|message| {
+                        matches!(
+                            message.method,
+                            Some("session/update" | "_pablo/model_attempt")
+                        )
+                    });
             tokio::time::timeout(WRITE_TIMEOUT, async {
                 output.write_all(line.as_bytes()).await?;
                 output.write_all(b"\n").await?;
@@ -210,8 +217,16 @@ async fn serve_streams(
                             .as_ref()
                             .and_then(|m| m.get("pablo/task-v1"))
                             == Some(&json!(true));
+                    state.route_extended = state.extended
+                        && request
+                            .client_capabilities
+                            .meta
+                            .as_ref()
+                            .and_then(|m| m.get("pablo/model-route-v1"))
+                            == Some(&json!(true));
                     let mut capabilities = meta(json!(true));
                     capabilities.insert("pablo/task-v1".into(), json!(true));
+                    capabilities.insert("pablo/model-route-v1".into(), json!(true));
                     let caps = wire::AgentCapabilities::new().meta(capabilities);
                     responder.respond(
                         wire::InitializeResponse::new(
@@ -306,7 +321,7 @@ async fn serve_streams(
                         Ok(input) => input,
                         Err(error) => return responder.respond_with_error(error),
                     };
-                    let (cwd, extended, task_extended) = {
+                    let (cwd, extended, task_extended, route_extended) = {
                         let mut s = state.lock().unwrap();
                         let Some((id, cwd)) = &s.session else {
                             return responder.respond_with_error(invalid("create a session first"));
@@ -321,7 +336,7 @@ async fn serve_streams(
                         }
                         let cwd = cwd.clone();
                         s.prompted = true;
-                        (cwd, s.extended, s.task_extended)
+                        (cwd, s.extended, s.task_extended, s.route_extended)
                     };
                     let prepared = match options.prepare_run(
                         Some(input.clone()),
@@ -413,7 +428,8 @@ async fn serve_streams(
                     let sender = cx.clone();
                     cx.spawn(async move {
                         let request_cancel = responder.cancellation();
-                        let forwarding = forward_events(rx, &sender, &written, extended);
+                        let forwarding =
+                            forward_events(rx, &sender, &written, extended, route_extended);
                         tokio::pin!(forwarding);
                         let terminal = tokio::select! {
                             result = &mut forwarding => result,
@@ -433,6 +449,7 @@ async fn serve_streams(
                             terminal,
                             extended,
                             task_extended,
+                            route_extended,
                             cancel.is_cancelled(),
                         ))
                     })
@@ -576,6 +593,7 @@ async fn forward_events(
     cx: &ConnectionTo<Client>,
     written: &Written,
     extended: bool,
+    route_extended: bool,
 ) -> Result<Option<RunEvent>, Error> {
     let mut events = EventStream::new(rx);
     let mut terminal = None;
@@ -584,12 +602,36 @@ async fn forward_events(
         if matches!(event.kind, EventKind::RunFinished { .. }) {
             terminal = Some(event.clone());
         }
+        let mut notification_sent = false;
+        if route_extended
+            && event.model_route.is_some()
+            && matches!(
+                event.kind,
+                EventKind::ModelStarted { .. } | EventKind::ModelFinished { .. }
+            )
+        {
+            let mut details = correlation(&event, first);
+            details["model_route"] =
+                serde_json::to_value(&event.model_route).map_err(|_| Error::internal_error())?;
+            let params = serde_json::value::to_raw_value(&json!({
+                "sessionId": event.session_id,
+                "type": if matches!(event.kind, EventKind::ModelStarted { .. }) { "model.started" } else { "model.finished" },
+                "pablo/v1": details
+            })).map_err(|_| Error::internal_error())?;
+            cx.send_notification(wire::AgentNotification::ExtNotification(
+                wire::ExtNotification::new("_pablo/model_attempt", Arc::from(params)),
+            ))?;
+            notification_sent = true;
+        }
         if let Some(update) = project(&event)? {
             let mut notification = wire::SessionNotification::new(event.session_id.clone(), update);
             if extended {
                 notification.meta = Some(meta(correlation(&event, first)));
             }
             cx.send_notification(notification)?;
+            notification_sent = true;
+        }
+        if notification_sent {
             sent += 1;
             while written.count.load(Ordering::Acquire) < sent {
                 written.changed.notified().await;
@@ -647,6 +689,7 @@ fn prompt_response(
     terminal: Option<RunEvent>,
     extended: bool,
     task_extended: bool,
+    route_extended: bool,
     cancelled: bool,
 ) -> Result<wire::PromptResponse, Error> {
     let outcome = outcome.map_err(|message| {
@@ -659,6 +702,10 @@ fn prompt_response(
     let terminal =
         terminal.ok_or_else(|| Error::internal_error().data("terminal event unavailable"))?;
     let mut details = correlation(&terminal, terminal.seq);
+    if route_extended && terminal.model_route.is_some() {
+        details["model_route"] =
+            serde_json::to_value(&terminal.model_route).map_err(|_| Error::internal_error())?;
+    }
     if task_extended {
         details["task"] = serde_json::to_value(
             pablo_core::TaskResult::from_terminal(&terminal).ok_or_else(Error::internal_error)?,
@@ -706,6 +753,7 @@ mod tests {
 
     fn event(seq: u64, kind: EventKind) -> RunEvent {
         RunEvent {
+            model_route: None,
             model_profile: None,
             deployment: None,
             accounting: None,

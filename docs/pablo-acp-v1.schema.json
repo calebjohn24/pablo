@@ -280,6 +280,9 @@
         },
         "model_profile": {
           "$ref": "#/$defs/model_profile"
+        },
+        "model_route": {
+          "$ref": "#/$defs/model_route"
         }
       },
       "required": [
@@ -360,6 +363,9 @@
         },
         "model_profile": {
           "$ref": "#/$defs/model_profile"
+        },
+        "model_route": {
+          "$ref": "#/$defs/model_route"
         }
       },
       "required": [
@@ -667,6 +673,166 @@
         "endpoint",
         "requested_model",
         "resolved_model"
+      ],
+      "additionalProperties": false
+    },
+    "model_route": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": "model-route-v1"
+        },
+        "route": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]{1,64}$"
+        },
+        "entry": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]{1,64}$"
+        },
+        "entry_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31
+        },
+        "provider": {
+          "enum": [
+            "vercel",
+            "openrouter",
+            "open_responses"
+          ]
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "operation": {
+          "$ref": "#/$defs/decimal"
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "selection_reason": {
+          "enum": [
+            "initial",
+            "sticky",
+            "fallback"
+          ]
+        },
+        "phase": {
+          "enum": [
+            "selected",
+            "started",
+            "finished",
+            "blocked"
+          ]
+        },
+        "dispatched": {
+          "type": "boolean"
+        },
+        "delivery": {
+          "enum": [
+            "not_sent",
+            "may_have_been_sent",
+            "response_received"
+          ]
+        },
+        "status": {
+          "enum": [
+            null,
+            "completed",
+            "failed",
+            "cancelled",
+            "timed_out",
+            "limit_exceeded",
+            "policy_denied"
+          ]
+        },
+        "failure_code": {
+          "anyOf": [
+            {
+              "enum": [
+                "provider_rejected",
+                "provider_transport",
+                "malformed_stream",
+                "unsupported_provider_content",
+                "event_sink_io",
+                "invalid_tool_arguments",
+                "tool_execution",
+                "tool_cleanup",
+                "accounting_bound_violated"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "enum": [
+                "input_bytes",
+                "output_bytes",
+                "output_tokens",
+                "model_calls",
+                "events",
+                "trace_bytes",
+                "tool_calls",
+                "tool_input_bytes",
+                "tool_output_bytes",
+                "context_bytes",
+                "filesystem_work",
+                "total_tokens",
+                "cost"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "retry_class": {
+          "enum": [
+            null,
+            "not_sent",
+            "rate_limited",
+            "service_unavailable",
+            "transport_uncertain"
+          ]
+        },
+        "accounting": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/accounting"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "route",
+        "entry",
+        "entry_index",
+        "provider",
+        "model",
+        "operation",
+        "attempt",
+        "selection_reason",
+        "phase",
+        "dispatched",
+        "delivery",
+        "status",
+        "failure_code",
+        "limit",
+        "retry_class",
+        "accounting"
       ],
       "additionalProperties": false
     }

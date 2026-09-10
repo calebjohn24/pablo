@@ -110,3 +110,16 @@ C2.3 adds optional `pablo/task-v1: true` alongside `pablo/v1: true` in capabilit
 There are no custom methods or alternate lifecycle. The pinned ACP SDK/schema remains authoritative; both legacy and task-negotiated shapes, generic fallback and maximum escaping-heavy output have executable tests. Decimal schemas enforce canonical syntax; the core and reference client additionally enforce the u64 numerical maximum. JSON Schema `format` is annotation-only in the fixture validator, and no network schema resolution is enabled.
 
 The existing short project-prefixed names are retained for development compatibility. No project-controlled DNS URI is claimed. Final namespace ownership/release stability and `pablo doctor` remain explicit release-hardening decisions; C2 acceptance does not silently ratify them or publish a release.
+
+
+### Negotiated route attempts
+
+C3.12 adds `pablo/model-route-v1` (requiring `pablo/v1`). Opted-in clients receive
+`_pablo/model_attempt` extension notifications for routed model start/finish events,
+with `sessionId`, native `type` and `pablo/v1` correlation containing `model_route`.
+The terminal correlation carries the latest selection, including a selected entry
+blocked before dispatch. Standard updates and task schema `c2.3` are unchanged.
+See [the attempt contract](project/contracts/c3-model-routes.md#f03-attempt-observability--model-route-v1)
+and the `model_route` definition in the extension schema. Notifications share the
+existing bounded queue and acknowledged physical-write path. Non-opted clients
+receive no new notification method or route metadata.

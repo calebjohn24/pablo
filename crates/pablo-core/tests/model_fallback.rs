@@ -365,3 +365,268 @@ async fn all_entry_preflight_and_root_call_budget_prevent_dispatch() {
     assert_eq!(accounting(&events).model_calls, 1);
     assert!(s.seen[1].lock().unwrap().is_empty());
 }
+
+#[tokio::test]
+async fn f03_exhaustion_has_exact_order_and_cumulative_settlement() {
+    let s = setup(
+        [
+            vec![Err(error(DeliveryCertainty::NotSent, None))],
+            vec![Err(error(
+                DeliveryCertainty::ResponseReceived,
+                Some(RetryClass::RateLimited),
+            ))],
+            vec![Err(error(
+                DeliveryCertainty::ResponseReceived,
+                Some(RetryClass::ServiceUnavailable),
+            ))],
+        ],
+        json!({}),
+        Duration::ZERO,
+        false,
+    );
+    let (outcome, events) = run(&s, false).await.unwrap();
+    assert!(matches!(
+        outcome,
+        RunOutcome::Failed {
+            code: FailureCode::ProviderRejected,
+            delivery: DeliveryCertainty::ResponseReceived
+        }
+    ));
+    let records: Vec<_> = events
+        .iter()
+        .filter(|e| matches!(e.kind, EventKind::ModelFinished { .. }))
+        .map(|e| e.model_route.as_ref().unwrap())
+        .collect();
+    assert_eq!(records.len(), 3);
+    for (i, record) in records.iter().enumerate() {
+        assert_eq!(record.entry_index, i);
+        assert_eq!(record.attempt, i + 1);
+        assert_eq!(record.operation, "1");
+        assert_eq!(
+            record.selection_reason,
+            if i == 0 { "initial" } else { "fallback" }
+        );
+        assert!(record.dispatched);
+        assert_eq!(record.phase, "finished");
+        let a = record.accounting.as_ref().unwrap();
+        assert_eq!(a.model_calls, i as u64 + 1);
+        assert_eq!(a.charged_tokens, Some(i as u64 * 10));
+        assert_eq!(a.charged_cost_microusd, Some(i as u64 * 8));
+    }
+    assert_eq!(
+        events.last().unwrap().model_route.as_ref().unwrap(),
+        records[2]
+    );
+    assert_eq!(
+        events
+            .iter()
+            .filter(|e| matches!(e.kind, EventKind::RunFinished { .. }))
+            .count(),
+        1
+    );
+}
+
+#[tokio::test]
+async fn f03_received_event_cannot_be_refunded_as_unsent_or_bypass_opt_in() {
+    for retry in [false, true] {
+        let s = setup(
+            [
+                vec![Ok(vec![
+                    Ok(ProviderEvent::Cost { microusd: 1 }),
+                    Err(error(DeliveryCertainty::NotSent, None)),
+                ])],
+                vec![turn(false)],
+                vec![],
+            ],
+            if retry {
+                json!({"eligible_errors":["not_sent","transport_uncertain"],"retry_uncertain_delivery":true})
+            } else {
+                json!({})
+            },
+            Duration::ZERO,
+            false,
+        );
+        let (outcome, events) = run(&s, false).await.unwrap();
+        assert_eq!(outcome.is_completed(), retry);
+        assert_eq!(s.seen[1].lock().unwrap().len(), usize::from(retry));
+        let first = events
+            .iter()
+            .find(|e| matches!(e.kind, EventKind::ModelFinished { .. }))
+            .unwrap()
+            .model_route
+            .as_ref()
+            .unwrap();
+        assert_eq!(first.delivery, DeliveryCertainty::ResponseReceived);
+        assert_eq!(first.retry_class.as_deref(), Some("transport_uncertain"));
+        assert_eq!(first.accounting.as_ref().unwrap().charged_tokens, Some(10));
+        // Known cost settles accurately; unknown tokens retain their reservation.
+        assert_eq!(
+            first.accounting.as_ref().unwrap().charged_cost_microusd,
+            Some(1)
+        );
+        if !retry {
+            assert!(matches!(
+                outcome,
+                RunOutcome::Failed {
+                    delivery: DeliveryCertainty::ResponseReceived,
+                    ..
+                }
+            ));
+        }
+    }
+}
+
+#[tokio::test]
+async fn f03_remaining_root_allowances_stop_before_next_delivery() {
+    for limit in [
+        LimitKind::TotalTokens,
+        LimitKind::Cost,
+        LimitKind::ModelCalls,
+        LimitKind::Events,
+    ] {
+        let mut s = setup(
+            [
+                vec![Err(error(
+                    DeliveryCertainty::ResponseReceived,
+                    Some(RetryClass::ServiceUnavailable),
+                ))],
+                vec![],
+                vec![],
+            ],
+            json!({}),
+            Duration::ZERO,
+            false,
+        );
+        match limit {
+            LimitKind::TotalTokens => s.spec.limits.max_total_tokens = Some(10),
+            LimitKind::Cost => s.spec.limits.max_cost_microusd = Some(8),
+            LimitKind::ModelCalls => s.spec.limits.max_model_calls = Some(1),
+            LimitKind::Events => s.spec.limits.max_events = 4,
+            _ => unreachable!(),
+        }
+        let (outcome, events) = run(&s, false).await.unwrap();
+        assert_eq!(outcome, RunOutcome::LimitExceeded { limit });
+        assert_eq!(accounting(&events).model_calls, 1);
+        assert_eq!(accounting(&events).charged_tokens, Some(10));
+        assert_eq!(accounting(&events).charged_cost_microusd, Some(8));
+        assert!(s.seen[1].lock().unwrap().is_empty());
+        let terminal = events.last().unwrap();
+        let record = terminal.model_route.as_ref().unwrap();
+        assert_eq!(record.entry, "b");
+        assert!(!record.dispatched);
+        assert_eq!(record.limit, Some(limit));
+        assert!(matches!(record.phase.as_str(), "blocked" | "finished"));
+    }
+}
+
+#[tokio::test]
+async fn f03_root_deadline_and_inflight_cancellation_retain_uncertain_charge() {
+    for cancel in [false, true] {
+        let mut s = setup(
+            [vec![turn(false)], vec![], vec![]],
+            json!({"per_attempt_timeout_ms":1000,"eligible_errors":["transport_uncertain"],"retry_uncertain_delivery":true}),
+            Duration::from_secs(5),
+            false,
+        );
+        s.spec.limits.max_run_duration_ms = if cancel { 1000 } else { 10 };
+        let token = CancellationToken::new();
+        let trigger = token.clone();
+        let guard = tokio::spawn(async move {
+            if cancel {
+                tokio::time::sleep(Duration::from_millis(10)).await;
+                trigger.cancel();
+            }
+        });
+        let provider = SdkTracerProvider::builder().build();
+        let mut events = Vec::new();
+        let outcome = Runtime::new(opentelemetry::trace::TracerProvider::tracer(
+            &provider, "test",
+        ))
+        .run_with_tools(
+            &s.spec,
+            &s.route,
+            &ToolRegistry::default(),
+            &token,
+            &mut |event: &RunEvent| {
+                events.push(event.clone());
+                Ok(())
+            },
+        )
+        .await
+        .unwrap();
+        guard.await.unwrap();
+        assert_eq!(
+            outcome,
+            if cancel {
+                RunOutcome::Cancelled
+            } else {
+                RunOutcome::TimedOut
+            }
+        );
+        assert_eq!(accounting(&events).model_calls, 1);
+        assert_eq!(accounting(&events).charged_tokens, Some(10));
+        let record = events.last().unwrap().model_route.as_ref().unwrap();
+        assert_eq!(record.delivery, DeliveryCertainty::MayHaveBeenSent);
+        assert_eq!(record.status.as_deref(), Some(outcome.label()));
+        assert!(s.seen[1].lock().unwrap().is_empty());
+    }
+}
+
+#[tokio::test]
+async fn f03_begun_tool_call_and_closing_sink_failure_never_fallback() {
+    let s = setup(
+        [
+            vec![Ok(vec![
+                Ok(ProviderEvent::ToolCallStart {
+                    id: "unfinished".into(),
+                    name: "fs.read".into(),
+                }),
+                Err(error(
+                    DeliveryCertainty::ResponseReceived,
+                    Some(RetryClass::ServiceUnavailable),
+                )),
+            ])],
+            vec![],
+            vec![],
+        ],
+        json!({}),
+        Duration::ZERO,
+        false,
+    );
+    let (_, events) = run(&s, false).await.unwrap();
+    assert_eq!(accounting(&events).tool_calls, 0);
+    assert!(s.seen[1].lock().unwrap().is_empty());
+    let s = setup(
+        [
+            vec![Err(error(DeliveryCertainty::NotSent, None))],
+            vec![],
+            vec![],
+        ],
+        json!({}),
+        Duration::ZERO,
+        false,
+    );
+    let provider = SdkTracerProvider::builder().build();
+    let mut events = Vec::new();
+    let outcome = Runtime::new(opentelemetry::trace::TracerProvider::tracer(
+        &provider, "test",
+    ))
+    .run(&s.spec, &s.route, &mut |e: &RunEvent| {
+        if matches!(e.kind, EventKind::ModelFinished { .. }) {
+            return Err(SinkError::Capacity);
+        }
+        events.push(e.clone());
+        Ok(())
+    })
+    .await
+    .unwrap();
+    assert_eq!(
+        outcome,
+        RunOutcome::Failed {
+            code: FailureCode::ProviderTransport,
+            delivery: DeliveryCertainty::NotSent
+        }
+    );
+    assert_eq!(accounting(&events).model_calls, 1);
+    assert!(s.seen[1].lock().unwrap().is_empty());
+}

@@ -51,3 +51,39 @@ A distinct attempt deadline returns `model_attempt_timed_out` with uncertain del
 Fallback stops after any emitted text delta or begun tool-call accumulation. Accounting violations, sink/closing-event failures and noneligible provider failures also stop. An incompatible next adapter stops before dispatch with `continuation_incompatible`; the runtime neither discards private state nor skips to a later compatible entry. The current Open Responses adapter requires its own complete private projection for prior assistant items; ordinary cross-gateway history remains supported by the chat-completions adapters. Completed tools and accepted history are retained once.
 
 F02 covers first failure → second success with no third request, sticky selection across a real filesystem tool, fallback after completed tool history, shared reservations, root call limits, cancellation, escaped text, incompatible private continuation, distinct attempt deadlines and fresh ACP reuse. C3.12 remains responsible for the complete failure matrix and explicit per-attempt failure ledger. No live route fallback or hard spending guarantee is claimed by offline fixtures.
+
+
+## F03 attempt observability — model-route-v1
+
+C3.12 adds optional `model_route` metadata to routed native `model.started`,
+`model.finished` and `run.finished` events. Legacy runs omit it. The task envelope
+remains the closed `c2.3` contract. Native `c2.4` permits this additive optional
+metadata; deployment configuration remains `c3.11` because its meaning is unchanged.
+
+The record contains `schema_version: "model-route-v1"`, route and entry names,
+zero-based entry index, provider and requested model, decimal-string logical
+operation number (one-based), one-based per-operation attempt, selection reason
+(`initial`, `sticky`, `fallback`), phase (`selected`, `started`, `finished`,
+`blocked`), dispatched boolean, delivery certainty, nullable status/failure code/
+limit/retry class and nullable cumulative accounting snapshot. Snapshots are taken
+at attempt settlement; the terminal event's top-level accounting remains final
+run truth. Complete attempts are streamed, never accumulated in runtime memory.
+The terminal carries only the latest selection, including pre-dispatch rejection;
+a selected entry is not evidence that a request reached its provider. Admission
+failures such as missing credentials occur before a run and have no attempt ledger.
+
+CLI `--trace` exposes the complete native ledger under either content policy.
+ACP peers negotiate both `pablo/v1` and `pablo/model-route-v1` in capability `_meta`.
+Only those peers receive `_pablo/model_attempt` extension notifications containing
+`sessionId`, native event `type` and `pablo/v1` correlation (including model_route).
+The terminal response carries the latest record in the existing correlation
+metadata. Standard session updates and the task envelope are unchanged. Extension
+notifications use the same bounded queue, physical-write backpressure and shutdown
+as ordinary updates; there is no detached notification channel.
+
+Delivery is tracked separately per attempt. Once a provider event is received,
+subsequent transport errors cannot downgrade it to proven unsent, refund its
+reservation or bypass uncertain-delivery opt-in. A provider's explicit NotSent
+opening failure remains refundable. Cancellation/root limits and sink failures
+never authorize a later request. Failed attempts retain one model finish and one
+root outcome when the event sink remains writable.

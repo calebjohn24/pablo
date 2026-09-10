@@ -90,3 +90,11 @@ Optional `--max-total-tokens` and `--max-cost-microusd` are u64 ceilings shared 
 C3.9 extends the provider boundary with a private, non-serializable `Continuation` carrier. The runtime associates accepted complete output items with their assistant history position, passes them back on subsequent model calls and counts their serialized bytes against context without charging the public projection again. Each task owns its continuation; failed/cancelled partial responses cannot seed another task. Gateways reject incompatible private continuation instead of dropping it. Provider preflight validates explicit model/profile compatibility before effects.
 
 Open Responses `model.started` and `model.finished` events additionally expose safe `model_profile` metadata: protocol, immutable upstream revision, configured capability profile, endpoint, requested model and nullable resolved model. OTel model spans record `pablo.provider.protocol`, `pablo.provider.revision`, `pablo.provider.capability_profile` and `gen_ai.response.model`. Opaque reasoning and summaries never enter public events, Debug, JSONL, ACP or OTel, including content-capture mode. Native revision `c2.4` and task accounting `c2.3` remain separate from deployment revision `c3.9`; `unsupported_provider_content` extends the closed failure vocabulary.
+
+
+Routed C3.12 runs add bounded `model_route` metadata to model start/finish and run
+finish events. Each settled attempt carries cumulative exact accounting; the
+terminal keeps only the latest entry/selection and final top-level accounting.
+CLI traces retain the ordered ledger under either content policy. This optional
+native metadata leaves the closed task envelope unchanged. See the
+[F03 attempt contract](project/contracts/c3-model-routes.md#f03-attempt-observability--model-route-v1).

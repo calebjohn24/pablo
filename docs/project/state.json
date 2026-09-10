@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-10T20:21:14.837Z",
+  "updated_at": "2026-09-10T20:42:22.859Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.12",
-  "next_action": "Activate C3.12 on feat/c3-fallback-accounting from merged C3.11 base d7c0456. Add precise per-attempt/selection failure metadata and F03 exhaustion, uncertainty, cancellation, credential, continuation and root-allowance races across providers. Preserve shared budgets, GLM defaults and unlimited filesystem work; repeat matched performance. Then implement C3.12a basic compaction before C3.13.",
-  "latest_log_entry": "LOG-0079",
+  "next_checkpoint": "C3.12a",
+  "next_action": "Merge verified C3.12, then activate C3.12a for basic provider-neutral context compaction with one summary pass, one overflow recovery and shared budgets; retain matched performance checks.",
+  "latest_log_entry": "LOG-0080",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -380,9 +380,11 @@
       "depends_on": [
         "C3.11"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0080"
+      ]
     },
     {
       "id": "C3.12a",

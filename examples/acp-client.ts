@@ -80,6 +80,7 @@ export interface ClientOptions {
   args?: string[];
   env?: NodeJS.ProcessEnv;
   onUpdate?: (notification: SessionNotification, context: ClientContext) => void | Promise<void>;
+  onModelAttempt?: (notification: unknown) => void | Promise<void>;
   onDiagnostic?: (text: string) => void;
   onSpawn?: (child: ChildProcessWithoutNullStreams) => void;
 }
@@ -101,6 +102,7 @@ export async function withPablo<T>(options: ClientOptions, operation: (context: 
   try {
     return await client({ name: 'pablo-reference' })
       .onNotification('session/update', ({ params, agent }) => options.onUpdate?.(params, agent))
+      .onNotification('_pablo/model_attempt', (params: unknown) => params, ({ params }) => options.onModelAttempt?.(params))
       .connectWith(stream, operation);
   } finally {
     child.stdin.end();
