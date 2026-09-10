@@ -11,21 +11,22 @@ import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { withPablo, outcomeOf } from '../examples/acp-client.ts';
 import { body, cleanEnv, server } from '../tests/fixtures/telemetry.ts';
+import { responsesEvents, responsesWire } from '../tests/fixtures/open-responses.ts';
 
 // @ts-expect-error Dependency-free Node helper is JavaScript.
 import { sourceFingerprint } from './lib/source-fingerprint.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const provider=process.env.PABLO_MEASURE_PROVIDER ?? 'vercel';
-assert(provider==='vercel'||provider==='openrouter');
-const model=provider==='vercel'?'zai/glm-5.3-flash':'z-ai/glm-5.3-flash';
+assert(provider==='vercel'||provider==='openrouter'||provider==='open_responses');
+const model=provider==='vercel'?'zai/glm-5.3-flash':provider==='openrouter'?'z-ai/glm-5.3-flash':'fixture-text-tools-v1';
 const count = Number(process.argv[2] ?? 30);
 assert(Number.isInteger(count) && count >= 10 && count <= 1000, 'sample count must be 10–1000');
 const binary = resolve(process.env.PABLO_MEASURE_BINARY ?? join(root, 'target/release/pablo'));
 const direct = resolve(process.env.PABLO_MEASURE_DIRECT ?? join(root, 'target/release/examples/measure'));
 const reuse = process.env.PABLO_MEASURE_REUSE !== '0';
 const restricted = process.env.PABLO_MEASURE_RESTRICTED === '1';
-const configured = process.env.PABLO_MEASURE_CONFIGURED === '1' || restricted;
+const configured = process.env.PABLO_MEASURE_CONFIGURED === '1' || restricted || provider==='open_responses';
 const absoluteCommand = process.env.PABLO_MEASURE_ABSOLUTE_COMMAND === '1';
 const destination = resolve(process.argv[3] ?? join(root, `.pablo/measurements/c2.5-${process.platform}-${process.arch}.json`));
 const cwd = await realpath(await mkdtemp(join(tmpdir(), 'pablo-measure-')));
@@ -58,6 +59,16 @@ const gateway = await server(async (req, res) => {
   const request = JSON.parse((await body(req)).toString());
   assert.equal(request.model, model);
   res.writeHead(200, { 'content-type': 'text/event-stream' });
+  if (provider==='open_responses') {
+    if (request.input[0].content[0].text === firstDeltaTask) {
+      const events=responsesEvents(request,{chunks:['first']}); firstDeltaSentAt=performance.now();
+      res.write(responsesWire(events.slice(0,5),false)); await delay(40); res.end(responsesWire(events.slice(5)));
+    } else if(request.input.at(-1).type==='function_call_output') {
+      const result=JSON.parse(request.input.at(-1).output); assert.equal(result.shell.stdout,'measure');assert.equal(result.shell.exit_code,0);
+      res.end(responsesWire(responsesEvents(request,{chunks:Array(32).fill(chunk)})));
+    } else res.end(responsesWire(responsesEvents(request,{call:{id:'measure_call',name:'shell_run',arguments:JSON.stringify({command:absoluteCommand?'/usr/bin/printf measure':'printf measure',cwd:'.'})}})));
+    return;
+  }
   if (request.messages.at(-1).content === firstDeltaTask) {
     firstDeltaSentAt = performance.now();
     res.write(frame({ content: 'first' }));
@@ -73,7 +84,7 @@ const gateway = await server(async (req, res) => {
     } }] }, 'tool_calls') + 'data: [DONE]\n\n');
   }
 });
-const endpoint = `${gateway.url}/v1/chat/completions`;
+const endpoint = `${gateway.url}/v1/${provider==='open_responses'?'responses':'chat/completions'}`;
 const task = 'Run the fixed measurement task.';
 const entry=join(cwd,'deployment.toml');
 const options = configured ? ['--config',entry,'--bind',`workspace=${cwd}`,'--fixture-endpoint',endpoint] : [...(provider==='openrouter'?['--provider',provider]:[]),'--model', model, '--max-model-calls', '2', '--max-tool-calls', '1'];
@@ -85,6 +96,7 @@ sources=[{kind="environment",name="UNREAD_FIXTURE_KEY"}]
 [options.model]
 provider="${provider}"
 id="${model}"
+${provider==='open_responses'?'endpoint="https://responses.example.test/v1/responses"\ncapability_profile="open-responses-text-tools-v1"':''}
 [options.limits]
 max_model_calls=2
 max_tool_calls=1

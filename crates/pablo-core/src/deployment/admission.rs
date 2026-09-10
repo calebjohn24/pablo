@@ -125,6 +125,11 @@ impl ResolvedDeployment {
             .unwrap()
             .parse()
             .map_err(|_| error("config_invalid_value", "/options/model/provider"))?;
+        if kind == crate::gateway::GatewayKind::OpenResponses {
+            return Ok(crate::gateway::ModelProfile::responses(responses_profile(
+                model,
+            )?));
+        }
         crate::gateway::ModelProfile::resolve(kind, model["id"].as_str())
             .map_err(|_| error("config_invalid_value", "/options/model/id"))
     }
@@ -340,4 +345,17 @@ impl ResolvedDeployment {
             bindings_fingerprint,
         })
     }
+}
+
+pub(super) fn responses_profile(
+    model: &Value,
+) -> Result<crate::gateway::OpenResponsesProfile, ConfigError> {
+    crate::gateway::OpenResponsesProfile::new(
+        model["endpoint"].as_str().unwrap_or(""),
+        model["id"].as_str().unwrap_or(""),
+        model["capability_profile"].as_str().unwrap_or(""),
+        model["auth_header"].as_str().unwrap_or("Authorization"),
+        model["auth_scheme"].as_str().unwrap_or("bearer"),
+    )
+    .map_err(|_| error("config_invalid_value", "/options/model"))
 }

@@ -120,6 +120,90 @@ fn openrouter_credentials_resolve_privately_and_cannot_cross_consumers_or_destin
 }
 
 #[test]
+fn open_responses_profile_credentials_and_render_preserve_exact_destination_scope() {
+    use deployment::CredentialConsumer::{OpenResponses, OpenRouter, Vercel};
+    let f = Fixture::new();
+    let endpoint = "https://responses.example.test/v1/responses";
+    let config = json!({"options":{"model":{"provider":"open_responses","id":"operator/model","endpoint":endpoint,
+        "capability_profile":"open-responses-text-tools-v1","auth_header":"X-Api-Key","auth_scheme":"raw"}},
+        "credentials":{"gateway":{"consumer":"provider.open_responses","sources":[{"kind":"environment","name":"CUSTOM_RESPONSES_TOKEN"},{"kind":"host","name":"responses"}]}}});
+    let resolved = f.resolve(config.clone());
+    assert_eq!(resolved.model_profile().unwrap().endpoint, endpoint);
+    let prepared = resolved
+        .prepare_run(deployment::RunInput {
+            input: "task".into(),
+            session_id: None,
+            workspace: None,
+        })
+        .unwrap();
+    let inputs = PrivateInputs {
+        environment: Some(b"private-responses-token".to_vec()),
+        ..Default::default()
+    };
+    let credential = prepared
+        .credential(OpenResponses, &inputs)
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        credential.expose_for(OpenResponses, endpoint).unwrap(),
+        "private-responses-token"
+    );
+    for (consumer, destination) in [
+        (Vercel, endpoint),
+        (OpenRouter, endpoint),
+        (OpenResponses, "https://responses.example.test/other"),
+        (OpenResponses, "https://other.example.test/v1/responses"),
+    ] {
+        assert_eq!(
+            credential
+                .expose_for(consumer, destination)
+                .unwrap_err()
+                .code,
+            "config_credential_scope"
+        );
+    }
+    assert!(
+        !format!(
+            "{credential:?} {prepared:?} {}",
+            prepared.deployment().render().unwrap()
+        )
+        .contains("private-responses-token")
+    );
+    for (field, value) in [
+        (
+            "endpoint",
+            json!("http://responses.example.test/v1/responses"),
+        ),
+        ("capability_profile", json!("unknown")),
+        ("auth_header", json!("Host")),
+        ("auth_scheme", json!("unknown")),
+    ] {
+        let mut bad = config.clone();
+        bad["options"]["model"][field] = value;
+        assert!(deployment::resolve(f.document(bad)).is_err());
+    }
+    let mut small = config.clone();
+    small["options"]["limits"] = json!({"max_output_tokens":15});
+    assert_eq!(
+        deployment::resolve(f.document(small)).unwrap_err().code,
+        "config_invalid_value"
+    );
+    let mut defaults = config.clone();
+    defaults["options"]["model"]
+        .as_object_mut()
+        .unwrap()
+        .remove("auth_header");
+    defaults["options"]["model"]
+        .as_object_mut()
+        .unwrap()
+        .remove("auth_scheme");
+    let resolved = f.resolve(defaults);
+    assert_eq!(resolved.options()["model"]["auth_header"], "Authorization");
+    assert_eq!(resolved.options()["model"]["auth_scheme"], "bearer");
+    assert!(!resolved.provenance()["/config/options/model/auth_header"].is_empty());
+}
+
+#[test]
 fn credential_fallback_only_uses_absent_sources_and_never_hashes_or_serializes_values() {
     use deployment::CredentialConsumer::Vercel;
     let f = Fixture::new();
@@ -1319,7 +1403,7 @@ fn unknown_unsupported_and_schema_versions_are_explicit_and_redacted() {
     assert_eq!(e.owner, Some("C3.15"));
     error(
         f.document(json!({"options":{"model":{"provider":"open_responses"}}})),
-        "config_unsupported_feature",
+        "config_invalid_value",
     );
     for version in [Value::Null, json!(0), json!(2), json!("1")] {
         let mut request = f.document(json!({}));
@@ -1360,6 +1444,10 @@ fn frozen_toml_corpus_is_accepted_or_rejected_by_the_real_loader() {
             .path_bindings
             .insert("secrets".into(), f.0.join("unopened-secrets"));
         let result = deployment::resolve(request);
+        if let Some(expected) = case["resolution_error"].as_str() {
+            assert_eq!(result.unwrap_err().code, expected, "{file}");
+            continue;
+        }
         match case["expected"].as_str().unwrap() {
             "accepted_shape" => {
                 result.unwrap();

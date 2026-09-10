@@ -11,6 +11,7 @@ pub enum GatewayKind {
     #[default]
     Vercel,
     Openrouter,
+    OpenResponses,
 }
 impl std::str::FromStr for GatewayKind {
     type Err = &'static str;
@@ -18,7 +19,7 @@ impl std::str::FromStr for GatewayKind {
         match value {
             "vercel" => Ok(Self::Vercel),
             "openrouter" => Ok(Self::Openrouter),
-            "open_responses" => Err("provider_unavailable: open_responses (C3.9)"),
+            "open_responses" => Ok(Self::OpenResponses),
             _ => Err("unknown provider"),
         }
     }
@@ -28,24 +29,28 @@ impl GatewayKind {
         match self {
             Self::Vercel => "vercel",
             Self::Openrouter => "openrouter",
+            Self::OpenResponses => "open_responses",
         }
     }
     pub fn default_model(self) -> &'static str {
         match self {
             Self::Vercel => VERCEL_DEFAULT_MODEL,
             Self::Openrouter => OPENROUTER_DEFAULT_MODEL,
+            Self::OpenResponses => "",
         }
     }
     pub fn endpoint(self) -> &'static str {
         match self {
             Self::Vercel => super::VERCEL_ENDPOINT,
             Self::Openrouter => OPENROUTER_ENDPOINT,
+            Self::OpenResponses => "",
         }
     }
     pub fn credential_consumer(self) -> crate::deployment::CredentialConsumer {
         match self {
             Self::Vercel => crate::deployment::CredentialConsumer::Vercel,
             Self::Openrouter => crate::deployment::CredentialConsumer::OpenRouter,
+            Self::OpenResponses => crate::deployment::CredentialConsumer::OpenResponses,
         }
     }
     pub fn available(self) -> bool {
@@ -53,7 +58,7 @@ impl GatewayKind {
     }
     pub fn ensure_available(self) -> Result<(), &'static str> {
         match self {
-            Self::Vercel | Self::Openrouter => Ok(()),
+            Self::Vercel | Self::Openrouter | Self::OpenResponses => Ok(()),
         }
     }
 }
@@ -62,10 +67,12 @@ impl GatewayKind {
 pub struct ModelProfile {
     pub provider: GatewayKind,
     pub model: String,
-    pub endpoint: &'static str,
+    pub endpoint: String,
     pub protocol: &'static str,
     pub adapter_available: bool,
     pub capabilities: GatewayCapabilities,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub open_responses: Option<super::OpenResponsesProfile>,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub struct GatewayCapabilities {
@@ -77,6 +84,11 @@ pub struct GatewayCapabilities {
 }
 impl ModelProfile {
     pub fn resolve(provider: GatewayKind, model: Option<&str>) -> Result<Self, &'static str> {
+        if provider == GatewayKind::OpenResponses {
+            return Err(
+                "Open Responses requires configured endpoint, model and capability profile",
+            );
+        }
         let model = model.unwrap_or(provider.default_model());
         if model.is_empty()
             || model.len() > 256
@@ -87,7 +99,7 @@ impl ModelProfile {
         Ok(Self {
             provider,
             model: model.into(),
-            endpoint: provider.endpoint(),
+            endpoint: provider.endpoint().into(),
             protocol: "chat_completions",
             adapter_available: provider.available(),
             capabilities: GatewayCapabilities {
@@ -97,7 +109,25 @@ impl ModelProfile {
                 reported_cost: provider == GatewayKind::Openrouter,
                 hard_accounting_bounds: false,
             },
+            open_responses: None,
         })
+    }
+    pub fn responses(profile: super::OpenResponsesProfile) -> Self {
+        Self {
+            provider: GatewayKind::OpenResponses,
+            model: profile.model().into(),
+            endpoint: profile.endpoint().into(),
+            protocol: "open-responses-http-sse",
+            adapter_available: true,
+            capabilities: GatewayCapabilities {
+                text_streaming: true,
+                tool_calls: true,
+                reported_usage: true,
+                reported_cost: false,
+                hard_accounting_bounds: false,
+            },
+            open_responses: Some(profile),
+        }
     }
 }
 
@@ -126,7 +156,12 @@ mod tests {
                 .cost_microusd,
             None
         );
-        assert!("open_responses".parse::<GatewayKind>().is_err());
+        assert_eq!(
+            "open_responses".parse::<GatewayKind>().unwrap(),
+            GatewayKind::OpenResponses
+        );
+        assert!(GatewayProvider::selected(GatewayKind::OpenResponses, "unused-key").is_err());
+        assert!(ModelProfile::resolve(GatewayKind::OpenResponses, Some("model")).is_err());
         assert!(
             GatewayProvider::local_fixture_for(
                 GatewayKind::Openrouter,

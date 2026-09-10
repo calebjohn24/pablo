@@ -11,6 +11,7 @@ pub const MAX_CREDENTIAL_BYTES: usize = 65_536;
 pub enum CredentialConsumer {
     Vercel,
     OpenRouter,
+    OpenResponses,
     OtelHeaders,
 }
 impl CredentialConsumer {
@@ -18,6 +19,7 @@ impl CredentialConsumer {
         match self {
             Self::Vercel => "provider.vercel",
             Self::OpenRouter => "provider.openrouter",
+            Self::OpenResponses => "provider.open_responses",
             Self::OtelHeaders => "otel.headers",
         }
     }
@@ -86,7 +88,9 @@ impl PreparedRun {
         let config = self.deployment().config();
         let options = self.deployment().options();
         let (reference, destination) = match consumer {
-            CredentialConsumer::Vercel | CredentialConsumer::OpenRouter => (
+            CredentialConsumer::Vercel
+            | CredentialConsumer::OpenRouter
+            | CredentialConsumer::OpenResponses => (
                 &options["model"]["credential"],
                 options["model"]["endpoint"].as_str().unwrap(),
             ),
@@ -112,6 +116,7 @@ impl PreparedRun {
                     CredentialConsumer::Vercel => crate::gateway::VERCEL_ENDPOINT,
                     CredentialConsumer::OpenRouter => crate::gateway::OPENROUTER_ENDPOINT,
                     CredentialConsumer::OtelHeaders => unreachable!(),
+                    CredentialConsumer::OpenResponses => unreachable!(),
                 }
         {
             return Err(error("config_credential_scope", "/credentials"));
@@ -167,7 +172,9 @@ impl PreparedRun {
             }
             if matches!(
                 consumer,
-                CredentialConsumer::Vercel | CredentialConsumer::OpenRouter
+                CredentialConsumer::Vercel
+                    | CredentialConsumer::OpenRouter
+                    | CredentialConsumer::OpenResponses
             ) && (value.len() > 8192
                 || value.chars().any(char::is_whitespace)
                 || reqwest::header::HeaderValue::from_str(&value).is_err())

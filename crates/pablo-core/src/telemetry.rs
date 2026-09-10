@@ -60,6 +60,9 @@ pub(crate) fn outcome(context: &Context, outcome: &RunOutcome) {
                     },
                 ));
                 match code {
+                    crate::FailureCode::UnsupportedProviderContent => {
+                        "unsupported_provider_content"
+                    }
                     crate::FailureCode::ProviderRejected => "provider_rejected",
                     crate::FailureCode::ProviderTransport => "provider_transport",
                     crate::FailureCode::MalformedStream => "malformed_stream",

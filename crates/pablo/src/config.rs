@@ -229,6 +229,9 @@ impl Options {
             return Err("config_override_forbidden at /demo".into());
         }
         if options.deployment.is_none() {
+            if options.provider == Some(pablo_core::gateway::GatewayKind::OpenResponses) {
+                return Err("Open Responses requires an explicit deployment with endpoint, model and capability profile".into());
+            }
             options.provider.unwrap_or_default().ensure_available()?;
         }
         options.explicit = seen;
@@ -382,6 +385,9 @@ impl Options {
         .map_err(|_| "cannot configure tool policy".into())
     }
     pub fn spec(&self) -> Result<RunSpec, String> {
+        if self.provider == Some(pablo_core::gateway::GatewayKind::OpenResponses) {
+            return Err("Open Responses requires an explicit deployment with endpoint, model and capability profile".into());
+        }
         let workspace = self
             .workspace
             .clone()
@@ -455,6 +461,11 @@ fn key_from_sources(
     let names: &[&str] = match kind {
         pablo_core::gateway::GatewayKind::Vercel => &["AI_GATEWAY_API_KEY", "VERCEL_AI_GATEWAY"],
         pablo_core::gateway::GatewayKind::Openrouter => &["OPENROUTER_API_KEY"],
+        pablo_core::gateway::GatewayKind::OpenResponses => {
+            return Err(
+                "Open Responses requires an explicit deployment credential reference".into(),
+            );
+        }
     };
     for name in names {
         if let Some(value) = environment(name)? {

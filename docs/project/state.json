@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-10T18:28:58.042Z",
+  "updated_at": "2026-09-10T19:17:51.650Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.9",
-  "next_action": "Activate C3.9 on feat/c3-open-responses from merged C3.8 base acaa7dd. Implement the frozen OR01 native adapter and OR02 core/CLI/ACP proofs, including private continuation and configured endpoint/header scope. Preserve gateway GLM defaults and unlimited filesystem work. Rebuild, run affected regressions and compare matched release performance before merging.",
-  "latest_log_entry": "LOG-0071",
+  "next_checkpoint": "C3.10",
+  "next_action": "Merge verified C3.9, then activate C3.10 to freeze named model profiles and ordered routes before fallback execution. Preserve explicit endpoint/credential authority and private continuation compatibility. Keep GLM defaults/unlimited filesystem work; revisit measured listing/replacement increases at C3.39.",
+  "latest_log_entry": "LOG-0073",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -341,9 +341,11 @@
       "depends_on": [
         "C3.8"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0073"
+      ]
     },
     {
       "id": "C3.10",

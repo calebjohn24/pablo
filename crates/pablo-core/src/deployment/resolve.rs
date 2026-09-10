@@ -677,7 +677,23 @@ impl Resolver {
                 .get(&path)
                 .is_some_and(|origins| origins.iter().all(|o| o.operation == "default"))
             {
+                if kind == crate::gateway::GatewayKind::OpenResponses {
+                    return Err(error("config_invalid_value", &path));
+                }
                 self.config["options"]["model"][field] = value.into();
+            }
+        }
+        if kind == crate::gateway::GatewayKind::OpenResponses {
+            for (field, value) in [("auth_header", "Authorization"), ("auth_scheme", "bearer")] {
+                if self.config["options"]["model"].get(field).is_none() {
+                    self.config["options"]["model"][field] = value.into();
+                    self.record(
+                        &Value::String(value.into()),
+                        &format!("/config/options/model/{field}"),
+                        "source-0000",
+                        "default",
+                    )?;
+                }
             }
         }
         Ok(())

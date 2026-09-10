@@ -179,6 +179,7 @@ where
             ));
         }
         let mut lifecycle = Lifecycle {
+            model_profile: None,
             deployment: self.deployment.clone(),
             sink,
             run_id,
@@ -251,6 +252,7 @@ where
             text: spec.input.clone(),
         }];
         let mut ids = HashSet::new();
+        let mut continuations: Vec<crate::provider::ContinuationEntry> = Vec::new();
         let mut remaining_tools = spec.limits.max_tool_calls;
         let mut remaining_models = spec.limits.max_model_calls;
 
@@ -264,16 +266,30 @@ where
                 }
                 *remaining -= 1;
             }
-            let context_bytes =
+            let mut context_bytes =
                 serde_json::to_vec(&(&spec.instructions, &history, execution.tools.descriptors()))
                     .expect("serializable request")
                     .len();
+            // Replace the public assistant projection's charge with its complete
+            // private wire projection. Never charge the same logical item twice.
+            for entry in &continuations {
+                let projected = serde_json::to_vec(&history[entry.message_index])
+                    .expect("serializable history")
+                    .len();
+                context_bytes = context_bytes.saturating_sub(projected);
+                let Some(total) = context_bytes.checked_add(entry.value.bytes()) else {
+                    return limit(LimitKind::ContextBytes);
+                };
+                context_bytes = total;
+            }
             if context_bytes > spec.limits.max_context_bytes {
                 return limit(LimitKind::ContextBytes);
             }
             let mut progress = ModelProgress::default();
             let input = ModelInput {
                 history: &history,
+                continuations: &continuations,
+                remaining_context: spec.limits.max_context_bytes - context_bytes,
                 allow_tool_calls: remaining_tools != Some(0)
                     && remaining_models != Some(0)
                     && !execution.tools.descriptors().is_empty(),
@@ -303,6 +319,12 @@ where
             // Do not perform an effectful tool call without budget to consume its result.
             if remaining_models == Some(0) {
                 return limit(LimitKind::ModelCalls);
+            }
+            if let Some(value) = progress.continuation {
+                continuations.push(crate::provider::ContinuationEntry {
+                    message_index: history.len(),
+                    value,
+                });
             }
             history.push(Message::Assistant {
                 text: progress.output,
@@ -336,6 +358,7 @@ where
         progress: &mut ModelProgress,
         ids: &mut HashSet<String>,
     ) -> Result<(), RunOutcome> {
+        lifecycle.model_profile = execution.provider.profile_identity();
         if !lifecycle.can_start_operation() {
             return Err(limit(LimitKind::Events));
         }
@@ -361,6 +384,20 @@ where
                 .start_with_context(&self.tracer, execution.root),
         );
         let parent = execution.root.span().span_context().span_id().to_string();
+        if let Some(profile) = &lifecycle.model_profile {
+            model.span().set_attribute(KeyValue::new(
+                "pablo.provider.protocol",
+                profile.protocol.clone(),
+            ));
+            model.span().set_attribute(KeyValue::new(
+                "pablo.provider.revision",
+                profile.revision.clone(),
+            ));
+            model.span().set_attribute(KeyValue::new(
+                "pablo.provider.capability_profile",
+                profile.capability_profile.clone(),
+            ));
+        }
         let mut result = match lifecycle.emit(
             EventKind::ModelStarted {
                 provider: execution.provider.name().into(),
@@ -585,6 +622,7 @@ where
 
 #[derive(Default)]
 struct ModelProgress {
+    continuation: Option<crate::provider::Continuation>,
     cost_microusd: Option<u64>,
     dispatched: bool,
     output: String,
@@ -602,6 +640,8 @@ struct PendingCall {
 
 struct ModelInput<'a> {
     history: &'a [Message],
+    continuations: &'a [crate::provider::ContinuationEntry],
+    remaining_context: usize,
     allow_tool_calls: bool,
 }
 
@@ -620,6 +660,11 @@ async fn consume(
         input: &spec.input,
         instructions: &spec.instructions,
         messages: input.history,
+        continuations: input.continuations,
+        max_continuation_bytes: input.remaining_context,
+        max_context_bytes: spec.limits.max_context_bytes,
+        max_tool_input_bytes: spec.limits.max_tool_input_bytes,
+        max_output_bytes: spec.limits.max_output_bytes,
         tools: execution.tools.descriptors(),
         allow_tool_calls: input.allow_tool_calls,
         max_output_tokens: spec.limits.max_output_tokens,
@@ -677,6 +722,27 @@ async fn consume(
                 });
             }
             Some(Ok(_)) if progress.finish_reason.is_some() => return Err(malformed()),
+            Some(Ok(ProviderEvent::ResolvedModel(value))) => {
+                let profile = lifecycle.model_profile.as_mut().ok_or_else(malformed)?;
+                if value.is_empty()
+                    || value.len() > 256
+                    || value.chars().any(char::is_control)
+                    || profile.resolved_model.replace(value.clone()).is_some()
+                {
+                    return Err(malformed());
+                }
+                model
+                    .span()
+                    .set_attribute(KeyValue::new("gen_ai.response.model", value));
+            }
+            Some(Ok(ProviderEvent::Continuation(value))) => {
+                if value.bytes() > input.remaining_context {
+                    return Err(limit(LimitKind::ContextBytes));
+                }
+                if progress.continuation.replace(value).is_some() {
+                    return Err(malformed());
+                }
+            }
             Some(Ok(ProviderEvent::Cost { microusd })) => {
                 if progress.cost_microusd.replace(microusd).is_some() {
                     return Err(malformed());
@@ -805,6 +871,9 @@ fn tool_failure(result: &ToolResult) -> Option<RunOutcome> {
 }
 
 fn validate(spec: &RunSpec, provider: &dyn Provider) -> Result<(), RunError> {
+    provider
+        .validate_model(&spec.model, spec.limits.max_output_tokens)
+        .map_err(RunError::InvalidSpec)?;
     if spec.model.is_empty() || spec.model.len() > 256 || spec.model.chars().any(char::is_control) {
         return Err(RunError::InvalidSpec(
             "model must contain 1–256 bytes without control characters",
@@ -874,6 +943,7 @@ pub fn validate_run(
 }
 
 struct Lifecycle<'a> {
+    model_profile: Option<ProviderIdentity>,
     deployment: Option<crate::deployment::DeploymentIdentity>,
     sink: &'a mut dyn EventSink,
     run_id: String,
@@ -898,6 +968,12 @@ impl Lifecycle<'_> {
         let span = context.span();
         let identity = span.span_context();
         RunEvent {
+            model_profile: matches!(
+                kind,
+                EventKind::ModelStarted { .. } | EventKind::ModelFinished { .. }
+            )
+            .then(|| self.model_profile.clone())
+            .flatten(),
             deployment: matches!(kind, EventKind::RunStarted | EventKind::RunFinished { .. })
                 .then(|| self.deployment.clone())
                 .flatten(),

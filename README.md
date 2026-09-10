@@ -4,7 +4,7 @@ A small, headless Rust agent runtime for applications doing arbitrary work.
 
 The focused [C1 spike](docs/project/cycles/001-first-spike.md) and [C2 cycle](docs/project/cycles/002-single-agent-completion.md) are complete. C2 implements bounded filesystem tools, machine-readable task output, static policy and accounting, with acceptance on macOS arm64 and [native Linux x86_64](docs/project/evidence/c2.5-linux-x64.md). This is not a published release. The [architecture brief](docs/context.md) describes the larger product; section 29.1 defines the 0.1 release contract. The project-state command reports checkpoint progress across retained cycles.
 
-The selected [C3 plan](docs/project/cycles/003-extensibility-and-release.md) covers declarative deployment configuration, ordered model fallback, shell command rules, providers, MCP, Skills, structured output, temporary children, A2A, a basic TUI and release delivery in small checkpoints. Otto integration remains deferred. Deployment loading/inspection, shell command rules and Vercel/OpenRouter gateways are implemented; later capabilities remain checkpointed in the plan. See the [deployment contract and examples](docs/project/contracts/c3-deployment-config.md).
+The selected [C3 plan](docs/project/cycles/003-extensibility-and-release.md) covers declarative deployment configuration, ordered model fallback, shell command rules, providers, MCP, Skills, structured output, temporary children, A2A, a basic TUI and release delivery in small checkpoints. Otto integration remains deferred. Deployment loading/inspection, shell command rules, Vercel/OpenRouter gateways and configured Open Responses are implemented; later capabilities remain checkpointed in the plan. See the [deployment contract and examples](docs/project/contracts/c3-deployment-config.md).
 
 ## Run a real task
 
@@ -31,6 +31,8 @@ node scripts/smoke-live-openrouter.ts target/release/pablo .env
 ```
 
 The explicit credential-file argument selects only that file, so an older environment key cannot override it. The executable privately resolves the credential; the harness prints sanitized timing/usage summaries and removes its temporary workspaces. Each task permits one file read and two model calls with a 90-second deadline. [Adapter details](docs/project/contracts/c3-openrouter.md) describe cost granularity and capability limits.
+
+Open Responses uses an explicit deployment with a complete HTTPS endpoint, model, capability profile and scoped credential reference. See the [runnable configuration](docs/gateway.md#open-responses) and [supported protocol subset](docs/project/contracts/c3-open-responses.md). It preserves private reasoning continuation across tool rounds.
 
 To work in a different folder while keeping credentials in this project:
 

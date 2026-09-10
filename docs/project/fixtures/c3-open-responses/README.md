@@ -1,6 +1,6 @@
 # OR01 pinned Open Responses examples
 
-These are contract examples for [C3.8](../../contracts/c3-open-responses.md), not evidence that an Open Responses runtime adapter exists. Run the offline audit from the repository root:
+These are contract examples for [C3.8](../../contracts/c3-open-responses.md), retained as the independent contract audit. C3.9 implements the adapter and `tests/open-responses.test.ts` supplies its separate runtime proof. Run the offline audit from the repository root:
 
 ```sh
 node --test docs/project/fixtures/c3-open-responses/audit.mjs
@@ -10,7 +10,7 @@ node --test docs/project/fixtures/c3-open-responses/audit.mjs
 
 `roundtrip.json` is a synthetic three-turn example: a commentary message and first file read, a second file read with a private summary, then a two-part Unicode answer. Complete function/message/reasoning items are fed back in order before each correlated tool result. Opaque state and summaries stay private; assistant phases survive continuation. Usage aggregates to 450 input, 90 output and 240 cached-input tokens. Cache-write and cost remain unknown. Synthetic model IDs and markers do not name a live service or credential.
 
-`turn-1.sse` through `turn-3.sse` are actual UTF-8, CRLF-framed wires matching the JSON events, including keepalive comments, named events, fragmented argument/text semantics and a data-only DONE sentinel. C3.9 must additionally split these wire bytes arbitrarily over actual HTTP; these static files do not prove incremental runtime parsing.
+`turn-1.sse` through `turn-3.sse` are actual UTF-8, CRLF-framed wires matching the JSON events, including keepalive comments, named events, fragmented argument/text semantics and a data-only DONE sentinel. C3.9 tests additionally split these wire bytes arbitrarily over actual HTTP; these static files do not prove incremental runtime parsing.
 
 `profile.json` freezes the configured capability and protocol bounds. `terminals.json` adds upstream-valid completed, incomplete, failed and null/zero usage examples with the selected finish/error mapping; these isolated terminal examples are not complete streams.
 

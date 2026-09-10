@@ -27,7 +27,8 @@
     },
     {
       "file": "invalid/future-provider.toml",
-      "expected": "schema_error"
+      "expected": "accepted_shape",
+      "resolution_error": "config_invalid_value"
     },
     {
       "file": "invalid/version.toml",

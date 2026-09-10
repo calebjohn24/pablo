@@ -308,6 +308,7 @@ mod tests {
     #[test]
     fn event_capacity_admits_large_plain_text_but_rejects_its_escaped_expansion() {
         let mut event = RunEvent {
+            model_profile: None,
             deployment: None,
             accounting: None,
             schema_version: "c1.2".into(),

@@ -377,6 +377,7 @@
                 "provider_rejected",
                 "provider_transport",
                 "malformed_stream",
+                "unsupported_provider_content",
                 "event_sink_io",
                 "invalid_tool_arguments",
                 "tool_execution",

@@ -124,6 +124,7 @@ pub enum DeliveryCertainty {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum FailureCode {
+    UnsupportedProviderContent,
     ProviderRejected,
     ProviderTransport,
     MalformedStream,
@@ -228,7 +229,20 @@ pub enum Message {
 
 /// Live events contain content. JsonlSink applies its independent capture policy.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ProviderIdentity {
+    pub protocol: String,
+    pub revision: String,
+    pub capability_profile: String,
+    pub endpoint: String,
+    pub requested_model: String,
+    pub resolved_model: Option<String>,
+}
+
+/// Live events contain content. JsonlSink applies its independent capture policy.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RunEvent {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_profile: Option<ProviderIdentity>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deployment: Option<crate::deployment::DeploymentIdentity>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

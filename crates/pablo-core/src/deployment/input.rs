@@ -97,14 +97,6 @@ fn unsupported(value: &Value, path: &str) -> Result<(), ConfigError> {
                 return Err(feature(&format!("{path}/options/{section}/{key}"), owner));
             }
         }
-        if options
-            .get("model")
-            .and_then(|v| v.get("provider"))
-            .and_then(Value::as_str)
-            == Some("open_responses")
-        {
-            return Err(feature(&format!("{path}/options/model/provider"), "C3.9"));
-        }
     }
     if value.get("requires").is_some() {
         return Err(feature(&format!("{path}/requires"), "C3.33"));
