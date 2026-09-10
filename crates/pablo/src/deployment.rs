@@ -22,27 +22,56 @@ pub struct Bootstrap {
     locked: bool,
 }
 
-pub struct Secrets {
-    provider: Option<deployment::ScopedCredential>,
-    kind: pablo_core::gateway::GatewayKind,
+struct ProviderSecret {
+    credential: Option<deployment::ScopedCredential>,
     profile: pablo_core::gateway::ModelProfile,
+}
+pub struct Secrets {
+    providers: Vec<ProviderSecret>,
+    route: Option<deployment::ResolvedRoute>,
     pub headers: Option<deployment::ScopedCredential>,
 }
 impl Secrets {
     pub fn read(prepared: &deployment::PreparedRun, bootstrap: &Bootstrap) -> Result<Self, String> {
-        let profile = prepared
-            .deployment()
-            .model_profile()
-            .map_err(|e| e.to_string())?;
-        let kind = profile.provider;
-        kind.ensure_available()?;
-        let provider = if bootstrap.fixture_endpoint.is_some() {
-            None
+        let route = prepared.deployment().model_route().cloned();
+        let profiles = if let Some(route) = &route {
+            route
+                .entries()
+                .iter()
+                .map(|entry| entry.profile().clone())
+                .collect()
         } else {
-            prepared
-                .credential(kind.credential_consumer(), &deployment::ProcessCredentials)
-                .map_err(|e| e.to_string())?
+            vec![
+                prepared
+                    .deployment()
+                    .model_profile()
+                    .map_err(|e| e.to_string())?,
+            ]
         };
+        let mut providers = Vec::new();
+        for (index, profile) in profiles.into_iter().enumerate() {
+            profile.provider.ensure_available()?;
+            let credential = if bootstrap.fixture_endpoint.is_some() {
+                None
+            } else if route.is_some() {
+                Some(
+                    prepared
+                        .route_credential(index, &deployment::ProcessCredentials)
+                        .map_err(|e| e.to_string())?,
+                )
+            } else {
+                prepared
+                    .credential(
+                        profile.provider.credential_consumer(),
+                        &deployment::ProcessCredentials,
+                    )
+                    .map_err(|e| e.to_string())?
+            };
+            providers.push(ProviderSecret {
+                credential,
+                profile,
+            });
+        }
         let otel = &prepared.deployment().options()["otel"];
         let headers = if otel["sdk_disabled"] != true && otel["exporter"] == "otlp" {
             prepared
@@ -55,32 +84,41 @@ impl Secrets {
             None
         };
         Ok(Self {
-            provider,
+            providers,
+            route,
             headers,
-            kind,
-            profile,
         })
     }
-    pub fn provider(
-        &self,
-        bootstrap: &Bootstrap,
-    ) -> Result<pablo_core::gateway::GatewayProvider, String> {
-        if let Some(endpoint) = &bootstrap.fixture_endpoint {
-            return pablo_core::gateway::GatewayProvider::configured_fixture(
-                &self.profile,
-                endpoint,
-            )
-            .map_err(|_| "config_invalid_value at /fixture_endpoint".into());
+    pub fn provider(&self, bootstrap: &Bootstrap) -> Result<Box<dyn pablo_core::Provider>, String> {
+        let mut providers: Vec<Box<dyn pablo_core::Provider>> = Vec::new();
+        for entry in &self.providers {
+            let adapter = if let Some(endpoint) = &bootstrap.fixture_endpoint {
+                pablo_core::gateway::GatewayProvider::configured_fixture(&entry.profile, endpoint)
+                    .map_err(|_| "config_invalid_value at /fixture_endpoint")?
+            } else {
+                let secret = entry
+                    .credential
+                    .as_ref()
+                    .ok_or("config_credential_missing at /options/model/credential")?;
+                let value = secret
+                    .expose_for(
+                        entry.profile.provider.credential_consumer(),
+                        &entry.profile.endpoint,
+                    )
+                    .map_err(|e| e.to_string())?;
+                pablo_core::gateway::GatewayProvider::configured(&entry.profile, value)
+                    .map_err(|_| "config_credential_invalid at /options/model/credential")?
+            };
+            providers.push(Box::new(adapter));
         }
-        let secret = self
-            .provider
-            .as_ref()
-            .ok_or("config_credential_missing at /options/model/credential")?;
-        let value = secret
-            .expose_for(self.kind.credential_consumer(), &self.profile.endpoint)
-            .map_err(|e| e.to_string())?;
-        pablo_core::gateway::GatewayProvider::configured(&self.profile, value)
-            .map_err(|_| "config_credential_invalid at /options/model/credential".into())
+        if let Some(route) = &self.route {
+            Ok(Box::new(
+                pablo_core::provider::ProviderRoute::new(route.clone(), providers)
+                    .map_err(|_| "config_invalid_value at /model_route")?,
+            ))
+        } else {
+            Ok(providers.remove(0))
+        }
     }
     pub fn same_private_values(&self, other: &Self) -> bool {
         let same = |a: &Option<deployment::ScopedCredential>,
@@ -89,9 +127,13 @@ impl Secrets {
             (Some(a), Some(b)) => a.same_private_value(b),
             _ => false,
         };
-        self.kind == other.kind
-            && self.profile == other.profile
-            && same(&self.provider, &other.provider)
+        self.route == other.route
+            && self.providers.len() == other.providers.len()
+            && self
+                .providers
+                .iter()
+                .zip(&other.providers)
+                .all(|(a, b)| a.profile == b.profile && same(&a.credential, &b.credential))
             && same(&self.headers, &other.headers)
     }
 }

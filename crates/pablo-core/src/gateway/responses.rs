@@ -147,6 +147,24 @@ impl OpenResponsesProvider {
     }
 }
 impl Provider for OpenResponsesProvider {
+    fn accepts_history(
+        &self,
+        model: &str,
+        messages: &[Message],
+        entries: &[crate::provider::ContinuationEntry],
+    ) -> bool {
+        messages.iter().enumerate().all(|(index, message)| {
+            !matches!(message, Message::Assistant { .. })
+                || entries.iter().any(|entry| entry.message_index == index)
+        }) && entries.iter().all(|entry| {
+            let scope = &entry.value.scope;
+            scope.provider == "open_responses"
+                && scope.endpoint == self.profile.endpoint
+                && scope.requested_model == model
+                && scope.revision == REVISION
+                && scope.profile == PROFILE
+        })
+    }
     fn validate_model(&self, model: &str, max_output_tokens: u32) -> Result<(), &'static str> {
         if model != self.profile.model || max_output_tokens < 16 {
             return Err(
@@ -200,6 +218,7 @@ impl Provider for OpenResponsesProvider {
 
 fn unsupported() -> ProviderError {
     ProviderError {
+        retry_class: None,
         code: FailureCode::UnsupportedProviderContent,
         delivery: DeliveryCertainty::ResponseReceived,
     }
@@ -312,6 +331,7 @@ impl ResponseStream {
                         .read(&mut self.bytes)
                         .await
                         .map_err(|_| ProviderError {
+                            retry_class: None,
                             code: FailureCode::ProviderTransport,
                             delivery: DeliveryCertainty::ResponseReceived,
                         })?;
@@ -522,6 +542,7 @@ impl Completion {
             }
             "error" | "response.failed" => {
                 return Err(ProviderError {
+                    retry_class: None,
                     code: FailureCode::ProviderRejected,
                     delivery: DeliveryCertainty::ResponseReceived,
                 });

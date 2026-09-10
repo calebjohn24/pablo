@@ -71,7 +71,7 @@ impl Worker {
 
 struct Resources {
     configuration: Option<(String, String, crate::deployment::Secrets)>,
-    provider: GatewayProvider,
+    provider: Box<dyn pablo_core::Provider>,
     tools: ToolRegistry,
     telemetry: crate::otel::Telemetry,
 }
@@ -94,7 +94,7 @@ impl Resources {
         let tools = options.tools()?;
         Ok(Self {
             configuration: None,
-            provider,
+            provider: Box::new(provider),
             tools,
             telemetry: crate::otel::Telemetry::new(),
         })
@@ -141,8 +141,12 @@ fn run(options: Arc<Options>, tasks: async_channel::Receiver<Task>) -> Result<()
                     if !reuse {
                         let provider = secrets.provider(bootstrap)?;
                         let tools = prepared.tools().map_err(|e| e.to_string())?;
-                        pablo_core::runtime::validate_run(prepared.spec(), &provider, &tools)
-                            .map_err(|_| "config_invalid_value at /run")?;
+                        pablo_core::runtime::validate_run(
+                            prepared.spec(),
+                            provider.as_ref(),
+                            &tools,
+                        )
+                        .map_err(|_| "config_invalid_value at /run")?;
                         crate::otel::Telemetry::check_configured(
                             prepared,
                             secrets.headers.as_ref(),
@@ -165,7 +169,7 @@ fn run(options: Arc<Options>, tasks: async_channel::Receiver<Task>) -> Result<()
                     }
                     pablo_core::runtime::validate_run(
                         prepared.spec(),
-                        &resources.as_ref().unwrap().provider,
+                        resources.as_ref().unwrap().provider.as_ref(),
                         &resources.as_ref().unwrap().tools,
                     )
                     .map_err(|_| "config_invalid_value at /run")?;
@@ -252,7 +256,7 @@ async fn execute(
     match runtime
         .run_with_tools(
             spec,
-            &resources.provider,
+            resources.provider.as_ref(),
             &resources.tools,
             &task.cancel,
             &mut sink,

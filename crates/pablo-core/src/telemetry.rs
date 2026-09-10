@@ -60,6 +60,8 @@ pub(crate) fn outcome(context: &Context, outcome: &RunOutcome) {
                     },
                 ));
                 match code {
+                    crate::FailureCode::ModelAttemptTimedOut => "model_attempt_timed_out",
+                    crate::FailureCode::ContinuationIncompatible => "continuation_incompatible",
                     crate::FailureCode::UnsupportedProviderContent => {
                         "unsupported_provider_content"
                     }

@@ -2,7 +2,7 @@
 
 ## Objective and authority
 
-Build on completed C1 and C2. Select declarative deployment configuration, ordered model fallback, shell command allow/deny rules, OpenRouter, native Open Responses, MCP over stdio and Streamable HTTP, local Agent Skills, structured-output validation and one repair, temporary children, A2A client delegation, a basic TUI, and release packaging, compatibility, measurements and distribution. The user explicitly excludes Otto integration from C3.
+Build on completed C1 and C2. Select declarative deployment configuration, ordered model fallback, basic bounded-run context compaction, shell command allow/deny rules, OpenRouter, native Open Responses, MCP over stdio and Streamable HTTP, local Agent Skills, structured-output validation and one repair, temporary children, A2A client delegation, a basic TUI, and release packaging, compatibility, measurements and distribution. The user explicitly excludes Otto integration from C3.
 
 The [design brief](../../context.md), sections 29.1 and 31.1, retains authority over the full 0.1 release. Excluding Otto from this cycle does not remove its release gate. [State](../state.json) alone records checkpoint status; retain the C1/C2 plans, checkpoint objects, evidence and append-only log.
 
@@ -21,6 +21,7 @@ Complete one checkpoint per implementation session, including evidence and hando
 | C3.5–C3.7 | Select providers and prove OpenRouter offline, then live |
 | C3.8–C3.9 | Freeze and implement the Open Responses subset |
 | C3.10–C3.12 | Configure ordered model routes, execute fallback and prove failure/accounting semantics |
+| C3.12a | Compact bounded-run context once, with visible summary and one overflow recovery |
 | C3.13–C3.14 | Validate structured output, then add one bounded repair |
 | C3.15–C3.18 | Configure MCP, prove each transport, integrate CLI/ACP |
 | C3.19–C3.20 | Discover Skills, then activate instructions and resources |
@@ -191,9 +192,23 @@ Acceptance:
 - Race remaining allowances with fallback attempts; count each request, retain uncertain reservations, stop at configured attempt/deadline limits and reject hard ceilings unsupported by any eligible entry before delivery. No repeated tool side effects or unconfigured destinations occur.
 - Run offline Vercel/OpenRouter/Open Responses transition fixtures and the full affected provider/ACP regressions. Forced paid failures are unnecessary; later live gates exercise the selected configured profile and record the resolved model.
 
-## C3.13: Final-output schema validation
+## C3.12a: Basic context compaction
 
 Prerequisites: C3.12.
+
+Implement the small bounded-run compaction required by design sections 23 and 28.8, explicitly added to C3 by the user on 2026-09-10. Take inspiration from Codex's summary-and-history replacement pattern; keep the existing provider defaults and one task lifecycle. [The scope review](../evidence/c3-compaction-scope.md) records the source and boundary.
+
+Acceptance:
+
+- Freeze the typed context/profile capacity options, conservative estimation/safety margin, summary/output bounds, complete-turn retention rule, overflow classification and event/privacy contract before implementation. Include instruction/tool/Skill/framing costs, use reported usage where available, and keep the binary tokenizer-free. Unknown capacity must remain explicit; no guessed live model catalog or new credential is required.
+- CP01 passes through actual core, CLI and ACP: near the configured usable context threshold, perform at most one bounded model summary pass per run, then atomically replace older completed history behind the unchanged instruction/tool prefix. Keep the original task, constraints, unresolved work, artifact references and recent complete tool-call/result pairs. The summary is derived history, never new authority. Continue from actual completed effects with fewer context bytes and no tool replay or task restart.
+- CP02 passes: a recognized provider context-overflow rejection can trigger that same one compaction allowance and at most one recovery attempt. Summary work and recovery consume the existing root model/time/token/cost budgets, with tools disabled during summarization. Cancellation, failed/empty/oversized summary, no available history or insufficient room/budget preserve original history and settle explicitly. No repeated summarization or hidden fallback/repair multiplication.
+- Preserve required private continuation for retained turns and never flatten opaque provider state. Replace discarded history only at an explicit successful compaction boundary. Emit native/ACP/OTel compaction identity, trigger, before/after size and replaced-history fingerprint; expose summary content only through the documented content policy. Prove trace/key redaction and fresh ACP-session isolation.
+- Cover Vercel/OpenRouter/Open Responses offline, retain the selected GLM gateway models, and measure the ordinary path overhead plus compaction/recovery duration and context reduction. No durable sessions, persistent memory, external retrieval, encrypted OpenAI-only compaction API, tokenizer bundle or recursive summary hierarchy is selected.
+
+## C3.13: Final-output schema validation
+
+Prerequisites: C3.12a.
 
 Add an optional model-output schema to the existing run contract, separately from C2's task envelope.
 
@@ -343,7 +358,7 @@ Exercise the combined extensibility surface before selecting interoperability im
 
 Acceptance:
 
-- E01 passes from a fresh build on the development host: Rust embedding and TypeScript ACP drive a synthetic task using an MCP tool, an explicitly activated Skill resource, two children and validated output/handoff. Include root cancellation and denied authority variants.
+- E01 passes from a fresh build on the development host: Rust embedding and TypeScript ACP drive a synthetic task using an MCP tool, an explicitly activated Skill resource, two children and validated output/handoff. Include forced basic compaction that retains active capability/child ownership and completed handoff state, root cancellation and denied authority variants.
 - Run the full offline suite and a real Collector proof covering root/model/native tools/MCP/local children, exact identities, metadata-only export and exporter outage. Preserve both gateway and Open Responses fixture regressions.
 - Reference the source-matched OpenRouter live proof and an explicit Vercel live proof; rerun bounded live checks if provider/lifecycle changes invalidate prior evidence. Record this slice's capability assessment; four-target release acceptance remains C3.35–C3.38.
 
@@ -427,7 +442,7 @@ Prove every supported subsystem can be preconfigured through one composed deploy
 
 Acceptance:
 
-- G04 passes for reusable base, read-only production and development presets configuring models/routes, shell/filesystem policy, limits, output schema, MCP, Skills, children, A2A, interfaces and trace/OTel; credentials remain external references.
+- G04 passes for reusable base, read-only production and development presets configuring models/routes, context compaction, shell/filesystem policy, limits, output schema, MCP, Skills, children, A2A, interfaces and trace/OTel; credentials remain external references.
 - Run a synthetic end-to-end task from a rendered preset through CLI, ACP and embedding, including eligible fallback and a denied command. Resolve identically in a clean environment and a noisy one under locked mode; preserve source/config fingerprints.
 - Compare the option inventory with the implemented public settings, document intentionally host-only callbacks/secrets/platform facts, verify unsupported settings fail explicitly, and carry versioned presets plus migration guidance into packaging and native acceptance.
 

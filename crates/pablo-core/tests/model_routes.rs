@@ -55,7 +55,7 @@ fn ordered_profiles_resolve_exact_identity_options_and_scoped_credentials_offlin
     assert_eq!(route.policy().max_attempts, 3);
     assert!(route.policy().sticky);
     assert_eq!(route.policy().retry_owner, "pablo");
-    assert!(!route.execution_available());
+    assert!(route.execution_available());
     assert_eq!(
         resolved.model_profile().unwrap(),
         *route.entries()[0].profile()
@@ -63,16 +63,15 @@ fn ordered_profiles_resolve_exact_identity_options_and_scoped_credentials_offlin
     assert!(!resolved.provenance()["/config/options/models/primary/endpoint"].is_empty());
     let inspected = serde_json::to_value(&resolved).unwrap();
     assert_eq!(inspected["model_route"]["selected_entry"], "primary");
-    let error = resolved
-        .prepare_run(RunInput {
-            input: "task".into(),
-            session_id: None,
-            workspace: None,
-        })
-        .err()
-        .unwrap();
-    assert_eq!(error.code, "config_unsupported_feature");
-    assert_eq!(error.owner, Some("C3.11"));
+    assert!(
+        resolved
+            .prepare_run(RunInput {
+                input: "task".into(),
+                session_id: None,
+                workspace: None
+            })
+            .is_ok()
+    );
     let rendered = resolved.render().unwrap();
     let value: Value = toml::from_str(&rendered).unwrap();
     let reloaded = f.resolve(value).unwrap();
@@ -221,16 +220,16 @@ fn selected_profile_credential_lookup_and_attempt_deadline_admission_are_explici
     assert!(!format!("{lease:?} {resolved:?}").contains("private-route-token"));
     value["options"]["routes"]["single"]["per_attempt_timeout_ms"] = 100.into();
     let resolved = f.resolve(value).unwrap();
-    assert!(!resolved.model_route().unwrap().execution_available());
-    let e = resolved
-        .prepare_run(RunInput {
-            input: "task".into(),
-            session_id: None,
-            workspace: None,
-        })
-        .err()
-        .unwrap();
-    assert_eq!(e.owner, Some("C3.11"));
+    assert!(resolved.model_route().unwrap().execution_available());
+    assert!(
+        resolved
+            .prepare_run(RunInput {
+                input: "task".into(),
+                session_id: None,
+                workspace: None
+            })
+            .is_ok()
+    );
 }
 
 #[test]

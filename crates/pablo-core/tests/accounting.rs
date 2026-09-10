@@ -195,6 +195,7 @@ async fn uncertain_failures_retain_charges_but_not_sent_releases_them() {
         DeliveryCertainty::ResponseReceived,
     ] {
         let p = FixtureProvider::new(vec![Err(ProviderError {
+            retry_class: None,
             code: FailureCode::ProviderTransport,
             delivery,
         })]);
@@ -285,6 +286,7 @@ async fn earlier_known_usage_survives_a_later_definitely_unsent_failure() {
     let p = FixtureProvider::new(vec![
         turn(true, usage(3, 3), Some(3)),
         Err(ProviderError {
+            retry_class: None,
             code: FailureCode::ProviderTransport,
             delivery: DeliveryCertainty::NotSent,
         }),

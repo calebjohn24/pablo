@@ -70,7 +70,15 @@ impl Ledger {
         spec: &crate::RunSpec,
         provider: &dyn crate::Provider,
     ) -> Result<Self, &'static str> {
-        let bounds = provider.accounting_bounds(&spec.model, spec.limits.max_output_tokens);
+        Self::for_model(spec, provider, &spec.model, spec.limits.max_output_tokens)
+    }
+    pub(crate) fn for_model(
+        spec: &crate::RunSpec,
+        provider: &dyn crate::Provider,
+        model: &str,
+        max_output_tokens: u32,
+    ) -> Result<Self, &'static str> {
+        let bounds = provider.accounting_bounds(model, max_output_tokens);
         if (spec.limits.max_total_tokens.is_some() && bounds.tokens.is_none())
             || (spec.limits.max_cost_microusd.is_some() && bounds.cost_microusd.is_none())
         {

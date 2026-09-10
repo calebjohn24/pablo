@@ -142,20 +142,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else if mode == "http" {
         let endpoint = args.next().ok_or("fixture endpoint required")?;
         // Reuse the actual CLI configuration, including instructions and caps.
-        let options = config::Options::parse("run".into(), args.map(Into::into))?;
+        let mut options = config::Options::parse("run".into(), args.map(Into::into))?;
+        if let Some(bootstrap) = &mut options.deployment {
+            if bootstrap
+                .fixture_endpoint
+                .as_ref()
+                .is_some_and(|value| value != &endpoint)
+            {
+                return Err("conflicting measurement fixture endpoints".into());
+            }
+            bootstrap.fixture_endpoint = Some(endpoint.clone());
+        }
         let prepared = options.prepare_run(None, None, Some(uuid::Uuid::new_v4().to_string()))?;
         let spec = match &prepared {
             Some(prepared) => prepared.spec().clone(),
             None => options.spec()?,
         };
-        let provider = match &prepared {
-            Some(prepared) => GatewayProvider::configured_fixture(
-                &prepared.deployment().model_profile()?,
-                &endpoint,
-            )?,
-            None => {
-                GatewayProvider::local_fixture_for(options.provider.unwrap_or_default(), &endpoint)?
+        let provider: Box<dyn Provider> = match &prepared {
+            Some(prepared) => {
+                let bootstrap = options.deployment.as_ref().unwrap();
+                // The HTTP measurement always uses an explicit loopback fixture.
+                if bootstrap.fixture_endpoint.as_deref() != Some(endpoint.as_str()) {
+                    return Err(
+                        "measurement requires the matching explicit fixture endpoint".into(),
+                    );
+                }
+                deployment::Secrets::read(prepared, bootstrap)?.provider(bootstrap)?
             }
+            None => Box::new(GatewayProvider::local_fixture_for(
+                options.provider.unwrap_or_default(),
+                &endpoint,
+            )?),
         };
         let tools = match &prepared {
             Some(prepared) => prepared.tools()?,
@@ -165,7 +182,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Some(prepared) => runtime.with_deployment(prepared.deployment()),
             None => runtime,
         };
-        pablo_core::runtime::validate_run(&spec, &provider, &tools)?;
+        pablo_core::runtime::validate_run(&spec, provider.as_ref(), &tools)?;
         let mut trace = prepared
             .as_ref()
             .map(|p| p.create_trace_file())
@@ -179,7 +196,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let outcome = runtime
             .run_with_tools(
                 &spec,
-                &provider,
+                provider.as_ref(),
                 &tools,
                 &CancellationToken::new(),
                 &mut |event: &RunEvent| -> Result<(), SinkError> {

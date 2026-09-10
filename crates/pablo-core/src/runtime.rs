@@ -51,14 +51,66 @@ pub struct Runtime<T> {
 }
 
 struct Execution<'a> {
-    ledger: crate::task::Ledger,
+    attempts: Vec<Attempt<'a>>,
+    route_policy: Option<&'a crate::deployment::RoutePolicy>,
     spec: &'a RunSpec,
-    provider: &'a dyn Provider,
     tools: &'a ToolRegistry,
     cancellation: &'a CancellationToken,
     deadline: Instant,
     root: &'a Context,
     filesystem: Option<crate::filesystem::Workspace>,
+}
+struct Attempt<'a> {
+    provider: &'a dyn Provider,
+    model: &'a str,
+    max_output_tokens: u32,
+    ledger: crate::task::Ledger,
+}
+fn attempts<'a>(
+    spec: &'a RunSpec,
+    provider: &'a dyn Provider,
+) -> Result<Vec<Attempt<'a>>, RunError> {
+    validate(spec, provider)?;
+    if let Some(route) = provider.route() {
+        if spec.model != route.resolved.entries()[0].profile().model {
+            return Err(RunError::InvalidSpec(
+                "run model must match the first route entry",
+            ));
+        }
+        route
+            .resolved
+            .entries()
+            .iter()
+            .zip(&route.providers)
+            .map(|(entry, provider)| {
+                let model = &entry.profile().model;
+                let max_output_tokens =
+                    spec.limits.max_output_tokens.min(entry.max_output_tokens());
+                provider
+                    .validate_model(model, max_output_tokens)
+                    .map_err(RunError::InvalidSpec)?;
+                Ok(Attempt {
+                    provider: provider.as_ref(),
+                    model,
+                    max_output_tokens,
+                    ledger: crate::task::Ledger::for_model(
+                        spec,
+                        provider.as_ref(),
+                        model,
+                        max_output_tokens,
+                    )
+                    .map_err(RunError::InvalidSpec)?,
+                })
+            })
+            .collect()
+    } else {
+        Ok(vec![Attempt {
+            provider,
+            model: &spec.model,
+            max_output_tokens: spec.limits.max_output_tokens,
+            ledger: crate::task::Ledger::new(spec, provider).map_err(RunError::InvalidSpec)?,
+        }])
+    }
 }
 impl Execution<'_> {
     fn stop(&self) -> Option<RunOutcome> {
@@ -121,8 +173,7 @@ where
         cancellation: &CancellationToken,
         sink: &mut dyn EventSink,
     ) -> Result<RunOutcome, RunError> {
-        validate(spec, provider)?;
-        let ledger = crate::task::Ledger::new(spec, provider).map_err(RunError::InvalidSpec)?;
+        let attempts = attempts(spec, provider)?;
         #[cfg(unix)]
         let filesystem = if tools.has_filesystem() {
             Some(
@@ -189,11 +240,11 @@ where
             delivery: DeliveryCertainty::NotSent,
             accounting: crate::task::Accounting::default(),
         };
-        ledger.initialize(&mut lifecycle.accounting);
+        attempts[0].ledger.initialize(&mut lifecycle.accounting);
         let execution = Execution {
-            ledger,
+            attempts,
+            route_policy: provider.route().map(|r| r.resolved.policy()),
             spec,
-            provider,
             tools,
             cancellation,
             deadline,
@@ -255,16 +306,11 @@ where
         let mut continuations: Vec<crate::provider::ContinuationEntry> = Vec::new();
         let mut remaining_tools = spec.limits.max_tool_calls;
         let mut remaining_models = spec.limits.max_model_calls;
+        let mut selected = 0;
 
         loop {
             if let Some(outcome) = execution.stop() {
                 return outcome;
-            }
-            if let Some(remaining) = &mut remaining_models {
-                if *remaining == 0 {
-                    return limit(LimitKind::ModelCalls);
-                }
-                *remaining -= 1;
             }
             let mut context_bytes =
                 serde_json::to_vec(&(&spec.instructions, &history, execution.tools.descriptors()))
@@ -285,21 +331,70 @@ where
             if context_bytes > spec.limits.max_context_bytes {
                 return limit(LimitKind::ContextBytes);
             }
-            let mut progress = ModelProgress::default();
-            let input = ModelInput {
-                history: &history,
-                continuations: &continuations,
-                remaining_context: spec.limits.max_context_bytes - context_bytes,
-                allow_tool_calls: remaining_tools != Some(0)
-                    && remaining_models != Some(0)
-                    && !execution.tools.descriptors().is_empty(),
+            let mut attempts_used = 0;
+            let progress = loop {
+                if let Some(outcome) = execution.stop() {
+                    return outcome;
+                }
+                if let Some(remaining) = &mut remaining_models {
+                    if *remaining == 0 {
+                        return limit(LimitKind::ModelCalls);
+                    }
+                    *remaining -= 1;
+                }
+                let attempt = &execution.attempts[selected];
+                if !attempt
+                    .provider
+                    .accepts_history(attempt.model, &history, &continuations)
+                {
+                    return RunOutcome::Failed {
+                        code: FailureCode::ContinuationIncompatible,
+                        delivery: DeliveryCertainty::NotSent,
+                    };
+                }
+                let deadline = execution.route_policy.map_or(execution.deadline, |p| {
+                    Instant::now()
+                        .checked_add(Duration::from_millis(p.per_attempt_timeout_ms))
+                        .unwrap_or(execution.deadline)
+                        .min(execution.deadline)
+                });
+                let input = ModelInput {
+                    attempt,
+                    deadline,
+                    history: &history,
+                    continuations: &continuations,
+                    remaining_context: spec.limits.max_context_bytes - context_bytes,
+                    allow_tool_calls: remaining_tools != Some(0)
+                        && remaining_models != Some(0)
+                        && !execution.tools.descriptors().is_empty(),
+                };
+                let mut progress = ModelProgress::default();
+                attempts_used += 1;
+                match self
+                    .model(execution, lifecycle, &input, &mut progress, &mut ids)
+                    .await
+                {
+                    Ok(()) => break progress,
+                    Err(outcome) => {
+                        let eligible = execution.route_policy.is_some_and(|policy| {
+                            progress.retry_class.is_some_and(|class| {
+                                policy.eligible_errors.iter().any(|e| e == class)
+                                    && (class != "transport_uncertain"
+                                        || policy.retry_uncertain_delivery)
+                            }) && attempts_used < policy.max_attempts
+                        });
+                        if !eligible
+                            || progress.chunks != 0
+                            || !progress.pending.is_empty()
+                            || !progress.tool_calls.is_empty()
+                            || selected + 1 >= execution.attempts.len()
+                        {
+                            return outcome;
+                        }
+                        selected += 1;
+                    }
+                }
             };
-            if let Err(outcome) = self
-                .model(execution, lifecycle, &input, &mut progress, &mut ids)
-                .await
-            {
-                return outcome;
-            }
 
             if let Some(outcome) = execution.stop() {
                 return outcome;
@@ -358,24 +453,23 @@ where
         progress: &mut ModelProgress,
         ids: &mut HashSet<String>,
     ) -> Result<(), RunOutcome> {
-        lifecycle.model_profile = execution.provider.profile_identity();
+        lifecycle.model_profile = input.attempt.provider.profile_identity();
         if !lifecycle.can_start_operation() {
             return Err(limit(LimitKind::Events));
         }
-        let spec = execution.spec;
         let started = telemetry::now();
         let model = execution.root.with_span(
             self.tracer
-                .span_builder(format!("chat {}", spec.model))
+                .span_builder(format!("chat {}", input.attempt.model))
                 .with_kind(SpanKind::Client)
                 .with_start_time(started)
                 .with_attributes([
                     KeyValue::new("gen_ai.operation.name", "chat"),
-                    KeyValue::new("gen_ai.provider.name", execution.provider.name()),
-                    KeyValue::new("gen_ai.request.model", spec.model.clone()),
+                    KeyValue::new("gen_ai.provider.name", input.attempt.provider.name()),
+                    KeyValue::new("gen_ai.request.model", input.attempt.model.to_owned()),
                     KeyValue::new(
                         "gen_ai.request.max_tokens",
-                        i64::from(spec.limits.max_output_tokens),
+                        i64::from(input.attempt.max_output_tokens),
                     ),
                     KeyValue::new("gen_ai.request.stream", true),
                     KeyValue::new("gen_ai.conversation.id", lifecycle.session_id.clone()),
@@ -400,8 +494,8 @@ where
         }
         let mut result = match lifecycle.emit(
             EventKind::ModelStarted {
-                provider: execution.provider.name().into(),
-                model: spec.model.clone(),
+                provider: input.attempt.provider.name().into(),
+                model: input.attempt.model.to_owned(),
             },
             &model,
             Some(&parent),
@@ -419,12 +513,13 @@ where
                     ..
                 })
             );
-            if let Err(outcome) = execution.ledger.settle(
+            if let Err(outcome) = input.attempt.ledger.settle(
                 &mut lifecycle.accounting,
                 &progress.usage,
                 progress.cost_microusd,
                 not_sent,
             ) {
+                progress.retry_class = None;
                 result = Err(outcome);
             }
         }
@@ -440,6 +535,9 @@ where
             output_bytes: progress.output.len(),
         };
         let closing = lifecycle.emit(finish_event, &model, Some(&parent), finished, true);
+        if closing.is_err() {
+            progress.retry_class = None;
+        }
         let result = result.and(closing); // Preserve the first failure, including delivery certainty.
         if let Err(outcome) = &result {
             telemetry::outcome(&model, outcome);
@@ -622,6 +720,7 @@ where
 
 #[derive(Default)]
 struct ModelProgress {
+    retry_class: Option<&'static str>,
     continuation: Option<crate::provider::Continuation>,
     cost_microusd: Option<u64>,
     dispatched: bool,
@@ -639,6 +738,8 @@ struct PendingCall {
 }
 
 struct ModelInput<'a> {
+    attempt: &'a Attempt<'a>,
+    deadline: Instant,
     history: &'a [Message],
     continuations: &'a [crate::provider::ContinuationEntry],
     remaining_context: usize,
@@ -656,7 +757,7 @@ async fn consume(
     let spec = execution.spec;
     let parent = execution.root.span().span_context().span_id().to_string();
     let request = ModelRequest {
-        model: &spec.model,
+        model: input.attempt.model,
         input: &spec.input,
         instructions: &spec.instructions,
         messages: input.history,
@@ -667,15 +768,15 @@ async fn consume(
         max_output_bytes: spec.limits.max_output_bytes,
         tools: execution.tools.descriptors(),
         allow_tool_calls: input.allow_tool_calls,
-        max_output_tokens: spec.limits.max_output_tokens,
-        deadline: execution.deadline,
+        max_output_tokens: input.attempt.max_output_tokens,
+        deadline: input.deadline,
         context: model.clone(),
         cancellation: execution.cancellation.clone(),
     };
     if let Some(outcome) = execution.stop() {
         return Err(outcome);
     }
-    execution.ledger.reserve(&mut lifecycle.accounting)?;
+    input.attempt.ledger.reserve(&mut lifecycle.accounting)?;
     lifecycle.accounting.model_calls = lifecycle
         .accounting
         .model_calls
@@ -686,12 +787,15 @@ async fn consume(
     let opened = tokio::select! {
         biased;
         _ = execution.cancellation.cancelled() => return Err(RunOutcome::Cancelled),
-        _ = sleep_until(execution.deadline) => return Err(RunOutcome::TimedOut),
-        result = execution.provider.stream(request) => result,
+        _ = sleep_until(input.deadline) => return Err(attempt_timeout(execution, progress)),
+        result = input.attempt.provider.stream(request) => result,
     };
-    let mut stream = opened.map_err(|error| RunOutcome::Failed {
-        code: error.code,
-        delivery: error.delivery,
+    let mut stream = opened.map_err(|error| {
+        progress.retry_class = error.fallback_class();
+        RunOutcome::Failed {
+            code: error.code,
+            delivery: error.delivery,
+        }
     })?;
     let mut frames = 0u64;
     loop {
@@ -702,7 +806,7 @@ async fn consume(
         let next = tokio::select! {
             biased;
             _ = execution.cancellation.cancelled() => return Err(RunOutcome::Cancelled),
-            _ = sleep_until(execution.deadline) => return Err(RunOutcome::TimedOut),
+            _ = sleep_until(input.deadline) => return Err(attempt_timeout(execution, progress)),
             result = stream.next() => result,
         };
         if matches!(next, Some(Ok(_))) {
@@ -716,6 +820,7 @@ async fn consume(
         }
         match next {
             Some(Err(error)) => {
+                progress.retry_class = error.fallback_class();
                 return Err(RunOutcome::Failed {
                     code: error.code,
                     delivery: error.delivery,
@@ -813,7 +918,7 @@ async fn consume(
                     || progress
                         .usage
                         .output_tokens
-                        .is_some_and(|n| n > u64::from(spec.limits.max_output_tokens))
+                        .is_some_and(|n| n > u64::from(input.attempt.max_output_tokens))
                 {
                     return Err(limit(LimitKind::OutputTokens));
                 }
@@ -868,6 +973,17 @@ fn tool_failure(result: &ToolResult) -> Option<RunOutcome> {
         ToolStatus::EventSinkFailed => failed(FailureCode::EventSinkIo),
         ToolStatus::SpawnFailed | ToolStatus::IoFailed => failed(FailureCode::ToolExecution),
     })
+}
+
+fn attempt_timeout(execution: &Execution<'_>, progress: &mut ModelProgress) -> RunOutcome {
+    if let Some(outcome) = execution.stop() {
+        return outcome;
+    }
+    progress.retry_class = Some("transport_uncertain");
+    RunOutcome::Failed {
+        code: FailureCode::ModelAttemptTimedOut,
+        delivery: DeliveryCertainty::MayHaveBeenSent,
+    }
 }
 
 fn validate(spec: &RunSpec, provider: &dyn Provider) -> Result<(), RunError> {
@@ -927,8 +1043,7 @@ pub fn validate_run(
     provider: &dyn Provider,
     tools: &ToolRegistry,
 ) -> Result<(), RunError> {
-    validate(spec, provider)?;
-    crate::task::Ledger::new(spec, provider).map_err(RunError::InvalidSpec)?;
+    attempts(spec, provider)?;
     #[cfg(unix)]
     if tools.has_filesystem() {
         crate::filesystem::Workspace::new(&spec.workspace, tools.policy())

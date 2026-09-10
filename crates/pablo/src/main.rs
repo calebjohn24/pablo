@@ -92,7 +92,7 @@ async fn execute(
         .map(|prepared| deployment::Secrets::read(prepared, options.deployment.as_ref().unwrap()))
         .transpose()?;
     let provider: Box<dyn Provider> = if let Some(secrets) = &secrets {
-        Box::new(secrets.provider(options.deployment.as_ref().unwrap())?)
+        secrets.provider(options.deployment.as_ref().unwrap())?
     } else if options.live {
         if let Some(endpoint) = std::env::var_os("PABLO_FIXTURE_ENDPOINT") {
             Box::new(GatewayProvider::local_fixture_for(

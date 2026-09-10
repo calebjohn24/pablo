@@ -65,9 +65,41 @@ pub enum ProviderEvent {
 /// Closed codes keep raw transport errors, request bodies, and keys out of traces.
 #[derive(Clone, Copy, Debug)]
 pub struct ProviderError {
+    pub retry_class: Option<RetryClass>,
     pub code: FailureCode,
     pub delivery: DeliveryCertainty,
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RetryClass {
+    RateLimited,
+    ServiceUnavailable,
+}
+impl ProviderError {
+    pub(crate) fn fallback_class(self) -> Option<&'static str> {
+        match (self.code, self.delivery, self.retry_class) {
+            (FailureCode::ProviderTransport, DeliveryCertainty::NotSent, _) => Some("not_sent"),
+            (
+                FailureCode::ProviderTransport,
+                DeliveryCertainty::MayHaveBeenSent | DeliveryCertainty::ResponseReceived,
+                _,
+            ) => Some("transport_uncertain"),
+            (
+                FailureCode::ProviderRejected,
+                DeliveryCertainty::ResponseReceived,
+                Some(RetryClass::RateLimited),
+            ) => Some("rate_limited"),
+            (
+                FailureCode::ProviderRejected,
+                DeliveryCertainty::ResponseReceived,
+                Some(RetryClass::ServiceUnavailable),
+            ) => Some("service_unavailable"),
+            _ => None,
+        }
+    }
+}
+mod route;
+pub use route::ProviderRoute;
 
 pub type ProviderStream<'a> = BoxStream<'a, Result<ProviderEvent, ProviderError>>;
 
@@ -81,6 +113,18 @@ pub struct AccountingBounds {
 /// Futures and streams must yield promptly; dropping them cancels owned work.
 /// Adapters must bound frame allocation before creating normalized deltas.
 pub trait Provider: Send + Sync {
+    /// Immutable adapters; selection belongs to a single runtime task.
+    fn route(&self) -> Option<&ProviderRoute> {
+        None
+    }
+    fn accepts_history(
+        &self,
+        _model: &str,
+        _messages: &[Message],
+        entries: &[ContinuationEntry],
+    ) -> bool {
+        entries.is_empty()
+    }
     fn validate_model(&self, _model: &str, _max_output_tokens: u32) -> Result<(), &'static str> {
         Ok(())
     }
