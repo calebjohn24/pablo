@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_revision": "c3.4",
+  "contract_revision": "c3.5",
   "config": {
     "deployment": {
       "locked": true,
@@ -20,7 +20,7 @@
       },
       "model": {
         "provider": "vercel",
-        "id": "google/gemini-3.8-flash",
+        "id": "zai/glm-5.3-flash",
         "endpoint": "https://ai-gateway.vercel.sh/v1/chat/completions",
         "credential": "gateway"
       },
@@ -122,7 +122,7 @@
           "fs.search"
         ],
         "model_ids": [
-          "google/gemini-3.8-flash"
+          "zai/glm-5.3-flash"
         ],
         "provider_endpoints": [
           "https://ai-gateway.vercel.sh/v1/chat/completions"
@@ -151,19 +151,19 @@
       "id": "source-0000",
       "kind": "defaults",
       "locator": "deployment-defaults-v1.json",
-      "digest": "sha256:d6de0a14baad734ba8e13ec56aed343484d1d18d252c0f1971a18e403fa3704b"
+      "digest": "sha256:f4ac8d9a9f1c6b2d7e76818f9496c10519979771d5126fdcc9a4dce2a538f7b2"
     },
     {
       "id": "source-0001",
       "kind": "file",
       "locator": "modules/base.toml",
-      "digest": "sha256:b1af25db9957e24a1fa268833efe725503e97715fb518d71314b47528c3f0e92"
+      "digest": "sha256:33b0094873bfbf0144f4a02dee940cc8c38be50c461334f3accbebe47c9f4ad4"
     },
     {
       "id": "source-0002",
       "kind": "file",
       "locator": "production.toml",
-      "digest": "sha256:04bc3732dd312bf363980a1652d38c3addc57c48d47a411d84be6ae3b1f8e9f2"
+      "digest": "sha256:322c4c22ebae65114635d78710d8dd2641b06206c2e337289f34922f626b47f5"
     },
     {
       "id": "source-0003",
@@ -794,6 +794,6 @@
       }
     ]
   },
-  "fingerprint": "sha256:cb34f67b07c9881a09729ac6bad3b5a5db23e930195a47c84081b80f189180c9",
-  "input_fingerprint": "sha256:a72d506c9992c14c992219678d2fb5e39bd11a0574316a29b75ad6d2d913fca4"
+  "fingerprint": "sha256:2529b667058c1cf8b3c26a406628e5cf269322d2bf1deacf75ebf2568003a198",
+  "input_fingerprint": "sha256:b5a786c968d7ce34111d9f3bb0977aa9abd4098a2338a9cef43148ee1412d97e"
 }

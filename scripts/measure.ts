@@ -53,7 +53,7 @@ const frame = (delta: object, finish: string | null = null) => `data: ${JSON.str
 const gateway = await server(async (req, res) => {
   requestTimes.push(performance.now());
   const request = JSON.parse((await body(req)).toString());
-  assert.equal(request.model, 'fixture/measure');
+  assert.equal(request.model, 'zai/glm-5.3-flash');
   res.writeHead(200, { 'content-type': 'text/event-stream' });
   if (request.messages.at(-1).content === firstDeltaTask) {
     firstDeltaSentAt = performance.now();
@@ -73,14 +73,14 @@ const gateway = await server(async (req, res) => {
 const endpoint = `${gateway.url}/v1/chat/completions`;
 const task = 'Run the fixed measurement task.';
 const entry=join(cwd,'deployment.toml');
-const options = configured ? ['--config',entry,'--bind',`workspace=${cwd}`,'--fixture-endpoint',endpoint] : ['--model', 'fixture/measure', '--max-model-calls', '2', '--max-tool-calls', '1'];
+const options = configured ? ['--config',entry,'--bind',`workspace=${cwd}`,'--fixture-endpoint',endpoint] : ['--model', 'zai/glm-5.3-flash', '--max-model-calls', '2', '--max-tool-calls', '1'];
 try {
   if(configured) await writeFile(entry,`schema_version=1
 [credentials.gateway]
 consumer="provider.vercel"
 sources=[{kind="environment",name="UNREAD_FIXTURE_KEY"}]
 [options.model]
-id="fixture/measure"
+id="zai/glm-5.3-flash"
 [options.limits]
 max_model_calls=2
 max_tool_calls=1

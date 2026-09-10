@@ -118,6 +118,16 @@ fn directory(path: &Path, option: &str) -> Result<PathBuf, ConfigError> {
 }
 
 impl ResolvedDeployment {
+    pub fn model_profile(&self) -> Result<crate::gateway::ModelProfile, ConfigError> {
+        let model = &self.options()["model"];
+        let kind = model["provider"]
+            .as_str()
+            .unwrap()
+            .parse()
+            .map_err(|_| error("config_invalid_value", "/options/model/provider"))?;
+        crate::gateway::ModelProfile::resolve(kind, model["id"].as_str())
+            .map_err(|_| error("config_invalid_value", "/options/model/id"))
+    }
     pub fn prepare_run(&self, input: RunInput) -> Result<PreparedRun, ConfigError> {
         let options = self.options();
         if self.config["deployment"]["locked"] == true
@@ -129,8 +139,10 @@ impl ResolvedDeployment {
         {
             return Err(error("config_override_forbidden", "/input"));
         }
-        if options["model"]["endpoint"] != crate::gateway::VERCEL_ENDPOINT {
-            return Err(error("config_invalid_value", "/options/model/endpoint"));
+        if !self.model_profile()?.adapter_available {
+            let mut diagnostic = error("config_unsupported_feature", "/options/model/provider");
+            diagnostic.owner = Some("C3.6");
+            return Err(diagnostic);
         }
         let config_root = directory(&self.config_root, "/config_root")?;
         let mut roots = BTreeMap::new();

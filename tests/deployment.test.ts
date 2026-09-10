@@ -40,7 +40,7 @@ test('configured CLI and ACP use one lifecycle, identical identity and synthetic
   const gateway=await server(async (req,res)=>{
     assert.equal(req.headers.authorization,'Bearer pablo-local-fixture');
     const payload=JSON.parse((await body(req)).toString()); seen.push(payload);
-    assert.equal(payload.model,'google/gemini-3.8-flash');
+    assert.equal(payload.model,'zai/glm-5.3-flash');
     assert(!payload.tools || payload.tools.length===0);
     answer(res);
   });
@@ -61,7 +61,7 @@ test('configured CLI and ACP use one lifecycle, identical identity and synthetic
       assert(outcome.status==='completed'); assert.equal(outcome.output,'configured answer');
       identity=(response._meta?.['pablo/v1'] as any).deployment;
     });
-    assert.deepEqual(identity,{schema_version:1,contract_revision:'c3.4',fingerprint:expected});
+    assert.deepEqual(identity,{schema_version:1,contract_revision:'c3.5',fingerprint:expected});
     assert.equal(seen.length,2); assert.deepEqual(seen[0],seen[1]);
     const traces=(await readdir(cwd)).filter(name=>name.endsWith('.jsonl'));assert.equal(traces.length,2);
     for(const name of traces){

@@ -22,7 +22,7 @@ pub use credentials::{
 };
 pub use resolve::{LoadedDeployment, load, resolve};
 
-pub const CONTRACT_REVISION: &str = "c3.4";
+pub const CONTRACT_REVISION: &str = "c3.5";
 pub const DOCUMENT_SCHEMA: &str =
     include_str!("../../../../docs/project/schemas/deployment-v1.schema.json");
 pub const DEFAULT_OPTIONS: &str =

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:pablo:deployment:1:c3.4",
-  "title": "Pablo deployment v1 \u2014 C3.4 configuration contract",
+  "$id": "urn:pablo:deployment:1:c3.5",
+  "title": "Pablo deployment v1 \u2014 C3.5 configuration contract",
   "description": "TOML-to-JSON shape. See c3-deployment-config.md for semantic checks and implementation availability.",
   "type": "object",
   "additionalProperties": false,
@@ -741,7 +741,10 @@
           "additionalProperties": false,
           "properties": {
             "provider": {
-              "const": "vercel"
+              "enum": [
+                "vercel",
+                "openrouter"
+              ]
             },
             "id": {
               "type": "string",
@@ -750,7 +753,10 @@
               "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
             },
             "endpoint": {
-              "const": "https://ai-gateway.vercel.sh/v1/chat/completions"
+              "enum": [
+                "https://ai-gateway.vercel.sh/v1/chat/completions",
+                "https://openrouter.ai/api/v1/chat/completions"
+              ]
             },
             "credential": {
               "$ref": "#/$defs/name"
@@ -1065,6 +1071,7 @@
         "consumer": {
           "enum": [
             "provider.vercel",
+            "provider.openrouter",
             "otel.headers"
           ]
         },
@@ -1191,7 +1198,10 @@
           "additionalProperties": false,
           "properties": {
             "provider": {
-              "const": "vercel"
+              "enum": [
+                "vercel",
+                "openrouter"
+              ]
             },
             "id": {
               "type": "string",
@@ -1200,7 +1210,10 @@
               "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
             },
             "endpoint": {
-              "const": "https://ai-gateway.vercel.sh/v1/chat/completions"
+              "enum": [
+                "https://ai-gateway.vercel.sh/v1/chat/completions",
+                "https://openrouter.ai/api/v1/chat/completions"
+              ]
             },
             "credential": {
               "$ref": "#/$defs/name"
@@ -1535,6 +1548,7 @@
         "consumer": {
           "enum": [
             "provider.vercel",
+            "provider.openrouter",
             "otel.headers"
           ]
         },
@@ -1728,6 +1742,7 @@
       "properties": {
         "option": {
           "enum": [
+            "model.provider",
             "model.id",
             "shell.enabled",
             "filesystem.enabled",

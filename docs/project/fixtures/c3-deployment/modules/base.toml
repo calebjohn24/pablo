@@ -9,7 +9,7 @@ workspace = { base = "binding", name = "workspace", path = "." }
 
 [options.model]
 provider = "vercel"
-id = "google/gemini-3.8-flash"
+id = "zai/glm-5.3-flash"
 credential = "gateway"
 
 [options.policy.read_roots]

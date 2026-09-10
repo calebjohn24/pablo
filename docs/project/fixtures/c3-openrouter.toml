@@ -1,0 +1,10 @@
+schema_version = 1
+
+[credentials.gateway]
+consumer = "provider.openrouter"
+sources = [{kind = "environment", name = "OPENROUTER_API_KEY"}]
+
+[options.model]
+provider = "openrouter"
+# Omission selects z-ai/glm-5.3-flash and the fixed OpenRouter endpoint.
+# Offline inspection works at C3.5; execution requires the C3.6 adapter.

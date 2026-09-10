@@ -12,10 +12,10 @@ Each row inherits owner C3.3, availability `c3.1` contract / C3.2 resolver / C3.
 | --- | --- | --- |
 | `run.workspace` | Path; explicit deployments default to binding `workspace`, path `.` | `RunSpec.workspace`; cannot be relative to itself; legacy CLI resolves invocation cwd, ACP uses `session/new.cwd`, Rust supplies its workspace |
 | `run.instructions` | String, exact current CLI instruction in defaults JSON | `RunSpec.instructions`; at most 1 MiB; local inspection only. A configured embedded run uses this same value; raw `RunSpec::new` retains its empty instruction default |
-| `model.provider` | Enum `vercel` | `GatewayProvider`; other known provider values fail as unsupported until C3.5/C3.6/C3.9 |
-| `model.id` | Nonempty string, `google/gemini-3.8-flash` | `RunSpec.model`; at most 256 bytes without whitespace/control; preserved current default, no new live availability claim |
-| `model.endpoint` | Literal `https://ai-gateway.vercel.sh/v1/chat/completions` | Gateway-owned destination; generalized endpoint policy belongs to C3.5 |
-| `model.credential` | Name, `gateway` | Must refer to one `provider.vercel` record; explicit presets declare it; compatibility mode synthesizes legacy references privately |
+| `model.provider` | Enum `vercel` (default), `openrouter` | C3.5 selection/inspection; OpenRouter admission fails until C3.6. [Provider contract](c3-provider-selection.md) defines adapter availability and capabilities |
+| `model.id` | Nonempty string; Vercel `zai/glm-5.3-flash`, OpenRouter `z-ai/glm-5.3-flash` | C3.5 follows the user-selected defaults for runs and provider testing; explicit IDs override defaults; at most 256 UTF-8 bytes without whitespace/control. Catalog presence does not claim live acceptance |
+| `model.endpoint` | Provider-owned literal chat-completions URL | Vercel `https://ai-gateway.vercel.sh/v1/chat/completions`; OpenRouter `https://openrouter.ai/api/v1/chat/completions`. Omission follows selection; explicit cross-provider/arbitrary endpoints reject |
+| `model.credential` | Name, `gateway` | Must refer to one matching `provider.vercel` or `provider.openrouter` record; explicit presets declare it; compatibility mode synthesizes legacy references privately |
 | `limits.max_model_calls`, `limits.max_tool_calls` | Optional u32 counts, `unlimited` each | `RunLimits`; never replace unlimited defaults with incidental config/parser limits |
 | `limits.max_total_tokens`, `limits.max_cost_microusd` | Optional `u64str`, `unlimited` each | C2 attested admission/reservations; live Vercel still rejects unsupported hard ceilings before delivery |
 | `limits.max_run_duration_ms`, `limits.max_tool_duration_ms` | Integer 1–86,400,000; 3,600,000 / 900,000 | Existing CLI range, expressed in ms; task-level shell timeout may narrow tool duration. Direct legacy Rust retains its existing representable-duration behavior |
@@ -64,7 +64,7 @@ These namespaces are reserved and rejected by the baseline schema. The listed ow
 
 | Reserved surface | Owner and availability gate | Required options and authority coverage |
 | --- | --- | --- |
-| New `model.provider` variants / endpoint options | C3.5 selection; OpenRouter C3.6; Open Responses C3.8–C3.9 | Provider endpoint/credential scope, supported model parameters/capabilities, bounded shared transport; no unchecked arbitrary provider option bag |
+| OpenRouter execution / Open Responses selection and execution | OpenRouter C3.6; Open Responses C3.8–C3.9 | C3.5 provider selection and shared transport are implemented; each new adapter owns its verified mapping/capabilities, endpoint/credential scope and protocol fields |
 | `models`, `routes`, `model_route` | C3.10 contracts, C3.11 execution / F01–F03 | Named exact profiles and ordered route, attempt/deadline policy, transient classes/uncertain-delivery opt-in, one retry owner, compatible continuation, child subset rules and accounting |
 | `output` | C3.13 validation; C3.14 repair | Local schema reference/digest, supported Draft 2020-12 subset and work bounds, output mode, one-repair choice/feedback budget; envelope stdout remains separate |
 | `mcp` | C3.15 contracts; C3.16 stdio, C3.17 HTTP, C3.18 integration | Named servers; executable/argv/cwd/cleared env or endpoint; scoped credential refs; required/optional startup; exact server/tool catalog/policy; request/result/progress/process/concurrency/startup/cleanup bounds |
@@ -86,7 +86,7 @@ Inventory audit sources are current [CLI configuration](../../../crates/pablo/sr
 | Quoted task / prompt / `RunSpec.input`; session ID | Dynamic per-run data, never persisted or hashed in a preset; input permission explicit, identities host/protocol-owned |
 | `run`, shorthand, `demo`, `acp --stdio`, help/version | Invocation/interface selection or offline fixture; not a deployment-granted capability. Future TUI selection owned by C3.29 |
 | `--workspace`, ACP cwd, Rust workspace | `run.workspace` after typed binding/override admission; locked ACP cwd must match or be an expressly permitted contained workspace |
-| `--model`, Rust model | `model.id`; configured host resolves the same provider identity |
+| `--provider`, `--model`, Rust `ModelProfile` | `model.provider`, `model.id`; configured host resolves the same provider identity/default/endpoint |
 | `--no-shell`, `--no-filesystem`, `--allow-write` | `shell.enabled = false`, `filesystem.enabled = false`, `filesystem.write = true` |
 | `--policy PATH` | Parse existing bounded C2 JSON policy as one explicit ordinary policy layer; cannot erase accumulated authority. C3.3 retains legacy behavior; rendered output contains typed rules, not a second live policy-file reference |
 | Timeout and `--max-*` flags | Corresponding `limits` leaves; seconds convert with checked multiplication by 1,000, u64 ceilings normalize to decimal strings |

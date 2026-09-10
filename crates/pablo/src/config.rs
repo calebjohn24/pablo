@@ -15,6 +15,7 @@ pub struct Options {
     pub json: bool,
     pub trace_path: Option<PathBuf>,
     pub env_file: Option<PathBuf>,
+    provider: Option<pablo_core::gateway::GatewayKind>,
     pub no_shell: bool,
     pub no_filesystem: bool,
     pub allow_write: bool,
@@ -56,6 +57,7 @@ impl Options {
             json: false,
             trace_path: None,
             env_file: None,
+            provider: None,
             no_shell: false,
             no_filesystem: false,
             allow_write: false,
@@ -128,6 +130,7 @@ impl Options {
                         "--policy"
                             | "--workspace"
                             | "--model"
+                            | "--provider"
                             | "--env-file"
                             | "--timeout"
                             | "--tool-timeout"
@@ -161,6 +164,10 @@ impl Options {
                 "--trace" => options.trace_path = Some(value.into()),
                 "--workspace" => options.workspace = Some(value.into()),
                 "--env-file" => options.env_file = Some(value.into()),
+                "--provider" => {
+                    options.provider =
+                        Some(value.to_str().ok_or("provider must be UTF-8")?.parse()?);
+                }
                 "--model" => {
                     options.model = Some(value.into_string().map_err(|_| "model must be UTF-8")?)
                 }
@@ -221,6 +228,9 @@ impl Options {
         if !options.live && options.deployment.is_some() {
             return Err("config_override_forbidden at /demo".into());
         }
+        if options.deployment.is_none() {
+            options.provider.unwrap_or_default().ensure_available()?;
+        }
         options.explicit = seen;
         Ok(options)
     }
@@ -278,6 +288,9 @@ impl Options {
             if let Some(value) = value {
                 overrides.insert(option.into(), value.to_string().into());
             }
+        }
+        if let Some(provider) = self.provider {
+            overrides.insert("model.provider".into(), provider.name().into());
         }
         if let Some(model) = &self.model {
             overrides.insert("model.id".into(), model.clone().into());
@@ -382,7 +395,9 @@ impl Options {
             RunSpec::new(
                 &self.input,
                 workspace,
-                self.model.as_deref().unwrap_or("google/gemini-3.8-flash"),
+                self.model
+                    .as_deref()
+                    .unwrap_or(self.provider.unwrap_or_default().default_model()),
             )
         } else {
             RunSpec::new(
@@ -419,16 +434,44 @@ impl Options {
 /// Parse privately; never mutate the process environment, source a shell file,
 /// search parent directories, or include parser errors (which contain values).
 pub fn gateway_key(path: Option<&Path>) -> Result<String, String> {
-    if let Some(value) =
-        std::env::var_os("AI_GATEWAY_API_KEY").or_else(|| std::env::var_os("VERCEL_AI_GATEWAY"))
-    {
-        return value
-            .into_string()
-            .map_err(|_| "AI_GATEWAY_API_KEY must be UTF-8".into());
+    provider_key(pablo_core::gateway::GatewayKind::Vercel, path)
+}
+
+pub fn provider_key(
+    kind: pablo_core::gateway::GatewayKind,
+    path: Option<&Path>,
+) -> Result<String, String> {
+    key_from_sources(kind, path, |name| {
+        std::env::var_os(name)
+            .map(|value| {
+                value
+                    .into_string()
+                    .map_err(|_| format!("{name} must be UTF-8"))
+            })
+            .transpose()
+    })
+}
+fn key_from_sources(
+    kind: pablo_core::gateway::GatewayKind,
+    path: Option<&Path>,
+    mut environment: impl FnMut(&str) -> Result<Option<String>, String>,
+) -> Result<String, String> {
+    let names: &[&str] = match kind {
+        pablo_core::gateway::GatewayKind::Vercel => &["AI_GATEWAY_API_KEY", "VERCEL_AI_GATEWAY"],
+        pablo_core::gateway::GatewayKind::Openrouter => &["OPENROUTER_API_KEY"],
+    };
+    for name in names {
+        if let Some(value) = environment(name)? {
+            return Ok(value);
+        }
     }
     let path = path.unwrap_or(Path::new(".env"));
-    let file = File::open(path)
-        .map_err(|_| "set AI_GATEWAY_API_KEY or place it in .env (or select --env-file PATH)")?;
+    let file = File::open(path).map_err(|_| {
+        format!(
+            "set {} or place it in .env (or select --env-file PATH)",
+            names[0]
+        )
+    })?;
     let mut bytes = Vec::new();
     file.take(64 * 1024 + 1)
         .read_to_end(&mut bytes)
@@ -436,23 +479,103 @@ pub fn gateway_key(path: Option<&Path>) -> Result<String, String> {
     if bytes.len() > 64 * 1024 {
         return Err("environment file exceeds 64 KiB".into());
     }
-    let mut key = None;
-    let mut alias = None;
+    let mut keys = std::collections::BTreeMap::new();
     for item in dotenvy::from_read_iter(bytes.as_slice()) {
         let (name, value) = item.map_err(|_| "cannot parse environment file")?;
-        if name == "AI_GATEWAY_API_KEY" {
-            if key.is_some() {
-                return Err("duplicate AI_GATEWAY_API_KEY in environment file".into());
-            }
-            key = Some(value);
-        } else if name == "VERCEL_AI_GATEWAY" {
-            if alias.is_some() {
-                return Err("duplicate VERCEL_AI_GATEWAY in environment file".into());
-            }
-            alias = Some(value);
+        if names.contains(&name.as_str()) && keys.insert(name.clone(), value).is_some() {
+            return Err(format!("duplicate {name} in environment file"));
         }
     }
-    key.or(alias).ok_or_else(|| {
+    for name in names {
+        if let Some(value) = keys.remove(*name) {
+            return Ok(value);
+        }
+    }
+    Err(if kind == pablo_core::gateway::GatewayKind::Vercel {
         "environment file must contain AI_GATEWAY_API_KEY (or VERCEL_AI_GATEWAY)".into()
+    } else {
+        "environment file must contain OPENROUTER_API_KEY".into()
     })
+}
+
+#[cfg(test)]
+mod credential_tests {
+    use super::*;
+    use pablo_core::gateway::GatewayKind::{Openrouter, Vercel};
+    #[test]
+    fn provider_key_precedence_and_names_stay_independent() {
+        let root =
+            std::env::temp_dir().join(format!("pablo-provider-keys-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir(&root).unwrap();
+        let file = root.join("synthetic.env");
+        std::fs::write(&file,"VERCEL_AI_GATEWAY=alias-file\nAI_GATEWAY_API_KEY=primary-file\nOPENROUTER_API_KEY=router-file\n").unwrap();
+        for (kind, values, expected) in [
+            (
+                Vercel,
+                vec![
+                    ("AI_GATEWAY_API_KEY", "primary-env"),
+                    ("VERCEL_AI_GATEWAY", "alias-env"),
+                    ("OPENROUTER_API_KEY", "router-env"),
+                ],
+                "primary-env",
+            ),
+            (
+                Vercel,
+                vec![
+                    ("VERCEL_AI_GATEWAY", "alias-env"),
+                    ("OPENROUTER_API_KEY", "router-env"),
+                ],
+                "alias-env",
+            ),
+            (
+                Vercel,
+                vec![("OPENROUTER_API_KEY", "router-env")],
+                "primary-file",
+            ),
+            (
+                Openrouter,
+                vec![
+                    ("AI_GATEWAY_API_KEY", "primary-env"),
+                    ("OPENROUTER_API_KEY", "router-env"),
+                ],
+                "router-env",
+            ),
+            (
+                Openrouter,
+                vec![("VERCEL_AI_GATEWAY", "alias-env")],
+                "router-file",
+            ),
+            (
+                Vercel,
+                vec![
+                    ("AI_GATEWAY_API_KEY", ""),
+                    ("VERCEL_AI_GATEWAY", "alias-env"),
+                ],
+                "",
+            ),
+        ] {
+            let result = key_from_sources(kind, Some(&file), |name| {
+                Ok(values
+                    .iter()
+                    .find(|(key, _)| *key == name)
+                    .map(|(_, value)| value.to_string()))
+            })
+            .unwrap();
+            assert_eq!(result, expected);
+        }
+        std::fs::write(&file, "AI_GATEWAY_API_KEY=primary-only\n").unwrap();
+        assert!(key_from_sources(Openrouter, Some(&file), |_| Ok(None)).is_err());
+        std::fs::write(
+            &file,
+            "OPENROUTER_API_KEY=first\nOPENROUTER_API_KEY=second\n",
+        )
+        .unwrap();
+        let error = key_from_sources(Openrouter, Some(&file), |_| Ok(None)).unwrap_err();
+        assert!(error.contains("duplicate OPENROUTER_API_KEY"));
+        assert!(!error.contains("first"));
+        assert!(
+            key_from_sources(Vercel, Some(&file), |_| Err("invalid present value".into())).is_err()
+        );
+        std::fs::remove_dir_all(root).unwrap();
+    }
 }

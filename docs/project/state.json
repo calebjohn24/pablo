@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-09T22:43:01.900Z",
+  "updated_at": "2026-09-10T17:19:10.750Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.5",
-  "next_action": "Activate C3.5 on feat/c3-provider-transport (merged C3.4 base 721dcfa). Freeze provider selection/credential/endpoint/availability contracts, verify an official OpenRouter candidate and implement the required shared transport seam with P01 and matched performance. Preserve Vercel behavior and unlimited filesystem defaults; continue remaining C3 checkpoints.",
-  "latest_log_entry": "LOG-0063",
+  "next_checkpoint": "C3.6",
+  "next_action": "Merge the verified C3.5 PR, then activate C3.6 for OpenRouter streamed tool calls and P02 with z-ai/glm-5.3-flash. Preserve Vercel zai/glm-5.3-flash defaults, unlimited filesystem work, credential isolation and cancellation. Live OpenRouter CLI/ACP acceptance belongs to C3.7 and remains unclaimed.",
+  "latest_log_entry": "LOG-0064",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -289,9 +289,11 @@
       "depends_on": [
         "C3.4"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0064"
+      ]
     },
     {
       "id": "C3.6",

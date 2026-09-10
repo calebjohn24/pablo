@@ -45,12 +45,12 @@ enabled=false
 [options.filesystem]
 write=true
 [options.model]
-id="fixture/filesystem"
+id="zai/glm-5.3-flash"
 [options.limits]
 max_model_calls=2
 max_tool_calls=1
 `);
-  const options=configured?['--config',entry,'--bind',`workspace=${cwd}`,'--fixture-endpoint',gateway.url+'/v1/chat/completions']:['--no-shell','--allow-write','--model','fixture/filesystem','--max-model-calls','2','--max-tool-calls','1'];
+  const options=configured?['--config',entry,'--bind',`workspace=${cwd}`,'--fixture-endpoint',gateway.url+'/v1/chat/completions']:['--no-shell','--allow-write','--model','zai/glm-5.3-flash','--max-model-calls','2','--max-tool-calls','1'];
   await writeFile(join(cwd,'read.txt'),content);await writeFile(join(cwd,'write.txt'),content);await writeFile(join(cwd,'edit.txt'),'needle'+content);
   await mkdir(join(cwd,'listing'));await mkdir(join(cwd,'search'));
   for(let i=0;i<1000;i++) await writeFile(join(cwd,'listing',String(i).padStart(4,'0')),'');

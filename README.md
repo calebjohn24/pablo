@@ -14,7 +14,7 @@ From the project directory:
 cargo run --locked -p pablo -- run "Read README.md and summarize what Pablo can do."
 ```
 
-Pablo loads your gateway key from the ignored `.env`, streams the answer, and shows shell activity in the terminal. Both `AI_GATEWAY_API_KEY` and your existing `VERCEL_AI_GATEWAY` name work. It uses direct HTTPS through a Rust HTTP client; no Vercel SDK is installed. The default model is `google/gemini-3.8-flash`.
+Pablo loads your gateway key from the ignored `.env`, streams the answer, and shows shell activity in the terminal. Both `AI_GATEWAY_API_KEY` and your existing `VERCEL_AI_GATEWAY` name work. It uses direct HTTPS through a Rust HTTP client; no Vercel SDK is installed. The default provider is Vercel with model `zai/glm-5.3-flash`; `--provider vercel` selects it explicitly. OpenRouter configurations default to `z-ai/glm-5.3-flash` and can be inspected offline; execution becomes available in C3.6. These are also the selected provider-testing models.
 
 To work in a different folder while keeping credentials in this project:
 

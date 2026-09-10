@@ -1,0 +1,39 @@
+{
+  "checked_at": "2026-09-09T22:46:39Z",
+  "source": "https://openrouter.ai/api/v1/models",
+  "requested_model": "z-ai/glm-5.3-flash",
+  "model": {
+    "id": "z-ai/glm-5.3-flash",
+    "canonical_slug": "z-ai/glm-5.3-flash-20260826",
+    "context_length": 1310720,
+    "top_provider": {
+      "context_length": 1048576,
+      "max_completion_tokens": 131072,
+      "is_moderated": false
+    },
+    "supported_parameters": [
+      "frequency_penalty",
+      "include_reasoning",
+      "logit_bias",
+      "logprobs",
+      "max_tokens",
+      "min_p",
+      "presence_penalty",
+      "reasoning",
+      "reasoning_effort",
+      "repetition_penalty",
+      "response_format",
+      "seed",
+      "stop",
+      "structured_outputs",
+      "temperature",
+      "tool_choice",
+      "tools",
+      "top_k",
+      "top_logprobs",
+      "top_p"
+    ]
+  },
+  "user_selected_default": true,
+  "live_verified": false
+}
