@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-10T18:06:09.451Z",
+  "updated_at": "2026-09-10T18:08:03.937Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.8",
-  "next_action": "Merge verified C3.7, then select C3.8 to pin Open Responses contracts and upstream fixtures before implementing its adapter. Preserve GLM defaults, private credential resolution and unlimited filesystem work defaults.",
-  "latest_log_entry": "LOG-0068",
+  "next_action": "Activate C3.8 on feat/c3-open-responses-contracts from merged C3.7 base b09f954. Pin Open Responses upstream specification and acceptance fixtures before adapter implementation. Live OpenRouter CLI/ACP now pass with the supplied replacement key; preserve GLM defaults, private credential resolution and unlimited filesystem work defaults.",
+  "latest_log_entry": "LOG-0069",
   "checkpoints": [
     {
       "id": "C1.0",
