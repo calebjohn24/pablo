@@ -8,6 +8,7 @@ mod credentials;
 mod input;
 mod render;
 mod resolve;
+mod routes;
 mod shell;
 mod validate;
 
@@ -21,8 +22,9 @@ pub use credentials::{
     CredentialConsumer, CredentialInputs, CredentialReadError, ProcessCredentials, ScopedCredential,
 };
 pub use resolve::{LoadedDeployment, load, resolve};
+pub use routes::{ResolvedRoute, RouteEntry, RoutePolicy};
 
-pub const CONTRACT_REVISION: &str = "c3.9";
+pub const CONTRACT_REVISION: &str = "c3.10";
 pub const DOCUMENT_SCHEMA: &str =
     include_str!("../../../../docs/project/schemas/deployment-v1.schema.json");
 pub const DEFAULT_OPTIONS: &str =
@@ -182,6 +184,8 @@ pub struct ResolvedDeployment {
     sources: Vec<Source>,
     provenance: BTreeMap<String, Vec<Origin>>,
     input_fingerprint: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    model_route: Option<ResolvedRoute>,
 }
 
 /// Safe run metadata. It intentionally excludes sources, paths, task content,
@@ -193,6 +197,16 @@ pub struct DeploymentIdentity {
     fingerprint: String,
 }
 impl ResolvedDeployment {
+    pub fn model_route(&self) -> Option<&ResolvedRoute> {
+        self.model_route.as_ref()
+    }
+    pub(super) fn selected_model(&self) -> &Value {
+        if let Some(route) = &self.model_route {
+            &self.options()["models"][route.entries()[0].name()]
+        } else {
+            &self.options()["model"]
+        }
+    }
     pub fn identity(&self) -> DeploymentIdentity {
         DeploymentIdentity {
             schema_version: self.schema_version,

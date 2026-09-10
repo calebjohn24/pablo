@@ -74,9 +74,6 @@ fn exceeds_bound(issue: &jsonschema::ValidationError<'_>) -> bool {
 fn unsupported(value: &Value, path: &str) -> Result<(), ConfigError> {
     if let Some(options) = value.get("options").and_then(Value::as_object) {
         for (key, owner) in [
-            ("models", "C3.10"),
-            ("routes", "C3.10"),
-            ("model_route", "C3.10"),
             ("output", "C3.13"),
             ("mcp", "C3.15"),
             ("skills", "C3.19"),

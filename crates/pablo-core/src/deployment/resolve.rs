@@ -229,9 +229,11 @@ impl LoadedDeployment {
         }
         resolver.apply_overrides(locked)?;
         resolver.complete_model()?;
+        resolver.complete_routes()?;
         resolver.complete_policies()?;
         resolver.complete_aliases()?;
         input::resolved_shape(&resolver.config)?;
+        let model_route = super::routes::resolve(&resolver.config)?;
         validate::config(&resolver.config, &resolver.request)?;
         resolver.provenance.retain(|path, _| {
             resolver
@@ -255,6 +257,7 @@ impl LoadedDeployment {
             sources: resolver.sources,
             provenance: resolver.provenance,
             input_fingerprint,
+            model_route,
         };
         // Inspection is bounded independently of the effective config. Avoid an
         // unbounded to_vec of the complete source/provenance envelope.
@@ -628,6 +631,15 @@ impl Resolver {
     fn apply_overrides(&mut self, locked: bool) -> Result<(), ConfigError> {
         let request = self.request.clone();
         for (option, value) in &request.overrides {
+            if (option == "model" || option.starts_with("model."))
+                && request
+                    .overrides
+                    .get("model_route")
+                    .or_else(|| self.config["options"].get("model_route"))
+                    .is_some()
+            {
+                return Err(error("config_conflict", option));
+            }
             if locked
                 && !self.config["deployment"]["allowed_run_overrides"]
                     .as_array()
@@ -661,6 +673,81 @@ impl Resolver {
                 &mut self.provenance,
                 &mut self.origins,
             )?;
+        }
+        Ok(())
+    }
+    fn complete_routes(&mut self) -> Result<(), ConfigError> {
+        if ["models", "routes", "model_route"]
+            .iter()
+            .all(|key| self.config["options"].get(key).is_none())
+        {
+            return Ok(());
+        }
+        let before = self.config.clone();
+        // Derived defaults follow later typed root/provider/list overrides.
+        // Rendered explicit values remain operator-authored and stay fixed.
+        let refresh: Vec<_> = self
+            .provenance
+            .iter()
+            .filter_map(|(path, origins)| {
+                let dependent = path.starts_with("/config/options/models/")
+                    && [
+                        "/endpoint",
+                        "/auth_header",
+                        "/auth_scheme",
+                        "/model_options/max_output_tokens",
+                    ]
+                    .iter()
+                    .any(|suffix| path.ends_with(suffix))
+                    || path.starts_with("/config/options/routes/")
+                        && [
+                            "/max_attempts",
+                            "/per_attempt_timeout_ms",
+                            "/required_capabilities",
+                        ]
+                        .iter()
+                        .any(|suffix| path.ends_with(suffix));
+                (dependent && origins.iter().all(|origin| origin.operation == "default"))
+                    .then(|| path.clone())
+            })
+            .collect();
+        for path in refresh {
+            let (parent, key) = path
+                .strip_prefix("/config")
+                .unwrap()
+                .rsplit_once('/')
+                .unwrap();
+            if let Some(map) = self
+                .config
+                .pointer_mut(parent)
+                .and_then(Value::as_object_mut)
+            {
+                map.remove(key);
+            }
+        }
+        super::routes::complete(&mut self.config)?;
+        fn added(before: &Value, after: &Value, path: &str, output: &mut Vec<(String, Value)>) {
+            if let Some(map) = after.as_object() {
+                for (key, value) in map {
+                    added(&before[key], value, &pointer(path, key), output);
+                }
+            } else if before.is_null() {
+                output.push((path.into(), after.clone()));
+            }
+        }
+        let mut defaults = Vec::new();
+        for field in ["models", "routes"] {
+            added(
+                &before["options"][field],
+                &self.config["options"][field],
+                &format!("/config/options/{field}"),
+                &mut defaults,
+            );
+        }
+        for (path, value) in defaults {
+            if !value.is_null() {
+                self.record(&value, &path, "source-0000", "default")?;
+            }
         }
         Ok(())
     }

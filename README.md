@@ -67,6 +67,8 @@ Shorthand and machine output use the same runtime:
 
 See [the gateway and CLI contract](docs/gateway.md) for transport details, trace options, and the explicit live smoke check.
 
+Named models and ordered routes can be inspected offline with `pablo config explain`. A single-entry route runs through CLI/ACP; fallback execution belongs to C3.11. See [route configuration and examples](docs/project/contracts/c3-model-routes.md).
+
 ## Use ACP from TypeScript
 
 ```sh

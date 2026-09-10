@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:pablo:deployment:1:c3.9",
-  "title": "Pablo deployment v1 \u2014 C3.5 configuration contract",
+  "$id": "urn:pablo:deployment:1:c3.10",
+  "title": "Pablo deployment v1 \u2014 C3.10 contract",
   "description": "TOML-to-JSON shape. See c3-deployment-config.md for semantic checks and implementation availability.",
   "type": "object",
   "additionalProperties": false,
@@ -990,6 +990,29 @@
         },
         "policy": {
           "$ref": "#/$defs/Policy"
+        },
+        "models": {
+          "type": "object",
+          "maxProperties": 64,
+          "propertyNames": {
+            "$ref": "#/$defs/name"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/NamedModel"
+          }
+        },
+        "routes": {
+          "type": "object",
+          "maxProperties": 64,
+          "propertyNames": {
+            "$ref": "#/$defs/name"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/ModelRoute"
+          }
+        },
+        "model_route": {
+          "$ref": "#/$defs/name"
         }
       }
     },
@@ -1472,6 +1495,29 @@
         },
         "policy": {
           "$ref": "#/$defs/resolvedPolicy"
+        },
+        "models": {
+          "type": "object",
+          "maxProperties": 64,
+          "propertyNames": {
+            "$ref": "#/$defs/name"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/resolvedNamedModel"
+          }
+        },
+        "routes": {
+          "type": "object",
+          "maxProperties": 64,
+          "propertyNames": {
+            "$ref": "#/$defs/name"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/resolvedModelRoute"
+          }
+        },
+        "model_route": {
+          "$ref": "#/$defs/name"
         }
       },
       "required": [
@@ -2096,6 +2142,327 @@
           "$ref": "#/$defs/resolvedRules"
         }
       }
+    },
+    "NamedModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "enum": [
+            "vercel",
+            "openrouter",
+            "open_responses"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "endpoint": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "credential": {
+          "$ref": "#/$defs/name"
+        },
+        "capability_profile": {
+          "const": "open-responses-text-tools-v1"
+        },
+        "auth_header": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9!#$%&'*+.^_`|~-]+$"
+        },
+        "auth_scheme": {
+          "enum": [
+            "bearer",
+            "raw"
+          ]
+        },
+        "model_options": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_output_tokens": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            }
+          }
+        },
+        "capabilities": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "text_streaming": {
+              "type": "boolean"
+            },
+            "tool_calls": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "resolvedNamedModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "enum": [
+            "vercel",
+            "openrouter",
+            "open_responses"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "endpoint": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "credential": {
+          "$ref": "#/$defs/name"
+        },
+        "capability_profile": {
+          "const": "open-responses-text-tools-v1"
+        },
+        "auth_header": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9!#$%&'*+.^_`|~-]+$"
+        },
+        "auth_scheme": {
+          "enum": [
+            "bearer",
+            "raw"
+          ]
+        },
+        "model_options": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_output_tokens": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            }
+          },
+          "required": [
+            "max_output_tokens"
+          ]
+        },
+        "capabilities": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "text_streaming": {
+              "type": "boolean"
+            },
+            "tool_calls": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "text_streaming",
+            "tool_calls"
+          ]
+        }
+      },
+      "required": [
+        "provider",
+        "id",
+        "endpoint",
+        "credential",
+        "model_options",
+        "capabilities"
+      ]
+    },
+    "ModelRoute": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "entries": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "model": {
+                    "$ref": "#/$defs/name"
+                  }
+                },
+                "required": [
+                  "model"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "route": {
+                    "$ref": "#/$defs/name"
+                  }
+                },
+                "required": [
+                  "route"
+                ]
+              }
+            ]
+          }
+        },
+        "max_attempts": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "per_attempt_timeout_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400000
+        },
+        "eligible_errors": {
+          "type": "array",
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "not_sent",
+              "rate_limited",
+              "service_unavailable",
+              "transport_uncertain"
+            ]
+          }
+        },
+        "retry_uncertain_delivery": {
+          "type": "boolean"
+        },
+        "retry_owner": {
+          "const": "pablo"
+        },
+        "sticky": {
+          "const": true
+        },
+        "required_capabilities": {
+          "type": "array",
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "text_streaming",
+              "tool_calls",
+              "structured_output"
+            ]
+          }
+        }
+      }
+    },
+    "resolvedModelRoute": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "entries": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "model": {
+                    "$ref": "#/$defs/name"
+                  }
+                },
+                "required": [
+                  "model"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "route": {
+                    "$ref": "#/$defs/name"
+                  }
+                },
+                "required": [
+                  "route"
+                ]
+              }
+            ]
+          }
+        },
+        "max_attempts": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "per_attempt_timeout_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400000
+        },
+        "eligible_errors": {
+          "type": "array",
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "not_sent",
+              "rate_limited",
+              "service_unavailable",
+              "transport_uncertain"
+            ]
+          }
+        },
+        "retry_uncertain_delivery": {
+          "type": "boolean"
+        },
+        "retry_owner": {
+          "const": "pablo"
+        },
+        "sticky": {
+          "const": true
+        },
+        "required_capabilities": {
+          "type": "array",
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "text_streaming",
+              "tool_calls",
+              "structured_output"
+            ]
+          }
+        }
+      },
+      "required": [
+        "entries",
+        "max_attempts",
+        "per_attempt_timeout_ms",
+        "eligible_errors",
+        "retry_uncertain_delivery",
+        "retry_owner",
+        "sticky",
+        "required_capabilities"
+      ]
     }
   }
 }

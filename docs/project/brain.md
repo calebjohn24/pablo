@@ -8,12 +8,7 @@ Private source remote: [calebjohn24/pablo](https://github.com/calebjohn24/pablo)
 
 ## Read the design selectively
 
-- [Architecture brief](../context.md), section 29.1: authoritative 0.1 release contract.
-- Section 37.1: focused first spike; the boundary for cycle C1.
-- Sections 12–14: typed contracts, run lifecycle, cancellation, shell behavior.
-- Sections 19 and 21: providers and native OTel instrumentation.
-- Sections 28, 31, and 32: performance baselines, release acceptance, tests.
-- [Backlog](backlog.md): preserved later slices and when to consider them.
+Read [the architecture brief](../context.md) selectively: section 29.1 defines the 0.1 contract; section 37.1 the C1 spike; sections 12–14 contracts/lifecycle/cancellation/shell; sections 19/21 providers and OTel; sections 28/31/32 performance/release/tests. [Backlog](backlog.md) retains deferred slices and promotion conditions.
 
 ### D001 — One checkpoint per implementation session
 
@@ -198,3 +193,8 @@ C3.6 enables OpenRouter through the shared gateway and treats its repeated termi
 ### D043 — Pin Open Responses and retain task-scoped continuation
 
 C3.8 freezes release 2026-04-24 at upstream 92c12d96d7b61d6d15e2214daa5e9c6000ab6e1c. Named HTTP/SSE events and complete ordered items are required; private opaque reasoning, summaries and assistant phase survive subsequent tool turns within their original endpoint/model scope. Unrepresentable raw reasoning rejects instead of disappearing. Configured capabilities are operator declarations, not remote attestations. C3.9 implements this with a non-serializable carrier, named-event validation, exact accounting and explicit auth-header scope. See [OR01](contracts/c3-open-responses.md).
+
+
+### D044 — Resolve exact ordered routes before allowing fallback
+
+C3.10 names profiles and composes ordered routes offline, validating every entry's capabilities, credential destination and authority. Children can retain only exact inherited entries in order. Sticky, forward-only runtime selection and one retry owner prevent hidden repeated attempts; all attempts consume root budgets and incompatible private continuation stops fallback. Single-entry behavior is verified now; C3.11 owns fallback and distinct per-attempt deadlines. See [F01](contracts/c3-model-routes.md).

@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-10T19:17:51.650Z",
+  "updated_at": "2026-09-10T19:50:52.824Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.10",
-  "next_action": "Merge verified C3.9, then activate C3.10 to freeze named model profiles and ordered routes before fallback execution. Preserve explicit endpoint/credential authority and private continuation compatibility. Keep GLM defaults/unlimited filesystem work; revisit measured listing/replacement increases at C3.39.",
-  "latest_log_entry": "LOG-0073",
+  "next_checkpoint": "C3.11",
+  "next_action": "Merge verified C3.10, then activate C3.11 for sticky forward-only runtime fallback and distinct attempt deadlines. F02 must prove eligible first failure, second success, no third contact/tool replay and per-attempt shared-budget identity. Preserve exact credential/continuation scope, GLM defaults and unlimited filesystem work; repeat matched performance.",
+  "latest_log_entry": "LOG-0076",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -354,9 +354,11 @@
       "depends_on": [
         "C3.9"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0075"
+      ]
     },
     {
       "id": "C3.11",
