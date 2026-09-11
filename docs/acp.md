@@ -179,3 +179,20 @@ Instructions are null unless content capture is enabled. Clients without this
 negotiation receive no activation extension notification. The same bounded event
 queue and physical stdout write acknowledgement apply. Activation setup errors
 precede run admission; admitted resource work shares run cancellation and joining.
+
+## Shared typed handlers (C3.21)
+
+The stable initialize/new-session/prompt/cancel handlers and event projection are
+shared by stdio and the internal in-memory dispatcher. The direct dispatcher passes
+official ACP structs, without a JSON-RPC envelope or the SDK's JSON-valued Channel.
+It retains the same runtime worker, session admission, configured fallback and
+terminal outcome mapping. Its owner must await close; the destructor signals
+cancellation but cannot promise an asynchronous join.
+
+Direct updates use a one-slot typed channel and a consumption acknowledgement;
+only one notification may be outstanding. Closing the dispatcher wakes pending
+acknowledgements, cancels its task and joins the worker. A stalled consumer shares
+the stdio 30-second delivery timeout. Native event and extension metadata encoding
+still follows existing trace contracts; provider HTTP requests still use their
+provider's wire format. C3.21 does not advertise delegation: the
+[child contract](project/contracts/c3-children.md) defines the next checkpoints.

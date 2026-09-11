@@ -19,6 +19,11 @@ use tokio::sync::Notify;
 
 use crate::config::Options;
 
+mod delivery;
+mod handlers;
+// C3.21 prepares this internal path; child execution is enabled at C3.22.
+#[allow(dead_code)]
+mod in_memory;
 mod worker;
 use worker::{Task, Worker};
 
@@ -220,82 +225,7 @@ async fn serve_streams(
                 async move |request: wire::InitializeRequest,
                             responder: Responder<wire::InitializeResponse>,
                             _cx| {
-                    let mut state = state.lock().unwrap();
-                    if state.initialized {
-                        return responder.respond_with_error(invalid("already initialized"));
-                    }
-                    // ACP negotiation returns our supported version. A client that
-                    // cannot speak v1 must disconnect; draft v2 is never selected.
-                    state.initialized = true;
-                    state.extensions.base = request
-                        .client_capabilities
-                        .meta
-                        .as_ref()
-                        .and_then(|m| m.get(EXTENSION))
-                        == Some(&json!(true));
-                    state.extensions.task = state.extensions.base
-                        && request
-                            .client_capabilities
-                            .meta
-                            .as_ref()
-                            .and_then(|m| m.get("pablo/task-v1"))
-                            == Some(&json!(true));
-                    state.extensions.route = state.extensions.base
-                        && request
-                            .client_capabilities
-                            .meta
-                            .as_ref()
-                            .and_then(|m| m.get("pablo/model-route-v1"))
-                            == Some(&json!(true));
-                    state.extensions.compaction = state.extensions.base
-                        && request
-                            .client_capabilities
-                            .meta
-                            .as_ref()
-                            .and_then(|m| m.get("pablo/compaction-v1"))
-                            == Some(&json!(true));
-                    state.extensions.output = state.extensions.base
-                        && state.extensions.task
-                        && request
-                            .client_capabilities
-                            .meta
-                            .as_ref()
-                            .and_then(|m| m.get("pablo/output-v1"))
-                            == Some(&json!(true));
-                    state.extensions.skills = state.extensions.base
-                        && request
-                            .client_capabilities
-                            .meta
-                            .as_ref()
-                            .and_then(|m| m.get("pablo/skills-v1"))
-                            == Some(&json!(true));
-                    state.extensions.repair = state.extensions.output
-                        && request
-                            .client_capabilities
-                            .meta
-                            .as_ref()
-                            .and_then(|m| m.get("pablo/output-repair-v1"))
-                            == Some(&json!(true));
-                    let mut capabilities = meta(json!(true));
-                    capabilities.insert("pablo/task-v1".into(), json!(true));
-                    capabilities.insert("pablo/model-route-v1".into(), json!(true));
-                    capabilities.insert("pablo/compaction-v1".into(), json!(true));
-                    capabilities.insert("pablo/skills-v1".into(), json!(true));
-                    capabilities.insert("pablo/output-v1".into(), json!(true));
-                    capabilities.insert("pablo/output-repair-v1".into(), json!(true));
-                    let caps = wire::AgentCapabilities::new()
-                        .meta(capabilities)
-                        .mcp_capabilities(wire::McpCapabilities::new().http(true));
-                    responder.respond(
-                        wire::InitializeResponse::new(
-                            agent_client_protocol::schema::ProtocolVersion::V1,
-                        )
-                        .agent_capabilities(caps)
-                        .agent_info(wire::Implementation::new(
-                            "pablo",
-                            env!("CARGO_PKG_VERSION"),
-                        )),
-                    )
+                    responder.respond_with_result(handlers::initialize(&state, request))
                 }
             },
             agent_client_protocol::on_receive_request!(),
@@ -307,56 +237,7 @@ async fn serve_streams(
                 async move |request: wire::NewSessionRequest,
                             responder: Responder<wire::NewSessionResponse>,
                             _cx| {
-                    let mut state = state.lock().unwrap();
-                    if !state.initialized {
-                        return responder.respond_with_error(invalid("initialize first"));
-                    }
-                    if state.prompt_active || (state.session.is_some() && !state.prompted) {
-                        return responder.respond_with_error(invalid(
-                            "finish the current session before creating another",
-                        ));
-                    }
-                    let mcp = match normalize_mcp(&request.mcp_servers) {
-                        Ok(mcp) => mcp,
-                        Err(message) => return responder.respond_with_error(invalid(message)),
-                    };
-                    if !mcp.is_empty() {
-                        let admitted = options
-                            .configured()
-                            .map_err(|_| "MCP host configuration invalid")
-                            .and_then(|host| {
-                                host.ok_or("MCP server is not host-configured; unsupported")
-                            })
-                            .and_then(|host| {
-                                host.admit_mcp_client(&mcp)
-                                    .map_err(|_| "MCP server configuration denied by host")
-                            });
-                        if let Err(message) = admitted {
-                            return responder.respond_with_error(invalid(message));
-                        }
-                    }
-                    if !request.cwd.is_absolute() {
-                        return responder.respond_with_error(invalid("cwd must be absolute"));
-                    }
-                    let Ok(cwd) = request.cwd.canonicalize() else {
-                        return responder
-                            .respond_with_error(invalid("cwd must be an existing directory"));
-                    };
-                    if !cwd.is_dir() {
-                        return responder.respond_with_error(invalid("cwd must be a directory"));
-                    }
-                    let id = wire::SessionId::new(uuid::Uuid::new_v4().to_string());
-                    if let Err(message) = options.prepare_run(
-                        Some(String::new()),
-                        Some(cwd.clone()),
-                        Some(id.to_string()),
-                    ) {
-                        return responder.respond_with_error(Error::invalid_params().data(message));
-                    }
-                    state.mcp = mcp;
-                    state.session = Some((id.clone(), cwd));
-                    state.prompted = false;
-                    responder.respond(wire::NewSessionResponse::new(id))
+                    responder.respond_with_result(handlers::new_session(&state, &options, request))
                 }
             },
             agent_client_protocol::on_receive_request!(),
@@ -365,19 +246,7 @@ async fn serve_streams(
             {
                 let state = state.clone();
                 async move |request: wire::CancelNotification, _cx| {
-                    let s = state.lock().unwrap();
-                    if s.prompt_active
-                        && s.session
-                            .as_ref()
-                            .is_some_and(|(id, _)| *id == request.session_id)
-                        && let Some(cancel) = &s.cancellation
-                    {
-                        if !cancel.is_cancelled() {
-                            eprintln!("pablo: ACP cancellation requested");
-                        }
-                        cancel.cancel();
-                    }
-                    Ok(())
+                    handlers::cancel(&state, request)
                 }
             },
             agent_client_protocol::on_receive_notification!(),
@@ -391,147 +260,27 @@ async fn serve_streams(
                 async move |request: wire::PromptRequest,
                             responder: Responder<wire::PromptResponse>,
                             cx: ConnectionTo<Client>| {
-                    let input = match prompt_text(&request.prompt) {
-                        Ok(input) => input,
+                    let pending = match handlers::start_prompt(
+                        state.clone(),
+                        options.clone(),
+                        &cancellation,
+                        request,
+                    ) {
+                        Ok(pending) => pending,
                         Err(error) => return responder.respond_with_error(error),
                     };
-                    let (cwd, extensions, mcp) = {
-                        let mut s = state.lock().unwrap();
-                        let Some((id, cwd)) = &s.session else {
-                            return responder.respond_with_error(invalid("create a session first"));
-                        };
-                        if *id != request.session_id {
-                            return responder.respond_with_error(invalid("unknown session"));
-                        }
-                        if s.prompted {
-                            return responder.respond_with_error(invalid(
-                                "one prompt per session; create a new session",
-                            ));
-                        }
-                        let cwd = cwd.clone();
-                        s.prompted = true;
-                        (cwd, s.extensions, s.mcp.clone())
+                    let delivery = delivery::Delivery::Stdio {
+                        cx: cx.clone(),
+                        written: written.clone(),
                     };
-                    let mut prepared = match options.prepare_run(
-                        Some(input.clone()),
-                        Some(cwd.clone()),
-                        Some(request.session_id.to_string()),
-                    ) {
-                        Ok(prepared) => prepared,
-                        Err(message) => {
-                            return responder
-                                .respond_with_error(Error::invalid_params().data(message));
-                        }
-                    };
-                    if let Some(prepared) = &mut prepared
-                        && let Err(error) = prepared.select_mcp_client(&mcp)
-                    {
-                        return responder
-                            .respond_with_error(Error::invalid_params().data(error.to_string()));
-                    }
-                    let mut spec = match prepared
-                        .as_ref()
-                        .map(|p| Ok(p.spec().clone()))
-                        .unwrap_or_else(|| options.spec())
-                    {
-                        Ok(spec) => spec,
-                        Err(_) => {
-                            return responder.respond_with_error(
-                                Error::internal_error().data("invalid host configuration"),
-                            );
-                        }
-                    };
-                    spec.workspace = cwd;
-                    spec.input = input;
-                    spec.session_id = Some(request.session_id.to_string());
-                    let incoming = request.meta.as_ref().and_then(|m| m.get(EXTENSION));
-                    let parent =
-                        if let Some(prepared) = prepared.as_ref().filter(|_| extensions.base) {
-                            crate::otel::parent_explicit(
-                                incoming
-                                    .and_then(|m| m.get("traceparent"))
-                                    .and_then(Value::as_str),
-                                incoming
-                                    .and_then(|m| m.get("tracestate"))
-                                    .and_then(Value::as_str),
-                                prepared.deployment().options()["otel"]["propagators"]
-                                    .as_array()
-                                    .unwrap()
-                                    .iter()
-                                    .any(|v| v == "tracecontext"),
-                            )
-                        } else if extensions.base {
-                            crate::otel::parent(
-                                incoming
-                                    .and_then(|m| m.get("traceparent"))
-                                    .and_then(Value::as_str),
-                                incoming
-                                    .and_then(|m| m.get("tracestate"))
-                                    .and_then(Value::as_str),
-                            )
-                        } else {
-                            opentelemetry::Context::new()
-                        };
-                    let capture_content = spec.trace.capture_content;
-                    let (tx, rx) = async_channel::bounded(QUEUE_EVENTS);
-                    let cancel = cancellation.child_token();
-                    let (completed, outcome) = tokio::sync::oneshot::channel();
-                    {
-                        let mut s = state.lock().unwrap();
-                        if s.worker.is_none() {
-                            match Worker::start(options.clone()) {
-                                Ok(worker) => s.worker = Some(worker),
-                                Err(_) => {
-                                    return responder.respond_with_error(
-                                        Error::internal_error().data("cannot start runtime worker"),
-                                    );
-                                }
-                            }
-                        }
-                        let task = Task {
-                            prepared,
-                            spec,
-                            parent,
-                            cancel: cancel.clone(),
-                            events: tx.clone().into(),
-                            completed,
-                        };
-                        if s.worker.as_ref().unwrap().submit(task).is_err() {
-                            return responder.respond_with_error(
-                                Error::internal_error().data("runtime worker unavailable"),
-                            );
-                        }
-                        s.events = Some(tx);
-                        s.cancellation = Some(cancel.clone());
-                        s.prompt_active = true;
-                    }
-                    let state = state.clone();
-                    let written = written.clone();
-                    let sender = cx.clone();
                     cx.spawn(async move {
                         let request_cancel = responder.cancellation();
-                        let forwarding =
-                            forward_events(rx, &sender, &written, extensions, capture_content);
-                        tokio::pin!(forwarding);
-                        let terminal = tokio::select! {
-                            result = &mut forwarding => result,
-                            _ = request_cancel.cancelled() => { cancel.cancel(); forwarding.await }
-                        }?;
-                        let outcome = outcome
-                            .await
-                            .unwrap_or_else(|_| Err("runtime worker failed".into()));
-                        {
-                            let mut s = state.lock().unwrap();
-                            s.prompt_active = false;
-                            s.events = None;
-                            s.cancellation = None;
-                        }
-                        responder.respond_with_result(prompt_response(
-                            outcome,
-                            terminal,
-                            extensions,
-                            cancel.is_cancelled(),
-                        ))
+                        let response = pending
+                            .finish(&delivery, async {
+                                request_cancel.cancelled().await;
+                            })
+                            .await;
+                        responder.respond_with_result(response)
                     })
                 }
             },
@@ -670,19 +419,16 @@ impl EventStream {
 
 async fn forward_events(
     rx: async_channel::Receiver<RunEvent>,
-    cx: &ConnectionTo<Client>,
-    written: &Written,
+    delivery: &delivery::Delivery,
     extensions: Extensions,
     capture_content: bool,
 ) -> Result<Option<RunEvent>, Error> {
     let mut events = EventStream::new(rx);
     let mut terminal = None;
-    let mut sent = written.count.load(Ordering::Acquire);
     while let Some((event, first)) = events.next().await {
         if matches!(event.kind, EventKind::RunFinished { .. }) {
             terminal = Some(event.clone());
         }
-        let mut notification_sent = false;
         #[cfg(unix)]
         if extensions.skills
             && let EventKind::SkillActivated {
@@ -691,10 +437,11 @@ async fn forward_events(
             } = &event.kind
         {
             let params=serde_json::value::to_raw_value(&json!({"sessionId":event.session_id,"type":"skill.activated","pablo/v1":correlation(&event,first),"skill":skill,"instructions":if capture_content {instructions.as_deref()}else{None},"content_redacted":!capture_content})).map_err(|_|Error::internal_error())?;
-            cx.send_notification(wire::AgentNotification::ExtNotification(
-                wire::ExtNotification::new("_pablo/skill", Arc::from(params)),
-            ))?;
-            notification_sent = true;
+            delivery
+                .send(wire::AgentNotification::ExtNotification(
+                    wire::ExtNotification::new("_pablo/skill", Arc::from(params)),
+                ))
+                .await?;
         }
         if extensions.compaction
             && matches!(
@@ -721,10 +468,11 @@ async fn forward_events(
                 _ => ("context.compaction.started", None, 0),
             };
             let params=serde_json::value::to_raw_value(&json!({"sessionId":event.session_id,"type":kind,"pablo/v1":details,"summary":summary,"summary_bytes":summary_bytes,"content_redacted":!capture_content})).map_err(|_|Error::internal_error())?;
-            cx.send_notification(wire::AgentNotification::ExtNotification(
-                wire::ExtNotification::new("_pablo/compaction", Arc::from(params)),
-            ))?;
-            notification_sent = true;
+            delivery
+                .send(wire::AgentNotification::ExtNotification(
+                    wire::ExtNotification::new("_pablo/compaction", Arc::from(params)),
+                ))
+                .await?;
         }
         if extensions.route
             && event.model_route.is_some()
@@ -741,10 +489,11 @@ async fn forward_events(
                 "type": if matches!(event.kind, EventKind::ModelStarted { .. }) { "model.started" } else { "model.finished" },
                 "pablo/v1": details
             })).map_err(|_| Error::internal_error())?;
-            cx.send_notification(wire::AgentNotification::ExtNotification(
-                wire::ExtNotification::new("_pablo/model_attempt", Arc::from(params)),
-            ))?;
-            notification_sent = true;
+            delivery
+                .send(wire::AgentNotification::ExtNotification(
+                    wire::ExtNotification::new("_pablo/model_attempt", Arc::from(params)),
+                ))
+                .await?;
         }
         if let Some(update) = project(&event)? {
             let mut notification = wire::SessionNotification::new(event.session_id.clone(), update);
@@ -760,14 +509,9 @@ async fn forward_events(
                 }
                 notification.meta = Some(meta(details));
             }
-            cx.send_notification(notification)?;
-            notification_sent = true;
-        }
-        if notification_sent {
-            sent += 1;
-            while written.count.load(Ordering::Acquire) < sent {
-                written.changed.notified().await;
-            }
+            delivery
+                .send(wire::AgentNotification::SessionNotification(notification))
+                .await?;
         }
     }
     Ok(terminal)

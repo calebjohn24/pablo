@@ -1425,7 +1425,7 @@ fn unknown_unsupported_and_schema_versions_are_explicit_and_redacted() {
     )
     .unwrap_err();
     assert_eq!(e.code, "config_unsupported_feature");
-    assert_eq!(e.owner, Some("C3.21"));
+    assert_eq!(e.owner, Some("C3.22"));
     error(
         f.document(json!({"options":{"model":{"provider":"open_responses"}}})),
         "config_invalid_value",
