@@ -1,0 +1,110 @@
+# Preset bundle v1. Import this file; bind workspace and preset explicitly.
+schema_version = 1
+
+[credentials.router]
+consumer = "provider.openrouter"
+sources = [{ kind = "environment", name = "OPENROUTER_API_KEY" }]
+[credentials.gateway]
+consumer = "provider.vercel"
+sources = [{ kind = "environment", name = "AI_GATEWAY_API_KEY" }]
+[credentials.evidence]
+consumer = "mcp.headers"
+sources = [{ kind = "environment", name = "PABLO_EVIDENCE_TOKEN" }]
+[credentials.collector]
+consumer = "otel.headers"
+sources = [{ kind = "environment", name = "PABLO_OTLP_HEADERS" }]
+
+# Select --profile observed after setting your collector endpoint in this profile.
+[profiles.observed.options.otel]
+exporter = "otlp"
+headers = "collector"
+endpoint = "http://localhost:4318/v1/traces"
+
+[options]
+model_route = "default"
+[options.models.primary]
+provider = "openrouter"
+id = "z-ai/glm-5.3-flash"
+credential = "router"
+[options.models.secondary]
+provider = "vercel"
+id = "zai/glm-5.3-flash"
+credential = "gateway"
+[options.routes.default]
+entries = [{ model = "primary" }, { model = "secondary" }]
+
+[options.run]
+workspace = { base = "binding", name = "workspace", path = "." }
+[options.context]
+enabled = true
+safety_margin_percent = 10
+max_summary_tokens = 1024
+max_summary_bytes = 16384
+keep_recent_turns = 0
+[options.limits]
+max_model_calls = "unlimited"
+max_tool_calls = "unlimited"
+max_total_tokens = "unlimited"
+max_cost_microusd = "unlimited"
+max_run_duration_ms = 3600000
+max_tool_duration_ms = 900000
+[options.limits.filesystem]
+max_file_bytes = "unlimited"
+max_entries = "unlimited"
+max_depth = "unlimited"
+max_scan_bytes = "unlimited"
+
+[options.shell]
+enabled = true
+[options.shell.environment]
+values = {}
+allowed_names = []
+[options.shell.commands]
+default = "deny"
+allow = [{ id = "preset.printf", executable = "/usr/bin/printf", args = [], match = "prefix" }]
+[options.filesystem]
+enabled = true
+write = false
+[options.policy.read_roots]
+default = "allow"
+[options.policy.write_roots]
+default = "deny"
+
+[options.output]
+schema = '{"type":"object","properties":{"answer":{"type":"string"}},"required":["answer"],"additionalProperties":false}'
+[options.output.repair]
+enabled = true
+max_feedback_bytes = 4096
+[options.skills]
+activate = ["preset/evidence"]
+[options.skills.roots]
+preset = { base = "binding", name = "preset", path = "skills" }
+[[options.mcp.policies]]
+[options.mcp.policies.tools]
+default = "deny"
+allow = [{ id = "preset.evidence_read", value = "mcp/evidence/read_evidence" }]
+[options.mcp.servers.evidence]
+transport = "http"
+url = "https://evidence.example.test/mcp"
+headers = { x-evidence-token = "evidence" }
+required = true
+startup_timeout_ms = 30000
+operation_timeout_ms = 60000
+[options.children]
+enabled = true
+[options.a2a.remotes.reviewer]
+card_url = "https://agent.example.test/.well-known/agent-card.json"
+endpoint = "https://agent.example.test/rpc"
+
+[options.interfaces]
+cli_output = "json"
+[options.trace]
+path = { base = "workspace", path = "trace-{session_id}.jsonl" }
+capture_content = false
+max_bytes = 268435456
+[options.otel]
+exporter = "none"
+sdk_disabled = false
+service_name = "pablo"
+resource_attributes = { "deployment.preset.version" = "1" }
+propagators = ["tracecontext"]

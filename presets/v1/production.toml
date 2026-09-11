@@ -1,0 +1,19 @@
+# Local filesystem writes are forbidden for the root and its local children.
+schema_version = 1
+imports = ["base.toml"]
+
+[deployment]
+locked = true
+allowed_run_overrides = ["input", "limits.max_run_duration_ms"]
+
+[[authority]]
+id = "production.read_only"
+capture_content = false
+[authority.policy.write_roots]
+default = "deny"
+[authority.shell.commands]
+default = "deny"
+allow = [{ id = "production.printf", executable = "/usr/bin/printf", args = [], match = "prefix" }]
+[authority.mcp.tools]
+default = "deny"
+allow = [{ id = "production.evidence_read", value = "mcp/evidence/read_evidence" }]

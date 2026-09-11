@@ -14,8 +14,11 @@ use pablo_core::{
 };
 use std::collections::{BTreeMap, VecDeque};
 use tokio::time::Instant;
+#[path = "supervisor/factory.rs"]
 pub(crate) mod factory;
+#[path = "supervisor/handoff.rs"]
 mod handoff;
+#[path = "supervisor/remote.rs"]
 mod remote;
 
 #[derive(Clone, Debug, serde::Serialize)]
@@ -716,6 +719,8 @@ fn admission_failed() -> RunOutcome {
 }
 
 #[cfg(test)]
+#[path = "supervisor/tests.rs"]
 mod tests;
 
+#[path = "supervisor/tool.rs"]
 mod tool;

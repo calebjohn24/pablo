@@ -445,6 +445,7 @@ async fn root_deadline_settles_active_and_queued_children_without_resetting_the_
     .unwrap();
 }
 
+#[path = "tests/root_owner.rs"]
 mod root_owner;
 
 #[tokio::test]
@@ -937,6 +938,8 @@ async fn handoff_rejects_invalid_oversize_cancelled_and_unvalidated_sources() {
     }).await.unwrap();
 }
 
+#[path = "tests/extensibility.rs"]
 mod extensibility;
 
+#[path = "tests/remote.rs"]
 mod remote;

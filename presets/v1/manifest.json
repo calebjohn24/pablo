@@ -1,0 +1,51 @@
+{
+  "bundle_version": 1,
+  "deployment_schema_version": 1,
+  "contract_revision": "c3.26",
+  "target_gates": [
+    "C3.35",
+    "C3.36",
+    "C3.37",
+    "C3.38"
+  ],
+  "files": {
+    "base.toml": "0bb380810568f2c7ce1dec1ceeee2bdd07ca1b08c503007cc3ba508eeeef2581",
+    "development.toml": "f2fe17f9cad4592f7c5b02cc15638475e71f1770f2569e66729daf89f16d80ba",
+    "production.toml": "ec42af5c98683de0b82ee3ca2772557281cf1163b9bd9f62f8ce8b8b1e04444b",
+    "README.md": "8af6e1dea17b8b3e1f3b8d9dfd38540c3299875adfa6e922c5285c92190db913",
+    "skills/evidence/checklist.txt": "33ea8426b7a4e36ec3b7b3f3b8b848a8802a3ee939b7ee8aae45a2377cbc3496",
+    "skills/evidence/SKILL.md": "b194038216c234ceb4c5af52cf1d895d22730781ef83fdb51cc1e2f8ceda94f3"
+  },
+  "entries": {
+    "base": {
+      "default": {
+        "fingerprint": "sha256:0f3e3e2fe1f8925c736c43d55f299844344cbeecf67fc625b77edf9cb83c8c9c",
+        "input_fingerprint": "sha256:326c4543e50982da36d3d4b8ad2dae3c5423e77ea32603ef9f0dd8b5c6fdf986"
+      },
+      "observed": {
+        "fingerprint": "sha256:4c50ca196e7b53dde2bfa4aa035951cf18a1c5c70fbba18fd919c67d87cab50c",
+        "input_fingerprint": "sha256:ae44647e97de51d46f6f7cb064101c3bd73525601fed2bdefc219c70058e994c"
+      }
+    },
+    "production": {
+      "default": {
+        "fingerprint": "sha256:91fb7b16b58e819f39f7335ad891b163205f1d0ff78f6a2f3f16f7959494704c",
+        "input_fingerprint": "sha256:a56bb3f2e004b8800b7615d85ddccc918ee9727dfd330f1c5c3aee8e6c1f7e44"
+      },
+      "observed": {
+        "fingerprint": "sha256:4705fbe3acb98968a1820f9cf794cec800387db07535dcb4112aa9fd57b4a1ff",
+        "input_fingerprint": "sha256:b1b80731551d848c6c2935a73af05af8945a7f135b46b751e6b416e85efe74cf"
+      }
+    },
+    "development": {
+      "default": {
+        "fingerprint": "sha256:9458fb02dfa69e3f454dd1d95e2916dedcf00426f2e5738ff4573809ef0accb6",
+        "input_fingerprint": "sha256:7908ec52bfc8825c98ddfd8ed0596c495d746fdb041e24a47a9221067fe5e315"
+      },
+      "observed": {
+        "fingerprint": "sha256:a86adcd7417daeacbe0374a6076e55a383ac5dcb9f17b8a18ea45432997936b4",
+        "input_fingerprint": "sha256:d2b11296e14e7efb2328a9b0a0868ca64311abfc8c4bd6b1ed17b1b380b96223"
+      }
+    }
+  }
+}

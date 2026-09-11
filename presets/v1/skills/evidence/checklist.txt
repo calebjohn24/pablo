@@ -1,0 +1,1 @@
+Preserve amount, currency, due date, artifact path and revision.

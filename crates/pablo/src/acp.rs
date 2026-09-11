@@ -19,13 +19,18 @@ use tokio::sync::Notify;
 
 use crate::config::Options;
 
+#[path = "acp/delivery.rs"]
 mod delivery;
+#[path = "acp/handlers.rs"]
 mod handlers;
 // C3.21 prepares this internal path; child execution is enabled at C3.22.
 #[allow(dead_code)]
+#[path = "acp/in_memory.rs"]
 mod in_memory;
 #[allow(dead_code)] // Some direct host operations are exercised only by internal acceptance tests.
+#[path = "acp/supervisor.rs"]
 pub(crate) mod supervisor;
+#[path = "acp/worker.rs"]
 mod worker;
 use worker::{Task, Worker};
 

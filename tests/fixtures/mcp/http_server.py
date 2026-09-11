@@ -28,7 +28,8 @@ class Recorded:
             return await app(scope, receive, send)
         headers = dict(scope["headers"])
         expected = Path("expected-token").read_bytes() if Path("expected-token").exists() else b"synthetic-http-token"
-        assert headers.get(b"x-fixture-token") == expected
+        token_header = sys.argv[2].encode() if len(sys.argv) > 2 else b"x-fixture-token"
+        assert headers.get(token_header) == expected
         assert b"authorization" not in headers, "ambient provider authentication leaked"
         body = b""
         while True:

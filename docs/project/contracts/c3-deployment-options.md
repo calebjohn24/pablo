@@ -1,6 +1,6 @@
-# C3.1 deployment option inventory
+# C3 deployment option inventory — C3.32 audit
 
-This inventory owns the typed surface of the [deployment contract](c3-deployment-config.md). The [source schema](../schemas/deployment-v1.schema.json) fixes accepted shapes and the [defaults](../schemas/deployment-defaults-v1.json) fix exact baseline values. C3.1 is specification-only: C3.2 validates/resolves baseline options; C3.3 makes them usable through the current runtime. No field is advertised as implemented merely because it appears here. All paths below are under `options` unless stated otherwise.
+This inventory owns the typed surface of the [deployment contract](c3-deployment-config.md). The [source schema](../schemas/deployment-v1.schema.json) fixes accepted shapes and the [defaults](../schemas/deployment-defaults-v1.json) fix exact baseline values. C3.32 reconciles the original C3.1 inventory with implemented public settings through C3.31. All paths below are under `options` unless stated otherwise. Versioned [presets](../../../presets/v1/README.md) exercise the combined surface; individual feature contracts retain their detailed bounds and acceptance.
 
 ## Baseline options
 
@@ -66,29 +66,31 @@ These dimensions do not accept `unset`: omission inherits, rule/name arrays repl
 
 ## Selected extension ownership
 
-These namespaces are reserved and rejected by the baseline schema. The listed owner must add exact typed keys, numeric defaults/bounds, merge/clear behavior, redaction, authority intersections, availability revision, resolved schema and file/direct equivalence fixtures **before** making the feature usable. Later checkpoints own their detailed protocol semantics; C3.1 does not guess them. The inventory reservation includes all selected subsystem settings, not just an `enabled` flag.
+The original inventory reserved these surfaces. The following table records their current availability, including settings that became fixed host invariants rather than mutable deployment keys. Unsupported names remain errors; a reservation is not an implemented option.
 
-| Reserved surface | Owner and availability gate | Required options and authority coverage |
+| Surface | Owner and current availability | Options and authority coverage |
 | --- | --- | --- |
-
 | `mcp` | C3.15 contracts; C3.16 stdio, C3.17 HTTP, C3.18 integration | Named servers; executable/argv/cwd/cleared env or endpoint; scoped credential refs; required/optional startup; exact server/tool catalog/policy; request/result/progress/process/concurrency/startup/cleanup bounds |
 | `skills` | C3.19 discovery; C3.20 activation | Explicit approved roots/activations, metadata/resource/instruction scan and byte bounds, identity/digest/duplicate handling, resource/tool/child authority; no install/auto-match |
 | `children` | C3.21 contracts; C3.22 one, C3.23 two; C3.24 handoffs | Explicit enablement; depth one, active/total/queue/context/process/MCP/event limits; allowed routes/tools/Skills/MCP; workspace and output/handoff schemas/byte limits; narrowed budgets and joined cancellation |
 | `a2a` | C3.26 cards; C3.27 delegation; C3.28 cancellation | Named approved card/endpoint and one binding, scoped auth, peer selection permission; input/card/task/artifact/update/time/cleanup limits, optional trace propagation; remote usage trust distinction |
-| `interfaces.tui` | C3.29–C3.30 | TTY selection, composer/display defaults and retained bytes/events, safe control rendering; real cancellation/restoration proof |
-| `diagnostics` | C3.31 | Offline doctor defaults and explicit probe selection; never eager MCP/network/model calls |
+| `interfaces.tui` | C3.29–C3.30 implemented TUI; this config key remains unsupported | `tui` invocation and TTY facts select the interface. Composer/display retention, escaping and restoration are fixed invariants, with no hidden mutable flags. `interfaces.cli_output=text` is the existing configurable prerequisite. |
+| `diagnostics` | C3.31 implemented doctor; this config key remains unsupported | `doctor --json` and explicit `--probe provider\|mcp` select an invocation and diagnostic output. Offline defaults, probe input/bounds and cleanup are fixed invariants; probes are never enabled by a preset. |
 | `interfaces.acp`, `compatibility`, top-level `requires` | C3.33 | Supported capability/extension versions, narrowing supported transport bounds, binary/protocol/schema compatibility requirements; generic-peer fallback |
 | Additional `trace`/`otel` settings | Owning feature; C3.32 coverage | Child/MCP/A2A attribution and fixed cleanup/transport settings only if newly configurable; content/privacy invariants persist |
 | Packaging and rendered presets | C3.32, C3.34–C3.40 | Complete option audit, explicit migration, source/config/build identity, four native target presets, version/channel and install destination. Build/installer inputs remain outside a run config |
 
 ## Compatibility and intentional host-only inputs
 
-Inventory audit sources are current [CLI configuration](../../../crates/pablo/src/config.rs), [RunSpec/RunLimits](../../../crates/pablo-core/src/contracts.rs), [filesystem limits](../../../crates/pablo-core/src/filesystem.rs), [policy](../../../crates/pablo-core/src/policy.rs), [gateway](../../../crates/pablo-core/src/gateway.rs), [ACP](../../../crates/pablo/src/acp.rs) and [telemetry](../../telemetry.md). No code behavior changes at C3.1.
+Inventory audit sources are current [CLI configuration](../../../crates/pablo/src/config.rs), [RunSpec/RunLimits](../../../crates/pablo-core/src/contracts.rs), [filesystem limits](../../../crates/pablo-core/src/filesystem.rs), [policy](../../../crates/pablo-core/src/policy.rs), [gateway](../../../crates/pablo-core/src/gateway.rs), [ACP](../../../crates/pablo/src/acp.rs), [doctor](../../../crates/pablo/src/doctor.rs), [TUI](../../../crates/pablo/src/tui.rs) and [telemetry](../../telemetry.md). The schema has 18 implemented option roots; the baseline table and extension contracts account for each. Configuration resolution/rendering and execution tests cover the shared host mapping.
 
 | Existing input | Config mapping or deliberate exception |
 | --- | --- |
 | Quoted task / prompt / `RunSpec.input`; session ID | Dynamic per-run data, never persisted or hashed in a preset; input permission explicit, identities host/protocol-owned |
-| `run`, shorthand, `demo`, `acp --stdio`, help/version | Invocation/interface selection or offline fixture; not a deployment-granted capability. Future TUI selection owned by C3.29 |
+| `run`, shorthand, `demo`, `acp --stdio`, `tui`, `doctor`, help/version | Invocation/interface selection or offline fixture; not a deployment-granted capability. |
+| `--skill NAME` | `skills.activate`; roots must already be host-approved; locked override admission still applies. |
+| `--config`, `--config-root`, `--profile`, `--user-config`, `--workspace-config`, `--locked`, `--bind` | Configuration bootstrap inputs. The entry owns composition and lock policy; physical binding values stay host-owned. Imports cannot change the entry's deployment controls. |
+| `--fixture-endpoint`, `--fixture-mcp-endpoint`, `--fixture-a2a-endpoint` | Explicit synthetic transport injection, admitted only by the host and paired with provider fixture mode. Not portable/live service configuration; ordinary endpoints and credentials remain configured and fingerprinted. |
 | `--workspace`, ACP cwd, Rust workspace | `run.workspace` after typed binding/override admission; locked ACP cwd must match or be an expressly permitted contained workspace |
 | `--provider`, `--model`, Rust `ModelProfile` | `model.provider`, `model.id`; configured host resolves the same provider identity/default/endpoint |
 | `--no-shell`, `--no-filesystem`, `--allow-write` | `shell.enabled = false`, `filesystem.enabled = false`, `filesystem.write = true` |
@@ -111,4 +113,21 @@ Inventory audit sources are current [CLI configuration](../../../crates/pablo/sr
 
 Schema versioning does not tighten raw legacy Rust inputs or silently change existing CLI/SDK error fallbacks. The new configured path validates the documented portable types; equivalent representable values resolve identically across interfaces. C3.3 must test both the legacy no-config path and the explicit configured path before claiming compatibility.
 
-C3.26 adds `a2a.remotes` (empty by default), with required `card_url`/`endpoint`, optional `bearer.scheme`/`bearer.credential`, and `trace_context` default false. Immutable `authority[].a2a_remotes` intersects exact named URL pairs. `a2a.bearer` credentials are scoped to the configured RPC endpoint. See [the A2A contract](c3-a2a.md); configured fetch/proxy identity and bounded wire conformance are implemented; project state and R01 evidence record acceptance, and configuration alone does not enable task delegation.
+C3.26 adds `a2a.remotes` (empty by default), with required `card_url`/`endpoint`, optional `bearer.scheme`/`bearer.credential`, and `trace_context` default false. Immutable `authority[].a2a_remotes` intersects exact named URL pairs. `a2a.bearer` credentials are scoped to the configured RPC endpoint. C3.27–C3.28 implement delegation/cancellation through the shared root owner; `children.enabled` is required to expose `subagent`. See [the A2A contract](c3-a2a.md).
+
+## C3.32 subsystem audit
+
+| Implemented roots | Configurable surface and intentional fixed behavior |
+| --- | --- |
+| `run`, `model`, `models`, `routes`, `model_route`, `limits`, `policy`, `shell`, `filesystem`, `context`, `output`, `trace`, `otel`, `interfaces` | Baseline and shell tables above cover all fields, including credential refs and per-route attempts/timeouts/eligible failures/capabilities. The source/resolved schemas own exact leaf shapes; no new public mutable setting was found without a mapping. |
+| `mcp` | `servers` contains stdio command/args/cwd/env or HTTP URL/headers, required startup and startup/operation timeouts; `policies` keeps intersecting server/tool/launcher rules. Catalog/frame/progress/concurrency/cleanup bounds are compiled invariants. [M01–M04](c3-mcp.md). |
+| `skills` | Named `roots` and `activate`. Scan/resource/metadata byte bounds, digest handling and allowed resource behavior are fixed; selected resource paths are dynamic tool data. [S01–S02](c3-skills.md). |
+| `children` | `enabled` only. Depth one, two active, sixteen total, queue/process/MCP/context/result limits are compiled root-owner invariants, not hidden flags. Dynamic spawn requests narrow tools, Skills, MCP, route, budgets, context, output schema and handoffs. [A01–A04](c3-children.md). |
+| `a2a` | Named remote endpoints, optional scoped bearer and trace propagation. Task-specific parts, requested modes, duration and stream selection are dynamic tool data; wire/card/artifact/update limits and remote-usage trust are fixed. [R01–R03](c3-a2a.md). |
+
+No preset serializes host callback objects, secret bytes, a new authority loop,
+platform facts, protocol-negotiated capabilities or compiled maxima. `interfaces.acp`,
+`compatibility` and top-level `requires` remain unimplemented at this checkpoint;
+C3.33 owns their compatibility review and must not treat their reservation as
+acceptance. Unknown fields, including attempted diagnostics/TUI/child-limit knobs,
+are rejected explicitly by G04 tests.
