@@ -1,0 +1,60 @@
+{
+  "events": [
+    {
+      "taskId": "remote-task",
+      "contextId": "remote-context",
+      "artifact": {
+        "artifactId": "assembled",
+        "parts": [
+          {
+            "text": "first"
+          }
+        ]
+      }
+    },
+    {
+      "taskId": "remote-task",
+      "contextId": "remote-context",
+      "artifact": {
+        "artifactId": "assembled",
+        "parts": [
+          {
+            "raw": "AP8=",
+            "filename": "../../inert.bin",
+            "mediaType": "application/octet-stream"
+          },
+          {
+            "url": "https://files.example.test/inert"
+          }
+        ]
+      },
+      "append": true,
+      "lastChunk": true
+    }
+  ],
+  "task": {
+    "id": "remote-task",
+    "contextId": "remote-context",
+    "status": {
+      "state": "TASK_STATE_COMPLETED"
+    },
+    "artifacts": [
+      {
+        "artifactId": "assembled",
+        "parts": [
+          {
+            "text": "first"
+          },
+          {
+            "raw": "AP8=",
+            "filename": "../../inert.bin",
+            "mediaType": "application/octet-stream"
+          },
+          {
+            "url": "https://files.example.test/inert"
+          }
+        ]
+      }
+    ]
+  }
+}

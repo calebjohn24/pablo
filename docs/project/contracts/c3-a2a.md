@@ -133,3 +133,25 @@ Independent SDK fixtures prove send/stream/cancel shapes, file/data/URL round tr
 negotiated headers/metadata and generic-peer fallback. Required-version rejection
 occurs before handler invocation. Actual propagated remote spans, metadata-only
 Collector export and exporter-outage parity remain C3.28 acceptance.
+
+## C3.27 lifecycle assembly increment
+
+`a2a::lifecycle::Lifecycle` accepts only bounded, freshly decoded JSONRPC envelopes.
+It preserves the first context/task IDs and rejects changes, recognizes immediate
+Message and terminal Task alternatives, and keeps failed/canceled/rejected/input-
+required/auth-required dispositions separate. A Task is a full snapshot replacing
+previous artifact deltas. Artifact append extends the existing Parts in order,
+matching the pinned SDK task manager; replacement replaces the artifact, and
+lastChunk closes it against further append. At most sixteen artifacts, thirty-two
+Parts per artifact and 64 KiB of serialized result data are retained. No URL is
+fetched and no filename is opened. Incomplete streams/artifacts and rejected
+updates cannot produce a successful result. Accepted state remains available for
+inspection after a failed update; the execution owner must handle cancellation.
+
+`a2a::sse::Decoder` accepts byte-split UTF-8 BOM, CR/LF/CRLF and multiline data. It
+charges raw comments and fields against 1 MiB total, 256 frames and a per-frame
+64 KiB envelope plus 4096 framing bytes; decoded data stays within 64 KiB. IDs and
+retry fields trigger no reconnect. Truncated data at EOF rejects. This is framing
+and assembly implementation, not evidence of supervised remote task execution:
+scoped production HTTP requests, idle/wall/cleanup timers, native proxy events,
+remote usage reporting and host/model admission remain C3.27 work.

@@ -280,7 +280,7 @@ fn present<'de, D: serde::Deserializer<'de>, T: Deserialize<'de>>(
 ) -> Result<Option<T>, D::Error> {
     T::deserialize(d).map(Some)
 }
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Part {
     #[serde(
@@ -427,7 +427,7 @@ fn parts(parts: &[Part]) -> Result<(), Error> {
     }
     Ok(())
 }
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Message {
     #[serde(default, skip_serializing)]
@@ -487,7 +487,7 @@ pub enum TaskState {
     #[serde(rename = "TASK_STATE_AUTH_REQUIRED")]
     AuthRequired,
 }
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct TaskStatus {
     pub state: TaskState,
     #[serde(default)]
@@ -507,7 +507,7 @@ impl TaskStatus {
         self.message.as_mut().map_or(Ok(()), |m| m.validate(trace))
     }
 }
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Artifact {
     pub artifact_id: String,
@@ -528,7 +528,7 @@ impl Artifact {
         parts(&self.parts)
     }
 }
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Task {
     #[serde(default, skip_serializing)]
@@ -563,7 +563,7 @@ impl Task {
         Ok(())
     }
 }
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StatusUpdate {
     #[serde(default, skip_serializing)]
@@ -574,7 +574,7 @@ pub struct StatusUpdate {
     pub context_id: String,
     pub status: TaskStatus,
 }
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ArtifactUpdate {
     #[serde(default, skip_serializing)]

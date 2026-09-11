@@ -331,6 +331,40 @@ async fn independent_sdk_dispatcher_roundtrips_send_sse_cancel_and_version_error
                 before
             );
             assert_eq!(before.lines().count(), 5);
+            let mut response = client
+                .post(url)
+                .header("A2A-Version", "1.0")
+                .header("Content-Type", "application/json")
+                .body(wire::send_request("rpc", "message", "assembly", true).unwrap())
+                .send()
+                .await
+                .unwrap();
+            let mut framing = pablo_core::a2a::sse::Decoder::default();
+            let mut lifecycle = pablo_core::a2a::lifecycle::Lifecycle::default();
+            let mut count = 0;
+            while let Some(chunk) = response.chunk().await.unwrap() {
+                for byte in chunk {
+                    if let Some(data) = framing.push(byte).unwrap() {
+                        lifecycle.ingest(&data, "rpc", Mode::Stream, false).unwrap();
+                        count += 1;
+                    }
+                }
+            }
+            framing.finish().unwrap();
+            let result = lifecycle.finish().unwrap();
+            let expected: Value =
+                serde_json::from_str(include_str!("../../../tests/fixtures/a2a/assembly.json"))
+                    .unwrap();
+            assert_eq!(count, 4);
+            assert_eq!(
+                serde_json::to_value(&result.artifacts).unwrap(),
+                expected["task"]["artifacts"]
+            );
+            assert_eq!(result.remote.task_id.as_deref(), Some("remote-task"));
+            assert_eq!(
+                result.disposition,
+                Some(pablo_core::a2a::lifecycle::Disposition::Completed)
+            );
             let trace = pablo_core::a2a::trace::TraceContext::new(
                 &format!("00-{}-{}-01", "1".repeat(32), "2".repeat(16)),
                 Some("vendor=value"),
@@ -400,7 +434,7 @@ async fn independent_sdk_dispatcher_roundtrips_send_sse_cancel_and_version_error
                     .unwrap()
                     .lines()
                     .count(),
-                10
+                11
             );
         })
         .catch_unwind(),

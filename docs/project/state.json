@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T16:18:00.098Z",
-  "active_checkpoint": null,
-  "next_checkpoint": "C3.27",
-  "next_action": "Start C3.27 R02 on feat/c3-a2a-task-streaming: mark active/in_progress, then implement scoped supervised remote task transport, bounded SSE/status/artifact assembly and immediate/terminal result shapes, host/model delegation, separate remote usage and joined cancellation/deadline cleanup. C3.26 PR #29 is merged with exact verified tree parity; preserve saved C3.25 baseline and both valid C3.26 performance orders.",
-  "latest_log_entry": "LOG-0142",
+  "updated_at": "2026-09-11T16:31:59.764Z",
+  "active_checkpoint": "C3.27",
+  "next_checkpoint": null,
+  "next_action": "Continue C3.27: integrate bounded lifecycle/SSE assembly with scoped HTTP task transport, real wall/idle/cleanup timers, supervisor queue/native events, host/model delegation and separate remote usage. Preserve remote IDs for cancellation on result rejection. R02 execution and final performance/merge remain pending; keep saved C3.26 and C3.25 baselines.",
+  "latest_log_entry": "LOG-0143",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -603,7 +603,7 @@
       "depends_on": [
         "C3.26"
       ],
-      "status": "pending",
+      "status": "in_progress",
       "blockers": [],
       "verification": []
     },

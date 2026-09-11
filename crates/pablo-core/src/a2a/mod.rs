@@ -1,7 +1,9 @@
 //! Host-selected A2A admission. Remote descriptions never grant local authority.
 mod fetch;
+pub mod lifecycle;
 mod proxy;
 mod settings;
+pub mod sse;
 pub mod trace;
 pub mod wire;
 pub use fetch::{CardClient, FetchError};

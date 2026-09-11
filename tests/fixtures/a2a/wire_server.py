@@ -10,6 +10,7 @@ from starlette.applications import Starlette
 import uvicorn
 assert version("a2a-sdk") == "1.0.2"
 vectors=json.loads(Path(__file__).with_name("wire.json").read_text())
+assembly=json.loads(Path(__file__).with_name("assembly.json").read_text())
 def value(name,field,kind): return ParseDict(vectors[name][field],kind())
 def record(method):
     with Path("calls.jsonl").open("a") as out: out.write(json.dumps({"method":method})+"\n")
@@ -33,7 +34,12 @@ class Handler:
         reply.parts[0].CopyFrom(params.message.parts[0]);reply.metadata.CopyFrom(params.metadata);reply.extensions.extend(params.message.extensions)
         return reply
     async def on_message_send_stream(self,params,context):
-        selected(params);record("SendStreamingMessage")
+        text=selected(params);record("SendStreamingMessage")
+        if text=="assembly":
+            yield value("stream_status","statusUpdate",p.TaskStatusUpdateEvent)
+            for event in assembly["events"]: yield ParseDict(event,p.TaskArtifactUpdateEvent())
+            yield p.TaskStatusUpdateEvent(task_id="remote-task",context_id="remote-context",status=p.TaskStatus(state=p.TASK_STATE_COMPLETED))
+            return
         yield value("stream_status","statusUpdate",p.TaskStatusUpdateEvent)
         yield value("stream_artifact","artifactUpdate",p.TaskArtifactUpdateEvent)
         yield value("stream_task","task",p.Task)
