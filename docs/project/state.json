@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T19:33:40.139Z",
+  "updated_at": "2026-09-11T19:35:28.410Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.29",
-  "next_action": "Merge verified C3.28 R03, then start C3.29 basic streaming TUI through the same runtime/session entry points. Preserve bounded display content and actual run-handle cancellation; TTY restoration/PTY proof remains C3.30. Keep saved C3.27/C3.26/C3.25 baselines.",
-  "latest_log_entry": "LOG-0148",
+  "next_action": "Start C3.29 on feat/c3-streaming-tui: mark active/in_progress, then implement basic streaming TUI through existing runtime/session entry points, bounded display content and real run-handle cancellation. Freeze TTY/non-TTY selection; PTY/restoration proof remains C3.30. C3.28 PR #31 merged with exact verified tree parity; preserve C3.28 baseline under .pablo/measurements/c3.29-baseline and prior baselines.",
+  "latest_log_entry": "LOG-0149",
   "checkpoints": [
     {
       "id": "C1.0",
