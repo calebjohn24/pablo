@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T13:14:12.339Z",
-  "active_checkpoint": "C3.22",
-  "next_checkpoint": null,
-  "next_action": "Continue C3.22 with full configured A02 failure/cancellation proof: root cancellation and deadline, child startup-error outcome mapping, setup/trace/consumer failures and exported OTel correlation against native/ACP receipts. CLI/ACP now use RootFactory with TreeSink and concurrently joined original-child delivery; children.enabled defaults false in the c3.22 contract. Basic model-triggered spawn/inspect/wait with child filesystem work and explicit active-child stop pass. Preserve root-only TaskResult, root-session ACP routing with agent-prefixed projected tool IDs, native IDs, atomic root capacity/accounting and joined cleanup. Same-binary one-child CLI/fresh-ACP workload has been measured; review this and complete A02 before marking C3.22 done or merging its PR. Then begin C3.23. Keep GLM defaults, unlimited filesystem work and compaction-independent handles/results. Prior F03 remains C3.33; mixed measurements and RSS/size remain C3.39.",
-  "latest_log_entry": "LOG-0124",
+  "updated_at": "2026-09-11T13:23:07.752Z",
+  "active_checkpoint": null,
+  "next_checkpoint": "C3.23",
+  "next_action": "Merge the exact verified C3.22 PR head, synchronize main and confirm tree parity, then activate C3.23 for two concurrent depth-one children and A03 barriers/isolation/shared-budget races. C3.22 A02 now passes configured operations, root cancellation/deadline/completion, child MCP startup failure, trace failure before setup and exported native/ACP/OTel identity correlation. Preserve root-atomic capacity/accounting, FIFO queue ownership, original native records, root-only results, agent-scoped ACP tool IDs and joined cleanup. Keep GLM defaults, unlimited filesystem work and compaction-independent handles/results. Prior F03 remains C3.33; mixed timing/RSS/size remains C3.39.",
+  "latest_log_entry": "LOG-0125",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -537,9 +537,11 @@
       "depends_on": [
         "C3.21"
       ],
-      "status": "in_progress",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0125"
+      ]
     },
     {
       "id": "C3.23",
