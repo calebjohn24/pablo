@@ -33,6 +33,7 @@ pub(super) struct EventState {
     entries: BTreeMap<u64, Entry>,
     next: u64,
     trace: Option<TraceBudget>,
+    multiplex: bool,
 }
 impl EventState {
     pub(super) fn new(root_id: &str) -> Self {
@@ -54,6 +55,7 @@ impl EventState {
             entries: BTreeMap::new(),
             next: 0,
             trace: None,
+            multiplex: false,
         }
     }
 }
@@ -199,6 +201,26 @@ fn reserve(
     })
 }
 impl RootLedger {
+    /// Claim one root consumer before execution or child registration. Counting
+    /// reserves the sequence field's maximum encoded width, not delivery order.
+    pub fn claim_event_consumer(&self, root: &AgentRef) -> Result<(), AdmissionError> {
+        let mut s = self.0.lock().unwrap();
+        if s.events.multiplex
+            || root.agent_id() != s.root_id
+            || root.root_run_id() != s.root_run_id
+            || root.root_session_id() != s.root_session_id
+            || s.closed
+            || s.agents.len() != 1
+            || s.events.counts.used != 0
+            || s.events.next != 0
+            || s.agents.values().any(|a| a.execution.is_some())
+        {
+            return Err(AdmissionError::InvalidCeiling);
+        }
+        s.events.multiplex = true;
+        Ok(())
+    }
+
     /// Install root-owned trace policy before execution/children. Untraced trees
     /// leave this unset. Repeating the same immutable policy is harmless.
     pub fn configure_trace(&self, settings: &TraceSettings) -> Result<(), AdmissionError> {
@@ -239,29 +261,46 @@ impl RootLedger {
             .as_ref()
             .map(|t| t.counts)
     }
-    fn record_bytes(&self, event: &RunEvent) -> Result<Option<usize>, AdmissionError> {
-        let settings = self
-            .0
-            .lock()
-            .unwrap()
-            .events
-            .trace
-            .as_ref()
-            .map(|t| t.settings.clone());
-        // Potentially large serialization happens outside the shared admission lock.
-        settings
+    fn record_bytes(&self, event: &RunEvent) -> Result<(Option<usize>, bool), AdmissionError> {
+        let (settings, multiplex) = {
+            let s = self.0.lock().unwrap();
+            (
+                s.events.trace.as_ref().map(|t| t.settings.clone()),
+                s.events.multiplex,
+            )
+        };
+        if multiplex && event.root_seq.is_some() {
+            return Err(AdmissionError::InvalidCeiling);
+        }
+        // Serialization stays outside the shared lock. Root delivery reserves
+        // bounded field overhead; it never spends a native event a second time.
+        let bytes = settings
             .map(|settings| {
-                jsonl_size(event, settings.capture_content, settings.max_bytes)
-                    .map_err(|_| trace_exhausted())
+                let extra = if multiplex {
+                    crate::events::ROOT_SEQUENCE_BYTES
+                } else {
+                    0
+                };
+                let remaining = settings
+                    .max_bytes
+                    .checked_sub(extra)
+                    .ok_or_else(trace_exhausted)?;
+                jsonl_size(event, settings.capture_content, remaining)
+                    .map_err(|_| trace_exhausted())?
+                    .checked_add(extra)
+                    .ok_or_else(trace_exhausted)
             })
-            .transpose()
+            .transpose()?;
+        Ok((bytes, multiplex))
     }
+
     pub fn admit_event_record(
         &self,
         agent_id: &str,
         event: &RunEvent,
     ) -> Result<(), AdmissionError> {
-        self.admit_event_bytes(agent_id, self.record_bytes(event)?)
+        let (bytes, multiplex) = self.record_bytes(event)?;
+        self.admit_event_bytes(agent_id, bytes, Some(multiplex))
     }
     pub fn event_counts(&self) -> EventCounts {
         self.0.lock().unwrap().events.counts
@@ -298,14 +337,18 @@ impl RootLedger {
         )
     }
     pub fn admit_event(&self, agent_id: &str) -> Result<(), AdmissionError> {
-        self.admit_event_bytes(agent_id, None)
+        self.admit_event_bytes(agent_id, None, None)
     }
     fn admit_event_bytes(
         &self,
         agent_id: &str,
         bytes: Option<usize>,
+        multiplex: Option<bool>,
     ) -> Result<(), AdmissionError> {
         let mut s = self.0.lock().unwrap();
+        if multiplex.is_some_and(|mode| mode != s.events.multiplex) {
+            return Err(AdmissionError::InvalidCeiling);
+        }
         check(&s, agent_id, 1)?;
         let trace = trace_after(&s, bytes, 0)?;
         if let Some(counts) = trace {
@@ -324,7 +367,7 @@ impl RootLedger {
 impl EventReservation {
     pub fn consume_record(&mut self, event: &RunEvent) -> Result<(), AdmissionError> {
         self.consume_bytes(
-            self.ledger.record_bytes(event)?,
+            self.ledger.record_bytes(event)?.0,
             matches!(event.kind, crate::EventKind::RunFinished { .. }),
         )
     }

@@ -4,6 +4,9 @@ use std::{
 };
 
 use crate::{EventKind, RunEvent, RunSpec};
+pub mod tree;
+/// Maximum extra JSON bytes for the consumer-assigned root sequence.
+pub const ROOT_SEQUENCE_BYTES: usize = b",\"root_seq\":18446744073709551615".len();
 use serde::{Serialize, Serializer, ser::SerializeMap};
 
 #[derive(Debug)]
@@ -225,6 +228,9 @@ impl Serialize for RedactedEvent<'_> {
         let e = self.0;
         let mut map = serializer.serialize_map(None)?;
         map.serialize_entry("schema_version", &e.schema_version)?;
+        if let Some(seq) = e.root_seq {
+            map.serialize_entry("root_seq", &seq)?;
+        }
         if let Some(agent) = &e.agent {
             map.serialize_entry("agent", agent)?;
         }

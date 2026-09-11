@@ -79,6 +79,9 @@ fn correlation(event: &RunEvent, first: u64) -> Value {
         "timestamp_unix_micros":event.timestamp_unix_micros,
         "trace_id":event.trace_id,"span_id":event.span_id,
         "parent_span_id":event.parent_span_id,"trace_flags":event.trace_flags});
+    if let Some(seq) = event.root_seq {
+        value["root_seq"] = json!(seq);
+    }
     if let Some(agent) = &event.agent {
         value["agent"] = serde_json::to_value(agent).expect("bounded agent identity");
     }
@@ -410,6 +413,7 @@ impl EventStream {
                 {
                     text.push_str(more);
                     event.seq = next.seq;
+                    event.root_seq = next.root_seq;
                     event.timestamp_unix_micros = next.timestamp_unix_micros;
                 } else {
                     self.pending = Some(next);
@@ -681,6 +685,7 @@ mod tests {
 
     fn event(seq: u64, kind: EventKind) -> RunEvent {
         RunEvent {
+            root_seq: None,
             agent: None,
             model_route: None,
             compaction: None,
@@ -808,14 +813,14 @@ mod tests {
         let (tx, rx) = async_channel::bounded(8);
         let mut stream = EventStream::new(rx);
         for seq in 1..=3 {
-            tx.send(event(
+            let mut record = event(
                 seq,
                 EventKind::TextDelta {
                     text: seq.to_string(),
                 },
-            ))
-            .await
-            .unwrap();
+            );
+            record.root_seq = Some(seq + 10);
+            tx.send(record).await.unwrap();
         }
         stream.next().await.unwrap();
         let next = stream.next();
@@ -827,5 +832,10 @@ mod tests {
             .unwrap();
         assert_eq!((first, event.seq, event.timestamp_unix_micros), (2, 3, 3));
         assert_eq!(event.kind, EventKind::TextDelta { text: "23".into() });
+        assert_eq!(event.root_seq, Some(13));
+        let correlation = correlation(&event, first);
+        assert_eq!(correlation["root_seq"], 13);
+        assert_eq!(correlation["seq_start"], 2);
+        assert_eq!(correlation["seq_end"], 3);
     }
 }

@@ -299,6 +299,11 @@
         },
         "agent": {
           "$ref": "#/$defs/agent_identity"
+        },
+        "root_seq": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Root consumer delivery sequence of the final native event in this projection; per-agent seq_start/seq_end remain unchanged."
         }
       },
       "required": [

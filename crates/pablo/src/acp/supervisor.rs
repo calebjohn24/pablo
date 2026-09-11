@@ -83,6 +83,26 @@ struct Shutdown {
     result: Option<Result<(), &'static str>>,
 }
 impl Supervisor {
+    /// The host joins this consumer alongside its root run. Receiver loss wakes
+    /// the supervisor; sink failure cancels the root and never acknowledges loss.
+    pub async fn consume_updates<S: pablo_core::EventSink>(
+        updates: async_channel::Receiver<Update>,
+        mut sink: pablo_core::events::tree::TreeSink<S>,
+        root_cancel: CancellationToken,
+    ) -> Result<(), pablo_core::SinkError> {
+        while let Ok(update) = updates.recv().await {
+            if let Err(error) = sink.emit_owned(update.update.event) {
+                updates.close();
+                root_cancel.cancel();
+                return Err(error);
+            }
+            // Cancellation can retire the producer's receipt before we drain its
+            // queued record. Successful delivery remains successful in that race.
+            let _ = update.update.consumed.send(());
+        }
+        Ok(())
+    }
+
     pub fn new(
         options: Options,
         root: AgentRef,

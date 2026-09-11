@@ -109,6 +109,29 @@ impl RootLedger {
             mutation: Arc::new(tokio::sync::Mutex::new(())),
         }))))
     }
+    /// Check a data-only event projection against an already bound execution.
+    pub fn event_source_matches(&self, event: &crate::RunEvent) -> bool {
+        let Some(agent) = &event.agent else {
+            return false;
+        };
+        let s = self.0.lock().unwrap();
+        let root = agent.agent_id() == s.root_id;
+        agent.root_run_id() == s.root_run_id
+            && agent.root_session_id() == s.root_session_id
+            && agent.session_id() == event.session_id
+            && agent.depth() == u8::from(!root)
+            && agent.parent_agent_id() == (!root).then_some(s.root_id.as_str())
+            && agent.kind()
+                == if root {
+                    super::AgentKind::Root
+                } else {
+                    super::AgentKind::LocalAcpTemporary
+                }
+            && s.agents
+                .get(agent.agent_id())
+                .and_then(|a| a.execution.as_ref())
+                .is_some_and(|(run, session)| *run == event.run_id && *session == event.session_id)
+    }
     /// Bind one registered agent to one native execution and its ACP/host session.
     /// Root ownership comes from this ledger, never incoming trace metadata.
     pub fn bind_execution(

@@ -430,22 +430,13 @@ async fn supervised_native_stream_keeps_lifecycle_deltas_identity_and_causal_par
         let parent_trace = parent.span().span_context().trace_id().to_string();
         let parent_span = parent.span().span_context().span_id().to_string();
         let request_spec = serde_json::from_value(json!({"input":"native selected task","capabilities":{"model_route":["secondary"],"tools":[]}})).unwrap();
+        let delivered = Arc::new(Mutex::new(Vec::new()));
+        let sink = pablo_core::events::tree::TreeSink::new({
+            let delivered = delivered.clone();
+            move |event: &RunEvent| { delivered.lock().unwrap().push(event.clone()); Ok(()) }
+        }, &fixture.ledger, fixture.supervisor.inner.root.clone()).unwrap();
         let child = fixture.supervisor.spawn(&request_spec, parent.clone()).unwrap();
-        let drain = tokio::spawn({
-            let updates = fixture.updates.clone();
-            let id = child.agent_id().to_owned();
-            async move {
-                let mut events = Vec::new();
-                while let Ok(update) = updates.recv().await {
-                    assert_eq!(update.agent.agent_id(), id);
-                    let terminal = matches!(update.update.event.kind, EventKind::RunFinished { .. });
-                    events.push(update.update.event);
-                    update.update.consumed.send(()).unwrap();
-                    if terminal { break; }
-                }
-                events
-            }
-        });
+        let drain = tokio::spawn(Supervisor::consume_updates(fixture.updates.clone(), sink, fixture.root_cancel.clone()));
         let (mut stream, _) = listener.accept().await.unwrap();
         let body = request(&mut stream).await;
         assert!(body.to_string().contains("native selected task"));
@@ -459,7 +450,9 @@ async fn supervised_native_stream_keeps_lifecycle_deltas_identity_and_causal_par
         let wait = fixture.supervisor.wait(&[child.agent_id().into()], WaitMode::All, 5000).await.unwrap();
         assert!(wait.remaining.is_empty());
         assert!(wait.settled[0].outcome.as_ref().unwrap().is_completed());
-        let events = drain.await.unwrap();
+        fixture.supervisor.close().await.unwrap();
+        drain.await.unwrap().unwrap();
+        let events = delivered.lock().unwrap().clone();
         assert_eq!(events.len(), 7);
         assert!(matches!(events[0].kind, EventKind::RunStarted));
         assert!(matches!(events[1].kind, EventKind::ModelStarted { .. }));
@@ -472,6 +465,7 @@ async fn supervised_native_stream_keeps_lifecycle_deltas_identity_and_causal_par
         assert!(snapshot.error.is_none());
         for (index, event) in events.iter().enumerate() {
             assert_eq!(event.seq, index as u64 + 1);
+            assert_eq!(event.root_seq, Some(index as u64 + 1));
             assert_eq!(event.trace_id, parent_trace);
             assert_eq!(event.run_id, snapshot.trace.as_ref().unwrap().run_id);
             let agent = event.agent.as_ref().unwrap();
@@ -494,4 +488,43 @@ async fn supervised_native_stream_keeps_lifecycle_deltas_identity_and_causal_par
         parent.span().end();
         sdk.shutdown().unwrap();
     }).await.unwrap();
+}
+
+#[tokio::test]
+async fn root_consumer_failure_cancels_and_joins_owned_children() {
+    tokio::time::timeout(Duration::from_secs(10), async {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let fixture = Fixture::new(&format!("http://{}", listener.local_addr().unwrap()));
+        let sink = pablo_core::events::tree::TreeSink::new(
+            |_: &RunEvent| {
+                Err(pablo_core::SinkError::Io(std::io::Error::other(
+                    "fixture sink failure",
+                )))
+            },
+            &fixture.ledger,
+            fixture.supervisor.inner.root.clone(),
+        )
+        .unwrap();
+        let child = fixture.spawn("cancel when observer fails");
+        assert!(
+            Supervisor::consume_updates(fixture.updates.clone(), sink, fixture.root_cancel.clone())
+                .await
+                .is_err()
+        );
+        assert!(fixture.root_cancel.is_cancelled());
+        fixture.supervisor.close().await.unwrap();
+        assert_eq!(
+            fixture
+                .supervisor
+                .inspect(child.agent_id())
+                .unwrap()
+                .agent
+                .state(),
+            AgentState::Settled
+        );
+        assert_eq!(fixture.ledger.resources().active_children, 0);
+        assert_eq!(fixture.ledger.resources().pending_children, 0);
+    })
+    .await
+    .unwrap();
 }

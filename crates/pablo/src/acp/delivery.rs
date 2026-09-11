@@ -9,7 +9,6 @@ pub(super) struct TypedUpdate {
 
 /// Original runtime record, before ACP projection or text coalescing.
 /// Acknowledgement covers consumption by the root's bounded native stream.
-#[cfg_attr(not(test), allow(dead_code))] // Root consumer wiring is the next C3.22 integration step.
 pub(super) struct NativeUpdate {
     pub event: RunEvent,
     pub consumed: tokio::sync::oneshot::Sender<()>,

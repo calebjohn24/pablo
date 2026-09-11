@@ -111,8 +111,12 @@ before their run span. Settlement replaces that allowance with actual projected
 bytes, including after admission closes. Unused terminal allowances are released;
 consumed bytes remain spent after failed delivery. Operation payloads still must
 fit ordinary trace space. One tree writer remains open through child terminals
-and closes on the native root terminal. The eventual multiplex projection must
-include any added sequence/envelope bytes in admission before delivery.
+and closes on the native root terminal. Claim the sole root consumer before any
+execution or child registration. It adds optional `root_seq` without changing
+per-agent `seq`; admission reserves the field's maximum encoded width, so charged
+trace bytes conservatively bound the actual writer bytes. Delivery does not charge
+an event twice. The shared sink verifies the source against a bound execution and
+serializes root/child projections outside the admission mutex.
 
 Retained model context uses the existing encoded instructions/history/tool catalog
 measure, including opaque continuation bytes. Roots reserve retained context and
@@ -174,8 +178,9 @@ as a successful result automatically.
 Native events carry immutable agent/root/parent IDs plus the source ACP session.
 Each child run span is causally parented by its spawn operation, with stable links
 for explicit handoffs; model/tool spans remain children of the executing agent's
-run. Root multiplexing assigns one monotonic delivery sequence while preserving
-per-agent sequence and original span/timestamps. Filtering is a projection, not a
+run. Root multiplexing assigns one monotonic `root_seq` delivery sequence while preserving
+per-agent `seq` and original span/timestamps. ACP correlation exposes `root_seq` for
+the final native event in a coalesced projection, retaining per-agent sequence ranges. Filtering is a projection, not a
 second lifecycle. Task/context/resource content stays absent from OTel.
 
 Scoped native records and ACP correlation metadata expose an `agent` object:

@@ -371,6 +371,11 @@ fn event_fits(event: &RunEvent) -> bool {
         if strings
             .saturating_mul(6)
             .saturating_add(512)
+            .saturating_add(if event.root_seq.is_some() {
+                pablo_core::events::ROOT_SEQUENCE_BYTES
+            } else {
+                0
+            })
             .saturating_add(
                 event
                     .agent
@@ -408,6 +413,7 @@ mod tests {
     #[test]
     fn event_capacity_admits_large_plain_text_but_rejects_its_escaped_expansion() {
         let mut event = RunEvent {
+            root_seq: None,
             agent: None,
             model_route: None,
             compaction: None,

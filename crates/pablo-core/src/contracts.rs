@@ -275,6 +275,9 @@ pub struct ModelRouteRecord {
 /// Live events contain content. JsonlSink applies its independent capture policy.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RunEvent {
+    /// Root consumer order; seq remains the executing agent's original sequence.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_seq: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub agent: Option<Box<crate::children::AgentIdentity>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

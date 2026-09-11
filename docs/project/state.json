@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T12:09:40.578Z",
+  "updated_at": "2026-09-11T12:25:16.927Z",
   "active_checkpoint": "C3.22",
   "next_checkpoint": null,
-  "next_action": "Continue C3.22 by merging root and original child native records under one root delivery sequence and bounded consumer while preserving per-agent seq/timestamps/identity. Supervisor now selects native output before ACP projection/coalescing, with acknowledgement, receiver-loss cancellation and joined settlement. Native records already spend shared event/trace admission: do not charge them twice; include any added sequence/envelope bytes before delivery. Reserve root-factory MCP capacity before setup, wire configured CLI/ACP RootOwner factories, then run full A02 and child-enabled performance before completing C3.22 or merging. Preserve one active FIFO child, shared context/accounting, truthful cancellation/outcomes, joined root cleanup and handles/results outside compaction. C3.23 follows; GLM defaults and unlimited filesystem work remain. Prior F03 remains C3.33 despite current Node pass; mixed timing/size remains C3.39.",
-  "latest_log_entry": "LOG-0120",
+  "next_action": "Continue C3.22 by verifying/fixing native cancellation drain before Dispatcher transport close with the shared consumer active; preserve prompt cleanup for stalled/lost consumers. Current forced close can discard in-flight child closings while snapshots retain original terminal receipts; receipt retention alone is not complete native delivery. TreeSink now claims one root consumer before execution/children, validates bound sources, assigns root_seq while preserving per-agent seq, and reserves trace projection overhead without double charge. Reserve root-factory MCP capacity before setup, wire configured CLI/ACP RootOwner factories and join the native consumer alongside the root. Run full A02 and child-enabled performance before completing C3.22 or merging. Preserve one active FIFO child, shared context/accounting, causal identity, joined cleanup and handles/results outside compaction. C3.23 follows; GLM defaults and unlimited filesystem work remain. Prior F03 stays C3.33; mixed timing/RSS/size stays C3.39.",
+  "latest_log_entry": "LOG-0121",
   "checkpoints": [
     {
       "id": "C1.0",

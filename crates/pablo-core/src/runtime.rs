@@ -1869,6 +1869,7 @@ impl Lifecycle<'_> {
         let span = context.span();
         let identity = span.span_context();
         RunEvent {
+            root_seq: None,
             agent: self.agent.clone(),
             output_repair: matches!(
                 kind,

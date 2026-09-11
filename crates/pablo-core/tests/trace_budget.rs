@@ -330,3 +330,180 @@ async fn event_denial_does_not_charge_trace_and_failed_sink_does_not_refund_admi
     );
     sdk.shutdown().unwrap();
 }
+
+#[tokio::test]
+async fn multiplexed_trace_reserves_sequence_bytes_without_recharging_native_events() {
+    use pablo_core::events::{ROOT_SEQUENCE_BYTES, tree::TreeSink};
+    use std::sync::{Arc, Mutex};
+    for capture in [false, true] {
+        let sdk = SdkTracerProvider::builder().build();
+        let mut spec = spec();
+        spec.trace.capture_content = capture;
+        let root = AgentRef::root("root".into(), "session".into());
+        let child = root.temporary_child().unwrap();
+        let ledger = RootLedger::new(&root, spec.limits.clone()).unwrap();
+        ledger.configure_trace(&spec.trace).unwrap();
+        let writer = Arc::new(Mutex::new(
+            JsonlSink::for_tree(Vec::new(), &spec, "root".into()).unwrap(),
+        ));
+        let delivered = Arc::new(Mutex::new(Vec::new()));
+        let mut sink = TreeSink::new(
+            {
+                let writer = writer.clone();
+                let delivered = delivered.clone();
+                move |event: &RunEvent| {
+                    writer.lock().unwrap().emit(event)?;
+                    delivered.lock().unwrap().push(event.clone());
+                    Ok(())
+                }
+            },
+            &ledger,
+            root.clone(),
+        )
+        .unwrap();
+        assert!(TreeSink::new(|_: &RunEvent| Ok(()), &ledger, root.clone()).is_err());
+        ledger.register_child(&child, spec.limits.clone()).unwrap();
+        let outcome = Runtime::new(telemetry::tracer(&sdk))
+            .with_root_ledger(ledger.clone(), child.agent_id().into())
+            .unwrap()
+            .run(
+                &spec,
+                &ScriptedProvider::text(std::iter::repeat_n("x", 1000)),
+                &mut sink.clone(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            outcome,
+            RunOutcome::LimitExceeded {
+                limit: LimitKind::TraceBytes
+            }
+        );
+        let result = Runtime::new(telemetry::tracer(&sdk))
+            .with_root_ledger(ledger.clone(), root.agent_id().into())
+            .unwrap()
+            .run(&spec, &ScriptedProvider::text(["root finished"]), &mut sink)
+            .await
+            .unwrap();
+        assert!(result.is_completed());
+        let events = delivered.lock().unwrap();
+        let counts = ledger.trace_counts().unwrap();
+        assert_eq!(counts.reserved, 0);
+        assert!(counts.used <= spec.trace.max_bytes);
+        let actual = writer.lock().unwrap().bytes_written();
+        assert!(actual <= counts.used);
+        let mut projected = 0;
+        for (index, event) in events.iter().enumerate() {
+            assert_eq!(event.root_seq, Some(index as u64 + 1));
+            let mut original = event.clone();
+            original.root_seq = None;
+            projected += jsonl_size(&original, capture, usize::MAX).unwrap() + ROOT_SEQUENCE_BYTES;
+        }
+        assert_eq!(counts.used, projected);
+        assert_eq!(
+            ledger.event_counts(),
+            EventCounts {
+                used: events.len() as u64,
+                reserved: 0
+            }
+        );
+        let before = ledger.event_counts();
+        assert!(
+            ledger
+                .admit_event_record(root.agent_id(), events.last().unwrap())
+                .is_err()
+        );
+        assert_eq!(ledger.event_counts(), before);
+        assert!(sink.emit(events.last().unwrap()).is_err());
+        let bytes = writer.lock().unwrap().bytes_written();
+        assert_eq!(bytes, actual);
+        sdk.shutdown().unwrap();
+    }
+}
+
+#[tokio::test]
+async fn root_consumer_serializes_concurrent_sources_and_rejects_foreign_execution() {
+    use pablo_core::events::tree::TreeSink;
+    use std::sync::{Arc, Mutex};
+    let sdk = SdkTracerProvider::builder().build();
+    let spec = spec();
+    let root = AgentRef::root("root".into(), "session".into());
+    let child = root.temporary_child().unwrap();
+    let ledger = RootLedger::new(&root, spec.limits.clone()).unwrap();
+    let delivered = Arc::new(Mutex::new(Vec::new()));
+    let mut sink = TreeSink::new(
+        {
+            let delivered = delivered.clone();
+            move |e: &RunEvent| {
+                delivered.lock().unwrap().push(e.clone());
+                Ok(())
+            }
+        },
+        &ledger,
+        root.clone(),
+    )
+    .unwrap();
+    ledger.register_child(&child, spec.limits.clone()).unwrap();
+    let mut sources = Vec::new();
+    for agent in [&root, &child] {
+        let mut events = Vec::new();
+        Runtime::new(telemetry::tracer(&sdk))
+            .with_root_ledger(ledger.clone(), agent.agent_id().into())
+            .unwrap()
+            .run(
+                &spec,
+                &ScriptedProvider::text(["a", "b", "c"]),
+                &mut |event: &RunEvent| {
+                    events.push(event.clone());
+                    Ok(())
+                },
+            )
+            .await
+            .unwrap();
+        sources.push(events);
+    }
+    let mut foreign = sources[0][0].clone();
+    foreign.session_id = "foreign".into();
+    assert!(sink.emit(&foreign).is_err());
+    foreign = sources[0][0].clone();
+    foreign.run_id = "foreign".into();
+    assert!(sink.emit(&foreign).is_err());
+    let terminal = sources[0].pop().unwrap();
+    let barrier = std::sync::Barrier::new(2);
+    std::thread::scope(|scope| {
+        for events in &sources {
+            let barrier = &barrier;
+            let mut sink = sink.clone();
+            scope.spawn(move || {
+                barrier.wait();
+                for event in events {
+                    sink.emit(event).unwrap();
+                }
+            });
+        }
+    });
+    sink.emit(&terminal).unwrap();
+    let events = delivered.lock().unwrap();
+    for (index, event) in events.iter().enumerate() {
+        assert_eq!(event.root_seq, Some(index as u64 + 1));
+    }
+    for (index, agent) in [&root, &child].iter().enumerate() {
+        let originals: Vec<_> = events
+            .iter()
+            .filter(|event| event.agent.as_ref().unwrap().agent_id() == agent.agent_id())
+            .map(|event| {
+                let mut e = event.clone();
+                e.root_seq = None;
+                e
+            })
+            .collect();
+        let mut expected = sources[index].clone();
+        if index == 0 {
+            expected.push(terminal.clone());
+        }
+        assert_eq!(originals, expected);
+    }
+    assert_eq!(ledger.event_counts().used, events.len() as u64);
+    assert_eq!(ledger.trace_counts(), None);
+    sdk.shutdown().unwrap();
+}
