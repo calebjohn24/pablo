@@ -17,7 +17,8 @@
         "acceptedOutputModes": [
           "text/plain",
           "application/json"
-        ]
+        ],
+        "historyLength": 0
       }
     }
   },
@@ -39,7 +40,8 @@
         "acceptedOutputModes": [
           "text/plain",
           "application/json"
-        ]
+        ],
+        "historyLength": 0
       }
     }
   },
@@ -50,6 +52,23 @@
     "params": {
       "id": "remote-task"
     }
+  },
+  "cancel_result": {
+    "id": "remote-task",
+    "contextId": "remote-context",
+    "status": {
+      "state": "TASK_STATE_COMPLETED"
+    },
+    "artifacts": [
+      {
+        "artifactId": "remote-artifact",
+        "parts": [
+          {
+            "text": "selected result"
+          }
+        ]
+      }
+    ]
   },
   "message_result": {
     "message": {

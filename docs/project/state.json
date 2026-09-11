@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T15:14:54.275Z",
+  "updated_at": "2026-09-11T15:33:36.664Z",
   "active_checkpoint": "C3.26",
   "next_checkpoint": null,
-  "next_action": "Continue C3.26 with remaining A2A request/result/SSE/task/artifact/cancel/error and trace-extension mapping/bounds proof against pinned independent SDK/reference fixtures. Named configured HTTP retrieval, local remote_a2a ownership, separate stable remote IDs and ledger kind binding are now implemented/tested. Finish full R01 and final regression/performance review before completion PR merge; C3.27 execution follows. Preserve baseline and both warm-prompt measurement orders.",
-  "latest_log_entry": "LOG-0138",
+  "next_action": "Continue C3.26: correct the earlier unjustified file-Part exclusion by implementing bounded file content and inert URL references with explicit input/output-mode handling and SDK proof. Then validate optional negotiated W3C trace metadata/headers without baggage/private policy or remote reparenting. Text/data wire codecs and SDK send/SSE/cancel/version-error proof pass; full R01 is still pending. Complete final regression/performance and exact-head PR merge before C3.27 production transport.",
+  "latest_log_entry": "LOG-0139",
   "checkpoints": [
     {
       "id": "C1.0",

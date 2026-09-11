@@ -15,11 +15,12 @@ message = p.Message(message_id="local-message",role=p.ROLE_USER,parts=[p.Part(te
 reply = p.Message(message_id="remote-message",context_id="remote-context",role=p.ROLE_AGENT,parts=[p.Part(text="selected result")])
 artifact = p.Artifact(artifact_id="remote-artifact",parts=[p.Part(text="selected result")])
 task = p.Task(id="remote-task",context_id="remote-context",status=p.TaskStatus(state=p.TASK_STATE_COMPLETED),artifacts=[artifact])
-request = p.SendMessageRequest(message=message,configuration=p.SendMessageConfiguration(accepted_output_modes=["text/plain","application/json"]))
+request = p.SendMessageRequest(message=message,configuration=p.SendMessageConfiguration(accepted_output_modes=["text/plain","application/json"],history_length=0))
 values = {
     "send": {"jsonrpc":"2.0","id":"rpc-send","method":"SendMessage","params":MessageToDict(request)},
     "stream": {"jsonrpc":"2.0","id":"rpc-stream","method":"SendStreamingMessage","params":MessageToDict(request)},
     "cancel": {"jsonrpc":"2.0","id":"rpc-cancel","method":"CancelTask","params":MessageToDict(p.CancelTaskRequest(id="remote-task"))},
+    "cancel_result": MessageToDict(task),
     "message_result": MessageToDict(p.SendMessageResponse(message=reply)),
     "task_result": MessageToDict(p.SendMessageResponse(task=task)),
     "stream_message": MessageToDict(p.StreamResponse(message=reply)),

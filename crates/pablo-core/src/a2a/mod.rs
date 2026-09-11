@@ -2,6 +2,7 @@
 mod fetch;
 mod proxy;
 mod settings;
+pub mod wire;
 pub use fetch::{CardClient, FetchError};
 pub use proxy::{IdentityError, MAX_REMOTE_ID_BYTES, RemoteIdentity, RemoteProxy, ResolveError};
 use serde::{Deserialize, Serialize};

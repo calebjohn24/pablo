@@ -2,8 +2,9 @@
 
 C3.26 is in progress. The implemented core currently validates cards and retrieves
 public cards through bounded, no-redirect HTTP. Deployment definitions, RPC
-credential scoping and named fetch/local proxy identity are implemented; remaining
-wire-bound mapping proof and full R01 acceptance remain pending. Task execution
+credential scoping and named fetch/local proxy identity are implemented; bounded
+wire codecs and independent SDK RPC/SSE proof are implemented. Required file-Part support, trace-extension
+metadata validation and final R01 acceptance review remain pending. Task execution
 and cancellation belong to C3.27/C3.28; no A2A capability is advertised yet.
 
 ## Immutable protocol and reference
@@ -82,7 +83,8 @@ R03 acceptance.
 - Only explicitly delegated task/context becomes a user Message. Local trusted
   instructions, full transcripts, tool catalogs, Skill bodies, credentials and
   policy do not transfer implicitly. Parts support bounded text/structured data;
-  raw bytes and URLs are unsupported and never fetched automatically.
+  file Parts are also required by the release design and remain unfinished in the
+  current codec. URL references must remain inert without automatic fetching.
 - Immediate agent Message results require their remote context and message IDs.
   Task results and subsequent status/artifact events must retain the same context
   and task identity. Submitted/working are nonterminal; completed requires a valid
@@ -97,6 +99,50 @@ R03 acceptance.
   A2A -32001 through -32009 have their pinned standard meanings; untrusted error
   messages/details must not enter private diagnostics or change local authority.
 
-Remaining R01 work must freeze the remaining request, stream, result, message/artifact
-identifier, time, error and trace-extension bounds against independent reference
-fixtures before C3.27 starts. Current card/proxy tests alone do not satisfy R01.
+## Current bounded wire codec
+
+`a2a::wire` encodes only explicitly selected input into a new user Message. It
+requests `historyLength: 0`; nonempty returned history rejects. Send/stream methods
+use their distinct response unions; `CancelTask` returns a direct Task. Duplicate
+known fields, ambiguous unions, mismatched JSONRPC IDs/versions, invalid role/state
+aliases and unknown content variants reject. Text and structured JSON (including
+explicit null) are implemented. The current raw/base64 and URL rejection is a
+temporary implementation gap, not the release cut: bounded file Parts and inert
+URL references must be added before R01 completion. Optional
+filename/name/description remain untrusted display data, never local file paths.
+Only text/plain for text and application/json for data are accepted when a media
+type is supplied. Unknown metadata is ignored and grants no local authority.
+
+| Resource | Selected bound |
+| --- | --- |
+| Explicit input UTF-8 | 32 KiB |
+| Encoded request | 256 KiB, allowing worst-case input escaping |
+| One JSONRPC response or SSE data envelope | 64 KiB |
+| Stream envelope bytes / updates | 1 MiB / 256 |
+| Parts per Message/Artifact | 32, at least one |
+| Artifacts per Task | 16; distinct IDs |
+| Local request / remote message, context, task, artifact IDs | 256 UTF-8 bytes, nonempty, no controls |
+| Artifact name / description and Part filename | 256 / 8192 / 256 bytes |
+| Remote error message | 1024 bytes; never copied to local diagnostic |
+| Task wall time / stream idle | 900 s / 10 s, clamped to remaining caller/root time |
+| Cancellation exchange | 2 s bounded cleanup window, or the earlier host cleanup deadline |
+
+The codec enforces structural/byte/count limits. Transport framing, idle timers,
+root deadline clamping and joined cancellation must be enforced by C3.27's reader;
+no execution claim follows from constants alone. Numeric JSONRPC/A2A error codes
+remain remote outcomes, distinct from local Invalid/Bound/UnsupportedContent and
+UnsupportedExtension failures. Unknown remote numeric errors retain their code
+without promoting arbitrary error text or details.
+
+The pinned SDK dispatcher independently accepts Pablo's send/stream/cancel
+requests, emits Message/Task/SSE status/artifact/terminal response shapes decoded
+by Pablo, returns task-not-found, and rejects unsupported versions before handler
+invocation. SDK-generated vectors independently pin byte-independent JSON shapes.
+See `tests/fixtures/a2a/wire_server.py` and `crates/pablo-core/tests/a2a_wire.rs`.
+This fixture is not the supervised production task transport.
+
+Remaining R01 work is bounded file-Part/inert URL support (required by the release
+design), explicit trace-extension metadata/header validation and a
+final requirement-by-requirement admission review. C3.27 still owns production
+transport, artifact assembly and supervised task execution; C3.28 owns adverse
+cancellation/remote-boundary proof.
