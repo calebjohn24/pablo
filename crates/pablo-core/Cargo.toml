@@ -22,6 +22,7 @@ toml.workspace = true
 rustix.workspace = true
 
 [dev-dependencies]
+rmcp.workspace = true
 opentelemetry_sdk = { workspace = true, features = ["testing"] }
 tokio = { workspace = true, features = ["test-util", "sync"] }
 

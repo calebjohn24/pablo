@@ -325,6 +325,25 @@ pub(crate) fn config(config: &Value, request: &ResolveRequest) -> Result<(), Con
             return Err(error("config_invalid_value", "/config/credentials"));
         }
     }
+    let mcp = super::mcp::settings(config)?;
+    let mut credential_ids: Vec<&str> = [
+        model["credential"].as_str(),
+        options["otel"]["headers"].as_str(),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+    for server in mcp.servers.values() {
+        for (_, id, consumer) in server.credentials() {
+            if config["credentials"]
+                .get(id)
+                .is_none_or(|record| record["consumer"] != consumer)
+            {
+                return Err(error("config_invalid_value", "/config/credentials"));
+            }
+            credential_ids.push(id);
+        }
+    }
     // Validate declared references, including unused secret sources, without
     // opening a file, observing presence or invoking a host credential callback.
     validate_paths(config, "/config", options, request)?;
@@ -386,16 +405,7 @@ pub(crate) fn config(config: &Value, request: &ResolveRequest) -> Result<(), Con
                     "provider_endpoints",
                     vec![model["endpoint"].as_str().unwrap()],
                 ),
-                (
-                    "credential_ids",
-                    [
-                        model["credential"].as_str(),
-                        options["otel"]["headers"].as_str(),
-                    ]
-                    .into_iter()
-                    .flatten()
-                    .collect(),
-                ),
+                ("credential_ids", credential_ids.clone()),
                 (
                     "otel_endpoints",
                     if options["otel"]["exporter"] == "otlp"

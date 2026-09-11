@@ -1,7 +1,5 @@
 # Project brain
-
 Pablo is a small headless Rust agent runtime for applications doing arbitrary work. Hosts own their sandboxes, business state, approvals, and user experience. CLI and protocol clients share one runtime lifecycle.
-
 This file holds durable context. [State](state.json) reports current progress, [the log](log.jsonl) records history, and [cycle C3](cycles/003-extensibility-and-release.md) defines the selected work. Completed [C1](cycles/001-first-spike.md) and [C2](cycles/002-single-agent-completion.md) plans/evidence remain historical. Run `node scripts/project.mjs context` for a focused handoff. Private source remote: [calebjohn24/pablo](https://github.com/calebjohn24/pablo), with `main` tracking `origin/main`. Repository creation is recorded in LOG-0044; [native Linux acceptance](evidence/c2.5-linux-x64.md) closes C2.5. C3 selects declarative deployments, extensibility, interoperability and release delivery, excluding Otto integration.
 
 Read [the architecture brief](../context.md) selectively: section 29.1 defines the 0.1 contract; section 37.1 the C1 spike; sections 12–14 contracts/lifecycle/cancellation/shell; sections 19/21 providers and OTel; sections 28/31/32 performance/release/tests. [Backlog](backlog.md) retains deferred slices and promotion conditions.
@@ -197,3 +195,6 @@ C3.13 pins an optional bounded Draft 2020-12 subset and a 16-entry canonical sch
 
 ### D047 — Repair is one admitted continuation, not a retry owner
 C3.14 permits opt-in repair of one invalid final answer in its original history. Keep instruction/tool/private continuation intact; share candidate output bytes, validation work and root model/token/cost/deadline/context/event/trace limits. No tools, compaction, fallback or third repair request may hide inside it. Negotiated repair metadata carries counts/phases only; terminal validity determines structured success. See [J02](contracts/c3-output-repair.md).
+
+### D048 — Admit exact host MCP definitions before enabling transports
+C3.15 pins official rmcp 3.3.0 and protocol 2025-11-25. Closed server records replace as units; private credential references and exact policy intersect immutable host ceilings before use. ACP can select only matching host definitions. Bounded framing must wrap the SDK because its default reader is unbounded; transports and runtime credential scope remain M02/M03. See [M01–M04](contracts/c3-mcp.md).

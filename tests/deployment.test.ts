@@ -61,7 +61,7 @@ test('configured CLI and ACP use one lifecycle, identical identity and synthetic
       assert(outcome.status==='completed'); assert.equal(outcome.output,'configured answer');
       identity=(response._meta?.['pablo/v1'] as any).deployment;
     });
-    assert.deepEqual(identity,{schema_version:1,contract_revision:'c3.14',fingerprint:expected});
+    assert.deepEqual(identity,{schema_version:1,contract_revision:'c3.15',fingerprint:expected});
     assert.equal(seen.length,2); assert.deepEqual(seen[0],seen[1]);
     const traces=(await readdir(cwd)).filter(name=>name.endsWith('.jsonl'));assert.equal(traces.length,2);
     for(const name of traces){
@@ -367,4 +367,43 @@ allow=[{id="b.read",value="fs.read"},{id="b.search",value="fs.search"}]
     const broken=await invoke(['run','task','--config',file,'--bind',`workspace=${cwd}`,'--policy',join(cwd,'missing')]);
     assert.equal(broken.code,2);assert.equal(broken.stdout,'');assert.match(broken.stderr,/config_invalid_value/);assert.equal(calls,4);
   }finally{await gateway.close();await rm(cwd,{recursive:true,force:true});}
+});
+
+test('MCP ACP inputs intersect host definitions before any launcher, credential or transport use', async () => {
+  const cwd=await realpath(await mkdtemp(join(tmpdir(),'pablo-mcp-admission-')));
+  try {
+    const file=join(cwd,'entry.toml');
+    await writeFile(file,preset(`
+[options.mcp.servers.local]
+transport="stdio"
+command="/not-installed/never-launch"
+args=["host-argument"]
+[options.mcp.servers.remote]
+transport="http"
+url="https://example.invalid/mcp"
+`));
+    await withPablo({binary,args:['--config',file,'--bind',`workspace=${cwd}`],env:cleanEnv()},async cx=>{
+      const init=await cx.request('initialize',{protocolVersion:1,clientCapabilities:{}});
+      assert(!init.agentCapabilities?.mcpCapabilities?.http);
+      assert(!init.agentCapabilities?.mcpCapabilities?.sse);
+      for(const [server,expected] of [
+        [{name:'unknown',command:'/bin/sh',args:[],env:[]},'denied by host'],
+        [{name:'local',command:'/bin/sh',args:['host-argument'],env:[]},'denied by host'],
+        [{name:'local',command:'/not-installed/never-launch',args:['changed'],env:[]},'denied by host'],
+        [{name:'local',command:'/not-installed/never-launch',args:['host-argument'],env:[{name:'TOKEN',value:'private-client-sentinel'}]},'denied by host'],
+        [{type:'http',name:'remote',url:'https://example.invalid/changed',headers:[]},'denied by host'],
+        [{type:'http',name:'remote',url:'https://example.invalid/mcp',headers:[{name:'authorization',value:'private-client-sentinel'}]},'denied by host'],
+        [{name:'local',command:'/not-installed/never-launch',args:['host-argument'],env:[]},'transport unsupported'],
+        [{type:'http',name:'remote',url:'https://example.invalid/mcp',headers:[]},'transport unsupported'],
+      ] as const) {
+        await assert.rejects(cx.request('session/new',{cwd,mcpServers:[server]} as any),(error:any)=>{
+          assert.equal(error.code,-32602);
+          assert(JSON.stringify(error).includes(expected));
+          assert(!JSON.stringify(error).includes('private-client-sentinel'));
+          return true;
+        });
+      }
+    });
+    assert.deepEqual((await readdir(cwd)).sort(),['entry.toml']);
+  } finally {await rm(cwd,{recursive:true,force:true});}
 });

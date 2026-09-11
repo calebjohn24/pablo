@@ -1624,6 +1624,7 @@ dependencies = [
  "opentelemetry",
  "opentelemetry_sdk",
  "reqwest",
+ "rmcp",
  "rustix",
  "serde",
  "serde_json",
@@ -2056,6 +2057,25 @@ dependencies = [
  "libc",
  "untrusted",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "rmcp"
+version = "3.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b88db56b8ae316560e9e868b6b978ea940f27cb883323fc90e07435e44158f5c"
+dependencies = [
+ "chrono",
+ "futures",
+ "indexmap 2.14.2",
+ "pin-project-lite",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "tracing",
 ]
 
 [[package]]

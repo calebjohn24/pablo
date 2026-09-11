@@ -108,11 +108,22 @@ async fn serve_streams(
     input: impl futures::AsyncRead + Unpin + Send + 'static,
     output: impl futures::AsyncWrite + Unpin + Send + 'static,
 ) -> Result<ExitCode, String> {
-    if let Some(prepared) = options.prepare_run(
-        Some(String::new()),
-        None,
-        Some(uuid::Uuid::new_v4().to_string()),
-    )? {
+    // M01 can inspect host definitions and reject session requests before either
+    // transport exists. Do not resolve provider credentials for an unusable MCP run.
+    let configured = options.configured()?;
+    let pending_mcp = configured.as_ref().is_some_and(|deployment| {
+        deployment.options()["mcp"]["servers"]
+            .as_object()
+            .is_some_and(|servers| !servers.is_empty())
+    });
+    if !pending_mcp && let Some(configured) = configured {
+        let prepared = configured
+            .prepare_run(pablo_core::deployment::RunInput {
+                input: String::new(),
+                workspace: None,
+                session_id: Some(uuid::Uuid::new_v4().to_string()),
+            })
+            .map_err(|error| error.to_string())?;
         let secrets =
             crate::deployment::Secrets::read(&prepared, options.deployment.as_ref().unwrap())?;
         let provider = secrets.provider(options.deployment.as_ref().unwrap())?;
@@ -292,8 +303,16 @@ async fn serve_streams(
                         ));
                     }
                     if !request.mcp_servers.is_empty() {
-                        return responder
-                            .respond_with_error(invalid("MCP servers are unsupported"));
+                        let admitted = normalize_mcp(&request.mcp_servers).and_then(|servers| {
+                            let host = options.configured().map_err(|_| "MCP host configuration invalid")?
+                                .ok_or("MCP server is not host-configured; unsupported")?;
+                            host.admit_mcp_client(&servers)
+                                .map_err(|_| "MCP server configuration denied by host")
+                        });
+                        return responder.respond_with_error(invalid(match admitted {
+                            Ok(_) => "MCP transport unsupported until its implementation checkpoint passes",
+                            Err(message) => message,
+                        }));
                     }
                     if !request.cwd.is_absolute() {
                         return responder.respond_with_error(invalid("cwd must be absolute"));
@@ -827,6 +846,37 @@ fn prompt_response(
         response.meta = Some(meta(details));
     }
     Ok(response)
+}
+
+/// Normalize the official ACP wire types without retaining client credentials.
+fn normalize_mcp(
+    servers: &[wire::McpServer],
+) -> Result<Vec<pablo_core::mcp::ClientServer>, &'static str> {
+    use pablo_core::mcp::{ClientServer, ClientTransport, MAX_SERVERS};
+    if servers.len() > MAX_SERVERS {
+        return Err("MCP server configuration exceeds host bound");
+    }
+    servers
+        .iter()
+        .map(|server| match server {
+            wire::McpServer::Stdio(s) if s.env.is_empty() => Ok(ClientServer {
+                name: s.name.clone(),
+                transport: ClientTransport::Stdio {
+                    command: s.command.to_str().ok_or("MCP launcher invalid")?.into(),
+                    args: s.args.clone(),
+                    env: Default::default(),
+                },
+            }),
+            wire::McpServer::Http(s) if s.headers.is_empty() => Ok(ClientServer {
+                name: s.name.clone(),
+                transport: ClientTransport::Http {
+                    url: s.url.clone(),
+                    headers: Default::default(),
+                },
+            }),
+            _ => Err("MCP client credentials or transport denied by host"),
+        })
+        .collect()
 }
 
 #[cfg(test)]

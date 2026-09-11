@@ -27,3 +27,5 @@ pub use tokio_util::sync::CancellationToken;
 pub use tool::{Tool, ToolRegistry};
 
 pub mod output;
+
+pub mod mcp;

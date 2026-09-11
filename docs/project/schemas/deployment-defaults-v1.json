@@ -96,5 +96,9 @@
       "enabled": false,
       "max_feedback_bytes": 4096
     }
+  },
+  "mcp": {
+    "servers": {},
+    "policies": []
   }
 }
