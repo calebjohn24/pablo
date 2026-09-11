@@ -73,11 +73,7 @@ fn exceeds_bound(issue: &jsonschema::ValidationError<'_>) -> bool {
 }
 fn unsupported(value: &Value, path: &str) -> Result<(), ConfigError> {
     if let Some(options) = value.get("options").and_then(Value::as_object) {
-        for (key, owner) in [
-            ("a2a", "C3.26"),
-            ("diagnostics", "C3.31"),
-            ("compatibility", "C3.33"),
-        ] {
+        for (key, owner) in [("diagnostics", "C3.31"), ("compatibility", "C3.33")] {
             if options.contains_key(key) {
                 return Err(feature(&format!("{path}/options/{key}"), owner));
             }

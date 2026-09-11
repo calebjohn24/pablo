@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T14:26:34.925Z",
+  "updated_at": "2026-09-11T16:16:41.542Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.26",
-  "next_action": "Merge exact verified C3.25 head, synchronize main and confirm tree parity. Prepare C3.26: pin A2A 1.0 and one JSON-RPC-over-HTTP/SSE binding, resolve allowlisted Agent Cards as untrusted remote proxy descriptions and reject invalid/unsupported/redirected authority before task submission. Preserve local child/MCP/Skill/compaction defaults and proofs; F03 remains C3.33 and four-target native/release acceptance remains pending.",
-  "latest_log_entry": "LOG-0134",
+  "next_checkpoint": "C3.27",
+  "next_action": "C3.26 R01 passes. Merge its exact verified PR head, then start C3.27 R02: supervised scoped remote task transport, bounded SSE/status/artifact assembly and immediate/terminal results, host/model delegation, separate remote usage, and joined cancellation/deadline cleanup. Preserve C3.25 baseline and both valid C3.26 performance orders.",
+  "latest_log_entry": "LOG-0141",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -590,9 +590,11 @@
       "depends_on": [
         "C3.25"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0141"
+      ]
     },
     {
       "id": "C3.27",

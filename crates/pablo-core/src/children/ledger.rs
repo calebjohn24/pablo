@@ -25,6 +25,7 @@ pub enum AdmissionError {
 #[derive(Clone)]
 pub struct RootLedger(Arc<Mutex<State>>);
 struct Agent {
+    kind: super::AgentKind,
     execution: Option<(String, String)>,
     limits: RunLimits,
     accounting: Accounting,
@@ -86,6 +87,7 @@ impl RootLedger {
         let agents = [(
             root.agent_id().to_owned(),
             Agent {
+                kind: root.kind(),
                 execution: None,
                 limits: limits.clone(),
                 accounting: accounting.clone(),
@@ -121,12 +123,9 @@ impl RootLedger {
             && agent.session_id() == event.session_id
             && agent.depth() == u8::from(!root)
             && agent.parent_agent_id() == (!root).then_some(s.root_id.as_str())
-            && agent.kind()
-                == if root {
-                    super::AgentKind::Root
-                } else {
-                    super::AgentKind::LocalAcpTemporary
-                }
+            && s.agents
+                .get(agent.agent_id())
+                .is_some_and(|a| a.kind == agent.kind())
             && s.agents
                 .get(agent.agent_id())
                 .and_then(|a| a.execution.as_ref())
@@ -144,6 +143,7 @@ impl RootLedger {
         if registered.execution.is_some() {
             return Err(AdmissionError::UnknownAgent);
         }
+        let kind = registered.kind;
         let is_root = agent_id == s.root_id;
         if is_root && session_id.is_some_and(|id| id != s.root_session_id) {
             return Err(AdmissionError::UnknownAgent);
@@ -170,11 +170,7 @@ impl RootLedger {
             root_run_id: s.root_run_id.clone(),
             root_session_id: s.root_session_id.clone(),
             parent_agent_id: (!is_root).then(|| s.root_id.clone()),
-            kind: if is_root {
-                super::AgentKind::Root
-            } else {
-                super::AgentKind::LocalAcpTemporary
-            },
+            kind,
             depth: u8::from(!is_root),
             session_id: session_id.clone(),
         };
@@ -216,6 +212,7 @@ impl RootLedger {
         s.agents.insert(
             child.agent_id().into(),
             Agent {
+                kind: child.kind(),
                 execution: None,
                 accounting: initial(&limits),
                 limits,

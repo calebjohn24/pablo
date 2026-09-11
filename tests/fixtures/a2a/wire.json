@@ -1,0 +1,206 @@
+{
+  "send": {
+    "jsonrpc": "2.0",
+    "id": "rpc-send",
+    "method": "SendMessage",
+    "params": {
+      "message": {
+        "messageId": "local-message",
+        "role": "ROLE_USER",
+        "parts": [
+          {
+            "text": "explicit selected input"
+          }
+        ]
+      },
+      "configuration": {
+        "acceptedOutputModes": [
+          "text/plain",
+          "application/json"
+        ],
+        "historyLength": 0
+      }
+    }
+  },
+  "stream": {
+    "jsonrpc": "2.0",
+    "id": "rpc-stream",
+    "method": "SendStreamingMessage",
+    "params": {
+      "message": {
+        "messageId": "local-message",
+        "role": "ROLE_USER",
+        "parts": [
+          {
+            "text": "explicit selected input"
+          }
+        ]
+      },
+      "configuration": {
+        "acceptedOutputModes": [
+          "text/plain",
+          "application/json"
+        ],
+        "historyLength": 0
+      }
+    }
+  },
+  "cancel": {
+    "jsonrpc": "2.0",
+    "id": "rpc-cancel",
+    "method": "CancelTask",
+    "params": {
+      "id": "remote-task"
+    }
+  },
+  "cancel_result": {
+    "id": "remote-task",
+    "contextId": "remote-context",
+    "status": {
+      "state": "TASK_STATE_COMPLETED"
+    },
+    "artifacts": [
+      {
+        "artifactId": "remote-artifact",
+        "parts": [
+          {
+            "text": "selected result"
+          }
+        ]
+      }
+    ]
+  },
+  "message_result": {
+    "message": {
+      "messageId": "remote-message",
+      "contextId": "remote-context",
+      "role": "ROLE_AGENT",
+      "parts": [
+        {
+          "text": "selected result"
+        }
+      ]
+    }
+  },
+  "task_result": {
+    "task": {
+      "id": "remote-task",
+      "contextId": "remote-context",
+      "status": {
+        "state": "TASK_STATE_COMPLETED"
+      },
+      "artifacts": [
+        {
+          "artifactId": "remote-artifact",
+          "parts": [
+            {
+              "text": "selected result"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "stream_message": {
+    "message": {
+      "messageId": "remote-message",
+      "contextId": "remote-context",
+      "role": "ROLE_AGENT",
+      "parts": [
+        {
+          "text": "selected result"
+        }
+      ]
+    }
+  },
+  "stream_task": {
+    "task": {
+      "id": "remote-task",
+      "contextId": "remote-context",
+      "status": {
+        "state": "TASK_STATE_COMPLETED"
+      },
+      "artifacts": [
+        {
+          "artifactId": "remote-artifact",
+          "parts": [
+            {
+              "text": "selected result"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "stream_status": {
+    "statusUpdate": {
+      "taskId": "remote-task",
+      "contextId": "remote-context",
+      "status": {
+        "state": "TASK_STATE_WORKING"
+      }
+    }
+  },
+  "stream_artifact": {
+    "artifactUpdate": {
+      "taskId": "remote-task",
+      "contextId": "remote-context",
+      "artifact": {
+        "artifactId": "remote-artifact",
+        "parts": [
+          {
+            "text": "selected result"
+          }
+        ]
+      },
+      "lastChunk": true
+    }
+  },
+  "file_send": {
+    "jsonrpc": "2.0",
+    "id": "rpc-file",
+    "method": "SendMessage",
+    "params": {
+      "message": {
+        "messageId": "local-message",
+        "role": "ROLE_USER",
+        "parts": [
+          {
+            "raw": "AP9zeW50aGV0aWMgZmlsZQ==",
+            "filename": "fixture.bin",
+            "mediaType": "application/octet-stream"
+          }
+        ]
+      },
+      "configuration": {
+        "acceptedOutputModes": [
+          "application/octet-stream"
+        ],
+        "historyLength": 0
+      }
+    }
+  },
+  "url_send": {
+    "jsonrpc": "2.0",
+    "id": "rpc-url",
+    "method": "SendMessage",
+    "params": {
+      "message": {
+        "messageId": "local-message",
+        "role": "ROLE_USER",
+        "parts": [
+          {
+            "url": "https://files.example.test/inert",
+            "mediaType": "application/octet-stream"
+          }
+        ]
+      },
+      "configuration": {
+        "acceptedOutputModes": [
+          "application/octet-stream"
+        ],
+        "historyLength": 0
+      }
+    }
+  }
+}

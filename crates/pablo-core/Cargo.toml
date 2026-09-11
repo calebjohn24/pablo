@@ -6,6 +6,7 @@ rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
+base64.workspace = true
 rmcp.workspace = true
 futures-util.workspace = true
 opentelemetry.workspace = true

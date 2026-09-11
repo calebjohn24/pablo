@@ -1,0 +1,32 @@
+{
+  "method": {
+    "samples": 30,
+    "warmup": 5,
+    "admissions_per_sample": 1000,
+    "scope": "CPU-only card decode, host interface/security/extension validation and raw-byte SHA-256; excludes HTTP, credentials and task dispatch."
+  },
+  "measurements": {
+    "sdk_card": {
+      "card_bytes": 726,
+      "microseconds_per_admission": {
+        "min": 2.2638749999999996,
+        "p50": 2.4415,
+        "p95": 3.398625,
+        "max": 3.403209
+      }
+    },
+    "fifty_skills": {
+      "card_bytes": 53986,
+      "microseconds_per_admission": {
+        "min": 33.690375,
+        "p50": 33.952542,
+        "p95": 36.327417000000004,
+        "max": 36.921791
+      }
+    }
+  },
+  "checkpoint": "C3.26",
+  "source_sha256": "355a3ffb2d0620ffe59e50cbfc340e6ec17ff8ab86e2bab92e50db70cb9d637c",
+  "binary_sha256": "90ebf6d802ce2376bb663d4c07dac4f60572f31ab25c89e5b22d682e0941c414",
+  "execution": "Sequential after all build/test/live processes and matched configured/filesystem controls terminated; before the separately recorded reverse-order runtime repeat."
+}

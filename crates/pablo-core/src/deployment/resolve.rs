@@ -234,6 +234,7 @@ impl LoadedDeployment {
         resolver.complete_aliases()?;
         resolver.complete_output()?;
         resolver.complete_mcp()?;
+        resolver.complete_a2a()?;
         input::resolved_shape(&resolver.config)?;
         let model_route = super::routes::resolve(&resolver.config)?;
         validate::config(&resolver.config, &resolver.request)?;
@@ -677,6 +678,24 @@ impl Resolver {
                 &mut self.origins,
             )?;
         }
+        Ok(())
+    }
+    fn complete_a2a(&mut self) -> Result<(), ConfigError> {
+        let settings = super::a2a::settings(&self.config)?;
+        for name in settings.remotes.keys() {
+            if self.config["options"]["a2a"]["remotes"][name]
+                .get("trace_context")
+                .is_none()
+            {
+                let path = pointer(
+                    &pointer("/config/options/a2a/remotes", name),
+                    "trace_context",
+                );
+                self.record(&Value::Bool(false), &path, "source-0000", "default")?;
+            }
+        }
+        self.config["options"]["a2a"] = serde_json::to_value(settings)
+            .map_err(|_| error("config_invalid_value", "/options/a2a"))?;
         Ok(())
     }
     fn complete_mcp(&mut self) -> Result<(), ConfigError> {

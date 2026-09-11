@@ -1,0 +1,26 @@
+{
+  "protocol": {
+    "version": "1.0",
+    "tag": "v1.0.0",
+    "repository": "https://github.com/a2aproject/A2A",
+    "commit": "173695755607e884aa9acf8ce4feed90e32727a1",
+    "specification_sha256": "087c6f6272ec08a7fcd90eb16843bf97e25e0dcd155afa5779033d23d5ac377d",
+    "proto_sha256": "4b74c0baa923ae0acb55474e548f1d6e5d3f83b80d757b65f8bf3e99a3c2257f"
+  },
+  "reference_sdk": {
+    "package": "a2a-sdk",
+    "version": "1.0.2",
+    "repository": "https://github.com/a2aproject/a2a-python",
+    "commit": "eb37091fcd6411b3b01481ea3fd3e001c6fb55c0",
+    "wheels": [
+      {
+        "filename": "a2a_sdk-1.0.2-py3-none-any.whl",
+        "sha256": "4dbc083b6808ee28207ac6daad263360f87612c37b2d06f5521efb530318141c",
+        "url": "https://files.pythonhosted.org/packages/c9/03/58c92a44e7b94a42614880df2365f074969e47067c4c736e31e855aca2fd/a2a_sdk-1.0.2-py3-none-any.whl"
+      }
+    ]
+  },
+  "binding": "JSONRPC over HTTP with SSE",
+  "python": "3.12.13",
+  "dependency_versions": "requirements.txt"
+}

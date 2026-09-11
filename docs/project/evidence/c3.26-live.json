@@ -1,0 +1,151 @@
+{
+  "checkpoint": "C3.26",
+  "timestamp": "2026-09-11T16:04:33.054827+00:00",
+  "source_sha256": "355a3ffb2d0620ffe59e50cbfc340e6ec17ff8ab86e2bab92e50db70cb9d637c",
+  "binary_sha256": "c89ba9c74382f303e17ed9531a41809f1b7cbfc9dbe97fb0a232a32e62f8319f",
+  "openrouter": [
+    {
+      "surface": "cli",
+      "result": "passed",
+      "elapsed_ms": 5724.585916999999,
+      "provider": "openrouter",
+      "model": "z-ai/glm-5.3-flash",
+      "binary": "target/release/pablo",
+      "binary_sha256": "c89ba9c74382f303e17ed9531a41809f1b7cbfc9dbe97fb0a232a32e62f8319f",
+      "source_sha256": "355a3ffb2d0620ffe59e50cbfc340e6ec17ff8ab86e2bab92e50db70cb9d637c",
+      "config_fingerprint": "sha256:c2363e8120244546efaf4d0c0dd37352754975a60488b2219c47901df8261e40",
+      "platform": "darwin/arm64",
+      "node": "v24.11.0",
+      "rust": "rustc 1.98.1 (48a229cea 2026-09-01)",
+      "accounting": {
+        "model_calls": "2",
+        "tool_calls": "1",
+        "usage": {
+          "input_tokens": "1090",
+          "output_tokens": "210",
+          "cache_read_input_tokens": "0",
+          "cache_write_input_tokens": "0"
+        },
+        "cost_microusd": "270",
+        "charged_tokens": null,
+        "charged_cost_microusd": null
+      },
+      "per_call_usage": [
+        {
+          "input_tokens": 774,
+          "output_tokens": 122,
+          "cache_read_input_tokens": 0,
+          "cache_write_input_tokens": 0
+        },
+        {
+          "input_tokens": 316,
+          "output_tokens": 88,
+          "cache_read_input_tokens": 0,
+          "cache_write_input_tokens": 0
+        }
+      ],
+      "exact_evidence": true,
+      "model_tool_model": true,
+      "one_terminal": true,
+      "no_shell": true,
+      "credential_source": "explicit dotenv reference; executable-only resolution",
+      "trace_redacted": true,
+      "workspace_removed": true
+    },
+    {
+      "surface": "acp",
+      "result": "passed",
+      "elapsed_ms": 1518.8821669999998,
+      "provider": "openrouter",
+      "model": "z-ai/glm-5.3-flash",
+      "binary": "target/release/pablo",
+      "binary_sha256": "c89ba9c74382f303e17ed9531a41809f1b7cbfc9dbe97fb0a232a32e62f8319f",
+      "source_sha256": "355a3ffb2d0620ffe59e50cbfc340e6ec17ff8ab86e2bab92e50db70cb9d637c",
+      "config_fingerprint": "sha256:961951d066ec79ad1872b0b22edc1c8c8782c432b748dc37ead70fe8a2460318",
+      "platform": "darwin/arm64",
+      "node": "v24.11.0",
+      "rust": "rustc 1.98.1 (48a229cea 2026-09-01)",
+      "accounting": {
+        "model_calls": "2",
+        "tool_calls": "1",
+        "usage": {
+          "input_tokens": "1084",
+          "output_tokens": "73",
+          "cache_read_input_tokens": "704",
+          "cache_write_input_tokens": "0"
+        },
+        "cost_microusd": "115",
+        "charged_tokens": null,
+        "charged_cost_microusd": null
+      },
+      "per_call_usage": [
+        {
+          "input_tokens": 774,
+          "output_tokens": 42,
+          "cache_read_input_tokens": 704,
+          "cache_write_input_tokens": 0
+        },
+        {
+          "input_tokens": 310,
+          "output_tokens": 31,
+          "cache_read_input_tokens": 0,
+          "cache_write_input_tokens": 0
+        }
+      ],
+      "exact_evidence": true,
+      "model_tool_model": true,
+      "one_terminal": true,
+      "no_shell": true,
+      "credential_source": "explicit dotenv reference; executable-only resolution",
+      "trace_redacted": true,
+      "workspace_removed": true
+    }
+  ],
+  "vercel": {
+    "result": "passed",
+    "timestamp": "2026-09-11T16:01:02.756Z",
+    "binary": "target/release/pablo",
+    "model": "zai/glm-5.3-flash",
+    "provider": "vercel",
+    "credential_source": "root .env parsed privately by executable",
+    "elapsed_seconds": 2.21,
+    "model_calls": 2,
+    "shell_calls": 0,
+    "filesystem": true,
+    "usage": {
+      "input_tokens": 1091,
+      "output_tokens": 76,
+      "cache_read_input_tokens": 0,
+      "cache_write_input_tokens": null
+    },
+    "per_call_usage": [
+      {
+        "input_tokens": 777,
+        "output_tokens": 45,
+        "cache_read_input_tokens": 0,
+        "cache_write_input_tokens": null
+      },
+      {
+        "input_tokens": 314,
+        "output_tokens": 31,
+        "cache_read_input_tokens": 0,
+        "cache_write_input_tokens": null
+      }
+    ],
+    "checks": [
+      "ACP v1 negotiation",
+      "model/fs.read/model with actual temporary evidence",
+      "streamed answer matches typed outcome",
+      "reported usage sums across calls",
+      "ordered ACP/native correlation",
+      "one completed outcome and protocol-only stdout",
+      "private redacted trace",
+      "no shell process created",
+      "ACP process exited cleanly",
+      "workspace removed"
+    ],
+    "harness_checkpoint": "C2.5",
+    "source_sha256": "355a3ffb2d0620ffe59e50cbfc340e6ec17ff8ab86e2bab92e50db70cb9d637c",
+    "binary_sha256": "c89ba9c74382f303e17ed9531a41809f1b7cbfc9dbe97fb0a232a32e62f8319f"
+  }
+}

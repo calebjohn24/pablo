@@ -10,6 +10,7 @@ rust-version = "1.98.1"
 publish = false
 
 [workspace.dependencies]
+base64 = "=0.22.1"
 yaml-rust2 = { version = "=0.11.0", default-features = false }
 unicode-normalization = "=0.1.25"
 rmcp = { version = "=3.3.0", default-features = false, features = ["client"] }

@@ -80,6 +80,7 @@ pub enum CredentialConsumer {
     OtelHeaders,
     McpEnvironment,
     McpHeaders,
+    A2aBearer,
 }
 impl CredentialConsumer {
     pub(crate) fn name(self) -> &'static str {
@@ -90,6 +91,7 @@ impl CredentialConsumer {
             Self::OtelHeaders => "otel.headers",
             Self::McpEnvironment => "mcp.env",
             Self::McpHeaders => "mcp.headers",
+            Self::A2aBearer => "a2a.bearer",
         }
     }
 }
@@ -160,7 +162,9 @@ impl PreparedRun {
             |route| &self.deployment().options()["models"][route.entries()[0].name()],
         );
         let (reference, destination) = match consumer {
-            CredentialConsumer::McpEnvironment | CredentialConsumer::McpHeaders => {
+            CredentialConsumer::McpEnvironment
+            | CredentialConsumer::McpHeaders
+            | CredentialConsumer::A2aBearer => {
                 return Err(error("config_credential_scope", "/credentials"));
             }
             CredentialConsumer::Vercel
@@ -174,6 +178,28 @@ impl PreparedRun {
             ),
         };
         self.resolve_credential(consumer, reference, destination, inputs)
+    }
+    /// Resolve only the named host definition, scoped to its exact RPC endpoint.
+    /// Public card retrieval must never use this credential.
+    pub fn a2a_credential(
+        &self,
+        name: &str,
+        inputs: &dyn CredentialInputs,
+    ) -> Result<Option<ScopedCredential>, ConfigError> {
+        let settings = self.deployment().a2a()?;
+        let remote = settings
+            .remotes
+            .get(name)
+            .ok_or_else(|| error("config_credential_scope", "/options/a2a/remotes"))?;
+        match &remote.bearer {
+            None => Ok(None),
+            Some(bearer) => self.resolve_credential(
+                CredentialConsumer::A2aBearer,
+                &Value::String(bearer.credential.clone()),
+                &remote.endpoint,
+                inputs,
+            ),
+        }
     }
     /// Select only an entry of this prepared deployment's authorized route.
     pub fn route_credential(
@@ -289,7 +315,8 @@ impl PreparedRun {
                     CredentialConsumer::OpenRouter => crate::gateway::OPENROUTER_ENDPOINT,
                     CredentialConsumer::OtelHeaders
                     | CredentialConsumer::McpEnvironment
-                    | CredentialConsumer::McpHeaders => {
+                    | CredentialConsumer::McpHeaders
+                    | CredentialConsumer::A2aBearer => {
                         unreachable!()
                     }
                     CredentialConsumer::OpenResponses => unreachable!(),

@@ -344,6 +344,18 @@ pub(crate) fn config(config: &Value, request: &ResolveRequest) -> Result<(), Con
             credential_ids.push(id);
         }
     }
+    let a2a = super::a2a::settings(config)?;
+    for remote in a2a.remotes.values() {
+        if let Some(bearer) = &remote.bearer {
+            if config["credentials"]
+                .get(&bearer.credential)
+                .is_none_or(|record| record["consumer"] != "a2a.bearer")
+            {
+                return Err(error("config_invalid_value", "/config/credentials"));
+            }
+            credential_ids.push(&bearer.credential);
+        }
+    }
     // Validate declared references, including unused secret sources, without
     // opening a file, observing presence or invoking a host credential callback.
     validate_paths(config, "/config", options, request)?;

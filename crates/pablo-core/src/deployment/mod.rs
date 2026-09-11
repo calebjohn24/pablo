@@ -2,6 +2,7 @@
 //! environment, credentials or workspace content and never activates a runtime.
 //! The checked-in schema/defaults are the option inventory for this revision.
 
+mod a2a;
 mod admission;
 mod canonical;
 mod credentials;
@@ -26,7 +27,7 @@ pub use credentials::{
 pub use resolve::{LoadedDeployment, load, resolve};
 pub use routes::{ResolvedRoute, RouteEntry, RoutePolicy};
 
-pub const CONTRACT_REVISION: &str = "c3.22";
+pub const CONTRACT_REVISION: &str = "c3.26";
 pub const DOCUMENT_SCHEMA: &str =
     include_str!("../../../../docs/project/schemas/deployment-v1.schema.json");
 pub const DEFAULT_OPTIONS: &str =
