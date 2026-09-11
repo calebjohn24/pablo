@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T03:37:23.299Z",
+  "updated_at": "2026-09-11T03:39:03.949Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.14",
-  "next_action": "Merge verified C3.13, then activate C3.14 and freeze one bounded output repair within the same conversation and root ledger.",
-  "latest_log_entry": "LOG-0087",
+  "next_action": "Activate C3.14 on merged 73469a1. Freeze and implement one bounded same-conversation output repair with path-aware feedback, shared root budgets, effective cancellation and metadata-only telemetry. Preserve explicit validity, GLM defaults, unlimited filesystem work and task-relevant compaction; continue performance and PR merges.",
+  "latest_log_entry": "LOG-0088",
   "checkpoints": [
     {
       "id": "C1.0",
