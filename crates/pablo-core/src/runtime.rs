@@ -396,6 +396,42 @@ where
     async fn drive(&self, execution: &Execution<'_>, lifecycle: &mut Lifecycle<'_>) -> RunOutcome {
         let spec = execution.spec;
         let mut state = TaskState::new(execution);
+        #[cfg(unix)]
+        if let Some(skills) = execution.tools.activated_skills() {
+            let records = skills.records();
+            execution.root.span().set_attribute(KeyValue::new(
+                "pablo.skills.catalog_bytes",
+                records.iter().map(|r| r.catalog_bytes as i64).sum::<i64>(),
+            ));
+            execution.root.span().set_attribute(KeyValue::new(
+                "pablo.skills.instruction_bytes",
+                records
+                    .iter()
+                    .map(|r| r.instruction_bytes as i64)
+                    .sum::<i64>(),
+            ));
+            execution.root.span().set_attribute(KeyValue::new(
+                "pablo.skills.activated",
+                skills.records().len() as i64,
+            ));
+            for (record, body) in skills.instructions() {
+                if let Some(outcome) = execution.stop() {
+                    return outcome;
+                }
+                if let Err(outcome) = lifecycle.emit(
+                    EventKind::SkillActivated {
+                        skill: record.clone(),
+                        instructions: Some(body.into()),
+                    },
+                    execution.root,
+                    None,
+                    telemetry::now(),
+                    false,
+                ) {
+                    return outcome;
+                }
+            }
+        }
 
         'generation: loop {
             if let Some(outcome) = execution.stop() {
@@ -979,6 +1015,8 @@ where
         } else if result.status == ToolStatus::RecoverableError {
             let error = if call.name.starts_with("mcp/") {
                 "mcp_tool_error"
+            } else if call.name == "skill.read" {
+                "skill_resource_error"
             } else {
                 "filesystem_error"
             };

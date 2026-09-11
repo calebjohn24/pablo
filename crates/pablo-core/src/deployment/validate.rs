@@ -366,6 +366,12 @@ pub(crate) fn config(config: &Value, request: &ResolveRequest) -> Result<(), Con
             tools.extend(["fs.write", "fs.edit"]);
         }
     }
+    if options["skills"]["activate"]
+        .as_array()
+        .is_some_and(|names| !names.is_empty())
+    {
+        tools.push("skill.read");
+    }
     for layer in config["authority"].as_array().unwrap() {
         let id = layer["id"].as_str().unwrap();
         if !authority_ids.insert(id) {

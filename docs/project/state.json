@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T06:47:27.303Z",
+  "updated_at": "2026-09-11T07:21:31.657Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.20",
-  "next_action": "Merge verified C3.19; then activate C3.20 explicit Skill activation and selected resources.",
-  "latest_log_entry": "LOG-0100",
+  "next_checkpoint": "C3.21",
+  "next_action": "Merge C3.20 and prepare C3.21 child contracts and typed ACP dispatch. Preserve explicit Skill authority/ownership, compaction detail preservation, MCP lifecycle, GLM defaults and unlimited filesystem work.",
+  "latest_log_entry": "LOG-0103",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -511,9 +511,11 @@
       "depends_on": [
         "C3.19"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0103"
+      ]
     },
     {
       "id": "C3.21",

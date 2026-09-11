@@ -84,7 +84,6 @@ fn unsupported(value: &Value, path: &str) -> Result<(), ConfigError> {
             }
         }
         for (section, key, owner) in [
-            ("skills", "activate", "C3.20"),
             ("interfaces", "tui", "C3.29"),
             ("interfaces", "acp", "C3.33"),
         ] {

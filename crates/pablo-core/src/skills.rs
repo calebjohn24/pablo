@@ -1,4 +1,4 @@
-//! Explicit host-root Agent Skills discovery. No instruction activation or execution.
+//! Explicit host-root Agent Skills discovery, activation and bounded resource reads.
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use unicode_normalization::UnicodeNormalization;
@@ -77,6 +77,9 @@ pub enum Error {
     Io,
     ScanBound,
     Cancelled,
+    Changed,
+    ResourceBound,
+    UnsupportedEncoding,
 }
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -221,3 +224,8 @@ pub fn parse_metadata(yaml: &str, directory: &str) -> Result<Metadata, Error> {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(unix)]
+pub mod activation;
+#[cfg(unix)]
+pub mod tool;

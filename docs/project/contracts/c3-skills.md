@@ -70,6 +70,65 @@ can be inspected by qualified name. A small bounded input buffer may prefetch by
 past the frontmatter delimiter, but body bytes are neither parsed, retained in the
 catalog nor added to model context. A body edit leaves discovery identity unchanged.
 
-S02 adds explicit activation, selected resource loading, stable instruction prefix,
-context accounting and joined cancellation. `options.skills.activate` remains an
-explicit unsupported C3.20 feature; discovery cannot activate a Skill implicitly.
+## Explicit activation and selected resources (S02)
+
+`options.skills.activate` selects at most eight names from configured roots; its
+default is empty. CLI run and ACP process configuration accept repeatable
+`--skill NAME` with `--config`. This replaces the configured selection and remains
+subject to locked deployment override policy. Unique short names resolve as in
+discovery; qualified identities sort activation deterministically. Repeated aliases
+for the same identity reject. Discovery alone never activates instructions.
+
+The asynchronous capability factory rechecks roots against the actual task
+workspace, discovers metadata, then reads only selected SKILL.md files. Each file
+is bounded to 256 KiB, with 1 MiB aggregate across selected files. Frontmatter must
+still match its discovery digest. Activation records identify metadata and the
+complete SKILL.md bytes with separate SHA-256 digests. Instruction byte counts
+measure the Markdown body; catalog byte counts measure the qualified name plus
+description actually included in context. These counts are source bytes, not
+token estimates or complete serialized message sizes.
+
+Bodies are ordinary user context after the original task, with an explicit reminder
+that they grant no authority. Shared system instructions stay unchanged. Compaction
+preserves this original task/activation prefix and summarizes subsequent history;
+the ordinary context estimator includes the full serialized messages and tool
+catalog, including wrappers. Resource context enters only through requested tool
+results and is eligible for ordinary task-relevant compaction. Fixed instructions
+cannot be silently discarded to make an oversized context fit.
+
+An activated set enables `skill.read` (provider alias `skill_read`). The model must
+select an exact activated `ROOT/NAME`, relative resource path and optional
+`max_bytes`. The reader retains the admitted package directory handle, opens each
+component without following symlinks, and accepts regular UTF-8 files only. Absolute
+paths, parent traversal, backslashes, symlinks and special files reject. Reads are
+bounded to 1 MiB, further narrowed by the requested byte limit, ordinary tool output
+capacity and deadline. Results contain actual text, source path, SHA-256 and byte
+count; repeated calls read current bytes without a cache. JSON escaping may make a
+result exceed the output budget even when raw bytes fit; that returns output limit.
+
+`authority[].skill_roots` bounds this separate read capability; filesystem tool
+`read_roots` governs filesystem tools. Configured tool authority must admit
+`skill.read`, and ordinary runtime tool policy can deny each call. Instructions and
+allowed-tools metadata cannot install tools or MCP servers, change write roots, or
+widen any authority. Bundled scripts execute only when the model explicitly calls
+the existing permitted `shell.run` lifecycle, with its usual workspace, launcher,
+environment, timeout and cleanup policy.
+
+Activation and resource reads each await an owned blocking worker, including after
+cancellation. Chunk reads check cancellation/deadlines before and after I/O. There
+is no detached file operation; a host filesystem call must return before joining
+can finish. Immutable package handles live with the activated registry. CLI and ACP
+prepare a fresh set for each task rather than retaining instructions in a shared
+provider cache. Activation failure/cancellation during admission returns a safe
+setup error before `run.started`; resource cancellation uses the admitted run's
+ordinary terminal lifecycle.
+
+Native `skill.activated` carries the activation record. Instruction content is
+absent unless native capture is explicitly enabled. CLI text mode reports the
+qualified identity on stderr; JSON mode retains one terminal envelope. ACP clients
+opting into both `pablo/v1` and `pablo/skills-v1` receive `_pablo/skill` with native
+correlation and capture-gated instructions. Metadata-only resource events omit
+text and the requested resource path. OTel records activation count/catalog/body
+bytes on the run and resource digest/bytes on the tool span, never bodies or
+resource content. Native instruction digests and tool resource digests distinguish
+the loaded sources without inventing token usage.

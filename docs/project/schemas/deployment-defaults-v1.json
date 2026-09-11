@@ -102,6 +102,7 @@
     "policies": []
   },
   "skills": {
-    "roots": {}
+    "roots": {},
+    "activate": []
   }
 }

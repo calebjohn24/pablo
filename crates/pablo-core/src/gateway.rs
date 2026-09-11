@@ -178,6 +178,7 @@ fn wire_name(name: &str) -> Result<std::borrow::Cow<'_, str>, ProviderError> {
     match name {
         "shell.run" => Ok("shell_run".into()),
         "fs.read" => Ok("fs_read".into()),
+        "skill.read" => Ok("skill_read".into()),
         "fs.list" => Ok("fs_list".into()),
         "fs.search" => Ok("fs_search".into()),
         "fs.write" => Ok("fs_write".into()),
@@ -191,7 +192,7 @@ fn wire_name(name: &str) -> Result<std::borrow::Cow<'_, str>, ProviderError> {
 fn tool_aliases(
     tools: &[crate::tool::ToolDescriptor],
 ) -> Result<BTreeMap<String, String>, ProviderError> {
-    if tools.len() > crate::mcp::MAX_TOOLS + 6 {
+    if tools.len() > crate::mcp::MAX_TOOLS + 7 {
         return Err(not_sent());
     }
     let mut aliases = BTreeMap::new();
@@ -208,6 +209,7 @@ fn native_name(name: &str, aliases: &BTreeMap<String, String>) -> Option<String>
     match name {
         "shell_run" => Some("shell.run".into()),
         "fs_read" => Some("fs.read".into()),
+        "skill_read" => Some("skill.read".into()),
         "fs_list" => Some("fs.list".into()),
         "fs_search" => Some("fs.search".into()),
         "fs_write" => Some("fs.write".into()),

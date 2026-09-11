@@ -1,9 +1,7 @@
 # Project brain
 Pablo is a small headless Rust agent runtime for applications doing arbitrary work. Hosts own their sandboxes, business state, approvals, and user experience. CLI and protocol clients share one runtime lifecycle.
 This file holds durable context. [State](state.json) reports current progress, [the log](log.jsonl) records history, and [cycle C3](cycles/003-extensibility-and-release.md) defines the selected work. Completed [C1](cycles/001-first-spike.md) and [C2](cycles/002-single-agent-completion.md) plans/evidence remain historical. Run `node scripts/project.mjs context` for a focused handoff. Private source remote: [calebjohn24/pablo](https://github.com/calebjohn24/pablo), with `main` tracking `origin/main`. Repository creation is recorded in LOG-0044; [native Linux acceptance](evidence/c2.5-linux-x64.md) closes C2.5. C3 selects declarative deployments, extensibility, interoperability and release delivery, excluding Otto integration.
-
 Read [the architecture brief](../context.md) selectively: section 29.1 defines the 0.1 contract; section 37.1 the C1 spike; sections 12–14 contracts/lifecycle/cancellation/shell; sections 19/21 providers and OTel; sections 28/31/32 performance/release/tests. [Backlog](backlog.md) retains deferred slices and promotion conditions.
-
 ### D001 — One checkpoint per implementation session
 The user selected this cadence to keep changes manageable. Finish verification and project records, leave the next checkpoint ready, and stop. Partial checkpoints can resume across sessions; explicit user steering can change the cadence.
 ### D002 — Cycle C1 proves the focused spike
@@ -18,7 +16,6 @@ Create `pablo-core` and the `pablo` executable at C1.1. Keep providers, tools, p
 Root execution, model calls, tools, ACP updates, JSONL records, and OTel spans originate from one runtime lifecycle. Instrument the first operation; add the network exporter later. ACP is the process protocol. No alternate proprietary loop or process lifecycle is introduced.
 ### D007 — Reuse installed development tools
 Reuse installed Rust and Node tools; noninteractive shells may need nvm initialization. `.nvmrc` pins Node 24.20.0, but verify and record each host's actual version rather than assuming it matches. Use Node's built-in modules and test runner for project management; pin dependencies and protocols when introduced.
-
 ### D008 — Inject the tracer and stream into a host-owned sink
 The core accepts an OTel tracer and inline event sink, with no global installation or detached worker. The CLI owns its SDK. This gives the ACP adapter one existing lifecycle to drive. Sink calls must return promptly; asynchronous transport backpressure belongs to C1.3. Checkpoint-versioned contracts expose only implemented behavior. The `c1.2` contracts add sequential tool turns and explicit cancellation through this same lifecycle. See [runtime contracts](../runtime.md).
 
@@ -198,3 +195,6 @@ C3.18 makes CLI/ACP await per-task MCP admission and joined cleanup. ACP selects
 
 ### D052 — Discover portable Skill metadata only from explicit roots
 C3.19 pins the Agent Skills format and bounded YAML parsing; qualify names by host root, reject normalized duplicates and report short-name ambiguity. No-follow discovery is metadata-only, with source digests and intersected root ceilings; empty defaults scan nothing. Bodies/resources and activation remain C3.20. See [S01 contract](contracts/c3-skills.md).
+
+### D053 — Explicit Skills are task context within host authority
+C3.20 loads only selected instructions and pins their task-context prefix across compaction. Selected resources use bounded no-follow reads from owned package handles, with tool policy and Skill-root ceilings; metadata cannot enable tools, scripts or writes. Await all file workers on cancellation and prepare fresh sets per host task. Native digests/byte counts identify sources while OTel excludes content. See [S02 contract](contracts/c3-skills.md#explicit-activation-and-selected-resources-s02).

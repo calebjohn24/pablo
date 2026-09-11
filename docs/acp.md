@@ -163,3 +163,19 @@ retain `c3.13` validity, legacy task peers retain `c2.3`, and generic peers keep
 standard updates and stop/error behavior. A repaired success contains only the
 corrected answer in terminal output, even though both provisional candidates may
 have streamed. `structuredOf(response)` accepts validated repaired output.
+
+## Explicit Skill activation
+
+Configured `options.skills.activate` or repeatable `--skill NAME --config PATH`
+selects instructions from explicit Skill roots. Each prompt loads a fresh set
+after rechecking authority against its session workspace. Prompt text cannot
+change that selection. `skill.read` uses standard tool updates for selected resource
+reads; scripts remain ordinary shell calls. See the [Skill contract](project/contracts/c3-skills.md#explicit-activation-and-selected-resources-s02).
+
+Clients negotiating both `pablo/v1` and `pablo/skills-v1` receive `_pablo/skill`
+notifications for native `skill.activated` events, with `sessionId`, `type`,
+`pablo/v1` correlation, the `skill` activation record, `instructions` and `content_redacted`.
+Instructions are null unless content capture is enabled. Clients without this
+negotiation receive no activation extension notification. The same bounded event
+queue and physical stdout write acknowledgement apply. Activation setup errors
+precede run admission; admitted resource work shares run cancellation and joining.

@@ -68,7 +68,7 @@ async fn execute(
     }
     if command == "--help" && args.len() == 0 {
         print!(
-            "{HELP}{}\nSkill metadata: pablo skills list --config PATH; pablo skills show NAME --config PATH\n",
+            "{HELP}{}\nSkill metadata: pablo skills list --config PATH; pablo skills show NAME --config PATH\nActivation: run/ACP --config PATH --skill NAME (repeatable; deployment override policy applies).\n",
             deployment::HELP
         );
         return Ok(ExitCode::SUCCESS);
@@ -96,7 +96,7 @@ async fn execute(
         None => options.spec()?,
     };
     let tools = match &prepared {
-        Some(prepared) if !prepared.has_mcp() => {
+        Some(prepared) if !prepared.needs_async_tools() => {
             Some(prepared.tools().map_err(|error| error.to_string())?)
         }
         Some(_) => None,
@@ -241,6 +241,10 @@ async fn execute(
             return Ok(());
         }
         match &event.kind {
+            #[cfg(unix)]
+            EventKind::SkillActivated { skill, .. } => {
+                writeln!(stderr, "pablo: activated Skill {}", skill.qualified_name)?;
+            }
             EventKind::TextDelta { text } => {
                 stdout.write_all(text.as_bytes())?;
                 stdout.flush()?;
@@ -279,25 +283,27 @@ async fn execute(
     };
     let result = {
         let run = async {
-            let configured_tools =
-                if let Some(prepared) = prepared.as_ref().filter(|prepared| prepared.has_mcp()) {
-                    let deadline = tokio::time::Instant::now()
-                        .checked_add(std::time::Duration::from_millis(
-                            spec.limits.max_run_duration_ms,
-                        ))
-                        .ok_or("invalid run duration")?;
-                    Some(
-                        options
-                            .deployment
-                            .as_ref()
-                            .unwrap()
-                            .tools(prepared, deadline, &cancellation)
-                            .await
-                            .map_err(|error| error.to_string())?,
-                    )
-                } else {
-                    None
-                };
+            let configured_tools = if let Some(prepared) = prepared
+                .as_ref()
+                .filter(|prepared| prepared.needs_async_tools())
+            {
+                let deadline = tokio::time::Instant::now()
+                    .checked_add(std::time::Duration::from_millis(
+                        spec.limits.max_run_duration_ms,
+                    ))
+                    .ok_or("invalid run duration")?;
+                Some(
+                    options
+                        .deployment
+                        .as_ref()
+                        .unwrap()
+                        .tools(prepared, deadline, &cancellation)
+                        .await
+                        .map_err(|error| error.to_string())?,
+                )
+            } else {
+                None
+            };
             let tools = configured_tools.as_ref().or(tools.as_ref()).unwrap();
             Ok::<_, String>(
                 runtime
