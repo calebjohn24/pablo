@@ -10,6 +10,7 @@ use std::{
 
 pub const HELP: &str = "\nOffline deployment inspection:\n  pablo config validate|explain|render --config PATH [--profile NAME]\n    [--config-root PATH] [--bind NAME=PATH ...] [--locked]\n    [--user-config PATH] [--workspace-config PATH]\nPaths are anchored at invocation; config-root defaults to the entry directory.\nBind workspace explicitly, for example --bind workspace=./project.\nInspection reads only config files and declared non-secret environment values.\n";
 
+#[derive(Clone)]
 pub struct Bootstrap {
     invocation: PathBuf,
     pub fixture_endpoint: Option<String>,

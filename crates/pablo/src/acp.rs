@@ -24,8 +24,8 @@ mod handlers;
 // C3.21 prepares this internal path; child execution is enabled at C3.22.
 #[allow(dead_code)]
 mod in_memory;
-#[allow(dead_code)] // Enabled after complete C3.22 admission and root integration.
-mod supervisor;
+#[allow(dead_code)] // Some direct host operations are exercised only by internal acceptance tests.
+pub(crate) mod supervisor;
 mod worker;
 use worker::{Task, Worker};
 
@@ -440,7 +440,9 @@ async fn forward_events(
     let mut events = EventStream::new(rx);
     let mut terminal = None;
     while let Some((event, first)) = events.next().await {
-        if matches!(event.kind, EventKind::RunFinished { .. }) {
+        if matches!(event.kind, EventKind::RunFinished { .. })
+            && (event.root_seq.is_none() || event.agent.as_ref().is_none_or(|a| a.depth() == 0))
+        {
             terminal = Some(event.clone());
         }
         #[cfg(unix)]
@@ -450,7 +452,7 @@ async fn forward_events(
                 instructions,
             } = &event.kind
         {
-            let params=serde_json::value::to_raw_value(&json!({"sessionId":event.session_id,"type":"skill.activated","pablo/v1":correlation(&event,first),"skill":skill,"instructions":if capture_content {instructions.as_deref()}else{None},"content_redacted":!capture_content})).map_err(|_|Error::internal_error())?;
+            let params=serde_json::value::to_raw_value(&json!({"sessionId":delivery_session(&event),"type":"skill.activated","pablo/v1":correlation(&event,first),"skill":skill,"instructions":if capture_content {instructions.as_deref()}else{None},"content_redacted":!capture_content})).map_err(|_|Error::internal_error())?;
             delivery
                 .send(wire::AgentNotification::ExtNotification(
                     wire::ExtNotification::new("_pablo/skill", Arc::from(params)),
@@ -481,7 +483,7 @@ async fn forward_events(
                 ),
                 _ => ("context.compaction.started", None, 0),
             };
-            let params=serde_json::value::to_raw_value(&json!({"sessionId":event.session_id,"type":kind,"pablo/v1":details,"summary":summary,"summary_bytes":summary_bytes,"content_redacted":!capture_content})).map_err(|_|Error::internal_error())?;
+            let params=serde_json::value::to_raw_value(&json!({"sessionId":delivery_session(&event),"type":kind,"pablo/v1":details,"summary":summary,"summary_bytes":summary_bytes,"content_redacted":!capture_content})).map_err(|_|Error::internal_error())?;
             delivery
                 .send(wire::AgentNotification::ExtNotification(
                     wire::ExtNotification::new("_pablo/compaction", Arc::from(params)),
@@ -499,7 +501,7 @@ async fn forward_events(
             details["model_route"] =
                 serde_json::to_value(&event.model_route).map_err(|_| Error::internal_error())?;
             let params = serde_json::value::to_raw_value(&json!({
-                "sessionId": event.session_id,
+                "sessionId": delivery_session(&event),
                 "type": if matches!(event.kind, EventKind::ModelStarted { .. }) { "model.started" } else { "model.finished" },
                 "pablo/v1": details
             })).map_err(|_| Error::internal_error())?;
@@ -510,7 +512,8 @@ async fn forward_events(
                 .await?;
         }
         if let Some(update) = project(&event)? {
-            let mut notification = wire::SessionNotification::new(event.session_id.clone(), update);
+            let mut notification =
+                wire::SessionNotification::new(delivery_session(&event).to_owned(), update);
             if extensions.base {
                 let mut details = correlation(&event, first);
                 if extensions.output && event.output_validation.is_some() {
@@ -531,13 +534,33 @@ async fn forward_events(
     Ok(terminal)
 }
 
+fn delivery_session(event: &RunEvent) -> &str {
+    if event.root_seq.is_some()
+        && let Some(agent) = &event.agent
+    {
+        agent.root_session_id()
+    } else {
+        &event.session_id
+    }
+}
+
+fn delivery_call_id(event: &RunEvent, call_id: &str) -> String {
+    if event.root_seq.is_some()
+        && let Some(agent) = &event.agent
+    {
+        format!("{}/{}", agent.agent_id(), call_id)
+    } else {
+        call_id.to_owned()
+    }
+}
+
 fn project(event: &RunEvent) -> Result<Option<wire::SessionUpdate>, Error> {
     Ok(Some(match &event.kind {
         EventKind::TextDelta { text } => wire::SessionUpdate::AgentMessageChunk(
             wire::ContentChunk::new(wire::ContentBlock::Text(wire::TextContent::new(text))),
         ),
         EventKind::ToolStarted { call } => wire::SessionUpdate::ToolCall(
-            wire::ToolCall::new(call.id.clone(), call.name.clone())
+            wire::ToolCall::new(delivery_call_id(event, &call.id), call.name.clone())
                 .kind(if matches!(call.name.as_str(), "fs.write" | "fs.edit") {
                     wire::ToolKind::Edit
                 } else if call.name.starts_with("fs.") {
@@ -550,7 +573,7 @@ fn project(event: &RunEvent) -> Result<Option<wire::SessionUpdate>, Error> {
         ),
         EventKind::ShellStarted { call_id, .. } => {
             wire::SessionUpdate::ToolCallUpdate(wire::ToolCallUpdate::new(
-                call_id.clone(),
+                delivery_call_id(event, call_id),
                 wire::ToolCallUpdateFields::new().status(wire::ToolCallStatus::InProgress),
             ))
         }
@@ -560,7 +583,7 @@ fn project(event: &RunEvent) -> Result<Option<wire::SessionUpdate>, Error> {
             let success = result.status == ToolStatus::Completed
                 && result.shell.as_ref().is_none_or(|s| s.exit_code == Some(0));
             wire::SessionUpdate::ToolCallUpdate(wire::ToolCallUpdate::new(
-                call_id.clone(),
+                delivery_call_id(event, call_id),
                 wire::ToolCallUpdateFields::new()
                     .status(if success {
                         wire::ToolCallStatus::Completed

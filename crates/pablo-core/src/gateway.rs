@@ -176,6 +176,7 @@ impl Provider for GatewayProvider {
 
 fn wire_name(name: &str) -> Result<std::borrow::Cow<'_, str>, ProviderError> {
     match name {
+        "subagent" => Ok("subagent".into()),
         "shell.run" => Ok("shell_run".into()),
         "fs.read" => Ok("fs_read".into()),
         "skill.read" => Ok("skill_read".into()),
@@ -192,7 +193,7 @@ fn wire_name(name: &str) -> Result<std::borrow::Cow<'_, str>, ProviderError> {
 fn tool_aliases(
     tools: &[crate::tool::ToolDescriptor],
 ) -> Result<BTreeMap<String, String>, ProviderError> {
-    if tools.len() > crate::mcp::MAX_TOOLS + 7 {
+    if tools.len() > crate::mcp::MAX_TOOLS + 8 {
         return Err(not_sent());
     }
     let mut aliases = BTreeMap::new();

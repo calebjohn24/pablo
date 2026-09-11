@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T12:59:57.969Z",
+  "updated_at": "2026-09-11T13:14:12.339Z",
   "active_checkpoint": "C3.22",
   "next_checkpoint": null,
-  "next_action": "Continue C3.22 by wiring RootFactory into configured CLI/ACP root execution with TreeSink and a concurrently joined native consumer. Factory admission now precedes root MCP setup; its permit survives cancellation and manager-owned tool cleanup. Keep polling setup on cancellation and close ownership on sink/trace errors. Preserve root-only TaskResult, attributed child updates, one consumer claim before execution, atomic accounting/context/event/trace capacity, FIFO one-active-child supervision and handles/results outside compaction. Enable configured children only with complete host integration. Run full A02 including setup-error/deadline/cancellation outcomes, child tools and native/ACP/OTel correlation, then child-enabled performance before completing or merging C3.22. C3.23 follows; GLM defaults and unlimited filesystem work remain. Prior F03 remains C3.33; mixed measurements remain C3.39.",
-  "latest_log_entry": "LOG-0123",
+  "next_action": "Continue C3.22 with full configured A02 failure/cancellation proof: root cancellation and deadline, child startup-error outcome mapping, setup/trace/consumer failures and exported OTel correlation against native/ACP receipts. CLI/ACP now use RootFactory with TreeSink and concurrently joined original-child delivery; children.enabled defaults false in the c3.22 contract. Basic model-triggered spawn/inspect/wait with child filesystem work and explicit active-child stop pass. Preserve root-only TaskResult, root-session ACP routing with agent-prefixed projected tool IDs, native IDs, atomic root capacity/accounting and joined cleanup. Same-binary one-child CLI/fresh-ACP workload has been measured; review this and complete A02 before marking C3.22 done or merging its PR. Then begin C3.23. Keep GLM defaults, unlimited filesystem work and compaction-independent handles/results. Prior F03 remains C3.33; mixed measurements and RSS/size remain C3.39.",
+  "latest_log_entry": "LOG-0124",
   "checkpoints": [
     {
       "id": "C1.0",

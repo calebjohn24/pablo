@@ -1,5 +1,5 @@
 //! Root-owned temporary children. The host must await close before root settlement.
-//! Internal until native attribution, aggregate event/process admission and A02 land.
+//! Configured CLI and ACP roots share this supervisor and its native consumer.
 use super::*;
 use pablo_core::{
     children::{
@@ -14,7 +14,7 @@ use pablo_core::{
 };
 use std::collections::{BTreeMap, VecDeque};
 use tokio::time::Instant;
-mod factory;
+pub(crate) mod factory;
 
 #[derive(Clone, Debug, serde::Serialize)]
 pub(super) struct Snapshot {

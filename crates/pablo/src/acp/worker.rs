@@ -239,13 +239,22 @@ async fn execute(
     task: &Task,
 ) -> Result<RunOutcome, String> {
     let spec = &task.spec;
+    let root_factory =
+        super::supervisor::factory::RootFactory::configured(options, task.prepared.as_ref())?;
+    let root_run_id = root_factory
+        .as_ref()
+        .map(|f| f.root.root_run_id().to_owned());
     let mut trace = if let Some(prepared) = &task.prepared {
         prepared
             .create_trace_file()
             .map_err(|e| e.to_string())?
             .map(|file| {
-                JsonlSink::new(BufWriter::new(file), spec)
-                    .map_err(|_| "config_invalid_value at /options/trace")
+                (if let Some(id) = &root_run_id {
+                    JsonlSink::for_tree(BufWriter::new(file), spec, id.clone())
+                } else {
+                    JsonlSink::new(BufWriter::new(file), spec)
+                })
+                .map_err(|_| "config_invalid_value at /options/trace")
             })
             .transpose()?
     } else if let Some(path) = &options.trace_path {
@@ -285,6 +294,7 @@ async fn execute(
     let mut slow_reported = false;
     let mut sink = |event: &RunEvent| -> Result<(), SinkError> {
         if matches!(event.kind, EventKind::RunFinished { .. })
+            && root_run_id.as_ref().is_none_or(|id| *id == event.run_id)
             && let Some(terminal) = &task.terminal
         {
             *terminal.lock().unwrap() = Some(event.clone());
@@ -305,6 +315,21 @@ async fn execute(
             .map_err(|_| io::Error::other("ACP consumer closed"))?;
         Ok(())
     };
+    if let Some(factory) = root_factory {
+        return match factory
+            .run(
+                runtime,
+                resources.provider.as_ref(),
+                &task.cancel,
+                &mut sink,
+            )
+            .await?
+        {
+            Ok(outcome) => Ok(outcome),
+            Err(RunError::EventDelivery { outcome, .. }) => Ok(*outcome),
+            Err(_) => Err("runtime rejected the run".into()),
+        };
+    }
     let task_tools = if let Some(prepared) = task
         .prepared
         .as_ref()

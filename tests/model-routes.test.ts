@@ -35,7 +35,7 @@ test('F01 executable explains ordered routes offline and single-entry CLI ACP ma
     const args = ['--config', entry, '--bind', `workspace=${cwd}`]; const env = { ...cleanEnv(), ROUTE_ROUTER_KEY: 'invalid private key' };
     const explained = JSON.parse((await exec(binary, ['config', 'explain', ...args], { env })).stdout);
     assert(checkExplanation(explained), ajv.errorsText(checkExplanation.errors));
-    assert.equal(explained.contract_revision, 'c3.20');
+    assert.equal(explained.contract_revision, 'c3.22');
     assert.deepEqual(explained.model_route.entries.map((e: any) => e.name), ['primary', 'secondary', 'third']);
     assert.deepEqual(explained.model_route.entries.map((e: any) => e.credential), ['router', 'vercel', 'responses']);
     assert.equal(explained.model_route.selected_entry, 'primary'); assert.equal(explained.model_route.execution_available, true);

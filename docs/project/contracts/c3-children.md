@@ -7,7 +7,7 @@ install a model tool or advertise working delegation. C3.22 admits one active ch
 C3.23 admits two, and C3.24 adds validated handoffs. Persistent agents, descendants,
 external ACP processes, automatic retry, graph scheduling and A2A are outside this
 slice. `options.children.enabled` must be explicit before any child can execute;
-absence means disabled. Unsupported enabling configuration must fail before work.
+absence means disabled. The c3.22 deployment schema admits this boolean for CLI and ACP roots. Prepared children cannot install another supervisor. A root claims one native consumer before execution, reserves MCP capacity before setup, and joins its supervisor and consumer before returning to the host. CLI machine output uses only the root terminal; child text is attributed on stderr. ACP tree notifications target the root session and preserve native child identity in correlation metadata. Projected tree tool-call IDs use an agent-ID prefix to distinguish equal provider IDs; native records keep the original IDs.
 
 One root owns temporary depth-one local ACP children. They use the existing runtime,
 provider fallback, tools, accounting and cancellation path. In-memory dispatch passes

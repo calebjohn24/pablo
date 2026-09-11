@@ -2,13 +2,72 @@
 //! retains the factory across setup and awaits setup/close instead of dropping it.
 use super::*;
 
-pub(super) struct RootFactory {
+pub(crate) struct RootFactory {
     pub root: AgentRef,
     pub ledger: RootLedger,
     options: Arc<Options>,
     parent: PreparedRun,
 }
 impl RootFactory {
+    pub fn configured(
+        options: &Options,
+        parent: Option<&PreparedRun>,
+    ) -> Result<Option<Self>, String> {
+        parent
+            .filter(|p| !p.is_child() && p.deployment().options()["children"]["enabled"] == true)
+            .map(|p| Self::new(Arc::new(options.clone()), p.clone()).map_err(str::to_owned))
+            .transpose()
+    }
+
+    /// Setup and execution remain polled through cancellation. The consumer runs
+    /// alongside the root while Runtime joins its owner before terminal emission.
+    pub async fn run<S: pablo_core::EventSink, T: opentelemetry::trace::Tracer + Send + Sync>(
+        self,
+        runtime: pablo_core::Runtime<T>,
+        provider: &dyn pablo_core::Provider,
+        cancellation: &CancellationToken,
+        sink: &mut S,
+    ) -> Result<Result<RunOutcome, pablo_core::RunError>, String>
+    where
+        T::Span: Send + Sync + 'static,
+    {
+        let spec = self.parent.spec().clone();
+        let mut sink = pablo_core::events::tree::TreeSink::new(
+            |event: &RunEvent| sink.emit(event),
+            &self.ledger,
+            self.root.clone(),
+        )
+        .map_err(|e| e.to_string())?;
+        let (owner, updates) = self.open(cancellation).await?;
+        let runtime = match runtime.with_root_owner(owner.clone()) {
+            Ok(runtime) => runtime,
+            Err(error) => {
+                let _ = owner.close().await;
+                return Err(error.to_string());
+            }
+        };
+        let consume = Supervisor::consume_updates(updates, sink.clone(), cancellation.clone());
+        let run = async {
+            let result = runtime
+                .run_with_tools(
+                    &spec,
+                    provider,
+                    &owner.inner.parent_tools,
+                    cancellation,
+                    &mut sink,
+                )
+                .await;
+            // Also closes the consumer on rejection before runtime claims ownership.
+            let cleanup = owner.close().await;
+            (result, cleanup)
+        };
+        let ((result, cleanup), delivery) = tokio::join!(run, consume);
+        if delivery.is_err() || cleanup.is_err() {
+            return Err("root tree delivery or cleanup failed".into());
+        }
+        Ok(result)
+    }
+
     pub fn new(options: Arc<Options>, parent: PreparedRun) -> Result<Self, &'static str> {
         if parent.is_child() || options.deployment.is_none() {
             return Err("invalid root factory");
@@ -35,7 +94,7 @@ impl RootFactory {
     }
     /// Permit admission precedes credential resolution, MCP initialize/list and
     /// Skill/MCP setup. The returned supervisor retains it until owned cleanup.
-    pub async fn open(
+    pub(super) async fn open(
         self,
         cancellation: &CancellationToken,
     ) -> Result<(Arc<Supervisor>, async_channel::Receiver<Update>), String> {
