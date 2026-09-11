@@ -19,6 +19,35 @@ pub(super) fn settings(config: &Value) -> Result<crate::mcp::Settings, ConfigErr
 }
 
 impl ResolvedDeployment {
+    /// Validate host-only local fixture destinations before credentials or launch.
+    #[doc(hidden)]
+    pub fn validate_mcp_fixture_endpoints(
+        &self,
+        endpoints: &BTreeMap<String, String>,
+    ) -> Result<(), ConfigError> {
+        let configured = self.mcp()?;
+        for (id, endpoint) in endpoints {
+            if endpoint.len() > 4096 {
+                return Err(error("config_invalid_value", "/fixture_mcp_endpoint"));
+            }
+            let url = reqwest::Url::parse(endpoint)
+                .map_err(|_| error("config_invalid_value", "/fixture_mcp_endpoint"))?;
+            if !matches!(
+                configured.servers.get(id),
+                Some(crate::mcp::Server::Http { .. })
+            ) || url.scheme() != "http"
+                || !matches!(url.host_str(), Some("127.0.0.1" | "[::1]"))
+                || !url.username().is_empty()
+                || url.password().is_some()
+                || url.query().is_some()
+                || url.fragment().is_some()
+            {
+                return Err(error("config_invalid_value", "/fixture_mcp_endpoint"));
+            }
+        }
+        Ok(())
+    }
+
     fn mcp_policy(&self) -> Result<crate::policy::PolicySet, ConfigError> {
         let ordinary = serde_json::from_value(self.options()["policy"].clone())
             .map_err(|_| error("config_invalid_value", "/options/policy"))?;
@@ -76,7 +105,23 @@ impl PreparedRun {
         deadline: tokio::time::Instant,
         cancellation: &tokio_util::sync::CancellationToken,
     ) -> Result<crate::ToolRegistry, ConfigError> {
+        self.tools_with_mcp_fixture(inputs, deadline, cancellation, &BTreeMap::new())
+            .await
+    }
+    /// Explicit local acceptance hook. Overrides may select only configured HTTP servers
+    /// and literal loopback endpoints; they cannot install servers or widen policy.
+    #[doc(hidden)]
+    pub async fn tools_with_mcp_fixture(
+        &self,
+        inputs: &dyn CredentialInputs,
+        deadline: tokio::time::Instant,
+        cancellation: &tokio_util::sync::CancellationToken,
+        endpoints: &BTreeMap<String, String>,
+    ) -> Result<crate::ToolRegistry, ConfigError> {
         use crate::mcp::{Server, stdio::StdioSession};
+        self.deployment()
+            .validate_mcp_fixture_endpoints(endpoints)?;
+        let configured = self.deployment().mcp()?;
         let deadline = deadline.min(
             tokio::time::Instant::now()
                 .checked_add(std::time::Duration::from_millis(
@@ -89,13 +134,21 @@ impl PreparedRun {
                     )
                 })?,
         );
-        let settings = self.deployment().mcp()?;
+        let settings = configured;
         let policy = self.deployment().mcp_policy()?;
         let mut tools = self.builtin_tools()?;
         tools.constrain_deadline(deadline);
         let mut catalog_bytes = 0usize;
         let mut catalog_tools = 0usize;
         for (id, server) in &settings.servers {
+            if self
+                .mcp_selection
+                .as_ref()
+                .is_some_and(|selected| !selected.contains(id))
+            {
+                tools.omit_mcp(id, "not_selected");
+                continue;
+            }
             if settings.admit_server(id, &policy).is_err() {
                 tools.omit_mcp(id, "policy_denied");
                 continue;
@@ -125,9 +178,11 @@ impl PreparedRun {
                         let env = self.mcp_environment(id, server, inputs)?;
                         StdioSession::start(server, &cwd, env, deadline, cancellation).await
                     }
-                    Server::Http { .. } => {
-                        let headers = self.mcp_headers(id, server, inputs)?;
-                        StdioSession::start_http(server, headers, None, deadline, cancellation)
+                    Server::Http { url, .. } => {
+                        let endpoint = endpoints.get(id).map(String::as_str);
+                        let headers =
+                            self.mcp_headers(id, server, endpoint.unwrap_or(url), inputs)?;
+                        StdioSession::start_http(server, headers, endpoint, deadline, cancellation)
                             .await
                     }
                 };

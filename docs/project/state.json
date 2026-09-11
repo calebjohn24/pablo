@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T05:50:48.692Z",
+  "updated_at": "2026-09-11T06:27:18.779Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.18",
-  "next_action": "Activate C3.18 on merged c2939f8. Wire both MCP transports to CLI/ACP per-run admission and prove Collector/native correlation, policy and failure cleanup, cancellation and remote uncertainty. Preserve compaction/repair/GLM defaults/unlimited filesystem work. Retain recurring F03 notification ordering at C3.33 and mixed performance observations at C3.39; continue measured PR merges.",
-  "latest_log_entry": "LOG-0097",
+  "next_checkpoint": "C3.19",
+  "next_action": "Merge verified C3.18; then activate C3.19 local Skill discovery.",
+  "latest_log_entry": "LOG-0098",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -485,9 +485,11 @@
       "depends_on": [
         "C3.17"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0098"
+      ]
     },
     {
       "id": "C3.19",

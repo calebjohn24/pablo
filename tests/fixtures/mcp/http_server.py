@@ -4,6 +4,7 @@ from pathlib import Path
 import json, socket, sys
 import uvicorn
 from mcp.server import MCPServer
+from mcp.server.mcpserver import Context
 from pydantic import BaseModel
 
 assert version("mcp") == "2.2.0"
@@ -13,8 +14,10 @@ class ReadResult(BaseModel):
     text: str
 
 @server.tool()
-def read_evidence() -> ReadResult:
+def read_evidence(ctx: Context) -> ReadResult:
     """Read a fresh synthetic file through the independent HTTP server."""
+    meta = ctx.request_context.meta or {}
+    Path("context.json").write_text(json.dumps({"traceparent":meta.get("traceparent"),"request_id":ctx.request_id}))
     return ReadResult(text=Path("evidence.txt").read_text())
 
 app = server.streamable_http_app(json_response=sys.argv[1] == "json")
@@ -24,7 +27,9 @@ class Recorded:
         if scope["type"] != "http":
             return await app(scope, receive, send)
         headers = dict(scope["headers"])
-        assert headers.get(b"x-fixture-token") == b"synthetic-http-token"
+        expected = Path("expected-token").read_bytes() if Path("expected-token").exists() else b"synthetic-http-token"
+        assert headers.get(b"x-fixture-token") == expected
+        assert b"authorization" not in headers, "ambient provider authentication leaked"
         body = b""
         while True:
             message = await receive()

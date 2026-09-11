@@ -14,7 +14,8 @@ acceptance. M01 performs configuration/policy admission only and advertises neit
 transport. M02 promotes the client-only SDK to a runtime dependency. M03 shares
 normalized sessions/catalogs between stdio and Streamable HTTP. The Rust
 embedding entry point is `PreparedRun::tools_with_mcp`; synchronous `tools()`
-requires the async path for admitted MCP. CLI/ACP integration remains C3.18 (M04).
+requires the async path for admitted MCP. C3.18 (M04) integrates this factory into
+CLI and ACP, with a fresh catalog and credential resolution for every task.
 
 ## Host configuration and authority
 
@@ -51,8 +52,10 @@ policy. Unknown names, duplicate names, changed command/args/endpoint, nonempty
 client environment/headers, or a denied host definition reject before I/O. Host
 credential references remain authoritative. Session cwd cannot install a launcher
 or configuration file. Model, Skill, tool and workspace data cannot add servers,
-credentials or authority. Actual ACP transport acceptance remains M04; M01 must
-prove this intersection and keep transport capabilities unadvertised.
+credentials or authority. ACP advertises HTTP capability and accepts stdio; legacy
+SSE transport remains unadvertised. Session creation performs offline admission;
+prompt admission revalidates the selection before launch. Empty selections use
+host defaults; nonempty selections narrow the configured server set.
 
 ## Qualified catalog and bounds
 
@@ -130,8 +133,10 @@ The initialized session header is visible ASCII, 1–256 bytes; subsequent reque
 carry it and the pinned protocol version. Peer headers never change the configured
 endpoint. Private `mcp.headers` credentials are scoped to the exact server definition
 and binding. HTTP clients disable proxies, redirects and automatic retries.
-Loopback HTTP is a crate-private synthetic fixture override; ordinary host
-configuration requires HTTPS.
+Loopback HTTP is an explicit host-only synthetic fixture override; ordinary host
+configuration requires HTTPS. The CLI/ACP bootstrap requires configuration and a
+synthetic provider endpoint, validates mappings before credentials/launch, and
+cannot install servers. See the deployment contract for the exact flags.
 
 Cancellation or disconnected uncertain calls attempt an explicit notification
 directly on the same HTTP endpoint, because the SDK sender may be occupied by a
@@ -154,7 +159,8 @@ Decorate the ordinary logical tool span with MCP attributes; do not add a duplic
 logical execution span. Keep raw peer errors, credentials, args/results, headers,
 stderr and progress text out of metadata-only telemetry; safe error codes/counts
 replace peer messages. Native records retain source, deciding policy IDs, phase,
-counts and uncertainty. Collector proof belongs to M04.
+counts and uncertainty. M04 proves exact native/Collector correlation across CLI
+and ACP for stdio, HTTP JSON and HTTP SSE using the independent pinned peer.
 
 ## Audited sources
 

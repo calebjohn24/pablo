@@ -25,6 +25,7 @@ pub struct PreparedRun {
     policy: PolicySet,
     trace_path: Option<PathBuf>,
     bindings_fingerprint: String,
+    pub(super) mcp_selection: Option<Vec<String>>,
 }
 impl std::fmt::Debug for PreparedRun {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -34,6 +35,28 @@ impl std::fmt::Debug for PreparedRun {
     }
 }
 impl PreparedRun {
+    pub fn has_mcp(&self) -> bool {
+        self.deployment.options()["mcp"]["servers"]
+            .as_object()
+            .is_some_and(|servers| !servers.is_empty())
+    }
+    /// Validate host/provider settings without launching an external capability.
+    pub fn preflight(&self, provider: &dyn crate::Provider) -> Result<(), ConfigError> {
+        crate::runtime::validate_run(self.spec(), provider, &self.builtin_tools()?)
+            .map_err(|_| error("config_invalid_value", "/run"))
+    }
+    /// A client may select only exact host definitions; empty selection uses host defaults.
+    pub fn select_mcp_client(
+        &mut self,
+        requests: &[crate::mcp::ClientServer],
+    ) -> Result<(), ConfigError> {
+        self.mcp_selection = if requests.is_empty() {
+            None
+        } else {
+            Some(self.deployment.admit_mcp_client(requests)?)
+        };
+        Ok(())
+    }
     /// Exclusive no-follow creation after all other admission checks succeed.
     #[cfg(unix)]
     pub fn create_trace_file(&self) -> Result<Option<std::fs::File>, ConfigError> {
@@ -372,6 +395,7 @@ impl ResolvedDeployment {
                 .map_err(|_| error("config_invalid_value", "/options/trace/max_bytes"))?;
         }
         Ok(PreparedRun {
+            mcp_selection: None,
             config_root,
             path_bindings: roots,
             deployment: self.clone(),

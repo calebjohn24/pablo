@@ -977,10 +977,15 @@ where
         if let Some(outcome) = &failure {
             telemetry::outcome(&context, outcome);
         } else if result.status == ToolStatus::RecoverableError {
-            context.span().set_status(Status::error("filesystem_error"));
+            let error = if call.name.starts_with("mcp/") {
+                "mcp_tool_error"
+            } else {
+                "filesystem_error"
+            };
+            context.span().set_status(Status::error(error));
             context
                 .span()
-                .set_attribute(KeyValue::new("error.type", "filesystem_error"));
+                .set_attribute(KeyValue::new("error.type", error));
         } else if result
             .shell
             .as_ref()

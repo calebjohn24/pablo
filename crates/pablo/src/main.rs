@@ -84,8 +84,11 @@ async fn execute(
         None => options.spec()?,
     };
     let tools = match &prepared {
-        Some(prepared) => prepared.tools().map_err(|e| e.to_string())?,
-        None => options.tools()?,
+        Some(prepared) if !prepared.has_mcp() => {
+            Some(prepared.tools().map_err(|error| error.to_string())?)
+        }
+        Some(_) => None,
+        None => Some(options.tools()?),
     };
     let secrets = prepared
         .as_ref()
@@ -112,9 +115,15 @@ async fn execute(
     } else {
         Box::new(ScriptedProvider::text(["Hello ", "from ", "pablo.\n"]))
     };
-    if prepared.is_some() {
-        pablo_core::runtime::validate_run(&spec, provider.as_ref(), &tools)
-            .map_err(|_| "config_invalid_value at /run")?;
+    if let Some(prepared) = &prepared {
+        if let Some(tools) = &tools {
+            pablo_core::runtime::validate_run(&spec, provider.as_ref(), tools)
+                .map_err(|_| "config_invalid_value at /run")?;
+        } else {
+            prepared
+                .preflight(provider.as_ref())
+                .map_err(|error| error.to_string())?;
+        }
     }
     let mut configured_sdk = prepared
         .as_ref()
@@ -257,8 +266,33 @@ async fn execute(
         Ok(())
     };
     let result = {
-        let run =
-            runtime.run_with_tools(&spec, provider.as_ref(), &tools, &cancellation, &mut sink);
+        let run = async {
+            let configured_tools =
+                if let Some(prepared) = prepared.as_ref().filter(|prepared| prepared.has_mcp()) {
+                    let deadline = tokio::time::Instant::now()
+                        .checked_add(std::time::Duration::from_millis(
+                            spec.limits.max_run_duration_ms,
+                        ))
+                        .ok_or("invalid run duration")?;
+                    Some(
+                        options
+                            .deployment
+                            .as_ref()
+                            .unwrap()
+                            .tools(prepared, deadline, &cancellation)
+                            .await
+                            .map_err(|error| error.to_string())?,
+                    )
+                } else {
+                    None
+                };
+            let tools = configured_tools.as_ref().or(tools.as_ref()).unwrap();
+            Ok::<_, String>(
+                runtime
+                    .run_with_tools(&spec, provider.as_ref(), tools, &cancellation, &mut sink)
+                    .await,
+            )
+        };
         tokio::pin!(run);
         loop {
             #[cfg(unix)]
@@ -273,7 +307,7 @@ async fn execute(
         }
     };
     sdk.shutdown().await;
-    let (outcome, delivery_failed) = match result {
+    let (outcome, delivery_failed) = match result? {
         Ok(outcome) => (outcome, false),
         Err(RunError::EventDelivery { outcome, .. }) => (*outcome, true),
         Err(error) => return Err(error.to_string()),

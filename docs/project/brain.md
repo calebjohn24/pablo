@@ -6,13 +6,10 @@ Read [the architecture brief](../context.md) selectively: section 29.1 defines t
 
 ### D001 — One checkpoint per implementation session
 The user selected this cadence to keep changes manageable. Finish verification and project records, leave the next checkpoint ready, and stop. Partial checkpoints can resume across sessions; explicit user steering can change the cadence.
-
 ### D002 — Cycle C1 proves the focused spike
 Use section 37.1, not the whole 0.1 release or alpha.1, as the completion boundary. Prove one model/shell loop through ACP plus native/OTel trace correlation. Keep filesystem tools, other providers, extensibility, TUI, and durable runtime state in later slices.
-
 ### D003 — Repository files are the development memory
 Use curated Markdown, one structured current-state file, and append-only JSONL work history. A dependency-free Node helper reads and validates those records. This keeps context inspectable in Git and avoids introducing a database or separate service before a runtime exists.
-
 ### D004 — Vercel is the first live provider
 The user selected Vercel AI Gateway. Use `AI_GATEWAY_API_KEY` and an explicit profile, initially `openai/gpt-4.1-mini`, following the approved cycle plan; D014 records the replacement default. The user supplied the credential in the root `.env`; its contents are private and uninspected by the project helper. The end-user preview in D011 brings a narrow live CLI smoke forward; live ACP acceptance remains C1.4.
 
@@ -198,3 +195,6 @@ C3.16 enables stdio through the async Rust embedding factory, with bounded SDK f
 
 ### D050 — HTTP disconnect is not remote cancellation
 C3.17 shares normalized MCP sessions across transports. Bound each POST/JSON/SSE exchange, retain exact endpoint/header scope and never follow redirects or replay invocations. Direct bounded cancellation bypasses a stalled SDK sender; local join and session DELETE cannot prove remote rollback, so results/metadata preserve uncertain completion. GET streams/resumption are outside this tool-only cut. See [M03 evidence](evidence/c3.17.md) and [contract](contracts/c3-mcp.md).
+
+### D051 — Fresh MCP ownership across host tasks
+C3.18 makes CLI/ACP await per-task MCP admission and joined cleanup. ACP selects exact host definitions offline and revalidates at prompt; cached provider/exporter resources never retain MCP catalogs or authentication. Explicit loopback fixture mappings validate before credentials/launch and scope headers to the actual endpoint. Real Collector proof covers both hosts and all transport formats. See [M04 evidence](evidence/c3.18.md).
