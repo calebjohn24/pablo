@@ -109,6 +109,7 @@ export interface ClientOptions {
   env?: NodeJS.ProcessEnv;
   onUpdate?: (notification: SessionNotification, context: ClientContext) => void | Promise<void>;
   onCompaction?: (notification: unknown) => void | Promise<void>;
+  onSkill?: (notification: unknown) => void | Promise<void>;
   onModelAttempt?: (notification: unknown) => void | Promise<void>;
   onDiagnostic?: (text: string) => void;
   onSpawn?: (child: ChildProcessWithoutNullStreams) => void;
@@ -132,6 +133,7 @@ export async function withPablo<T>(options: ClientOptions, operation: (context: 
     return await client({ name: 'pablo-reference' })
       .onNotification('session/update', ({ params, agent }) => options.onUpdate?.(params, agent))
       .onNotification('_pablo/compaction', (params: unknown) => params, ({ params }) => options.onCompaction?.(params))
+      .onNotification('_pablo/skill', (params: unknown) => params, ({ params }) => options.onSkill?.(params))
       .onNotification('_pablo/model_attempt', (params: unknown) => params, ({ params }) => options.onModelAttempt?.(params))
       .connectWith(stream, operation);
   } finally {

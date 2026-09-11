@@ -14,6 +14,7 @@ pub(super) struct TaskState {
     pub remaining_output: usize,
     pub remaining_validation_work: u64,
     pub history: Vec<Message>,
+    pub prefix_len: usize,
     pub continuations: Vec<ContinuationEntry>,
     pub ids: HashSet<String>,
     pub remaining_models: Option<u32>,
@@ -26,6 +27,14 @@ pub(super) struct TaskState {
 }
 impl TaskState {
     pub fn new(execution: &Execution<'_>) -> Self {
+        let mut history = vec![Message::User {
+            text: execution.spec.input.clone(),
+        }];
+        #[cfg(unix)]
+        if let Some(skills) = execution.tools.activated_skills() {
+            history.extend(skills.context_messages());
+        }
+        let prefix_len = history.len();
         Self {
             repairing: false,
             remaining_output: execution.spec.limits.max_output_bytes,
@@ -34,9 +43,8 @@ impl TaskState {
                 .output
                 .as_ref()
                 .map_or(0, |o| o.max_validation_work),
-            history: vec![Message::User {
-                text: execution.spec.input.clone(),
-            }],
+            history,
+            prefix_len,
             continuations: Vec::new(),
             ids: HashSet::new(),
             remaining_models: execution.spec.limits.max_model_calls,
@@ -135,7 +143,12 @@ fn select_split(execution: &Execution<'_>, state: &TaskState) -> Option<(usize, 
     Some(original)
 }
 
-fn fingerprint(history: &[Message], entries: &[ContinuationEntry], split: usize) -> String {
+fn fingerprint(
+    history: &[Message],
+    entries: &[ContinuationEntry],
+    split: usize,
+    prefix_len: usize,
+) -> String {
     struct HashWriter(digest::Context);
     impl std::io::Write for HashWriter {
         fn write(&mut self, value: &[u8]) -> std::io::Result<usize> {
@@ -148,7 +161,7 @@ fn fingerprint(history: &[Message], entries: &[ContinuationEntry], split: usize)
     }
     let mut hash = HashWriter(digest::Context::new(&digest::SHA256));
     hash.0.update(b"pablo-compaction-history-v1\0");
-    serde_json::to_writer(&mut hash, &history[1..split]).expect("serializable history");
+    serde_json::to_writer(&mut hash, &history[prefix_len..split]).expect("serializable history");
     for e in entries.iter().filter(|e| e.message_index < split) {
         let s = &e.value.scope;
         serde_json::to_writer(
@@ -228,7 +241,8 @@ where
             replaced_history_sha256: fingerprint(
                 &state.history,
                 &state.continuations,
-                split.map_or(1, |(i, _)| i),
+                split.map_or(state.prefix_len, |(i, _)| i),
+                state.prefix_len,
             ),
             reason: None,
         }));
@@ -442,19 +456,17 @@ where
         let mut next_admission = lifecycle.accounting.clone();
         selected.ledger.reserve(&mut next_admission)?;
         let summary = progress.output;
-        let mut history = vec![
-            state.history[0].clone(),
-            Message::User {
-                text: format!("{SUMMARY_PREFIX}{summary}"),
-            },
-        ];
+        let mut history = state.history[..state.prefix_len].to_vec();
+        history.push(Message::User {
+            text: format!("{SUMMARY_PREFIX}{summary}"),
+        });
         history.extend_from_slice(&state.history[split..]);
         let continuations = state
             .continuations
             .iter()
             .filter(|e| e.message_index >= split)
             .map(|e| ContinuationEntry {
-                message_index: e.message_index - split + 2,
+                message_index: e.message_index - split + state.prefix_len + 1,
                 value: e.value.clone(),
             })
             .collect::<Vec<_>>();

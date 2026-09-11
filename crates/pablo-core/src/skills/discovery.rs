@@ -16,7 +16,7 @@ fn os_error(e: rustix::io::Errno) -> Error {
         _ => Error::Io,
     }
 }
-fn at(parent: &File, name: &std::ffi::OsStr, directory: bool) -> Result<File, Error> {
+pub(super) fn at(parent: &File, name: &std::ffi::OsStr, directory: bool) -> Result<File, Error> {
     let expected = if directory {
         FileType::Directory
     } else {
@@ -53,7 +53,7 @@ fn at(parent: &File, name: &std::ffi::OsStr, directory: bool) -> Result<File, Er
     }
     Ok(File::from(fd))
 }
-fn open_root(path: &Path) -> Result<File, Error> {
+pub(super) fn open_root(path: &Path) -> Result<File, Error> {
     if !path.is_absolute()
         || path.as_os_str().len() > 4096
         || path.components().any(|c| matches!(c, Component::ParentDir))

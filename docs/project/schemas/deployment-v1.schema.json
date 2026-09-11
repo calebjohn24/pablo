@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:pablo:deployment:1:c3.19",
-  "title": "Pablo deployment v1 \u2014 C3.19 contract",
+  "$id": "urn:pablo:deployment:1:c3.20",
+  "title": "Pablo deployment v1 \u2014 C3.20 contract",
   "description": "TOML-to-JSON shape. See c3-deployment-config.md for semantic checks and implementation availability.",
   "type": "object",
   "additionalProperties": false,
@@ -3002,6 +3002,16 @@
           "additionalProperties": {
             "$ref": "#/$defs/Path"
           }
+        },
+        "activate": {
+          "type": "array",
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
         }
       }
     },
@@ -3018,10 +3028,21 @@
           "additionalProperties": {
             "$ref": "#/$defs/resolvedPath"
           }
+        },
+        "activate": {
+          "type": "array",
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
         }
       },
       "required": [
-        "roots"
+        "roots",
+        "activate"
       ]
     }
   }

@@ -55,6 +55,9 @@ pub struct ToolResult {
     pub mcp: Option<Box<crate::mcp::tool::McpResult>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub filesystem: Option<Box<crate::filesystem::FilesystemResult>>,
+    #[cfg(unix)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub skill: Option<Box<crate::skills::tool::SkillResult>>,
     #[serde(default, skip_serializing_if = "<[_]>::is_empty")]
     pub policy_decisions: Box<[String]>,
 }
@@ -68,6 +71,8 @@ impl ToolResult {
             #[cfg(unix)]
             mcp: None,
             filesystem: None,
+            #[cfg(unix)]
+            skill: None,
             policy_decisions: Box::default(),
         }
     }
@@ -79,6 +84,8 @@ impl ToolResult {
             #[cfg(unix)]
             mcp: None,
             filesystem: None,
+            #[cfg(unix)]
+            skill: None,
             policy_decisions: Box::default(),
         }
     }
@@ -118,6 +125,8 @@ impl std::error::Error for ToolSetupError {}
 
 #[derive(Default)]
 pub struct ToolRegistry {
+    #[cfg(unix)]
+    skills: Option<crate::skills::tool::ResourceTool>,
     shell: Option<crate::shell::ShellTool>,
     filesystem: Vec<crate::filesystem::FilesystemTool>,
     policy: std::sync::Arc<crate::policy::PolicySet>,
@@ -133,6 +142,25 @@ pub struct ToolRegistry {
 }
 
 impl ToolRegistry {
+    #[cfg(unix)]
+    pub fn with_activated_skills(
+        mut self,
+        active: crate::skills::activation::ActivatedSkills,
+    ) -> Result<Self, ToolSetupError> {
+        if self.skills.is_some() {
+            return Err(ToolSetupError);
+        }
+        if !active.records().is_empty() {
+            let tool = crate::skills::tool::ResourceTool::new(active)?;
+            self.descriptors.push(tool.descriptor());
+            self.skills = Some(tool);
+        }
+        Ok(self)
+    }
+    #[cfg(unix)]
+    pub fn activated_skills(&self) -> Option<&crate::skills::activation::ActivatedSkills> {
+        self.skills.as_ref().map(|tool| &tool.active)
+    }
     /// Opt in to shell execution; an empty/default registry grants no tools.
     pub fn with_shell() -> Result<Self, ToolSetupError> {
         let shell = crate::shell::ShellTool::new()?;
@@ -227,6 +255,7 @@ impl ToolRegistry {
                 "fs_search",
                 "fs_write",
                 "fs_edit",
+                "skill_read",
             ]
             .into_iter()
             .map(String::from)
@@ -332,6 +361,10 @@ impl ToolRegistry {
         &self.policy
     }
     pub(crate) fn get(&self, name: &str) -> Option<&dyn Tool> {
+        #[cfg(unix)]
+        if name == "skill.read" {
+            return self.skills.as_ref().map(|tool| tool as &dyn Tool);
+        }
         if name == "shell.run" {
             return self.shell.as_ref().map(|tool| tool as &dyn Tool);
         }

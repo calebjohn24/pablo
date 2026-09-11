@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_revision": "c3.19",
+  "contract_revision": "c3.20",
   "config": {
     "options": {
       "run": {
@@ -112,7 +112,8 @@
         "policies": []
       },
       "skills": {
-        "roots": {}
+        "roots": {},
+        "activate": []
       }
     },
     "deployment": {
@@ -173,13 +174,13 @@
       }
     ]
   },
-  "fingerprint": "sha256:c7ad55e9f3b1e74862479dbd85b581a7e20855904cc699ddf80ef391129afa89",
+  "fingerprint": "sha256:1d237d4955f350ec9042e069f945489da700387ed4a560abf1309d63ae0a055f",
   "sources": [
     {
       "id": "source-0000",
       "kind": "defaults",
       "locator": "deployment-defaults-v1.json",
-      "digest": "sha256:56fabd0477c522d9e30574504051e43951ed9c7505096e98f246b432a057e99e"
+      "digest": "sha256:981071d476c9ce50eb4b60c9d25628706acc9202ce72be43d8889c99ba0863bb"
     },
     {
       "id": "source-0001",
@@ -881,6 +882,12 @@
         "operation": "default"
       }
     ],
+    "/config/options/skills/activate": [
+      {
+        "source": "source-0000",
+        "operation": "default"
+      }
+    ],
     "/config/options/skills/roots": [
       {
         "source": "source-0000",
@@ -912,5 +919,5 @@
       }
     ]
   },
-  "input_fingerprint": "sha256:ea3a83d9c2cacbb182b4fb2e30e0e10581ecc6d42bc6789afbd1024775ec172e"
+  "input_fingerprint": "sha256:7b13f5cda421b7bbc49f0662ec5933725ba5f76ade5e7a4e1def4b6f19aa7931"
 }

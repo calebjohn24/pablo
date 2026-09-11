@@ -35,6 +35,7 @@ struct Extensions {
     task: bool,
     route: bool,
     compaction: bool,
+    skills: bool,
     output: bool,
     repair: bool,
 }
@@ -185,7 +186,12 @@ async fn serve_streams(
                     .is_some_and(|message| {
                         matches!(
                             message.method,
-                            Some("session/update" | "_pablo/model_attempt" | "_pablo/compaction")
+                            Some(
+                                "session/update"
+                                    | "_pablo/model_attempt"
+                                    | "_pablo/compaction"
+                                    | "_pablo/skill"
+                            )
                         )
                     });
             tokio::time::timeout(WRITE_TIMEOUT, async {
@@ -256,6 +262,13 @@ async fn serve_streams(
                             .as_ref()
                             .and_then(|m| m.get("pablo/output-v1"))
                             == Some(&json!(true));
+                    state.extensions.skills = state.extensions.base
+                        && request
+                            .client_capabilities
+                            .meta
+                            .as_ref()
+                            .and_then(|m| m.get("pablo/skills-v1"))
+                            == Some(&json!(true));
                     state.extensions.repair = state.extensions.output
                         && request
                             .client_capabilities
@@ -267,6 +280,7 @@ async fn serve_streams(
                     capabilities.insert("pablo/task-v1".into(), json!(true));
                     capabilities.insert("pablo/model-route-v1".into(), json!(true));
                     capabilities.insert("pablo/compaction-v1".into(), json!(true));
+                    capabilities.insert("pablo/skills-v1".into(), json!(true));
                     capabilities.insert("pablo/output-v1".into(), json!(true));
                     capabilities.insert("pablo/output-repair-v1".into(), json!(true));
                     let caps = wire::AgentCapabilities::new()
@@ -669,6 +683,19 @@ async fn forward_events(
             terminal = Some(event.clone());
         }
         let mut notification_sent = false;
+        #[cfg(unix)]
+        if extensions.skills
+            && let EventKind::SkillActivated {
+                skill,
+                instructions,
+            } = &event.kind
+        {
+            let params=serde_json::value::to_raw_value(&json!({"sessionId":event.session_id,"type":"skill.activated","pablo/v1":correlation(&event,first),"skill":skill,"instructions":if capture_content {instructions.as_deref()}else{None},"content_redacted":!capture_content})).map_err(|_|Error::internal_error())?;
+            cx.send_notification(wire::AgentNotification::ExtNotification(
+                wire::ExtNotification::new("_pablo/skill", Arc::from(params)),
+            ))?;
+            notification_sent = true;
+        }
         if extensions.compaction
             && matches!(
                 event.kind,

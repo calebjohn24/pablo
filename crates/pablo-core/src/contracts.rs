@@ -305,6 +305,12 @@ pub struct RunEvent {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum EventKind {
+    #[cfg(unix)]
+    #[serde(rename = "skill.activated")]
+    SkillActivated {
+        skill: crate::skills::activation::ActivationRecord,
+        instructions: Option<String>,
+    },
     #[serde(rename = "context.compaction.started")]
     CompactionStarted,
     #[serde(rename = "context.compaction.finished")]

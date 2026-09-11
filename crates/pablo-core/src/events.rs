@@ -198,6 +198,13 @@ impl Serialize for RedactedEvent<'_> {
             map.serialize_entry("accounting", accounting)?;
         }
         match &e.kind {
+            #[cfg(unix)]
+            EventKind::SkillActivated { skill, .. } => {
+                map.serialize_entry("type", "skill.activated")?;
+                map.serialize_entry("skill", skill)?;
+                map.serialize_entry("instructions", &())?;
+                map.serialize_entry("content_redacted", &true)?;
+            }
             EventKind::CompactionStarted => {
                 map.serialize_entry("type", "context.compaction.started")?
             }
@@ -272,6 +279,9 @@ impl Serialize for RedactedEvent<'_> {
                     mcp: Option<crate::mcp::tool::RedactedMcpResult>,
                     #[serde(skip_serializing_if = "Option::is_none")]
                     filesystem: Option<crate::filesystem::RedactedFilesystem>,
+                    #[cfg(unix)]
+                    #[serde(skip_serializing_if = "Option::is_none")]
+                    skill: Option<crate::skills::tool::RedactedSkillResult<'a>>,
                     #[serde(skip_serializing_if = "<[_]>::is_empty")]
                     policy_decisions: &'a [String],
                 }
@@ -287,6 +297,8 @@ impl Serialize for RedactedEvent<'_> {
                         #[cfg(unix)]
                         mcp: result.mcp.as_ref().map(|m| m.redacted()),
                         filesystem: result.filesystem.as_ref().map(|f| f.redacted()),
+                        #[cfg(unix)]
+                        skill: result.skill.as_ref().map(|s| s.redacted()),
                         policy_decisions: &result.policy_decisions,
                     },
                 )?;

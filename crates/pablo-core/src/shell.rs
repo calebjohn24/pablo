@@ -368,6 +368,7 @@ mod unix {
                 shell: Some(capture.finish(exit)),
                 filesystem: None,
                 mcp: None,
+                skill: None,
                 policy_decisions: context.policy_decisions.into(),
             },
             context.limits.max_tool_output_bytes,

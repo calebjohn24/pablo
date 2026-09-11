@@ -35,6 +35,14 @@ impl std::fmt::Debug for PreparedRun {
     }
 }
 impl PreparedRun {
+    pub fn has_skills(&self) -> bool {
+        self.deployment.options()["skills"]["activate"]
+            .as_array()
+            .is_some_and(|names| !names.is_empty())
+    }
+    pub fn needs_async_tools(&self) -> bool {
+        self.has_mcp() || self.has_skills()
+    }
     pub fn has_mcp(&self) -> bool {
         self.deployment.options()["mcp"]["servers"]
             .as_object()
@@ -114,6 +122,12 @@ impl PreparedRun {
         &self.bindings_fingerprint
     }
     pub fn tools(&self) -> Result<ToolRegistry, ConfigError> {
+        if self.has_skills() {
+            return Err(error(
+                "config_async_skills_required",
+                "/options/skills/activate",
+            ));
+        }
         let settings = self.deployment.mcp()?;
         if settings
             .servers

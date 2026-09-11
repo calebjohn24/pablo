@@ -21,6 +21,7 @@ pub struct Options {
     pub allow_write: bool,
     policy_path: Option<PathBuf>,
     output_schema_path: Option<PathBuf>,
+    skills: Vec<String>,
     pub traceparent: Option<String>,
     pub tracestate: Option<String>,
     input: String,
@@ -64,6 +65,7 @@ impl Options {
             allow_write: false,
             policy_path: None,
             output_schema_path: None,
+            skills: Vec::new(),
             traceparent: None,
             tracestate: None,
             input: String::new(),
@@ -98,7 +100,7 @@ impl Options {
                 }
                 continue;
             }
-            if !seen.insert(arg.to_owned()) {
+            if !seen.insert(arg.to_owned()) && arg != "--skill" {
                 return Err("repeated option; use --help".into());
             }
             if arg == "--json" && options.live && !options.acp {
@@ -131,6 +133,7 @@ impl Options {
                         arg,
                         "--policy"
                             | "--output-schema"
+                            | "--skill"
                             | "--workspace"
                             | "--model"
                             | "--provider"
@@ -165,6 +168,16 @@ impl Options {
                 }
                 "--policy" => options.policy_path = Some(value.into()),
                 "--output-schema" => options.output_schema_path = Some(value.into()),
+                "--skill" => {
+                    if value.is_empty() || value.len() > 512 || options.skills.len() >= 8 {
+                        return Err("invalid Skill activation".into());
+                    }
+                    options.skills.push(
+                        value
+                            .into_string()
+                            .map_err(|_| "Skill name must be UTF-8")?,
+                    );
+                }
                 "--trace" => options.trace_path = Some(value.into()),
                 "--workspace" => options.workspace = Some(value.into()),
                 "--env-file" => options.env_file = Some(value.into()),
@@ -233,6 +246,9 @@ impl Options {
             return Err("config_override_forbidden at /demo".into());
         }
         if options.deployment.is_none() {
+            if !options.skills.is_empty() {
+                return Err("--skill requires explicit deployment roots via --config".into());
+            }
             if options.provider == Some(pablo_core::gateway::GatewayKind::OpenResponses) {
                 return Err("Open Responses requires an explicit deployment with endpoint, model and capability profile".into());
             }
@@ -250,6 +266,9 @@ impl Options {
             return Err("config_override_forbidden at /credentials".into());
         }
         let mut overrides = serde_json::Map::new();
+        if !self.skills.is_empty() {
+            overrides.insert("skills.activate".into(), serde_json::json!(self.skills));
+        }
         for (flag, option, value) in [
             ("--json", "interfaces.cli_output", serde_json::json!("json")),
             ("--no-shell", "shell.enabled", serde_json::json!(false)),

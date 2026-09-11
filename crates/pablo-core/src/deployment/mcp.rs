@@ -97,6 +97,15 @@ impl ResolvedDeployment {
 
 #[cfg(unix)]
 impl PreparedRun {
+    /// Prepare fresh configured MCP and explicitly activated Skill capabilities.
+    pub async fn tools_with_capabilities(
+        &self,
+        inputs: &dyn CredentialInputs,
+        deadline: tokio::time::Instant,
+        cancellation: &tokio_util::sync::CancellationToken,
+    ) -> Result<crate::ToolRegistry, ConfigError> {
+        self.tools_with_mcp(inputs, deadline, cancellation).await
+    }
     /// Start a fresh per-run MCP catalog using only admitted host configuration.
     /// The runtime joins it before its terminal event; callers abandoning a prepared catalog must call close().
     pub async fn tools_with_mcp(
@@ -138,6 +147,28 @@ impl PreparedRun {
         let policy = self.deployment().mcp_policy()?;
         let mut tools = self.builtin_tools()?;
         tools.constrain_deadline(deadline);
+        if self.has_skills() {
+            let names = self.deployment().options()["skills"]["activate"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|name| name.as_str().unwrap().to_owned())
+                .collect();
+            let roots = self
+                .deployment()
+                .skill_roots(Some(&self.spec().workspace))?;
+            let active = crate::skills::activation::ActivatedSkills::load(
+                roots,
+                names,
+                cancellation.clone(),
+                deadline,
+            )
+            .await
+            .map_err(|_| error("config_skill_activation", "/options/skills/activate"))?;
+            tools = tools
+                .with_activated_skills(active)
+                .map_err(|_| error("config_invalid_value", "/options/skills"))?;
+        }
         let mut catalog_bytes = 0usize;
         let mut catalog_tools = 0usize;
         for (id, server) in &settings.servers {

@@ -140,7 +140,7 @@ fn run(options: Arc<Options>, tasks: async_channel::Receiver<Task>) -> Result<()
                         });
                     if !reuse {
                         let provider = secrets.provider(bootstrap)?;
-                        let tools = if prepared.has_mcp() {
+                        let tools = if prepared.needs_async_tools() {
                             prepared
                                 .preflight(provider.as_ref())
                                 .map_err(|error| error.to_string())?;
@@ -175,7 +175,7 @@ fn run(options: Arc<Options>, tasks: async_channel::Receiver<Task>) -> Result<()
                             )),
                         });
                     }
-                    if prepared.has_mcp() {
+                    if prepared.needs_async_tools() {
                         prepared
                             .preflight(resources.as_ref().unwrap().provider.as_ref())
                             .map_err(|error| error.to_string())?;
@@ -267,25 +267,28 @@ async fn execute(
             .map_err(|_| io::Error::other("ACP consumer closed"))?;
         Ok(())
     };
-    let task_tools =
-        if let Some(prepared) = task.prepared.as_ref().filter(|prepared| prepared.has_mcp()) {
-            let deadline = tokio::time::Instant::now()
-                .checked_add(std::time::Duration::from_millis(
-                    spec.limits.max_run_duration_ms,
-                ))
-                .ok_or("invalid run duration")?;
-            Some(
-                options
-                    .deployment
-                    .as_ref()
-                    .unwrap()
-                    .tools(prepared, deadline, &task.cancel)
-                    .await
-                    .map_err(|error| error.to_string())?,
-            )
-        } else {
-            None
-        };
+    let task_tools = if let Some(prepared) = task
+        .prepared
+        .as_ref()
+        .filter(|prepared| prepared.needs_async_tools())
+    {
+        let deadline = tokio::time::Instant::now()
+            .checked_add(std::time::Duration::from_millis(
+                spec.limits.max_run_duration_ms,
+            ))
+            .ok_or("invalid run duration")?;
+        Some(
+            options
+                .deployment
+                .as_ref()
+                .unwrap()
+                .tools(prepared, deadline, &task.cancel)
+                .await
+                .map_err(|error| error.to_string())?,
+        )
+    } else {
+        None
+    };
     match runtime
         .run_with_tools(
             spec,
