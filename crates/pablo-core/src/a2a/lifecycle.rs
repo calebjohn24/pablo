@@ -46,6 +46,20 @@ pub struct ResultData {
     pub status: Option<TaskState>,
     pub message: Option<Message>,
     pub artifacts: Vec<Artifact>,
+    pub remote_reported_usage: Option<super::usage::ReportedUsage>,
+}
+impl ResultData {
+    /// Logical output bytes, independent of the larger serialized receipt bound.
+    pub fn output_bytes(&self) -> Result<usize, wire::Error> {
+        self.artifacts
+            .iter()
+            .flat_map(|artifact| artifact.parts.iter())
+            .chain(self.message.iter().flat_map(|message| message.parts.iter()))
+            .try_fold(0usize, |sum, part| {
+                sum.checked_add(part.input_bytes()?)
+                    .ok_or(wire::Error::Bound)
+            })
+    }
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Update {
@@ -102,6 +116,9 @@ impl Lifecycle {
         self.budget.charge(bytes.len()).map_err(Error::Wire)?;
         let reply = wire::decode(bytes, rpc_id, mode, trace).map_err(Error::Wire)?;
         let mut next = self.result.clone();
+        if let Some(usage) = reply.reported_usage() {
+            next.remote_reported_usage = Some(usage);
+        }
         let mut open = self.open_artifacts.clone();
         let (context, task) = match &reply {
             Reply::Message(v) => (v.context_id.as_str(), v.task_id.as_deref()),

@@ -269,6 +269,11 @@ impl Serialize for RedactedEvent<'_> {
             map.serialize_entry("accounting", accounting)?;
         }
         match &e.kind {
+            EventKind::A2aUpdate { remote } => {
+                map.serialize_entry("type", "a2a.update")?;
+                map.serialize_entry("remote", remote)?;
+            }
+
             #[cfg(unix)]
             EventKind::SkillActivated { skill, .. } => {
                 map.serialize_entry("type", "skill.activated")?;

@@ -37,13 +37,34 @@ impl RootOwner for Supervisor {
 }
 impl Tool for Supervisor {
     fn descriptor(&self) -> ToolDescriptor {
-        ToolDescriptor {
+        let remotes = self
+            .inner
+            .parent
+            .deployment()
+            .a2a()
+            .map(|settings| settings.remotes.into_keys().collect::<Vec<_>>())
+            .unwrap_or_default();
+        let has_remotes = !remotes.is_empty();
+        let mut actions = vec!["spawn", "inspect", "wait", "stop"];
+        let remote_name = if remotes.is_empty() {
+            serde_json::json!({"type":"string","minLength":1,"maxLength":128})
+        } else {
+            actions.push("spawn_remote");
+            serde_json::json!({"type":"string","enum":remotes})
+        };
+        let mut descriptor=ToolDescriptor {
             name: "subagent".into(),
-            description: "Run up to two concurrent temporary children with explicitly selected tasks and inherited capabilities. Spawn returns a handle immediately; inspect and wait return bounded state/results; stop joins owned child work. Children share the workspace and root budgets. Select handoffs by source_agent_id and result_id from settled schema-valid results; inline passes structured output, artifact passes a verified workspace path/revision.".into(),
+            description: "Run up to two concurrent temporary children. Local spawn inherits selected capabilities; spawn_remote selects a configured peer and explicit Parts, without local authority or transcripts. Remote usage and cancellation receipts are peer claims. Spawn returns a handle immediately; inspect and wait return bounded state/results; stop joins owned child work. Children share the workspace and root budgets. Select handoffs by source_agent_id and result_id from settled schema-valid results; inline passes structured output, artifact passes a verified workspace path/revision.".into(),
             input_schema: serde_json::json!({
                 "type":"object","additionalProperties":false,
                 "properties":{
-                    "action":{"enum":["spawn","inspect","wait","stop"]},
+                    "action":{"enum":actions},
+                    "remote_request":{"type":"object","additionalProperties":false,"required":["remote","parts","accepted_output_modes"],"properties":{
+                        "remote":remote_name,
+                        "parts":{"type":"array","minItems":1,"maxItems":32,"items":{"type":"object","additionalProperties":false,"properties":{"text":{"type":"string"},"data":{},"raw":{"type":"string"},"url":{"type":"string","maxLength":4096},"mediaType":{"type":"string","maxLength":128},"filename":{"type":"string","maxLength":256}},"oneOf":[{"required":["text"]},{"required":["data"]},{"required":["raw"]},{"required":["url"]}]}},
+                        "accepted_output_modes":{"type":"array","minItems":1,"maxItems":16,"items":{"type":"string","maxLength":128}},
+                        "stream":{"type":["boolean","null"]},"max_duration_ms":{"type":["integer","null"],"minimum":0}
+                    }},
                     "request":{"type":"object","additionalProperties":false,"required":["input"],
                         "properties":{
                             "input":{"type":"string","minLength":1,"maxLength":1048576},
@@ -80,12 +101,25 @@ impl Tool for Supervisor {
                 "required":["action"],
                 "oneOf":[
                     {"properties":{"action":{"const":"spawn"}},"required":["request"]},
+                    {"properties":{"action":{"const":"spawn_remote"}},"required":["remote_request"]},
                     {"properties":{"action":{"const":"inspect"}},"required":["agent_id"]},
                     {"properties":{"action":{"const":"stop"}},"required":["agent_id"]},
                     {"properties":{"action":{"const":"wait"}},"required":["agent_ids","mode","timeout_ms"]}
                 ]
             }),
+        };
+        if !has_remotes {
+            descriptor.input_schema["properties"]
+                .as_object_mut()
+                .expect("tool schema")
+                .remove("remote_request");
+            descriptor.input_schema["oneOf"]
+                .as_array_mut()
+                .expect("tool schema")
+                .retain(|branch| branch["properties"]["action"]["const"] != "spawn_remote");
+            descriptor.description="Run up to two concurrent temporary children with explicitly selected tasks and inherited capabilities. Spawn returns a handle immediately; inspect and wait return bounded state/results; stop joins owned child work. Children share the workspace and root budgets. Select handoffs by source_agent_id and result_id from settled schema-valid results; inline passes structured output, artifact passes a verified workspace path/revision.".into();
         }
+        descriptor
     }
     fn execute<'a>(
         &'a self,
@@ -107,6 +141,9 @@ impl Tool for Supervisor {
                 return ToolResult::status(ToolStatus::InvalidArguments);
             }
             let value = match action {
+                ChildAction::SpawnRemote { remote_request } => self
+                    .spawn_remote(&remote_request, context.context)
+                    .map(|agent| json!({"action":"spawn_remote","agent":agent})),
                 ChildAction::Spawn { request } => self
                     .spawn(&request, context.context)
                     .map(|agent| json!({"action":"spawn","agent":agent})),

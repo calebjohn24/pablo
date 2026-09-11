@@ -168,7 +168,8 @@ async fn independent_sdk_card_is_fetched_with_version_and_no_task_or_credentials
         assert!(matches!(deployment.resolve_a2a_fixture(&parent,"missing",url,deadline,&cancel).await,Err(pablo_core::a2a::ResolveError::Configuration(_))));
         let child=parent.temporary_child().unwrap();
         assert!(matches!(deployment.resolve_a2a_fixture(&child,"echo",url,deadline,&cancel).await,Err(pablo_core::a2a::ResolveError::Ownership(_))));
-        let mut first=deployment.resolve_a2a_fixture(&parent,"echo",url,deadline,&cancel).await.unwrap();
+        let pending=deployment.prepare_a2a(&parent,"echo").unwrap();let queued_id=pending.agent().agent_id().to_owned();assert_eq!(pending.agent().state(),pablo_core::children::AgentState::Queued);assert!(!cwd.join("requests.jsonl").exists());
+        let mut first=pending.resolve_fixture(url,deadline,&cancel).await.unwrap();assert_eq!(first.agent().agent_id(),queued_id);
         let second=deployment.resolve_a2a_fixture(&parent,"echo",url,deadline,&cancel).await.unwrap();
         assert_eq!(first.name(),"echo");assert_eq!(first.agent().kind(),AgentKind::RemoteA2a);
         assert_eq!(first.agent().parent_agent_id(),Some(parent.agent_id()));

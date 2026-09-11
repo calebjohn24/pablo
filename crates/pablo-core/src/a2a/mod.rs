@@ -1,14 +1,19 @@
 //! Host-selected A2A admission. Remote descriptions never grant local authority.
+pub mod events;
 mod fetch;
 pub mod lifecycle;
 mod proxy;
+pub mod request;
 mod settings;
 pub mod sse;
 pub mod trace;
 pub mod transport;
+pub mod usage;
 pub mod wire;
 pub use fetch::{CardClient, FetchError};
-pub use proxy::{IdentityError, MAX_REMOTE_ID_BYTES, RemoteIdentity, RemoteProxy, ResolveError};
+pub use proxy::{
+    IdentityError, MAX_REMOTE_ID_BYTES, PendingRemote, RemoteIdentity, RemoteProxy, ResolveError,
+};
 use serde::{Deserialize, Serialize};
 pub use settings::{Bearer, Remote, Settings};
 use std::collections::BTreeMap;

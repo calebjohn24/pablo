@@ -1,9 +1,8 @@
 # R01–R03 — Configured A2A client
 
 C3.26 supplies configured public-card admission, owned local proxy descriptions
-and bounded wire codecs. Production supervised task transport/artifact assembly
-belongs to C3.27; adverse cancellation and Collector proof belong to C3.28. The
-presence of configuration or a proxy description does not claim task execution.
+and bounded wire codecs. C3.27 adds supervised task transport, artifact assembly and explicit host/model
+delegation. Adverse cancellation and Collector proof belong to C3.28.
 
 ## Immutable protocol and reference
 
@@ -77,7 +76,7 @@ exactly one Message, Task, statusUpdate or artifactUpdate. Preserve remote IDs,
 status dispositions, artifact IDs and append/lastChunk flags. Status-message
 context/task identities must agree with their enclosing task. Submitted/working,
 completed, failed, canceled, rejected and input/auth-required remain distinct;
-execution and interruption handling are C3.27 responsibilities. No automatic
+execution and interruption handling follow the C3.27 lifecycle below. No automatic
 replay, reconnect, continuation or remote file fetching follows from decoding.
 Remote-reported usage cannot replace enforceable local accounting.
 
@@ -102,9 +101,9 @@ Typed deserialization rejects duplicate known fields and ambiguous unions.
 JSONRPC response ID/version must match the request. Local bound/shape/content
 failures remain distinct from numeric remote JSONRPC/A2A errors. Unknown numeric
 remote errors retain their code; their untrusted message/data grants no authority.
-The codec enforces byte/count/content limits. C3.27 must additionally enforce raw
-SSE framing bytes, wall/idle timers, assembled-result limits, root admission and
-joined cleanup; constants alone do not prove those execution guarantees.
+The codec enforces byte/count/content limits. The C3.27 execution path additionally
+enforces raw SSE framing bytes, wall/idle timers, assembled-result limits, root
+admission and joined cleanup, as described below.
 
 ## Optional trace-context extension
 
@@ -151,10 +150,8 @@ inspection after a failed update; the execution owner must handle cancellation.
 `a2a::sse::Decoder` accepts byte-split UTF-8 BOM, CR/LF/CRLF and multiline data. It
 charges raw comments and fields against 1 MiB total, 256 frames and a per-frame
 64 KiB envelope plus 4096 framing bytes; decoded data stays within 64 KiB. IDs and
-retry fields trigger no reconnect. Truncated data at EOF rejects. This is framing
-and assembly implementation, not evidence of supervised remote task execution:
-scoped production HTTP requests, idle/wall/cleanup timers, native proxy events,
-remote usage reporting and host/model admission remain C3.27 work.
+retry fields trigger no reconnect. Truncated data at EOF rejects. The transport and supervisor below own HTTP requests, idle/wall/cleanup timers,
+native proxy events, usage receipts and host/model admission.
 
 ## C3.27 task transport increment
 
@@ -183,6 +180,46 @@ a distinct result and triggers best-effort cleanup of its nonterminal remote tas
 
 Independent SDK tests cover immediate/terminal/streamed results, cancellation after
 assignment, task deadline cleanup, and no request for pre-cancelled or unsupported
-input. Synthetic credential tests verify sensitive headers and exact scope. Full
-supervisor queue/native-event integration, host/model delegation, separately
-labelled remote usage, R02 completion and adverse R03 proof remain pending.
+input. Synthetic credential tests verify sensitive headers and exact scope. The supervised path below extends these checks to root ownership. Adverse R03
+proof remains separate.
+
+
+## C3.27 supervisor and explicit delegation
+
+With children enabled and configured remotes, `subagent` advertises `spawn_remote`
+with `remote_request`: an exact configured remote name, explicit Parts, accepted
+output modes, optional streaming selection and optional narrower duration. The
+host calls the same supervisor admission function. No RunSpec, task overlay,
+transcript, credential or local tool catalog is an argument to this operation.
+With no configured remotes, the model schema omits this action entirely.
+
+Admission creates one queued owned proxy without HTTP or credential lookup. Local
+and remote jobs share the root's two active slots, fourteen pending slots, sixteen
+total handles, context/result reservations and native event/trace budgets. Card
+retrieval occurs after promotion and preserves that proxy identity. Queued stop
+performs no card lookup or task submission. Local execution/session IDs remain
+separate from the peer's context/task IDs throughout wait, inspect and stop.
+
+The bounded snapshot includes card digest, selected endpoint/protocol/binding,
+remote IDs, status, typed result, delivery certainty and a separate cancellation
+receipt. Logical output content also obeys the parent output-byte ceiling. Rejected
+content is not retained as a successful result. Metadata-only `a2a.update` records
+carry IDs, status, artifact IDs and optional usage; Parts remain in the explicit
+result. Native start/update/finish events use the same acknowledged root consumer.
+ACP projects these as standard attributed tool-call updates in the root session.
+The local remote-run span is parented by the delegation operation; actual remote
+Collector propagation and outage parity remain R03 gates.
+
+Optional response metadata `urn:pablo:a2a:reported-usage:v1` contains only
+`inputTokens`, `outputTokens`, `totalTokens` and `costMicrousd`. Each supplied value
+is a canonical decimal-string u64, preserving values above JavaScript's exact
+integer range. The closed object is limited to 1024 bytes. The latest explicit
+claim is retained; a later update with no claim does not erase it. These are
+untrusted remote reports, not local model calls, token charges or enforced spend.
+Unrelated optional metadata is ignored. No capability or authority is granted by
+this receipt namespace.
+
+Explicit local tests may pass `--fixture-a2a-endpoint NAME=RPC_URL` alongside
+`--fixture-endpoint`. Overrides accept only literal loopback HTTP URLs without
+credentials, query or fragment, and never bypass original configured authority.
+The public fixture card is read at the same origin's `/.well-known/agent-card.json`.

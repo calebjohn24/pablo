@@ -563,6 +563,7 @@
                 "tool_cleanup",
                 "accounting_bound_violated",
                 "child_admission",
+                "remote_task",
                 "context_overflow",
                 "compaction_failed",
                 "output_validation_failed"

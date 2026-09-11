@@ -555,7 +555,36 @@ fn delivery_call_id(event: &RunEvent, call_id: &str) -> String {
 }
 
 fn project(event: &RunEvent) -> Result<Option<wire::SessionUpdate>, Error> {
+    let remote = event
+        .agent
+        .as_ref()
+        .is_some_and(|agent| agent.kind() == pablo_core::children::AgentKind::RemoteA2a);
     Ok(Some(match &event.kind {
+        EventKind::RunStarted if remote => wire::SessionUpdate::ToolCall(
+            wire::ToolCall::new(delivery_call_id(event, "remote"), "Remote A2A task")
+                .kind(wire::ToolKind::Execute)
+                .status(wire::ToolCallStatus::Pending),
+        ),
+        EventKind::A2aUpdate { remote } => {
+            wire::SessionUpdate::ToolCallUpdate(wire::ToolCallUpdate::new(
+                delivery_call_id(event, "remote"),
+                wire::ToolCallUpdateFields::new()
+                    .status(wire::ToolCallStatus::InProgress)
+                    .raw_output(json!({"remote_a2a":remote})),
+            ))
+        }
+        EventKind::RunFinished { outcome } if remote => {
+            wire::SessionUpdate::ToolCallUpdate(wire::ToolCallUpdate::new(
+                delivery_call_id(event, "remote"),
+                wire::ToolCallUpdateFields::new()
+                    .status(if outcome.is_completed() {
+                        wire::ToolCallStatus::Completed
+                    } else {
+                        wire::ToolCallStatus::Failed
+                    })
+                    .raw_output(json!({"outcome":outcome})),
+            ))
+        }
         EventKind::TextDelta { text } => wire::SessionUpdate::AgentMessageChunk(
             wire::ContentChunk::new(wire::ContentBlock::Text(wire::TextContent::new(text))),
         ),

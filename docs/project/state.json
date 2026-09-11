@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T18:40:57.535Z",
-  "active_checkpoint": "C3.27",
-  "next_checkpoint": null,
-  "next_action": "Continue C3.27 R02: integrate TaskClient and bounded lifecycle/SSE with the root supervisor queue/resource ledger, card retrieval on the owned proxy identity, bounded native event delivery/redaction, host/model delegation and separately labelled remote usage. Standalone SDK transport/cancel/deadline proof passes; full supervised R02, final performance and PR merge remain pending. Preserve saved C3.26/C3.25 baselines and both timing orders.",
-  "latest_log_entry": "LOG-0144",
+  "updated_at": "2026-09-11T19:18:39.353Z",
+  "active_checkpoint": null,
+  "next_checkpoint": "C3.28",
+  "next_action": "Merge verified C3.27 R02, then start C3.28 R03 adverse cancellation/lost-stream/input-required boundary proof and actual remote Collector correlation/exporter-outage parity. Preserve saved C3.26/C3.25 baselines and both filesystem timing orders.",
+  "latest_log_entry": "LOG-0146",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -603,9 +603,11 @@
       "depends_on": [
         "C3.26"
       ],
-      "status": "in_progress",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0146"
+      ]
     },
     {
       "id": "C3.28",

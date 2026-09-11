@@ -7,6 +7,8 @@ from a2a.types import a2a_pb2 as p
 from a2a.server.routes import create_jsonrpc_routes
 from a2a.utils.errors import TaskNotFoundError
 from starlette.applications import Starlette
+from starlette.routing import Route
+from starlette.responses import JSONResponse
 import uvicorn
 assert version("a2a-sdk") == "1.0.2"
 vectors=json.loads(Path(__file__).with_name("wire.json").read_text())
@@ -42,7 +44,7 @@ class Handler:
         if text=="assembly":
             yield value("stream_status","statusUpdate",p.TaskStatusUpdateEvent)
             for event in assembly["events"]: yield ParseDict(event,p.TaskArtifactUpdateEvent())
-            yield p.TaskStatusUpdateEvent(task_id="remote-task",context_id="remote-context",status=p.TaskStatus(state=p.TASK_STATE_COMPLETED))
+            yield p.TaskStatusUpdateEvent(task_id="remote-task",context_id="remote-context",status=p.TaskStatus(state=p.TASK_STATE_COMPLETED),metadata={"urn:pablo:a2a:reported-usage:v1":{"inputTokens":"13","outputTokens":"7","totalTokens":"20","costMicrousd":"42"}})
             return
         yield value("stream_status","statusUpdate",p.TaskStatusUpdateEvent)
         yield value("stream_artifact","artifactUpdate",p.TaskArtifactUpdateEvent)
@@ -52,7 +54,11 @@ class Handler:
         if params.id != "remote-task": raise TaskNotFoundError()
         task=ParseDict(vectors["cancel_result"],p.Task());task.status.state=p.TASK_STATE_CANCELED
         return task
-sdk_app=Starlette(routes=create_jsonrpc_routes(Handler(),"/rpc",enable_v0_3_compat=False))
+async def card(request):
+    record("GetAgentCard")
+    assert "authorization" not in request.headers
+    return JSONResponse(json.loads(Path(__file__).with_name("card.json").read_text()))
+sdk_app=Starlette(routes=[Route("/.well-known/agent-card.json",card),*create_jsonrpc_routes(Handler(),"/rpc",enable_v0_3_compat=False)])
 async def app(scope,receive,send):
     if scope["type"]=="http":
         headers=dict(scope["headers"])

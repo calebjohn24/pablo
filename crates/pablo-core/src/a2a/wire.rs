@@ -189,6 +189,15 @@ pub enum Reply {
     Artifact(ArtifactUpdate),
 }
 impl Reply {
+    pub fn reported_usage(&self) -> Option<super::usage::ReportedUsage> {
+        match self {
+            Self::Message(v) => v.reported_usage,
+            Self::Task(v) => v.reported_usage,
+            Self::Status(v) => v.reported_usage,
+            Self::Artifact(v) => v.reported_usage,
+        }
+    }
+
     pub fn remote_trace(&self) -> Result<Option<super::trace::TraceContext>, Error> {
         Ok(match self {
             Self::Message(v) => v.correlation.clone(),
@@ -261,6 +270,7 @@ pub fn decode(
                     .validate_for(trace_context, &status.context_id, &status.task_id)?;
                 status.correlation =
                     super::trace::remote_metadata(&status.metadata, trace_context)?;
+                status.reported_usage = super::usage::decode(&status.metadata)?;
                 return Ok(Reply::Status(status));
             }
             let mut artifact = body.artifact_update.ok_or(Error::Invalid)?;
@@ -269,6 +279,7 @@ pub fn decode(
             artifact.artifact.validate()?;
             artifact.correlation =
                 super::trace::remote_metadata(&artifact.metadata, trace_context)?;
+            artifact.reported_usage = super::usage::decode(&artifact.metadata)?;
             Ok(Reply::Artifact(artifact))
         }
         _ => Err(Error::Invalid),
@@ -369,7 +380,7 @@ impl Part {
         }
         Ok(Some(bytes))
     }
-    fn input_bytes(&self) -> Result<usize, Error> {
+    pub(crate) fn input_bytes(&self) -> Result<usize, Error> {
         if let Some(text) = &self.text {
             return Ok(text.len());
         }
@@ -434,6 +445,8 @@ pub struct Message {
     metadata: Value,
     #[serde(skip)]
     correlation: Option<super::trace::TraceContext>,
+    #[serde(skip)]
+    reported_usage: Option<super::usage::ReportedUsage>,
     pub message_id: String,
     pub context_id: String,
     #[serde(default)]
@@ -462,6 +475,7 @@ impl Message {
             return Err(Error::Bound);
         }
         self.correlation = super::trace::remote_metadata(&self.metadata, trace)?;
+        self.reported_usage = super::usage::decode(&self.metadata)?;
         parts(&self.parts)
     }
     pub fn remote_trace(&self) -> Result<Option<super::trace::TraceContext>, Error> {
@@ -535,6 +549,8 @@ pub struct Task {
     metadata: Value,
     #[serde(skip)]
     correlation: Option<super::trace::TraceContext>,
+    #[serde(skip)]
+    reported_usage: Option<super::usage::ReportedUsage>,
     pub id: String,
     pub context_id: String,
     pub status: TaskStatus,
@@ -546,6 +562,7 @@ pub struct Task {
 impl Task {
     fn validate(&mut self, trace: bool) -> Result<(), Error> {
         self.correlation = super::trace::remote_metadata(&self.metadata, trace)?;
+        self.reported_usage = super::usage::decode(&self.metadata)?;
         id(&self.id)?;
         id(&self.context_id)?;
         self.status
@@ -570,6 +587,8 @@ pub struct StatusUpdate {
     metadata: Value,
     #[serde(skip)]
     correlation: Option<super::trace::TraceContext>,
+    #[serde(skip)]
+    reported_usage: Option<super::usage::ReportedUsage>,
     pub task_id: String,
     pub context_id: String,
     pub status: TaskStatus,
@@ -581,6 +600,8 @@ pub struct ArtifactUpdate {
     metadata: Value,
     #[serde(skip)]
     correlation: Option<super::trace::TraceContext>,
+    #[serde(skip)]
+    reported_usage: Option<super::usage::ReportedUsage>,
     pub task_id: String,
     pub context_id: String,
     pub artifact: Artifact,
