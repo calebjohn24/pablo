@@ -18,13 +18,10 @@ Root execution, model calls, tools, ACP updates, JSONL records, and OTel spans o
 Reuse installed Rust and Node tools; noninteractive shells may need nvm initialization. `.nvmrc` pins Node 24.20.0, but verify and record each host's actual version rather than assuming it matches. Use Node's built-in modules and test runner for project management; pin dependencies and protocols when introduced.
 ### D008 — Inject the tracer and stream into a host-owned sink
 The core accepts an OTel tracer and inline event sink, with no global installation or detached worker. The CLI owns its SDK. This gives the ACP adapter one existing lifecycle to drive. Sink calls must return promptly; asynchronous transport backpressure belongs to C1.3. Checkpoint-versioned contracts expose only implemented behavior. The `c1.2` contracts add sequential tool turns and explicit cancellation through this same lifecycle. See [runtime contracts](../runtime.md).
-
 ### D009 — Pin the native telemetry mapping from the first run
 Rust 1.98.1, OTel API 0.32.0, SDK 0.32.1, and all introduced dependencies are pinned. The GenAI mapping retains the brief's immutable revision `fee465db333bdd6a7d2faa320edab5cf3101a4f4` in the separate GenAI conventions repository. Native events reuse SDK identities and exact lifecycle timestamps; JSONL content capture is independent of metadata-only OTel spans. See [the mapping](../runtime.md#otel-mapping).
-
 ### D010 — Shell is an explicit capability with owned cleanup
 `ToolRegistry::with_shell()` enables the single built-in tool; empty catalogs grant none. Shell uses a contained canonical cwd, cleared environment plus `PABLO_TASK_` additions, bounded results, and a new process group. Cancellation awaits group kill, leader reaping, pipe draining, and group disappearance. The two-second cleanup allowance follows the execution deadline. No global subreaper is installed; hosts provide containment and orphan reaping. Details and the observed macOS zombie-group case are in [the shell contract](../shell.md).
-
 ### D011 — Bring a small end-user preview forward
 The user asked to test real tasks immediately after C1.2. Add C1.2a before ACP: a one-task `pablo run` CLI and reusable Vercel adapter through the existing runtime, with a small live synthetic-evidence smoke. The user explicitly selected direct HTTP; use a general Rust HTTP client, with no Vercel SDK. The existing `.env` key name `VERCEL_AI_GATEWAY` is supported as an alias for `AI_GATEWAY_API_KEY`. This changes the checkpoint order without claiming C1.3 or C1.4 complete. Keep ACP, durable chat, and the remaining live acceptance separate.
 
@@ -198,3 +195,6 @@ C3.19 pins the Agent Skills format and bounded YAML parsing; qualify names by ho
 
 ### D053 — Explicit Skills are task context within host authority
 C3.20 loads only selected instructions and pins their task-context prefix across compaction. Selected resources use bounded no-follow reads from owned package handles, with tool policy and Skill-root ceilings; metadata cannot enable tools, scripts or writes. Await all file workers on cancellation and prepare fresh sets per host task. Native digests/byte counts identify sources while OTel excludes content. See [S02 contract](contracts/c3-skills.md#explicit-activation-and-selected-resources-s02).
+
+### D054 — Share typed ACP handlers before enabling children
+C3.21 extracts official stable ACP initialize/new/prompt/cancel handlers for direct in-memory dispatch and stdio. Typed updates require consumption acknowledgements and owned close joins the same runtime worker. Freeze depth-one identity, narrowed authority and root-atomic capacity/accounting before C3.22 execution; do not advertise delegation at the contract stage. See [child contract](contracts/c3-children.md).

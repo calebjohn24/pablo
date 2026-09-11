@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T07:21:31.657Z",
+  "updated_at": "2026-09-11T07:39:45.894Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.21",
-  "next_action": "Merge C3.20 and prepare C3.21 child contracts and typed ACP dispatch. Preserve explicit Skill authority/ownership, compaction detail preservation, MCP lifecycle, GLM defaults and unlimited filesystem work.",
-  "latest_log_entry": "LOG-0103",
+  "next_checkpoint": "C3.22",
+  "next_action": "Merge C3.21 and prepare C3.22 one supervised local child. Implement root-owned atomic reservations, authority intersections and joined supervision before enabling spawn. Preserve typed ACP lifecycle, Skill/MCP ownership, compaction detail retention, GLM defaults and unlimited filesystem work. Retain C3.33 F03 investigation and C3.39 mixed performance observations.",
+  "latest_log_entry": "LOG-0105",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -524,9 +524,11 @@
       "depends_on": [
         "C3.20"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0105"
+      ]
     },
     {
       "id": "C3.22",
