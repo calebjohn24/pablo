@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T16:16:41.542Z",
+  "updated_at": "2026-09-11T16:18:00.098Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.27",
-  "next_action": "C3.26 R01 passes. Merge its exact verified PR head, then start C3.27 R02: supervised scoped remote task transport, bounded SSE/status/artifact assembly and immediate/terminal results, host/model delegation, separate remote usage, and joined cancellation/deadline cleanup. Preserve C3.25 baseline and both valid C3.26 performance orders.",
-  "latest_log_entry": "LOG-0141",
+  "next_action": "Start C3.27 R02 on feat/c3-a2a-task-streaming: mark active/in_progress, then implement scoped supervised remote task transport, bounded SSE/status/artifact assembly and immediate/terminal result shapes, host/model delegation, separate remote usage and joined cancellation/deadline cleanup. C3.26 PR #29 is merged with exact verified tree parity; preserve saved C3.25 baseline and both valid C3.26 performance orders.",
+  "latest_log_entry": "LOG-0142",
   "checkpoints": [
     {
       "id": "C1.0",
