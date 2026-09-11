@@ -198,7 +198,7 @@ pub(crate) fn narrow(
     let prior = options
         .pointer(&path)
         .ok_or_else(|| error("config_override_forbidden", option))?;
-    let allowed = if option.starts_with("limits.") {
+    let allowed = if option.starts_with("limits.") || option == "output.max_validation_work" {
         narrower(value, prior)?
     } else if option == "run.workspace" {
         physical(value, options, request, false)?
@@ -209,7 +209,7 @@ pub(crate) fn narrow(
     ) {
         value == &Value::Bool(false) || prior == &Value::Bool(true)
     } else {
-        option == "interfaces.cli_output"
+        option == "interfaces.cli_output" || (option == "output.schema" && value == prior)
     };
     if allowed {
         Ok(())

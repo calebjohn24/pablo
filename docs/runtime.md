@@ -128,3 +128,22 @@ Native compaction events report identity, trigger, before/after sizes and a hash
 replaced history. A valid summary is visible to live core sinks; stored JSONL
 requires explicit `options.trace.capture_content=true` plus a trace destination.
 Summary text is excluded from ordinary answer deltas and OTel.
+
+## Final JSON output validation
+
+Set `options.output.schema` to an inline JSON schema string or a bound schema-file
+path, or pass `--output-schema PATH`. The default is unset. Schema files are pinned
+into rendered configuration. Rust hosts use `RunSpec.output` and `OutputSettings`.
+The admitted Draft 2020-12 subset supports local references; external retrieval,
+cycles and unsupported assertions reject before dispatch. `format` is annotation-only.
+
+Validation applies to the final answer after tool use and compaction. Streamed text
+is provisional. Schema-enabled task envelopes use `c3.13` and an
+`output_validation` record with `unvalidated`, `valid` or `invalid` status and a
+schema digest. Parse the original output string only after `valid`. Invalid JSON,
+schema violations or validation bounds produce `output_validation_failed`, with
+bounded diagnostics and no repair call. Root cancellation and provider errors keep
+their existing outcomes. Text-only task envelopes remain `c2.3`.
+
+See [J01](project/contracts/c3-output-validation.md) for the supported keywords,
+work/cache/input bounds, override rules and content-safe telemetry contract.

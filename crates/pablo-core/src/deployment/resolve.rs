@@ -232,6 +232,7 @@ impl LoadedDeployment {
         resolver.complete_routes()?;
         resolver.complete_policies()?;
         resolver.complete_aliases()?;
+        resolver.complete_output()?;
         input::resolved_shape(&resolver.config)?;
         let model_route = super::routes::resolve(&resolver.config)?;
         validate::config(&resolver.config, &resolver.request)?;
@@ -673,6 +674,36 @@ impl Resolver {
                 &mut self.provenance,
                 &mut self.origins,
             )?;
+        }
+        Ok(())
+    }
+    fn complete_output(&mut self) -> Result<(), ConfigError> {
+        let value = self.config["options"]["output"]["schema"].clone();
+        if value.get("unset") == Some(&Value::Bool(true)) {
+            return Ok(());
+        }
+        let schema = if let Some(text) = value.as_str() {
+            if text.len() > crate::output::MAX_SCHEMA_BYTES {
+                return Err(limit());
+            }
+            serde_json::from_str(text)
+                .map_err(|_| error("config_invalid_value", "/options/output/schema"))?
+        } else {
+            // Path shape and binding names were admitted before accessing any file.
+            let path = validate::physical(&value, &self.config["options"], &self.request, true)?;
+            crate::output::read_schema(&path)
+                .map_err(|_| error("config_invalid_value", "/options/output/schema"))?
+        };
+        let compiled = crate::output::compile(&schema)
+            .map_err(|_| error("config_invalid_value", "/options/output/schema"))?;
+        if value.as_str() != Some(compiled.canonical.as_str()) {
+            let source = self.source(
+                "override",
+                "output.schema.normalized",
+                compiled.digest.clone(),
+            )?;
+            self.config["options"]["output"]["schema"] = compiled.canonical.clone().into();
+            self.mark("/config/options/output/schema", &source, "replace")?;
         }
         Ok(())
     }

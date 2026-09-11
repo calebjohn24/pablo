@@ -62,6 +62,7 @@ pub(crate) fn outcome(context: &Context, outcome: &RunOutcome) {
                 match code {
                     crate::FailureCode::ContextOverflow => "context_overflow",
                     crate::FailureCode::CompactionFailed => "compaction_failed",
+                    crate::FailureCode::OutputValidationFailed => "output_validation_failed",
                     crate::FailureCode::ModelAttemptTimedOut => "model_attempt_timed_out",
                     crate::FailureCode::ContinuationIncompatible => "continuation_incompatible",
                     crate::FailureCode::UnsupportedProviderContent => {

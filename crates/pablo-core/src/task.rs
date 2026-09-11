@@ -202,6 +202,8 @@ pub struct TaskResult {
     pub outcome: Option<RunOutcome>,
     pub accounting: Option<Box<Accounting>>,
     pub error: Option<TaskError>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output_validation: Option<Box<crate::output::OutputValidation>>,
 }
 impl TaskResult {
     pub fn rejected(code: TaskErrorCode) -> Self {
@@ -213,6 +215,7 @@ impl TaskResult {
             outcome: None,
             accounting: None,
             error: Some(TaskError { code }),
+            output_validation: None,
         }
     }
     pub fn from_terminal(event: &RunEvent) -> Option<Self> {
@@ -220,13 +223,19 @@ impl TaskResult {
             return None;
         };
         Some(Self {
-            schema_version: TASK_SCHEMA_VERSION.into(),
+            schema_version: if event.output_validation.is_some() {
+                "c3.13"
+            } else {
+                TASK_SCHEMA_VERSION
+            }
+            .into(),
             run_id: Some(event.run_id.clone()),
             session_id: Some(event.session_id.clone()),
             trace_id: Some(event.trace_id.clone()),
             outcome: Some(outcome.clone()),
             accounting: Some(event.accounting.clone()?),
             error: None,
+            output_validation: event.output_validation.clone(),
         })
     }
     /// Serialization includes escaping but never accumulates event history.

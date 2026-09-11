@@ -204,7 +204,8 @@
                 "tool_cleanup",
                 "accounting_bound_violated",
                 "context_overflow",
-                "compaction_failed"
+                "compaction_failed",
+                "output_validation_failed"
               ]
             },
             "delivery": {
@@ -288,6 +289,9 @@
         },
         "compaction": {
           "$ref": "#/$defs/compaction"
+        },
+        "output_validation": {
+          "$ref": "#/$defs/output_validation"
         }
       },
       "required": [
@@ -501,7 +505,10 @@
       "type": "object",
       "properties": {
         "schema_version": {
-          "const": "c2.3"
+          "enum": [
+            "c2.3",
+            "c3.13"
+          ]
         },
         "run_id": {
           "type": [
@@ -564,6 +571,9 @@
               "additionalProperties": false
             }
           ]
+        },
+        "output_validation": {
+          "$ref": "#/$defs/output_validation"
         }
       },
       "additionalProperties": false,
@@ -618,6 +628,100 @@
             },
             "error": {
               "type": "object"
+            }
+          }
+        }
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "schema_version": {
+                "const": "c3.13"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "output_validation"
+            ],
+            "properties": {
+              "error": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "not": {
+              "required": [
+                "output_validation"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "output_validation"
+            ],
+            "properties": {
+              "output_validation": {
+                "properties": {
+                  "status": {
+                    "const": "valid"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "outcome": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "const": "completed"
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "output_validation"
+            ],
+            "properties": {
+              "output_validation": {
+                "properties": {
+                  "status": {
+                    "const": "invalid"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "outcome": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "const": "failed"
+                  },
+                  "code": {
+                    "const": "output_validation_failed"
+                  }
+                },
+                "required": [
+                  "status",
+                  "code"
+                ]
+              }
             }
           }
         }
@@ -773,7 +877,8 @@
                 "tool_cleanup",
                 "accounting_bound_violated",
                 "context_overflow",
-                "compaction_failed"
+                "compaction_failed",
+                "output_validation_failed"
               ]
             },
             {
@@ -930,6 +1035,89 @@
         "reason"
       ],
       "additionalProperties": false
+    },
+    "output_validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "output-validation-v1"
+        },
+        "schema_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "status": {
+          "enum": [
+            "unvalidated",
+            "valid",
+            "invalid"
+          ]
+        },
+        "diagnostics": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "enum": [
+                  "malformed_json",
+                  "json_bytes",
+                  "validation_work",
+                  "json_structure",
+                  "schema_violation"
+                ]
+              },
+              "instance_path": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "schema_path": {
+                "type": "string",
+                "maxLength": 256
+              }
+            },
+            "required": [
+              "code",
+              "instance_path",
+              "schema_path"
+            ]
+          }
+        }
+      },
+      "required": [
+        "schema_version",
+        "schema_sha256",
+        "status",
+        "diagnostics"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "invalid"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "diagnostics": {
+                "minItems": 1
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "diagnostics": {
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }
