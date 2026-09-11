@@ -14,6 +14,7 @@ use pablo_core::{
 };
 use std::collections::{BTreeMap, VecDeque};
 use tokio::time::Instant;
+mod factory;
 
 #[derive(Clone, Debug, serde::Serialize)]
 pub(super) struct Snapshot {
@@ -66,6 +67,7 @@ struct Inner {
     root: AgentRef,
     parent: PreparedRun,
     parent_tools: Arc<pablo_core::tool::ToolRegistry>,
+    root_mcp: Mutex<Option<Arc<ResourceLease>>>,
     ledger: RootLedger,
     options: Arc<Options>,
     registry: Mutex<Registry>,
@@ -79,7 +81,7 @@ pub(super) struct Supervisor {
     join: tokio::sync::Mutex<Shutdown>,
 }
 struct Shutdown {
-    task: Option<tokio::task::JoinHandle<()>>,
+    task: Option<tokio::task::JoinHandle<Result<(), &'static str>>>,
     result: Option<Result<(), &'static str>>,
 }
 impl Supervisor {
@@ -111,6 +113,35 @@ impl Supervisor {
         parent: PreparedRun,
         parent_tools: Arc<pablo_core::tool::ToolRegistry>,
     ) -> Result<(Self, async_channel::Receiver<Update>), &'static str> {
+        Self::with_root_resources(
+            Arc::new(options),
+            root,
+            ledger,
+            root_cancel,
+            parent,
+            parent_tools,
+            None,
+        )
+    }
+    fn with_root_resources(
+        options: Arc<Options>,
+        root: AgentRef,
+        ledger: RootLedger,
+        root_cancel: &CancellationToken,
+        parent: PreparedRun,
+        parent_tools: Arc<pablo_core::ToolRegistry>,
+        root_mcp: Option<Arc<ResourceLease>>,
+    ) -> Result<(Self, async_channel::Receiver<Update>), &'static str> {
+        let required = parent
+            .mcp_resources()
+            .map_err(|_| "invalid root MCP capacity")?;
+        if required.mcp_sessions != 0
+            && root_mcp
+                .as_ref()
+                .is_none_or(|lease| !lease.covers(&ledger, root.agent_id(), required))
+        {
+            return Err("root MCP capacity missing");
+        }
         if parent.is_child()
             || root.depth() != 0
             || ledger.agent(root.agent_id()).is_none()
@@ -131,8 +162,9 @@ impl Supervisor {
             root,
             parent,
             parent_tools,
+            root_mcp: Mutex::new(root_mcp),
             ledger,
-            options: Arc::new(options),
+            options,
             registry: Mutex::default(),
             cancel: root_cancel.child_token(),
             ready: Notify::new(),
@@ -140,7 +172,16 @@ impl Supervisor {
             updates,
         });
         let owned = inner.clone();
-        let join = tokio::spawn(async move { owned.run().await });
+        let join = tokio::spawn(async move {
+            owned.run().await;
+            let result = owned
+                .parent_tools
+                .close()
+                .await
+                .map_err(|_| "root MCP cleanup failed");
+            owned.root_mcp.lock().unwrap().take();
+            result
+        });
         Ok((
             Self {
                 inner,
@@ -323,7 +364,9 @@ impl Supervisor {
             return result;
         }
         let result = if let Some(task) = join.task.as_mut() {
-            task.await.map_err(|_| "child supervisor cleanup failed")
+            task.await
+                .map_err(|_| "child supervisor cleanup failed")
+                .and_then(|result| result)
         } else {
             Ok(())
         };

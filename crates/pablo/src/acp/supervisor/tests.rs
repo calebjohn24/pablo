@@ -15,7 +15,11 @@ impl Fixture {
     fn with_duration(endpoint: &str, duration: u64) -> Self {
         Self::with_settings(endpoint, duration, "")
     }
-    fn with_settings(endpoint: &str, duration: u64, extra: &str) -> Self {
+    fn admission(
+        endpoint: &str,
+        duration: u64,
+        extra: &str,
+    ) -> (std::path::PathBuf, Options, PreparedRun) {
         let cwd = std::env::temp_dir().join(format!("pablo-supervisor-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir(&cwd).unwrap();
         let cwd = cwd.canonicalize().unwrap();
@@ -54,6 +58,10 @@ impl Fixture {
             )
             .unwrap()
             .unwrap();
+        (cwd, options, parent)
+    }
+    fn with_settings(endpoint: &str, duration: u64, extra: &str) -> Self {
+        let (cwd, options, parent) = Self::admission(endpoint, duration, extra);
         let tools = Arc::new(parent.tools().unwrap());
         let root = AgentRef::root(uuid::Uuid::new_v4().to_string(), "root-session".into());
         let ledger = RootLedger::new(&root, parent.spec().limits.clone()).unwrap();
@@ -598,4 +606,120 @@ async fn cancellation_drains_owned_work_even_when_the_root_update_queue_is_full(
     })
     .await
     .unwrap();
+}
+
+mod root_factory {
+    use super::super::factory::RootFactory;
+    use super::*;
+
+    fn prepared(mode: &str) -> (std::path::PathBuf, RootFactory) {
+        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .canonicalize()
+            .unwrap();
+        let extra = format!(
+            "\n[options.mcp.servers.local]\ntransport=\"stdio\"\ncommand={}\nargs=[{},{}]\nrequired=true\n",
+            json!(root.join(".pablo/mcp-fixture-venv/bin/python")),
+            json!(root.join("tests/fixtures/mcp/adversarial.py")),
+            json!(mode)
+        );
+        let (cwd, options, parent) = Fixture::admission("http://127.0.0.1:1", 10_000, &extra);
+        std::fs::write(cwd.join("catalog-version"), "original").unwrap();
+        (cwd, RootFactory::new(Arc::new(options), parent).unwrap())
+    }
+    fn assert_reaped(cwd: &std::path::Path) {
+        let pid: i32 = std::fs::read_to_string(cwd.join("pid"))
+            .unwrap()
+            .parse()
+            .unwrap();
+        assert!(
+            !std::process::Command::new("kill")
+                .args(["-0", &pid.to_string()])
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .status()
+                .unwrap()
+                .success(),
+            "MCP process must be joined before capacity is released"
+        );
+    }
+
+    #[tokio::test]
+    async fn capacity_rejection_precedes_process_start() {
+        let (cwd, factory) = prepared("child_catalog");
+        let ledger = factory.ledger.clone();
+        let occupied = ledger
+            .reserve_resources(
+                factory.root.agent_id(),
+                Resources {
+                    processes: 16,
+                    mcp_sessions: 16,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        assert_eq!(
+            factory.open(&CancellationToken::new()).await.err().unwrap(),
+            "root MCP admission rejected"
+        );
+        assert!(!cwd.join("pid").exists());
+        assert_eq!(ledger.resources().processes, 16);
+        drop(occupied);
+        assert_eq!(ledger.resources(), Resources::default());
+        std::fs::remove_dir_all(cwd).unwrap();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires the isolated .pablo/mcp-fixture-venv/bin/python fixture interpreter"]
+    async fn root_mcp_capacity_survives_setup_and_owned_close() {
+        let (cwd, factory) = prepared("child_catalog");
+        let ledger = factory.ledger.clone();
+        let (owner, updates) = factory.open(&CancellationToken::new()).await.unwrap();
+        assert_eq!(ledger.resources().processes, 1);
+        assert_eq!(ledger.resources().mcp_sessions, 1);
+        assert!(
+            owner
+                .inner
+                .parent_tools
+                .descriptors()
+                .iter()
+                .any(|t| t.name == "mcp/local/read")
+        );
+        let mut abandoned_close = Box::pin(owner.close());
+        assert!(futures::poll!(abandoned_close.as_mut()).is_pending());
+        assert_eq!(ledger.resources().processes, 1);
+        drop(abandoned_close);
+        owner.close().await.unwrap();
+        owner.close().await.unwrap();
+        assert!(updates.is_closed());
+        assert_reaped(&cwd);
+        assert_eq!(ledger.resources(), Resources::default());
+        std::fs::remove_dir_all(cwd).unwrap();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires the isolated .pablo/mcp-fixture-venv/bin/python fixture interpreter"]
+    async fn cancelled_initialization_joins_before_releasing_capacity() {
+        tokio::time::timeout(Duration::from_secs(10), async {
+            let (cwd, factory) = prepared("startup_hang");
+            let ledger = factory.ledger.clone();
+            let cancel = CancellationToken::new();
+            let setup = tokio::spawn({
+                let cancel = cancel.clone();
+                async move { factory.open(&cancel).await }
+            });
+            while !cwd.join("pid").exists() {
+                tokio::time::sleep(Duration::from_millis(5)).await;
+            }
+            assert_eq!(ledger.resources().processes, 1);
+            assert_eq!(ledger.resources().mcp_sessions, 1);
+            cancel.cancel();
+            assert!(setup.await.unwrap().is_err());
+            assert_reaped(&cwd);
+            assert_eq!(ledger.resources(), Resources::default());
+            std::fs::remove_dir_all(cwd).unwrap();
+        })
+        .await
+        .unwrap();
+    }
 }
