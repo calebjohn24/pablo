@@ -107,5 +107,8 @@
   },
   "children": {
     "enabled": false
+  },
+  "a2a": {
+    "remotes": {}
   }
 }

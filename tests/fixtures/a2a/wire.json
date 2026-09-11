@@ -1,0 +1,140 @@
+{
+  "send": {
+    "jsonrpc": "2.0",
+    "id": "rpc-send",
+    "method": "SendMessage",
+    "params": {
+      "message": {
+        "messageId": "local-message",
+        "role": "ROLE_USER",
+        "parts": [
+          {
+            "text": "explicit selected input"
+          }
+        ]
+      },
+      "configuration": {
+        "acceptedOutputModes": [
+          "text/plain",
+          "application/json"
+        ]
+      }
+    }
+  },
+  "stream": {
+    "jsonrpc": "2.0",
+    "id": "rpc-stream",
+    "method": "SendStreamingMessage",
+    "params": {
+      "message": {
+        "messageId": "local-message",
+        "role": "ROLE_USER",
+        "parts": [
+          {
+            "text": "explicit selected input"
+          }
+        ]
+      },
+      "configuration": {
+        "acceptedOutputModes": [
+          "text/plain",
+          "application/json"
+        ]
+      }
+    }
+  },
+  "cancel": {
+    "jsonrpc": "2.0",
+    "id": "rpc-cancel",
+    "method": "CancelTask",
+    "params": {
+      "id": "remote-task"
+    }
+  },
+  "message_result": {
+    "message": {
+      "messageId": "remote-message",
+      "contextId": "remote-context",
+      "role": "ROLE_AGENT",
+      "parts": [
+        {
+          "text": "selected result"
+        }
+      ]
+    }
+  },
+  "task_result": {
+    "task": {
+      "id": "remote-task",
+      "contextId": "remote-context",
+      "status": {
+        "state": "TASK_STATE_COMPLETED"
+      },
+      "artifacts": [
+        {
+          "artifactId": "remote-artifact",
+          "parts": [
+            {
+              "text": "selected result"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "stream_message": {
+    "message": {
+      "messageId": "remote-message",
+      "contextId": "remote-context",
+      "role": "ROLE_AGENT",
+      "parts": [
+        {
+          "text": "selected result"
+        }
+      ]
+    }
+  },
+  "stream_task": {
+    "task": {
+      "id": "remote-task",
+      "contextId": "remote-context",
+      "status": {
+        "state": "TASK_STATE_COMPLETED"
+      },
+      "artifacts": [
+        {
+          "artifactId": "remote-artifact",
+          "parts": [
+            {
+              "text": "selected result"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "stream_status": {
+    "statusUpdate": {
+      "taskId": "remote-task",
+      "contextId": "remote-context",
+      "status": {
+        "state": "TASK_STATE_WORKING"
+      }
+    }
+  },
+  "stream_artifact": {
+    "artifactUpdate": {
+      "taskId": "remote-task",
+      "contextId": "remote-context",
+      "artifact": {
+        "artifactId": "remote-artifact",
+        "parts": [
+          {
+            "text": "selected result"
+          }
+        ]
+      },
+      "lastChunk": true
+    }
+  }
+}

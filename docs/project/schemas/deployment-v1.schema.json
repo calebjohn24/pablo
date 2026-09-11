@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:pablo:deployment:1:c3.22",
+  "$id": "urn:pablo:deployment:1:c3.26",
   "title": "Pablo deployment v1 \u2014 C3.22 contract",
   "description": "TOML-to-JSON shape. See c3-deployment-config.md for semantic checks and implementation availability.",
   "type": "object",
@@ -1108,6 +1108,9 @@
               "type": "boolean"
             }
           }
+        },
+        "a2a": {
+          "$ref": "#/$defs/A2a"
         }
       }
     },
@@ -1208,7 +1211,8 @@
             "otel.headers",
             "provider.open_responses",
             "mcp.env",
-            "mcp.headers"
+            "mcp.headers",
+            "a2a.bearer"
           ]
         },
         "sources": {
@@ -1311,6 +1315,9 @@
           "items": {
             "$ref": "#/$defs/Path"
           }
+        },
+        "a2a_remotes": {
+          "$ref": "#/$defs/A2aAllowlist"
         }
       },
       "required": [
@@ -1734,6 +1741,9 @@
           "required": [
             "enabled"
           ]
+        },
+        "a2a": {
+          "$ref": "#/$defs/resolvedA2a"
         }
       },
       "required": [
@@ -1750,7 +1760,8 @@
         "output",
         "mcp",
         "skills",
-        "children"
+        "children",
+        "a2a"
       ]
     },
     "resolvedCredentialSource": {
@@ -1850,7 +1861,8 @@
             "otel.headers",
             "provider.open_responses",
             "mcp.env",
-            "mcp.headers"
+            "mcp.headers",
+            "a2a.bearer"
           ]
         },
         "sources": {
@@ -1953,6 +1965,9 @@
           "items": {
             "$ref": "#/$defs/resolvedPath"
           }
+        },
+        "a2a_remotes": {
+          "$ref": "#/$defs/A2aAllowlist"
         }
       },
       "required": [
@@ -3066,6 +3081,113 @@
         "roots",
         "activate"
       ]
+    },
+    "A2aRemote": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "card_url": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "endpoint": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "trace_context": {
+          "type": "boolean"
+        },
+        "bearer": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "scheme": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "credential": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_.-]{1,128}$"
+            }
+          },
+          "required": [
+            "scheme",
+            "credential"
+          ]
+        }
+      },
+      "required": [
+        "card_url",
+        "endpoint"
+      ]
+    },
+    "A2a": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "remotes": {
+          "type": "object",
+          "maxProperties": 16,
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.-]{1,128}$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/A2aRemote"
+          }
+        }
+      }
+    },
+    "resolvedA2a": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "remotes": {
+          "type": "object",
+          "maxProperties": 16,
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.-]{1,128}$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/A2aRemote"
+          }
+        }
+      },
+      "required": [
+        "remotes"
+      ]
+    },
+    "A2aAllowlist": {
+      "type": "object",
+      "maxProperties": 16,
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_.-]{1,128}$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "card_url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "endpoint": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          }
+        },
+        "required": [
+          "card_url",
+          "endpoint"
+        ]
+      }
     }
   }
 }

@@ -2276,3 +2276,109 @@ fn mcp_tool_admission_always_uses_deployment_policy() {
     assert!(resolved.admit_mcp_tool("remote", "read").is_err());
     assert!(resolved.admit_mcp_tool("remote", "other").is_ok());
 }
+
+#[test]
+fn a2a_definitions_intersect_exact_host_tuples_and_roundtrip_offline() {
+    let f = Fixture::new();
+    let tuple = json!({"card_url":"https://agent.example.test/card","endpoint":"https://agent.example.test/rpc"});
+    let doc = json!({"options":{"a2a":{"remotes":{"echo":tuple}}},"authority":[{"id":"host","a2a_remotes":{"echo":tuple}}]});
+    let resolved = f.resolve(doc.clone());
+    assert!(!resolved.a2a().unwrap().remotes["echo"].trace_context);
+    let card = include_bytes!("../../../tests/fixtures/a2a/card.json");
+    assert_eq!(
+        resolved.admit_a2a_card("echo", card).unwrap().endpoint,
+        "https://agent.example.test/rpc"
+    );
+    assert!(resolved.admit_a2a_card("unknown", card).is_err());
+    f.write("a2a.toml", &resolved.render().unwrap());
+    assert_eq!(
+        deployment::resolve(f.request("a2a.toml"))
+            .unwrap()
+            .fingerprint(),
+        resolved.fingerprint()
+    );
+    let mut explicit = doc.clone();
+    explicit["options"]["a2a"]["remotes"]["echo"]["trace_context"] = false.into();
+    assert_eq!(f.resolve(explicit).fingerprint(), resolved.fingerprint());
+    for (field, value) in [
+        ("endpoint", "https://other.example.test/rpc"),
+        ("card_url", "https://other.example.test/card"),
+    ] {
+        let mut wrong = doc.clone();
+        wrong["options"]["a2a"]["remotes"]["echo"][field] = value.into();
+        let err = deployment::resolve(f.document(wrong)).unwrap_err();
+        assert_eq!(err.code, "config_authority_violation");
+        assert_eq!(err.authority_id.as_deref(), Some("host"));
+    }
+    let mut request = f.document(doc.clone());
+    request
+        .host_authority
+        .push(json!({"id":"narrow","a2a_remotes":{}}));
+    assert_eq!(
+        deployment::resolve(request)
+            .unwrap_err()
+            .authority_id
+            .as_deref(),
+        Some("narrow")
+    );
+    let mut unsafe_url = doc;
+    unsafe_url["options"]["a2a"]["remotes"]["echo"]["card_url"] = "http://127.0.0.1/card".into();
+    error(f.document(unsafe_url), "config_invalid_value");
+}
+
+#[test]
+fn a2a_credentials_resolve_only_for_configured_rpc_consumer_and_destination() {
+    use deployment::CredentialConsumer::{A2aBearer, McpHeaders};
+    let f = Fixture::new();
+    let doc = json!({"options":{"a2a":{"remotes":{"echo":{"card_url":"https://cards.example.test/card","endpoint":"https://agent.example.test/rpc","bearer":{"scheme":"bearer","credential":"remote-key"}}}}},"credentials":{"gateway":{"consumer":"provider.vercel","sources":[{"kind":"host","name":"gateway"}]},"remote-key":{"consumer":"a2a.bearer","sources":[{"kind":"host","name":"remote"}]}}});
+    let inputs = PrivateInputs {
+        host: Some(b"synthetic-a2a-token".to_vec()),
+        ..Default::default()
+    };
+    let resolved = f.resolve(doc.clone());
+    assert!(!resolved.render().unwrap().contains("synthetic-a2a-token"));
+    let prepared = resolved
+        .prepare_run(deployment::RunInput {
+            input: "synthetic".into(),
+            session_id: None,
+            workspace: None,
+        })
+        .unwrap();
+    assert!(prepared.a2a_credential("missing", &inputs).is_err());
+    assert!(prepared.credential(A2aBearer, &inputs).is_err());
+    assert_eq!(
+        inputs.host_calls.load(std::sync::atomic::Ordering::SeqCst),
+        0
+    );
+    let credential = prepared.a2a_credential("echo", &inputs).unwrap().unwrap();
+    assert_eq!(
+        credential
+            .expose_for(A2aBearer, "https://agent.example.test/rpc")
+            .unwrap(),
+        "synthetic-a2a-token"
+    );
+    assert!(
+        credential
+            .expose_for(A2aBearer, "https://cards.example.test/card")
+            .is_err()
+    );
+    assert!(
+        credential
+            .expose_for(McpHeaders, "https://agent.example.test/rpc")
+            .is_err()
+    );
+    let mut wrong = doc.clone();
+    wrong["credentials"]["remote-key"]["consumer"] = "mcp.headers".into();
+    error(f.document(wrong), "config_invalid_value");
+    let mut request = f.document(doc);
+    request
+        .host_authority
+        .push(json!({"id":"no-remote-secret","credential_ids":["gateway"]}));
+    assert_eq!(
+        deployment::resolve(request)
+            .unwrap_err()
+            .authority_id
+            .as_deref(),
+        Some("no-remote-secret")
+    );
+}

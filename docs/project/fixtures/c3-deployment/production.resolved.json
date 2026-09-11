@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_revision": "c3.22",
+  "contract_revision": "c3.26",
   "config": {
     "options": {
       "run": {
@@ -117,6 +117,9 @@
       },
       "children": {
         "enabled": false
+      },
+      "a2a": {
+        "remotes": {}
       }
     },
     "deployment": {
@@ -177,13 +180,13 @@
       }
     ]
   },
-  "fingerprint": "sha256:c4de3ece9da788b7ec5e6280c5c88d074248a27a62223964825835727e8b7ecc",
+  "fingerprint": "sha256:464986a58bdf1cbc2c60269e5e54bfd25f35395c532ed9d3e7968bcdb9a232f0",
   "sources": [
     {
       "id": "source-0000",
       "kind": "defaults",
       "locator": "deployment-defaults-v1.json",
-      "digest": "sha256:98f77ab6f3f6fe151b5438d63428be844e6c69ba8c030319ce40633e42d6536d"
+      "digest": "sha256:7b0e5621a20a5d1dac8fb556dc4a2b8acc165d004b0852b54d7e82ca4e04f0a9"
     },
     {
       "id": "source-0001",
@@ -926,7 +929,13 @@
         "source": "source-0000",
         "operation": "default"
       }
+    ],
+    "/config/options/a2a/remotes": [
+      {
+        "source": "source-0000",
+        "operation": "default"
+      }
     ]
   },
-  "input_fingerprint": "sha256:b97636f11c7d223bdda319d76421e958f0612767ff4f4e22949736bd2528860c"
+  "input_fingerprint": "sha256:787ac373caffaff0ad5296bc2ffaa4f1d25b0965eccc482c9fc64dab14fb9eec"
 }

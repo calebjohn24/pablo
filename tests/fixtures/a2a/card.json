@@ -1,0 +1,32 @@
+{
+  "name": "Independent A2A fixture",
+  "description": "Untrusted remote description; never local authority.",
+  "supportedInterfaces": [
+    {
+      "url": "https://agent.example.test/rpc",
+      "protocolBinding": "JSONRPC",
+      "protocolVersion": "1.0"
+    }
+  ],
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": true
+  },
+  "defaultInputModes": [
+    "text/plain"
+  ],
+  "defaultOutputModes": [
+    "text/plain",
+    "application/json"
+  ],
+  "skills": [
+    {
+      "id": "echo",
+      "name": "Echo",
+      "description": "Return only explicitly submitted input.",
+      "tags": [
+        "fixture"
+      ]
+    }
+  ]
+}
