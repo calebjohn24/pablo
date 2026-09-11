@@ -6,6 +6,7 @@ mod admission;
 mod canonical;
 mod credentials;
 mod input;
+mod mcp;
 mod render;
 mod resolve;
 mod routes;
@@ -24,7 +25,7 @@ pub use credentials::{
 pub use resolve::{LoadedDeployment, load, resolve};
 pub use routes::{ResolvedRoute, RouteEntry, RoutePolicy};
 
-pub const CONTRACT_REVISION: &str = "c3.14";
+pub const CONTRACT_REVISION: &str = "c3.15";
 pub const DOCUMENT_SCHEMA: &str =
     include_str!("../../../../docs/project/schemas/deployment-v1.schema.json");
 pub const DEFAULT_OPTIONS: &str =

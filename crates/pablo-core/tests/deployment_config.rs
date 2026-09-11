@@ -1396,11 +1396,11 @@ fn unknown_unsupported_and_schema_versions_are_explicit_and_redacted() {
         "config_unknown_option",
     );
     let e = deployment::resolve(
-        f.document(json!({"profiles":{"unused":{"options":{"mcp":{"enabled":false}}}}})),
+        f.document(json!({"profiles":{"unused":{"options":{"skills":{"enabled":false}}}}})),
     )
     .unwrap_err();
     assert_eq!(e.code, "config_unsupported_feature");
-    assert_eq!(e.owner, Some("C3.15"));
+    assert_eq!(e.owner, Some("C3.19"));
     error(
         f.document(json!({"options":{"model":{"provider":"open_responses"}}})),
         "config_invalid_value",
@@ -2120,4 +2120,132 @@ fn output_repair_admission_requires_schema_and_locked_overrides_only_narrow() {
             error(request, "config_authority_violation");
         }
     }
+}
+
+#[test]
+fn mcp_configuration_preserves_defaults_provenance_and_private_references() {
+    let f = Fixture::new();
+    let document = json!({"options":{"mcp":{"servers":{
+        "local":{"transport":"stdio","command":"/usr/bin/printf","env":{"TOKEN":"local-key"}},
+        "remote":{"transport":"http","url":"https://example.test/mcp","required":false}
+    }}},"credentials":{
+        "gateway":{"consumer":"provider.vercel","sources":[{"kind":"host","name":"gateway"}]},
+        "local-key":{"consumer":"mcp.env","sources":[{"kind":"file","path":{"base":"config","path":"absent-secret"},"encoding":"utf8"}]}
+    }});
+    let resolved = f.resolve(document.clone());
+    let exposed = serde_json::to_value(&resolved).unwrap();
+    assert_eq!(
+        exposed["provenance"]["/config/options/mcp/servers/local/required"][0]["source"],
+        "source-0000"
+    );
+    assert_ne!(
+        exposed["provenance"]["/config/options/mcp/servers/local/command"][0]["source"],
+        "source-0000"
+    );
+    assert!(resolved.mcp().unwrap().servers["local"].required());
+    assert!(!resolved.mcp().unwrap().servers["remote"].required());
+    f.write("rendered-mcp.toml", &resolved.render().unwrap());
+    let reloaded = deployment::resolve(f.request("rendered-mcp.toml")).unwrap();
+    assert_eq!(reloaded.fingerprint(), resolved.fingerprint());
+    let e = resolved
+        .prepare_run(deployment::RunInput {
+            input: "synthetic".into(),
+            session_id: None,
+            workspace: None,
+        })
+        .unwrap_err();
+    assert_eq!(e.code, "config_unsupported_feature");
+    assert_eq!(e.owner, Some("C3.16"));
+    let mut wrong = document.clone();
+    wrong["credentials"]["local-key"]["consumer"] = "mcp.headers".into();
+    error(f.document(wrong), "config_invalid_value");
+    let mut request = f.document(document);
+    request
+        .host_authority
+        .push(json!({"id":"host","credential_ids":["gateway"]}));
+    error(request, "config_authority_violation");
+}
+
+#[test]
+fn mcp_host_ceilings_survive_rendering_and_optional_denials_do_not_launch() {
+    let f = Fixture::new();
+    for required in [true, false] {
+        let mut request = f.document(json!({"options":{"mcp":{"servers":{"local":{
+            "transport":"stdio","command":"/not-installed/never-launch","required":required
+        }}}}}));
+        request.host_authority.push(json!({"id":"host","mcp":{"servers":{"default":"allow","deny":[{"id":"host.mcp.no","value":"local"}]}}}));
+        let resolved = deployment::resolve(request).unwrap();
+        assert_eq!(resolved.options()["mcp"]["policies"], json!([]));
+        assert!(
+            resolved
+                .mcp()
+                .unwrap()
+                .admit_server("local", &Default::default())
+                .is_err()
+        );
+        f.write("denied-mcp.toml", &resolved.render().unwrap());
+        let reloaded = deployment::resolve(f.request("denied-mcp.toml")).unwrap();
+        assert_eq!(reloaded.fingerprint(), resolved.fingerprint());
+        assert!(
+            reloaded
+                .mcp()
+                .unwrap()
+                .admit_server("local", &Default::default())
+                .is_err()
+        );
+        let prepared = resolved.prepare_run(deployment::RunInput {
+            input: "synthetic".into(),
+            session_id: None,
+            workspace: None,
+        });
+        if required {
+            assert_eq!(prepared.unwrap_err().code, "config_authority_violation");
+        } else {
+            prepared.unwrap();
+        }
+    }
+    let mut request = f.document(json!({"options":{"mcp":{"servers":{"remote":{"transport":"http","url":"https://example.test/mcp"}}}}}));
+    request.host_authority.push(
+        json!({"id":"host.tools","tool_names":["shell.run","fs.read","fs.list","fs.search"]}),
+    );
+    let resolved = deployment::resolve(request).unwrap();
+    let denied = resolved.admit_mcp_tool("remote", "read").unwrap_err();
+    assert_eq!(denied.authority_id.as_deref(), Some("host.tools"));
+}
+
+#[test]
+fn mcp_server_replacement_cannot_inherit_stale_arguments_or_credentials() {
+    let f = Fixture::new();
+    let mut request = f.document(json!({"options":{"mcp":{"servers":{"local":{
+        "transport":"stdio","command":"/bin/true"
+    }}}}}));
+    request.user_config = Some(ConfigInput::Document(
+        json!({"schema_version":1,"options":{"mcp":{"servers":{"local":{
+            "transport":"stdio","command":"/bin/echo","args":["old-argument"],"env":{"TOKEN":"undeclared-stale-secret"}
+        }}}}}),
+    ));
+    let resolved = deployment::resolve(request).unwrap();
+    assert_eq!(
+        resolved.options()["mcp"]["servers"]["local"]["args"],
+        json!([])
+    );
+    assert_eq!(
+        resolved.options()["mcp"]["servers"]["local"]["env"],
+        json!({})
+    );
+    assert_eq!(
+        resolved.options()["mcp"]["servers"]["local"]["command"],
+        "/bin/true"
+    );
+}
+
+#[test]
+fn mcp_tool_admission_always_uses_deployment_policy() {
+    let f = Fixture::new();
+    let resolved = f.resolve(json!({"options":{
+        "mcp":{"servers":{"remote":{"transport":"http","url":"https://example.test/mcp"}}},
+        "policy":{"tools":{"default":"allow","deny":[{"id":"host.tool.no","value":"mcp/remote/read"}]}}
+    }}));
+    assert!(resolved.admit_mcp_tool("remote", "read").is_err());
+    assert!(resolved.admit_mcp_tool("remote", "other").is_ok());
 }

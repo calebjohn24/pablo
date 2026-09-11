@@ -313,6 +313,21 @@ impl ResolvedDeployment {
             .map_err(|_| error("config_invalid_value", "/authority/policy"))?;
         let policy = PolicySet::new(ordinary, ceilings)
             .map_err(|_| error("config_invalid_value", "/options/policy"))?;
+        let mcp = self.mcp()?;
+        for (id, server) in &mcp.servers {
+            if mcp.admit_server(id, &policy).is_err() {
+                if server.required() {
+                    return Err(error("config_authority_violation", "/options/mcp"));
+                }
+                continue;
+            }
+            let mut unavailable = error("config_unsupported_feature", "/options/mcp");
+            unavailable.owner = Some(match server {
+                crate::mcp::Server::Stdio { .. } => "C3.16",
+                crate::mcp::Server::Http { .. } => "C3.17",
+            });
+            return Err(unavailable);
+        }
         #[cfg(unix)]
         if options["filesystem"]["enabled"] == true {
             crate::filesystem::Workspace::new(&spec.workspace, &policy)

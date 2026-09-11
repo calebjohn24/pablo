@@ -233,6 +233,7 @@ impl LoadedDeployment {
         resolver.complete_policies()?;
         resolver.complete_aliases()?;
         resolver.complete_output()?;
+        resolver.complete_mcp()?;
         input::resolved_shape(&resolver.config)?;
         let model_route = super::routes::resolve(&resolver.config)?;
         validate::config(&resolver.config, &resolver.request)?;
@@ -675,6 +676,39 @@ impl Resolver {
                 &mut self.origins,
             )?;
         }
+        Ok(())
+    }
+    fn complete_mcp(&mut self) -> Result<(), ConfigError> {
+        super::mcp::settings(&self.config)?;
+        let settings: crate::mcp::Settings =
+            serde_json::from_value(self.config["options"]["mcp"].clone())
+                .map_err(|_| error("config_invalid_value", "/options/mcp"))?;
+        let normalized = serde_json::to_value(settings)
+            .map_err(|_| error("config_invalid_value", "/options/mcp"))?;
+        // Only newly supplied defaults receive a defaults origin; declarations retain theirs.
+        fn additions(old: &Value, new: &Value, path: &str, out: &mut Vec<(String, Value)>) {
+            if let Some(map) = new.as_object() {
+                for (key, value) in map {
+                    let path = pointer(path, key);
+                    if let Some(previous) = old.get(key) {
+                        additions(previous, value, &path, out);
+                    } else {
+                        out.push((path, value.clone()));
+                    }
+                }
+            }
+        }
+        let mut added = Vec::new();
+        additions(
+            &self.config["options"]["mcp"],
+            &normalized,
+            "/config/options/mcp",
+            &mut added,
+        );
+        for (path, value) in added {
+            self.record(&value, &path, "source-0000", "default")?;
+        }
+        self.config["options"]["mcp"] = normalized;
         Ok(())
     }
     fn complete_output(&mut self) -> Result<(), ConfigError> {
@@ -1163,6 +1197,15 @@ fn merge(
             _ => incoming.clone(),
         });
     } else if let Value::Object(map) = patch {
+        if path
+            .strip_prefix("/config/options/mcp/servers/")
+            .is_some_and(|name| !name.contains('/'))
+        {
+            // Server definitions replace as a unit; stale arguments or credentials cannot survive.
+            *target = patch.clone();
+            record(patch, path, source, "replace", origins, count)?;
+            return Ok(());
+        }
         if atomic(patch, path) {
             *target = patch.clone();
             record(
