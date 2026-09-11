@@ -15,7 +15,9 @@ These examples intentionally use v1.0 camelCase fields and protobuf enum names.
 `server.py` serves the unmodified SDK's Agent Card routes on a literal loopback
 socket. The wrapper records only method/path/version/auth-presence in its temporary
 working directory. It has no task executor. The explicit Rust acceptance test
-proves a versioned unauthenticated GET and no task submission, then joins the peer.
+proves two versioned unauthenticated GETs through configured admission, distinct local
+proxy IDs, stable remote identity binding and root-ledger kind checks with no task
+submission, then joins the peer.
 The fixture requires no live provider credentials and must never load root `.env`.
 
 Run:

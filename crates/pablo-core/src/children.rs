@@ -21,6 +21,7 @@ pub const MAX_WAIT_MS: u64 = 900_000;
 pub enum AgentKind {
     Root,
     LocalAcpTemporary,
+    RemoteA2a,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -57,6 +58,12 @@ impl AgentRef {
         }
     }
     pub fn temporary_child(&self) -> Result<Self, ContractError> {
+        self.child(AgentKind::LocalAcpTemporary)
+    }
+    pub(crate) fn remote_proxy(&self) -> Result<Self, ContractError> {
+        self.child(AgentKind::RemoteA2a)
+    }
+    fn child(&self, kind: AgentKind) -> Result<Self, ContractError> {
         if self.kind != AgentKind::Root || self.depth != 0 || self.state != AgentState::Running {
             return Err(ContractError::Depth);
         }
@@ -65,11 +72,14 @@ impl AgentRef {
             root_run_id: self.root_run_id.clone(),
             root_session_id: self.root_session_id.clone(),
             parent_agent_id: Some(self.agent_id.clone()),
-            kind: AgentKind::LocalAcpTemporary,
+            kind,
             depth: MAX_DEPTH,
             state: AgentState::Queued,
             session_id: None,
         })
+    }
+    pub fn kind(&self) -> AgentKind {
+        self.kind
     }
     pub fn state(&self) -> AgentState {
         self.state
@@ -81,14 +91,16 @@ impl AgentRef {
         session: Option<String>,
     ) -> Result<(), ContractError> {
         use AgentState::*;
-        let valid = self.kind == AgentKind::LocalAcpTemporary
-            && matches!(
-                (self.state, next),
-                (Queued, Starting | Stopping | Settled)
-                    | (Starting, Running | Stopping | Settled)
-                    | (Running, Stopping | Settled)
-                    | (Stopping, Settled)
-            );
+        let valid = matches!(
+            self.kind,
+            AgentKind::LocalAcpTemporary | AgentKind::RemoteA2a
+        ) && matches!(
+            (self.state, next),
+            (Queued, Starting | Stopping | Settled)
+                | (Starting, Running | Stopping | Settled)
+                | (Running, Stopping | Settled)
+                | (Stopping, Settled)
+        );
         if !valid
             || (next == Running) != session.is_some()
             || session.as_ref().is_some_and(|s| s.is_empty())
@@ -105,7 +117,12 @@ impl AgentRef {
     /// A session admitted concurrently with stop still belongs to this child.
     /// Binding its identity must never restart stopping work.
     pub fn bind_session(&mut self, session: String) -> Result<(), ContractError> {
-        if self.state == AgentState::Stopping && self.kind == AgentKind::LocalAcpTemporary {
+        if self.state == AgentState::Stopping
+            && matches!(
+                self.kind,
+                AgentKind::LocalAcpTemporary | AgentKind::RemoteA2a
+            )
+        {
             if session.is_empty() || self.session_id.is_some() {
                 return Err(ContractError::Lifecycle);
             }

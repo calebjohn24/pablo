@@ -1,7 +1,9 @@
 //! Host-selected A2A admission. Remote descriptions never grant local authority.
 mod fetch;
+mod proxy;
 mod settings;
 pub use fetch::{CardClient, FetchError};
+pub use proxy::{IdentityError, MAX_REMOTE_ID_BYTES, RemoteIdentity, RemoteProxy, ResolveError};
 use serde::{Deserialize, Serialize};
 pub use settings::{Bearer, Remote, Settings};
 use std::collections::BTreeMap;

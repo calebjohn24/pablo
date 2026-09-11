@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T15:03:43.626Z",
+  "updated_at": "2026-09-11T15:14:54.275Z",
   "active_checkpoint": "C3.26",
   "next_checkpoint": null,
-  "next_action": "Continue C3.26: connect named configured card HTTP retrieval to an owned remote_a2a proxy with distinct local/remote/card/protocol identities; freeze remaining protocol mapping/bounds and independent R01 rejection proof. Current deployment/card/scoped credentials pass 320 distinct Rust and 280 Node tests with partial-source performance recorded. Full R01 and its completion PR remain pending; preserve saved C3.25 baseline.",
-  "latest_log_entry": "LOG-0137",
+  "next_action": "Continue C3.26 with remaining A2A request/result/SSE/task/artifact/cancel/error and trace-extension mapping/bounds proof against pinned independent SDK/reference fixtures. Named configured HTTP retrieval, local remote_a2a ownership, separate stable remote IDs and ledger kind binding are now implemented/tested. Finish full R01 and final regression/performance review before completion PR merge; C3.27 execution follows. Preserve baseline and both warm-prompt measurement orders.",
+  "latest_log_entry": "LOG-0138",
   "checkpoints": [
     {
       "id": "C1.0",

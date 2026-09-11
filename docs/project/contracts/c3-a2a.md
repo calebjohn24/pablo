@@ -1,9 +1,9 @@
 # R01–R03 — Configured A2A client
 
 C3.26 is in progress. The implemented core currently validates cards and retrieves
-public cards through bounded, no-redirect HTTP. Deployment definitions and RPC
-credential scoping are implemented; configured fetch/proxy identity integration
-and full R01 acceptance remain pending. Task execution
+public cards through bounded, no-redirect HTTP. Deployment definitions, RPC
+credential scoping and named fetch/local proxy identity are implemented; remaining
+wire-bound mapping proof and full R01 acceptance remain pending. Task execution
 and cancellation belong to C3.27/C3.28; no A2A capability is advertised yet.
 
 ## Immutable protocol and reference
@@ -55,6 +55,16 @@ credential only by configured remote name and expose it only for that RPC endpoi
 and consumer, never for the card URL or another provider. Public-card-only
 retrieval intentionally excludes authenticated card discovery.
 
+Configured retrieval selects only an admitted remote name and creates a fresh
+local `AgentRef` of kind `remote_a2a` beneath a running depth-zero root. Card
+admission leaves remote `context_id` and `task_id` absent. Observed remote IDs are
+opaque nonempty UTF-8 strings of at most 256 bytes without control characters;
+context may bind once and task may be added once, with conflicting changes
+rejected atomically. Remote IDs never bind a local session. The root ledger stores
+the registered agent kind and verifies it against event projections, preventing
+kind substitution. Card retrieval creates a description only; supervisor capacity
+admission and execution remain C3.27.
+
 The optional selected trace extension is `urn:pablo:a2a:tracecontext:v1`. It is
 understood only with explicit host opt-in, matching card declaration and no unknown
 parameters. Unknown optional extensions are ignored; required unsupported ones
@@ -87,6 +97,6 @@ R03 acceptance.
   A2A -32001 through -32009 have their pinned standard meanings; untrusted error
   messages/details must not enter private diagnostics or change local authority.
 
-Remaining R01 work must freeze request/stream/result/identifier/time/error and
-trace-extension bounds alongside configuration and reference-server rejection
-fixtures before C3.27 starts. Current card tests alone do not satisfy R01.
+Remaining R01 work must freeze the remaining request, stream, result, message/artifact
+identifier, time, error and trace-extension bounds against independent reference
+fixtures before C3.27 starts. Current card/proxy tests alone do not satisfy R01.

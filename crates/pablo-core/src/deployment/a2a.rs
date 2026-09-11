@@ -47,3 +47,65 @@ impl ResolvedDeployment {
             .map_err(|_| error("config_invalid_value", "/options/a2a/remotes"))
     }
 }
+
+impl ResolvedDeployment {
+    /// Retrieve only a configured public card and create a fresh local proxy.
+    /// No credential lookup, task submission or ledger registration occurs here.
+    pub async fn resolve_a2a(
+        &self,
+        parent: &crate::children::AgentRef,
+        name: &str,
+        deadline: tokio::time::Instant,
+        cancellation: &crate::CancellationToken,
+    ) -> Result<crate::a2a::RemoteProxy, crate::a2a::ResolveError> {
+        self.resolve_a2a_inner(parent, name, None, deadline, cancellation)
+            .await
+    }
+    /// Explicit host fixture override; original configured authority is checked
+    /// before a literal loopback transport can be selected.
+    #[doc(hidden)]
+    pub async fn resolve_a2a_fixture(
+        &self,
+        parent: &crate::children::AgentRef,
+        name: &str,
+        loopback: &str,
+        deadline: tokio::time::Instant,
+        cancellation: &crate::CancellationToken,
+    ) -> Result<crate::a2a::RemoteProxy, crate::a2a::ResolveError> {
+        self.resolve_a2a_inner(parent, name, Some(loopback), deadline, cancellation)
+            .await
+    }
+    async fn resolve_a2a_inner(
+        &self,
+        parent: &crate::children::AgentRef,
+        name: &str,
+        loopback: Option<&str>,
+        deadline: tokio::time::Instant,
+        cancellation: &crate::CancellationToken,
+    ) -> Result<crate::a2a::RemoteProxy, crate::a2a::ResolveError> {
+        use crate::a2a::{CardClient, RemoteProxy, ResolveError};
+        let settings = self.a2a().map_err(ResolveError::Configuration)?;
+        let remote = settings.remotes.get(name).ok_or_else(|| {
+            ResolveError::Configuration(error("config_authority_violation", "/options/a2a/remotes"))
+        })?;
+        let agent = parent.remote_proxy().map_err(ResolveError::Ownership)?;
+        let selection = remote
+            .admission()
+            .map_err(|e| ResolveError::Fetch(crate::a2a::FetchError::Admission(e)))?;
+        let client = CardClient::new().map_err(ResolveError::Fetch)?;
+        let card = match loopback {
+            Some(target) => {
+                client
+                    .fetch_fixture(&selection, &remote.card_url, target, deadline, cancellation)
+                    .await
+            }
+            None => {
+                client
+                    .fetch(&selection, &remote.card_url, deadline, cancellation)
+                    .await
+            }
+        }
+        .map_err(ResolveError::Fetch)?;
+        Ok(RemoteProxy::admitted(name.into(), agent, card))
+    }
+}

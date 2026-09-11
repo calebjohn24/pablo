@@ -64,6 +64,7 @@ impl AgentIdentity {
                 match self.kind {
                     super::AgentKind::Root => "root",
                     super::AgentKind::LocalAcpTemporary => "local_acp_temporary",
+                    super::AgentKind::RemoteA2a => "remote_a2a",
                 },
             ),
         ];
