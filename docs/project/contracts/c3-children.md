@@ -169,9 +169,33 @@ explicit attachments, not the parent transcript. Capability descriptions and Ski
 instructions follow the stable-prefix contracts. Parent context receives bounded
 snapshots/results only on explicit operations. Compaction preserves ownership,
 handles, pending work and completed handoff identities outside summarized text.
-A04 later validates schema-constrained output or workspace-relative path/revision
-references before downstream delivery; unsuccessful upstream work is never passed
-as a successful result automatically.
+C3.24 `spawn.request.handoffs` selects up to sixteen `{source_agent_id, result_id,
+kind}` entries, where `kind` is `inline` or `artifact`. Successful settlement assigns
+an immutable UUID result ID. Only a matching, owned, settled `completed` snapshot
+with `validation.status=valid` can supply a handoff. Unvalidated JSON, failed,
+cancelled, oversized and foreign results cannot become successful inputs.
+
+Inline selection passes the entire parsed structured output. Artifact selection
+requires an exact `{path, revision}` object: a nonempty workspace-relative path and
+lowercase SHA-256 revision from the existing filesystem contract. After queue
+promotion and before child setup/provider work, the narrowed child must still admit
+`fs.read`, the read-root policy and physical no-follow path must allow the regular
+file, and its current full-file digest must match. Verification streams bounded
+buffers, honors explicit file-byte limits and cancellation/deadlines, and joins its
+worker before releasing ownership. Default filesystem work remains unlimited.
+References are checked again after waiting in the queue; this is a revision check,
+not a content snapshot or protection from later concurrent writes.
+
+The supervisor resolves selections from retained snapshots, appending only selected
+values and validation/repair, accounting and native trace receipts to ordinary user
+context. Input/context bounds apply after expansion. It never copies transcripts
+or promotes result text to trusted instructions. Downstream snapshots retain the
+source/result selections, and upstream snapshots stay owned through root shutdown,
+so compaction does not erase lineage. Artifact verification spends no extra model
+tool-call attempt; subsequent child `fs.read` calls spend their ordinary shared
+budgets. Selection errors reject admission synchronously; artifact-check failures
+settle the admitted handle before downstream work. Cancellation and timeout retain
+their typed outcomes. No automatic chaining, retry or scheduler is introduced.
 
 ## Attribution and typed dispatch ownership
 

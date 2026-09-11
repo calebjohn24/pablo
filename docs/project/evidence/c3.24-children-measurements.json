@@ -1,0 +1,42 @@
+{
+  "checkpoint": "C3.24",
+  "source_sha256": "0fed18829adb3c6364d233bc5d04cf58875d7076f5ec5549429b2bfab3a15755",
+  "binary_sha256": "b4ec4b022c3235234f71e813d8a9a1554a1b5b21b24f2e52df40b313880adaa5",
+  "platform": "darwin/arm64",
+  "node": "v24.11.0",
+  "method": {
+    "samples": 30,
+    "warmup": 5,
+    "timing": "Complete CLI or fresh ACP process including startup, configured setup, task and joined shutdown; sequential surfaces/modes, local fixture, no trace.",
+    "comparison": "Same final binary: disabled root makes one model call; enabled root spawns/waits for 2 children and makes 6 aggregate model calls and 3 subagent tool calls. Difference includes extra work, not isolated scheduler overhead.",
+    "child_count": 2,
+    "overlap_barrier": true,
+    "scope": "Regression control using the existing A03 two-child harness on the final C3.24 binary; this workload does not select handoffs."
+  },
+  "stats": {
+    "cli_disabled_ms": {
+      "min": 8.301417000000015,
+      "p50": 8.954915999999969,
+      "p95": 10.066000000000003,
+      "max": 10.345833999999996
+    },
+    "cli_child_ms": {
+      "min": 11.043499999999995,
+      "p50": 11.728832999999895,
+      "p95": 12.957832999999937,
+      "max": 15.333249999999907
+    },
+    "fresh_acp_disabled_ms": {
+      "min": 10.073667000000114,
+      "p50": 10.76237500000002,
+      "p95": 12.807083000000034,
+      "max": 13.375541999999996
+    },
+    "fresh_acp_child_ms": {
+      "min": 12.989499999999907,
+      "p50": 13.864665999999943,
+      "p95": 14.589208000000099,
+      "max": 15.954541999999947
+    }
+  }
+}

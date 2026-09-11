@@ -795,3 +795,144 @@ async fn two_active_and_fourteen_queued_children_are_bounded_and_joined_on_root_
     .await
     .unwrap();
 }
+
+async fn structured_done(stream: &mut tokio::net::TcpStream, value: Value) {
+    let body = format!(
+        "data: {}\n\ndata: [DONE]\n\n",
+        json!({"choices":[{"index":0,"delta":{"content":value.to_string()},"finish_reason":"stop"}]})
+    );
+    stream.write_all(format!("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len()).as_bytes()).await.unwrap();
+}
+
+#[tokio::test]
+async fn handoff_fan_in_resolves_valid_owned_results_and_rejects_stale_before_provider() {
+    tokio::time::timeout(Duration::from_secs(15), async {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let fixture = Fixture::new(&format!("http://{}", listener.local_addr().unwrap()));
+        std::fs::write(fixture.cwd.join("result.json"), b"{}").unwrap();
+        let drain = tokio::spawn({
+            let updates = fixture.updates.clone();
+            async move {
+                while let Ok(update) = updates.recv().await {
+                    let _ = update.update.consumed.send(());
+                }
+            }
+        });
+        let mut ids = vec![];
+        for task in ["source inline PRIVATE_A", "source artifact PRIVATE_B"] {
+            let request = serde_json::from_value(json!({"input":task,"capabilities":{"model_route":["secondary"],"tools":[]},"output_schema":{"type":"object"}})).unwrap();
+            ids.push(fixture.supervisor.spawn(&request, opentelemetry::Context::new()).unwrap().agent_id().to_owned());
+        }
+        // Both fan-out requests must arrive before either receives a result.
+        let (mut a, _) = listener.accept().await.unwrap();
+        let a_body = request(&mut a).await;
+        let (mut b, _) = listener.accept().await.unwrap();
+        let b_body = request(&mut b).await;
+        let reference = json!({"path":"result.json","revision":"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"});
+        for (stream, body) in [(&mut a, a_body), (&mut b, b_body)] {
+            structured_done(stream, if body.to_string().contains("PRIVATE_A") { json!({"answer":42}) } else { reference.clone() }).await;
+        }
+        let settled = fixture.supervisor.wait(&ids, WaitMode::All, 5000).await.unwrap();
+        assert!(settled.remaining.is_empty());
+        let selections: Vec<Value> = settled.settled.iter().enumerate().map(|(i, source)| {
+            assert_eq!(source.validation.as_ref().unwrap().status, "valid");
+            assert!(source.trace.is_some());
+            assert_eq!(source.accounting.model_calls, 1);
+            json!({"source_agent_id":source.agent.agent_id(),"result_id":source.result_id,"kind":if i==0 {"inline"} else {"artifact"}})
+        }).collect();
+        let selected: pablo_core::children::SpawnRequest = serde_json::from_value(json!({"input":"combine selected outputs","capabilities":{"model_route":["secondary"],"tools":["fs.read"]},"handoffs":selections})).unwrap();
+        let before = fixture.ledger.resources();
+        let mut forged = selected.clone();
+        forged.handoffs[0].result_id = uuid::Uuid::new_v4().to_string();
+        assert!(fixture.supervisor.spawn(&forged, opentelemetry::Context::new()).is_err());
+        forged = selected.clone();
+        forged.handoffs[0].source_agent_id = uuid::Uuid::new_v4().to_string();
+        assert!(fixture.supervisor.spawn(&forged, opentelemetry::Context::new()).is_err());
+        assert_eq!(fixture.ledger.resources(), before);
+        let joined = fixture.supervisor.spawn(&selected, opentelemetry::Context::new()).unwrap();
+        let (mut downstream, _) = listener.accept().await.unwrap();
+        let body = request(&mut downstream).await.to_string();
+        assert!(!body.contains("PRIVATE_A") && !body.contains("PRIVATE_B") && !body.contains("parent private transcript"));
+        for source in &settled.settled {
+            assert!(body.contains(source.result_id.as_ref().unwrap()));
+            assert!(body.contains(&source.trace.as_ref().unwrap().trace_id));
+            assert!(body.contains(&source.validation.as_ref().unwrap().schema_sha256));
+        }
+        assert!(body.contains("answer") && body.contains("42") && body.contains("result.json"));
+        done(&mut downstream).await;
+        let result = fixture.supervisor.wait(&[joined.agent_id().to_owned()], WaitMode::All, 5000).await.unwrap();
+        assert!(result.settled[0].outcome.as_ref().unwrap().is_completed());
+        assert_eq!(result.settled[0].handoffs.len(), 2);
+        let mut oversized = selected.clone();
+        oversized.input = "x".repeat(pablo_core::children::MAX_INPUT_BYTES);
+        assert!(fixture.supervisor.spawn(&oversized, opentelemetry::Context::new()).is_err());
+        let mut denied = selected.clone();
+        denied.capabilities.tools = Some(vec![]);
+        let denied = fixture.supervisor.spawn(&denied, opentelemetry::Context::new()).unwrap();
+        let rejected = fixture.supervisor.wait(&[denied.agent_id().to_owned()], WaitMode::All, 5000).await.unwrap();
+        assert_eq!(rejected.settled[0].outcome, Some(admission_failed()));
+        assert_eq!(rejected.settled[0].accounting.model_calls, 0);
+        let blocker_a = fixture.spawn("blocker A");
+        let blocker_b = fixture.spawn("blocker B");
+        let (mut block_a, _) = listener.accept().await.unwrap();
+        request(&mut block_a).await;
+        let (mut block_b, _) = listener.accept().await.unwrap();
+        request(&mut block_b).await;
+        held(&mut block_a).await;
+        held(&mut block_b).await;
+        let stale = fixture.supervisor.spawn(&selected, opentelemetry::Context::new()).unwrap();
+        assert_eq!(fixture.ledger.resources().pending_children, 1);
+        std::fs::write(fixture.cwd.join("result.json"), b"stale").unwrap();
+        fixture.supervisor.stop(blocker_a.agent_id()).await.unwrap();
+        let rejected = fixture.supervisor.wait(&[stale.agent_id().to_owned()], WaitMode::All, 5000).await.unwrap();
+        assert_eq!(rejected.settled[0].outcome, Some(admission_failed()));
+        assert_eq!(rejected.settled[0].accounting.model_calls, 0);
+        assert!(rejected.settled[0].result_id.is_none());
+        assert_eq!(fixture.ledger.total().model_calls, 5);
+        fixture.supervisor.stop(blocker_b.agent_id()).await.unwrap();
+        assert!(tokio::time::timeout(Duration::from_millis(30), listener.accept()).await.is_err());
+        fixture.supervisor.close().await.unwrap();
+        drain.await.unwrap();
+    }).await.unwrap();
+}
+
+#[tokio::test]
+async fn handoff_rejects_invalid_oversize_cancelled_and_unvalidated_sources() {
+    tokio::time::timeout(Duration::from_secs(15), async {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let fixture = Fixture::new(&format!("http://{}", listener.local_addr().unwrap()));
+        let drain = tokio::spawn({
+            let updates = fixture.updates.clone();
+            async move {
+                while let Ok(update) = updates.recv().await {
+                    let _ = update.update.consumed.send(());
+                }
+            }
+        });
+        for mode in ["invalid", "oversize", "cancelled", "unvalidated"] {
+            let mut value = json!({"input":mode,"capabilities":{"model_route":["secondary"],"tools":[]}});
+            if mode != "unvalidated" { value["output_schema"] = json!({"type":"object"}); }
+            let source = fixture.supervisor.spawn(&serde_json::from_value(value).unwrap(), opentelemetry::Context::new()).unwrap();
+            let (mut stream, _) = listener.accept().await.unwrap();
+            request(&mut stream).await;
+            match mode {
+                "cancelled" => { held(&mut stream).await; fixture.supervisor.stop(source.agent_id()).await.unwrap(); }
+                "oversize" => structured_done(&mut stream, json!({"large":"x".repeat(70_000)})).await,
+                "invalid" => structured_done(&mut stream, json!(42)).await,
+                _ => structured_done(&mut stream, json!({"valid_json_but_no_schema":true})).await,
+            }
+            let result = fixture.supervisor.wait(&[source.agent_id().to_owned()], WaitMode::All, 5000).await.unwrap();
+            assert!(result.remaining.is_empty());
+            let snapshot = &result.settled[0];
+            assert_eq!(snapshot.outcome.as_ref().unwrap().is_completed(), mode == "unvalidated");
+            let selection = serde_json::from_value(json!({"input":"must not run","handoffs":[{"source_agent_id":source.agent_id(),"result_id":snapshot.result_id.clone().unwrap_or_else(||uuid::Uuid::new_v4().to_string()),"kind":"inline"}]})).unwrap();
+            let before = fixture.ledger.resources();
+            assert!(fixture.supervisor.spawn(&selection, opentelemetry::Context::new()).is_err());
+            assert_eq!(fixture.ledger.resources(), before);
+        }
+        assert_eq!(fixture.ledger.total().model_calls, 4);
+        assert!(tokio::time::timeout(Duration::from_millis(30), listener.accept()).await.is_err());
+        fixture.supervisor.close().await.unwrap();
+        drain.await.unwrap();
+    }).await.unwrap();
+}
