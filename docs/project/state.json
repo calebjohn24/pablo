@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-10T23:12:16.088Z",
+  "updated_at": "2026-09-11T02:36:31.016Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.13",
-  "next_action": "Merge verified C3.12a, then activate C3.13 final-output schema validation with shared root budgets and continued performance checks.",
-  "latest_log_entry": "LOG-0083",
+  "next_action": "Merge C3.12b, then activate C3.13 and restore saved output-validation WIP onto the merged base while preserving current records. Continue final-output validation and matched performance.",
+  "latest_log_entry": "LOG-0085",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -400,11 +400,24 @@
       ]
     },
     {
+      "id": "C3.12b",
+      "title": "Stronger task-relevant compaction",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c312b-stronger-task-relevant-compaction",
+      "depends_on": [
+        "C3.12a"
+      ],
+      "status": "done",
+      "blockers": [],
+      "verification": [
+        "LOG-0085"
+      ]
+    },
+    {
       "id": "C3.13",
       "title": "Final-output schema validation",
       "spec": "docs/project/cycles/003-extensibility-and-release.md#c313-final-output-schema-validation",
       "depends_on": [
-        "C3.12a"
+        "C3.12b"
       ],
       "status": "pending",
       "blockers": [],

@@ -22,6 +22,7 @@ Complete one checkpoint per implementation session, including evidence and hando
 | C3.8–C3.9 | Freeze and implement the Open Responses subset |
 | C3.10–C3.12 | Configure ordered model routes, execute fallback and prove failure/accounting semantics |
 | C3.12a | Compact bounded-run context once, with visible summary and one overflow recovery |
+| C3.12b | Summarize bulky recent results while preserving task-relevant details |
 | C3.13–C3.14 | Validate structured output, then add one bounded repair |
 | C3.15–C3.18 | Configure MCP, prove each transport, integrate CLI/ACP |
 | C3.19–C3.20 | Discover Skills, then activate instructions and resources |
@@ -206,9 +207,21 @@ Acceptance:
 - Preserve required private continuation for retained turns and never flatten opaque provider state. Replace discarded history only at an explicit successful compaction boundary. Emit native/ACP/OTel compaction identity, trigger, before/after size and replaced-history fingerprint; expose summary content only through the documented content policy. Prove trace/key redaction and fresh ACP-session isolation.
 - Cover Vercel/OpenRouter/Open Responses offline, retain the selected GLM gateway models, and measure the ordinary path overhead plus compaction/recovery duration and context reduction. No durable sessions, persistent memory, external retrieval, encrypted OpenAI-only compaction API, tokenizer bundle or recursive summary hierarchy is selected.
 
-## C3.13: Final-output schema validation
+## C3.12b: Stronger task-relevant compaction
 
 Prerequisites: C3.12a.
+
+The user requested stronger reduction and selected preserving task-relevant details in the summary rather than exact raw-output recall. Default to summarizing all completed turns when the summary request fits; retain the fewest necessary recent complete turns if source capacity requires it. Keep explicit recent-turn retention configurable, preserve the original task/prefix and effect ledger, and strengthen the handoff prompt around exact constraints, identifiers, artifact references, decisions and unfinished work. No raw-output archive or recall tool.
+
+Acceptance:
+
+- Prove substantially smaller continuation context on a workload where a bulky recent result previously dominated retained history, with one summary pass and unchanged root budget/privacy boundaries.
+- Cover details distributed across older and newest results, effect non-replay, local capacity fallback, explicit retention, invalid summaries, and all adapters through CLI/ACP.
+- Report achieved reduction and the fixed-prefix floor, along with matched ordinary/compaction performance. Summary fidelity is task-relevant, not a claim of lossless arbitrary recall.
+
+## C3.13: Final-output schema validation
+
+Prerequisites: C3.12b.
 
 Add an optional model-output schema to the existing run contract, separately from C2's task envelope.
 
