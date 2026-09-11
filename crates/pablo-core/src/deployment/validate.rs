@@ -198,14 +198,22 @@ pub(crate) fn narrow(
     let prior = options
         .pointer(&path)
         .ok_or_else(|| error("config_override_forbidden", option))?;
-    let allowed = if option.starts_with("limits.") || option == "output.max_validation_work" {
+    let allowed = if option.starts_with("limits.")
+        || matches!(
+            option,
+            "output.max_validation_work" | "output.repair.max_feedback_bytes"
+        ) {
         narrower(value, prior)?
     } else if option == "run.workspace" {
         physical(value, options, request, false)?
             .starts_with(physical(prior, options, request, false)?)
     } else if matches!(
         option,
-        "shell.enabled" | "filesystem.enabled" | "filesystem.write" | "trace.capture_content"
+        "output.repair.enabled"
+            | "shell.enabled"
+            | "filesystem.enabled"
+            | "filesystem.write"
+            | "trace.capture_content"
     ) {
         value == &Value::Bool(false) || prior == &Value::Bool(true)
     } else {

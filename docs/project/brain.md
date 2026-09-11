@@ -16,15 +16,12 @@ Use section 37.1, not the whole 0.1 release or alpha.1, as the completion bounda
 Use curated Markdown, one structured current-state file, and append-only JSONL work history. A dependency-free Node helper reads and validates those records. This keeps context inspectable in Git and avoids introducing a database or separate service before a runtime exists.
 
 ### D004 — Vercel is the first live provider
-
 The user selected Vercel AI Gateway. Use `AI_GATEWAY_API_KEY` and an explicit profile, initially `openai/gpt-4.1-mini`, following the approved cycle plan; D014 records the replacement default. The user supplied the credential in the root `.env`; its contents are private and uninspected by the project helper. The end-user preview in D011 brings a narrow live CLI smoke forward; live ACP acceptance remains C1.4.
 
 ### D005 — Start with two Rust crates
-
 Create `pablo-core` and the `pablo` executable at C1.1. Keep providers, tools, protocol adapters, and telemetry in owned modules initially. The brief's larger crate map describes ownership, not a scaffolding requirement.
 
 ### D006 — One lifecycle with native telemetry
-
 Root execution, model calls, tools, ACP updates, JSONL records, and OTel spans originate from one runtime lifecycle. Instrument the first operation; add the network exporter later. ACP is the process protocol. No alternate proprietary loop or process lifecycle is introduced.
 
 ### D007 — Reuse installed development tools
@@ -197,3 +194,6 @@ The user explicitly added compaction to C3. C3.12a closes the omitted section 23
 
 ### D046 — Validate final JSON locally before exposing structured success
 C3.13 pins an optional bounded Draft 2020-12 subset and a 16-entry canonical schema cache. Provider hints cannot establish validity; schema-enabled CLI/negotiated ACP tasks carry explicit provisional/valid/invalid metadata. Unsupported schemas reject before dispatch; invalid finals fail without hidden calls. Format stays annotation-only, diagnostics exclude values, and compilation/validation share finite input/work bounds. C3.14 owns the separate bounded repair. See [J01](contracts/c3-output-validation.md).
+
+### D047 — Repair is one admitted continuation, not a retry owner
+C3.14 permits opt-in repair of one invalid final answer in its original history. Keep instruction/tool/private continuation intact; share candidate output bytes, validation work and root model/token/cost/deadline/context/event/trace limits. No tools, compaction, fallback or third repair request may hide inside it. Negotiated repair metadata carries counts/phases only; terminal validity determines structured success. See [J02](contracts/c3-output-repair.md).

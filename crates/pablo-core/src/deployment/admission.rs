@@ -288,6 +288,8 @@ impl ResolvedDeployment {
         spec.context.window_tokens = self.model_profile()?.context_window_tokens;
         if let Some(schema) = options["output"]["schema"].as_str() {
             spec.output = Some(crate::output::OutputSettings {
+                repair: serde_json::from_value(options["output"]["repair"].clone())
+                    .map_err(|_| error("config_invalid_value", "/options/output/repair"))?,
                 schema: serde_json::from_str(schema)
                     .map_err(|_| error("config_invalid_value", "/options/output/schema"))?,
                 max_validation_work: options["output"]["max_validation_work"].as_u64().unwrap(),

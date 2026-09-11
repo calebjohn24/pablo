@@ -275,6 +275,8 @@ pub struct ModelRouteRecord {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RunEvent {
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output_repair: Option<Box<crate::output::OutputRepair>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub compaction: Option<Box<crate::context::CompactionRecord>>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub output_validation: Option<Box<crate::output::OutputValidation>>,

@@ -147,3 +147,22 @@ their existing outcomes. Text-only task envelopes remain `c2.3`.
 
 See [J01](project/contracts/c3-output-validation.md) for the supported keywords,
 work/cache/input bounds, override rules and content-safe telemetry contract.
+
+## One bounded output repair
+
+Set `options.output.repair.enabled=true` with an output schema to permit one
+additional model call after an invalid final answer. The default remains disabled.
+`max_feedback_bytes` defaults to 4096 and accepts 512–4096. The runtime appends the
+invalid answer and bounded validation codes/paths to the same history, preserving
+the original instructions, schema and completed tools. The repair cannot dispatch
+tools, fall back to another model or invoke compaction.
+
+Both candidates share the final-output byte and validation-work allowances. The
+original model/token/cost ledger, deadline, cancellation, context and trace limits
+remain in force. Insufficient allowance stops before delivery. A second invalid
+answer is a typed validation failure; only a validated correction becomes completed
+terminal output. Treat streamed candidates as provisional.
+
+Enabled repair uses task revision `c3.14` and bounded `output_repair` metadata with
+attempt/validation counts, phase and feedback size. See [J02](project/contracts/c3-output-repair.md)
+for exact status transitions, failure mappings and compatibility.

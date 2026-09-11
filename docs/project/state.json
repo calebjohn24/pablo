@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T03:37:23.299Z",
+  "updated_at": "2026-09-11T04:06:01.776Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.14",
-  "next_action": "Merge verified C3.13, then activate C3.14 and freeze one bounded output repair within the same conversation and root ledger.",
-  "latest_log_entry": "LOG-0087",
+  "next_checkpoint": "C3.15",
+  "next_action": "Merge C3.14 and activate C3.15 MCP configuration/policy contracts. Preserve repair/validation/compaction invariants, GLM defaults and unlimited filesystem work. Continue performance and PR merges; retain repeated schema warm-ACP tail and mixed filesystem measurements for C3.39 cause isolation.",
+  "latest_log_entry": "LOG-0089",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -432,9 +432,11 @@
       "depends_on": [
         "C3.13"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0089"
+      ]
     },
     {
       "id": "C3.15",

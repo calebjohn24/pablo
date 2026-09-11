@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_revision": "c3.13",
+  "contract_revision": "c3.14",
   "config": {
     "options": {
       "run": {
@@ -101,7 +101,11 @@
         "schema": {
           "unset": true
         },
-        "max_validation_work": 16777216
+        "max_validation_work": 16777216,
+        "repair": {
+          "enabled": false,
+          "max_feedback_bytes": 4096
+        }
       }
     },
     "deployment": {
@@ -162,13 +166,13 @@
       }
     ]
   },
-  "fingerprint": "sha256:4a8f9c1944bea23ee03caf093c3f9ad836744af0da625d3476dc44fc1d679ec5",
+  "fingerprint": "sha256:8c8dfc556a1cdef3d7d692906cbfb6d9148f62d2904d362baa0e7f8fcb7c49b6",
   "sources": [
     {
       "id": "source-0000",
       "kind": "defaults",
       "locator": "deployment-defaults-v1.json",
-      "digest": "sha256:78e6319dccf0d386d4188b030ba6610a1ba69a273fe60e8bcdc7c8d4954422c4"
+      "digest": "sha256:648851db0b2760ce56ad03dfbc3745447cfc26d8c3ebd944fdb073c4dccb400b"
     },
     {
       "id": "source-0001",
@@ -740,6 +744,18 @@
         "operation": "default"
       }
     ],
+    "/config/options/output/repair/enabled": [
+      {
+        "source": "source-0000",
+        "operation": "default"
+      }
+    ],
+    "/config/options/output/repair/max_feedback_bytes": [
+      {
+        "source": "source-0000",
+        "operation": "default"
+      }
+    ],
     "/config/options/output/schema": [
       {
         "source": "source-0000",
@@ -871,5 +887,5 @@
       }
     ]
   },
-  "input_fingerprint": "sha256:23695679130334663b34c6f799492326a74ea8be919a11be064a5ff509eaab44"
+  "input_fingerprint": "sha256:a95a609e72a4d9fa9d8172cc808b86eaaffc559ae5a091e40a6d5fa73c744726"
 }

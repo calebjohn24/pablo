@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:pablo:deployment:1:c3.13",
-  "title": "Pablo deployment v1 \u2014 C3.13 contract",
+  "$id": "urn:pablo:deployment:1:c3.14",
+  "title": "Pablo deployment v1 \u2014 C3.14 contract",
   "description": "TOML-to-JSON shape. See c3-deployment-config.md for semantic checks and implementation availability.",
   "type": "object",
   "additionalProperties": false,
@@ -1077,6 +1077,20 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 1000000000
+            },
+            "repair": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "max_feedback_bytes": {
+                  "type": "integer",
+                  "minimum": 512,
+                  "maximum": 4096
+                }
+              }
             }
           }
         }
@@ -1655,11 +1669,25 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 1000000000
+            },
+            "repair": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/Options/properties/output/properties/repair"
+                },
+                {
+                  "required": [
+                    "enabled",
+                    "max_feedback_bytes"
+                  ]
+                }
+              ]
             }
           },
           "required": [
             "schema",
-            "max_validation_work"
+            "max_validation_work",
+            "repair"
           ]
         }
       },
@@ -1905,7 +1933,11 @@
               "limits.filesystem.max_file_bytes",
               "limits.filesystem.max_entries",
               "limits.filesystem.max_depth",
-              "limits.filesystem.max_scan_bytes"
+              "limits.filesystem.max_scan_bytes",
+              "output.schema",
+              "output.max_validation_work",
+              "output.repair.enabled",
+              "output.repair.max_feedback_bytes"
             ]
           },
           "maxItems": 64,
@@ -1947,7 +1979,11 @@
               "limits.filesystem.max_file_bytes",
               "limits.filesystem.max_entries",
               "limits.filesystem.max_depth",
-              "limits.filesystem.max_scan_bytes"
+              "limits.filesystem.max_scan_bytes",
+              "output.schema",
+              "output.max_validation_work",
+              "output.repair.enabled",
+              "output.repair.max_feedback_bytes"
             ]
           },
           "maxItems": 64,

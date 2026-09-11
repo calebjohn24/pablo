@@ -18,10 +18,11 @@ import { sourceFingerprint } from './lib/source-fingerprint.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const provider=process.env.PABLO_MEASURE_PROVIDER ?? 'vercel';
-const structured=process.env.PABLO_MEASURE_OUTPUT==='1';
+const repair=process.env.PABLO_MEASURE_REPAIR==='1';
+const structured=repair||process.env.PABLO_MEASURE_OUTPUT==='1';
 const measuredOutcome=(response: Parameters<typeof outcomeOf>[0]) => {
   if (!structured) return outcomeOf(response);
-  const task=taskOf(response); assert.equal(task.output_validation?.status,'valid'); return task.outcome;
+  const task=taskOf(response); assert.equal(task.output_validation?.status,'valid'); if(repair)assert(['not_needed','succeeded'].includes(task.output_repair?.status??'')); return task.outcome;
 };
 const fallback=process.env.PABLO_MEASURE_FALLBACK==='1';
 const routed=fallback||process.env.PABLO_MEASURE_ROUTED==='1';
@@ -75,13 +76,15 @@ const gateway = await server(async (req, res) => {
   if(fallback && request.model===failingModel){res.writeHead(503);res.end();return;}
   assert.equal(request.model, model);
   res.writeHead(200, { 'content-type': 'text/event-stream' });
+  const repairRequest=repair && JSON.stringify((request.input??request.messages).at(-1)).includes('Correct the previous final answer.');
   if (provider==='open_responses') {
     if (request.input[0].content[0].text === firstDeltaTask) {
       const events=responsesEvents(request,{chunks:[firstOutput]}); firstDeltaSentAt=performance.now();
       res.write(responsesWire(events.slice(0,5),false)); await delay(40); res.end(responsesWire(events.slice(5)));
+    } else if(repairRequest){res.end(responsesWire(responsesEvents(request,{chunks})));
     } else if(request.input.at(-1).type==='function_call_output') {
       const result=JSON.parse(request.input.at(-1).output); assert.equal(result.shell.stdout,'measure');assert.equal(result.shell.exit_code,0);
-      res.end(responsesWire(responsesEvents(request,{chunks})));
+      res.end(responsesWire(responsesEvents(request,{chunks:repair?['{}']:chunks})));
     } else res.end(responsesWire(responsesEvents(request,{call:{id:'measure_call',name:'shell_run',arguments:JSON.stringify({command:absoluteCommand?'/usr/bin/printf measure':'printf measure',cwd:'.'})}})));
     return;
   }
@@ -90,10 +93,11 @@ const gateway = await server(async (req, res) => {
     res.write(frame({ content: firstOutput }));
     await delay(40); // Isolate delivery from terminal flushing and burst batching.
     res.end(frame({}, 'stop') + 'data: [DONE]\n\n');
+  } else if(repairRequest){res.end(chunks.map(content=>frame({content})).join('')+frame({},'stop')+'data: [DONE]\n\n');
   } else if (request.messages.at(-1).role === 'tool') {
     const result = JSON.parse(request.messages.at(-1).content);
     assert.equal(result.shell.stdout, 'measure'); assert.equal(result.shell.exit_code, 0);
-    res.end(chunks.map(content => frame({ content })).join('') + frame({}, 'stop') + 'data: [DONE]\n\n');
+    res.end((repair?['{}']:chunks).map(content => frame({ content })).join('') + frame({}, 'stop') + 'data: [DONE]\n\n');
   } else {
     res.end(frame({ tool_calls: [{ index: 0, id: 'measure_call', type: 'function', function: {
       name: 'shell_run', arguments: JSON.stringify({ command: absoluteCommand ? '/usr/bin/printf measure' : 'printf measure', cwd: '.' }),
@@ -122,8 +126,8 @@ ${routed?'credential="gateway"':''}
 provider="${provider}"
 id="${model}"
 ${provider==='open_responses'?'endpoint="https://responses.example.test/v1/responses"\ncapability_profile="open-responses-text-tools-v1"':''}
-${structured?`[options.output]\nschema='${JSON.stringify({type:'object',properties:{answer:{type:'string'}},required:['answer'],additionalProperties:false})}'\n`:''}[options.limits]
-max_model_calls=${fallback?3:2}
+${structured?`[options.output]\nschema='${JSON.stringify({type:'object',properties:{answer:{type:'string'}},required:['answer'],additionalProperties:false})}'\n${repair?'[options.output.repair]\nenabled=true\n':''}`:''}[options.limits]
+max_model_calls=${(fallback?3:2)+(repair?1:0)}
 max_tool_calls=1
 ${restricted ? `[options.shell.commands]\ndefault="deny"\nallow=[{id="measure.printf",executable="/usr/bin/printf",args=["measure"],match="exact"}]\n` : ""}`);
   const measurements: Record<string, number[]> = Object.fromEntries([
@@ -143,11 +147,12 @@ ${restricted ? `[options.shell.commands]\ndefault="deny"\nallow=[{id="measure.pr
       if (path === 'core') {
         const result = await processRun(direct, ['http', endpoint, task, '--workspace', cwd, ...options]);
         const parsed = JSON.parse(result.stdout);
-        assert.equal(parsed.outcome.output, output); assert.equal(parsed.events, fallback?43:41);
+        assert.equal(parsed.outcome.output, output); assert.equal(parsed.events, (fallback?43:41)+(repair?3:0));
         record('core_run_ms', parsed.run_ms); record('core_host_total_ms', result.wallMs);
       } else if (path === 'cli') {
-        const result = await processRun(binary, ['run', task, '--workspace', cwd, ...options], { PABLO_FIXTURE_ENDPOINT: endpoint });
-        assert.equal(result.stdout, `${output}\n`);
+        const result = await processRun(binary, ['run', task, '--workspace', cwd, ...options, ...(structured?['--json']:[])], { PABLO_FIXTURE_ENDPOINT: endpoint });
+        if(structured){const task=JSON.parse(result.stdout);assert.equal(task.outcome.output,output);assert.equal(task.output_validation.status,'valid');if(repair)assert.equal(task.output_repair.status,'succeeded');}
+        else assert.equal(result.stdout, `${output}\n`);
         record('cli_provider_ready_ms', requestTimes[0] - started); record('cli_total_ms', result.wallMs);
       } else if (path === 'first_delta') {
         let deliveredAt: number | undefined;
@@ -155,7 +160,7 @@ ${restricted ? `[options.shell.commands]\ndefault="deny"\nallow=[{id="measure.pr
           onModelAttempt: () => { routeNotifications++; },
           onUpdate: ({ update }) => { if (deliveredAt === undefined && update.sessionUpdate === 'agent_message_chunk') deliveredAt = performance.now(); },
         }, async cx => {
-          await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v1': true, 'pablo/model-route-v1': routeEvents, 'pablo/task-v1': structured, 'pablo/output-v1': structured } } });
+          await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v1': true, 'pablo/model-route-v1': routeEvents, 'pablo/task-v1': structured, 'pablo/output-v1': structured, 'pablo/output-repair-v1': repair } } });
           const { sessionId } = await cx.request('session/new', { cwd, mcpServers: [] });
           const result = measuredOutcome(await cx.request('session/prompt', { sessionId, prompt: [{ type: 'text', text: firstDeltaTask }] }));
           assert(result.status === 'completed' && result.output === firstOutput);
@@ -171,7 +176,7 @@ ${restricted ? `[options.shell.commands]\ndefault="deny"\nallow=[{id="measure.pr
           onModelAttempt: () => { routeNotifications++; },
           onUpdate: ({ update }) => { if (firstText === undefined && update.sessionUpdate === 'agent_message_chunk') firstText = performance.now(); },
         }, async cx => {
-          const init = await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v1': true, 'pablo/model-route-v1': routeEvents, 'pablo/task-v1': structured, 'pablo/output-v1': structured } } });
+          const init = await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v1': true, 'pablo/model-route-v1': routeEvents, 'pablo/task-v1': structured, 'pablo/output-v1': structured, 'pablo/output-repair-v1': repair } } });
           assert.equal(init.protocolVersion, 1); initializedAt = performance.now();
           // Idle after initialize, before session/prompt or provider creation.
           await delay(50);
@@ -184,13 +189,13 @@ ${restricted ? `[options.shell.commands]\ndefault="deny"\nallow=[{id="measure.pr
           const outcome = measuredOutcome(response); assert(outcome.status === 'completed' && outcome.output === output);
         });
         assert.equal(measuredExit, 0); assert(firstText !== undefined);
-        assert.equal(routeNotifications, routeEvents ? (fallback ? 6 : 4) : 0);
+        assert.equal(routeNotifications, routeEvents ? ((fallback ? 6 : 4)+(repair?2:0)) : 0);
         record('acp_initialize_ms', initializedAt - started);
         record('acp_prompt_ms', promptMs); record('acp_first_text_ms', firstText - promptStart);
         // Exclude deliberate idle sampling and session creation time from total.
         record('acp_total_ms', performance.now() - started - (promptStart - initializedAt));
       }
-      assert.equal(requestTimes.length, (path === 'first_delta' ? 1 : 2) + (fallback ? 1 : 0), `${path}: expected model calls`);
+      assert.equal(requestTimes.length, (path === 'first_delta' ? 1 : 2+(repair?1:0)) + (fallback ? 1 : 0), `${path}: expected model calls`);
     }
   }
   if (reuse) {
@@ -205,7 +210,7 @@ ${restricted ? `[options.shell.commands]\ndefault="deny"\nallow=[{id="measure.pr
         onModelAttempt: () => { routeNotifications++; },
         onUpdate: ({ update }) => { if (firstText === undefined && update.sessionUpdate === 'agent_message_chunk') firstText = performance.now(); },
       }, async cx => {
-        await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v1': true, 'pablo/model-route-v1': routeEvents, 'pablo/task-v1': structured, 'pablo/output-v1': structured } } });
+        await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v1': true, 'pablo/model-route-v1': routeEvents, 'pablo/task-v1': structured, 'pablo/output-v1': structured, 'pablo/output-repair-v1': repair } } });
         for (let index = 0; index < Math.min(40, count - base) + 5; index++) {
           const { sessionId } = await cx.request('session/new', { cwd, mcpServers: [] });
           requestTimes = []; firstText = undefined; routeNotifications=0;
@@ -213,8 +218,8 @@ ${restricted ? `[options.shell.commands]\ndefault="deny"\nallow=[{id="measure.pr
           const result = measuredOutcome(await cx.request('session/prompt', { sessionId, prompt: [{ type: 'text', text: task }] }));
           const elapsed = performance.now() - started;
           assert(result.status === 'completed' && result.output === output);
-          assert.equal(requestTimes.length, fallback ? 3 : 2); assert(firstText !== undefined);
-          assert.equal(routeNotifications, routeEvents ? (fallback ? 6 : 4) : 0);
+          assert.equal(requestTimes.length, (fallback ? 3 : 2)+(repair?1:0)); assert(firstText !== undefined);
+          assert.equal(routeNotifications, routeEvents ? ((fallback ? 6 : 4)+(repair?2:0)) : 0);
           if (index >= 5) {
             measurements.acp_warm_prompt_ms.push(elapsed);
             measurements.acp_warm_first_text_ms.push(firstText - started);
@@ -238,8 +243,8 @@ ${restricted ? `[options.shell.commands]\ndefault="deny"\nallow=[{id="measure.pr
       environment: process.env.PABLO_MEASURE_ENVIRONMENT ?? 'local host' },
     build: { profile: process.env.PABLO_MEASURE_BUILD ?? (await readFile(join(root, 'Cargo.toml'), 'utf8')).split('[profile.release]')[1].trim(), binary_bytes: (await stat(binary)).size, stripped_binary_bytes: (await stat(stripped)).size, strip_method: 'platform strip on a copy; timings use original release executable',
       binary_sha256: createHash('sha256').update(await readFile(binary)).digest('hex') },
-    method: { provider, model, output_validation: structured, route_events: routeEvents, configuration: fallback ? 'ordered route; initial HTTP 503 then sticky second entry; three calls and one real tool' : routed ? 'explicit single-entry model route; re-resolved per task' : restricted ? 'explicit deployment file with exact printf executable/argv allowlist' : configured ? 'explicit deployment file; re-resolved per admitted task' : 'legacy invocation', samples: count, warmup: 5, cache: 'warm filesystem; no forced cache eviction',
-      workload: `${fallback?'three local HTTP calls including one 503, two SSE responses':'two local HTTP/SSE calls'}, one ${absoluteCommand ? 'explicit /usr/bin/printf' : 'bare printf'} shell command, 32 output deltas (${structured?'512 payload bytes plus JSON object framing and local schema validation':'512 text bytes'})`,
+    method: { provider, model, output_validation: structured, output_repair: repair, cli_output: structured?'validated task JSON':'streaming text', route_events: routeEvents, configuration: fallback ? 'ordered route; initial HTTP 503 then sticky second entry; three calls and one real tool' : routed ? 'explicit single-entry model route; re-resolved per task' : restricted ? 'explicit deployment file with exact printf executable/argv allowlist' : configured ? 'explicit deployment file; re-resolved per admitted task' : 'legacy invocation', samples: count, warmup: 5, cache: 'warm filesystem; no forced cache eviction',
+      workload: `${(fallback?3:2)+(repair?1:0)} local HTTP calls${fallback?' including one 503':''}, one ${absoluteCommand ? 'explicit /usr/bin/printf' : 'bare printf'} shell command, 32 final output deltas (${structured?'512 payload bytes plus JSON object framing and local schema validation':'512 text bytes'})${repair?'; one preceding invalid {} candidate and one bounded repair':''}`,
       startup: 'Node monotonic spawn to first loopback provider request arrival; separate --version process wall time',
       baseline: 'direct core run_with_tools in measurement host; SDK/provider/tool construction excluded from core_run_ms',
       acp: 'official TS SDK; one new process/session/prompt per sample; prompt includes per-run provider/tool/SDK setup; total excludes deliberate RSS wait and session creation',

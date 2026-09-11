@@ -258,6 +258,11 @@ where
         let mut lifecycle = Lifecycle {
             model_profile: None,
             model_route: None,
+            output_repair: spec
+                .output
+                .as_ref()
+                .filter(|o| o.repair.enabled)
+                .map(|_| Box::new(crate::output::OutputRepair::default())),
             output_validation: compiled
                 .as_ref()
                 .map(|s| Box::new(crate::output::OutputValidation::pending(&s.digest))),
@@ -307,6 +312,17 @@ where
             }
             Ok(()) => self.drive(&execution, &mut lifecycle).await,
         };
+        if let Some(record) = &mut lifecycle.output_repair {
+            record.finish(outcome.is_completed());
+            root.span().set_attribute(KeyValue::new(
+                "pablo.output.repair_status",
+                record.status.clone(),
+            ));
+            root.span().set_attribute(KeyValue::new(
+                "pablo.output.repair_attempts",
+                i64::from(record.attempts),
+            ));
+        }
         if let Some(record) = &mut lifecycle.model_route
             && record.phase == "selected"
         {
@@ -354,7 +370,8 @@ where
                     tokens.saturating_add(u64::from(attempt.max_output_tokens))
                         >= spec.context.usable(cap)
                 });
-            if spec.context.enabled
+            if !state.repairing
+                && spec.context.enabled
                 && !state.compacted
                 && near
                 && state.split(spec.context.keep_recent_turns).is_some()
@@ -417,14 +434,15 @@ where
                 });
                 let input = ModelInput {
                     summary: false,
-                    max_output_bytes: spec.limits.max_output_bytes,
+                    max_output_bytes: state.remaining_output,
                     parent: execution.root,
                     attempt,
                     deadline,
                     history: &state.history,
                     continuations: &state.continuations,
                     remaining_context: spec.limits.max_context_bytes - context_bytes,
-                    allow_tool_calls: state.remaining_tools != Some(0)
+                    allow_tool_calls: !state.repairing
+                        && state.remaining_tools != Some(0)
                         && state.remaining_models != Some(0)
                         && !execution.tools.descriptors().is_empty(),
                 };
@@ -444,7 +462,8 @@ where
                                 code: FailureCode::ContextOverflow,
                                 ..
                             }
-                        ) && spec.context.enabled
+                        ) && !state.repairing
+                            && spec.context.enabled
                             && !state.compacted
                             && !progress.closing_failed
                             && progress.chunks == 0
@@ -460,7 +479,7 @@ where
                             state.recovering = true;
                             continue 'generation;
                         }
-                        if state.recovering {
+                        if state.recovering || state.repairing {
                             return outcome;
                         }
                         let eligible = execution.route_policy.is_some_and(|policy| {
@@ -508,7 +527,7 @@ where
                         schema.work(progress.output.len()).to_string(),
                     ));
                     let validation =
-                        schema.validate(&progress.output, settings.max_validation_work, || {
+                        schema.validate(&progress.output, state.remaining_validation_work, || {
                             execution.stop().is_some()
                         });
                     if let Some(stopped) = execution.stop() {
@@ -520,6 +539,16 @@ where
                         span.span().end();
                         return failed(FailureCode::OutputValidationFailed);
                     };
+                    state.remaining_validation_work = state
+                        .remaining_validation_work
+                        .saturating_sub(schema.work(progress.output.len()));
+                    if let Some(record) = &mut lifecycle.output_repair {
+                        record.validation_attempts += 1;
+                        span.span().set_attribute(KeyValue::new(
+                            "pablo.output.validation_attempt",
+                            i64::from(record.validation_attempts),
+                        ));
+                    }
                     let valid = validation.status == "valid";
                     span.span().set_attribute(KeyValue::new(
                         "pablo.output.validation_status",
@@ -529,11 +558,53 @@ where
                         "pablo.output.validation_errors",
                         validation.diagnostics.len() as i64,
                     ));
+                    let repair_feedback = (!valid && settings.repair.enabled && !state.repairing)
+                        .then(|| {
+                            crate::output::feedback(&validation, settings.repair.max_feedback_bytes)
+                        });
                     lifecycle.output_validation = Some(Box::new(validation));
                     if !valid {
                         let outcome = failed(FailureCode::OutputValidationFailed);
                         telemetry::outcome(&span, &outcome);
                         span.span().end();
+                        if let Some(feedback) = repair_feedback {
+                            let record = lifecycle.output_repair.as_mut().expect("enabled repair");
+                            record.status = "pending".into();
+                            record.previous_error_count = lifecycle
+                                .output_validation
+                                .as_ref()
+                                .unwrap()
+                                .diagnostics
+                                .len();
+                            record.feedback_bytes = feedback.len();
+                            if state.remaining_validation_work == 0 {
+                                record.status = "blocked".into();
+                                return outcome;
+                            }
+                            lifecycle.output_validation = Some(Box::new(
+                                crate::output::OutputValidation::pending(&schema.digest),
+                            ));
+                            state.remaining_output =
+                                state.remaining_output.saturating_sub(progress.output.len());
+                            if state.remaining_output == 0 {
+                                return limit(LimitKind::OutputBytes);
+                            }
+                            if let Some(value) = progress.continuation {
+                                state
+                                    .continuations
+                                    .push(crate::provider::ContinuationEntry {
+                                        message_index: state.history.len(),
+                                        value,
+                                    });
+                            }
+                            state.history.push(Message::Assistant {
+                                text: progress.output,
+                                tool_calls: Vec::new(),
+                            });
+                            state.history.push(Message::User { text: feedback });
+                            state.repairing = true;
+                            continue 'generation;
+                        }
                         return outcome;
                     }
                     span.span().end();
@@ -638,7 +709,13 @@ where
         }
         model.span().set_attribute(KeyValue::new(
             "pablo.model.purpose",
-            if input.summary {
+            if lifecycle
+                .output_repair
+                .as_ref()
+                .is_some_and(|r| r.status == "pending")
+            {
+                "output_repair"
+            } else if input.summary {
                 "compaction"
             } else {
                 "generation"
@@ -948,6 +1025,12 @@ async fn consume(
         .model_calls
         .checked_add(1)
         .ok_or_else(|| limit(LimitKind::ModelCalls))?;
+    if let Some(record) = &mut lifecycle.output_repair
+        && record.status == "pending"
+    {
+        record.status = "started".into();
+        record.attempts = 1;
+    }
     progress.dispatched = true;
     lifecycle.delivery = DeliveryCertainty::MayHaveBeenSent;
     progress.delivery = Some(DeliveryCertainty::MayHaveBeenSent);
@@ -1048,6 +1131,13 @@ async fn consume(
                         record.reason = Some("tool_call_during_summary".into());
                     }
                     return Err(failed(FailureCode::CompactionFailed));
+                }
+                if lifecycle
+                    .output_repair
+                    .as_ref()
+                    .is_some_and(|r| r.status == "started")
+                {
+                    return Err(malformed());
                 }
                 if id.is_empty()
                     || id.len() > 128
@@ -1242,6 +1332,7 @@ pub fn validate_run(
 struct Lifecycle<'a> {
     compaction: Option<Box<crate::context::CompactionRecord>>,
     output_validation: Option<Box<crate::output::OutputValidation>>,
+    output_repair: Option<Box<crate::output::OutputRepair>>,
     extra_closing: u64,
     model_route: Option<Box<ModelRouteRecord>>,
     model_profile: Option<ProviderIdentity>,
@@ -1269,6 +1360,15 @@ impl Lifecycle<'_> {
         let span = context.span();
         let identity = span.span_context();
         RunEvent {
+            output_repair: matches!(
+                kind,
+                EventKind::ModelStarted { .. }
+                    | EventKind::ModelFinished { .. }
+                    | EventKind::TextDelta { .. }
+                    | EventKind::RunFinished { .. }
+            )
+            .then(|| self.output_repair.clone())
+            .flatten(),
             output_validation: matches!(
                 kind,
                 EventKind::TextDelta { .. } | EventKind::RunFinished { .. }
