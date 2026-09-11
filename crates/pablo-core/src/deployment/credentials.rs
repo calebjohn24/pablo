@@ -155,7 +155,10 @@ impl PreparedRun {
         inputs: &dyn CredentialInputs,
     ) -> Result<Option<ScopedCredential>, ConfigError> {
         let options = self.deployment().options();
-        let model = self.deployment().selected_model();
+        let model = self.model_route().map_or_else(
+            || self.deployment().selected_model(),
+            |route| &self.deployment().options()["models"][route.entries()[0].name()],
+        );
         let (reference, destination) = match consumer {
             CredentialConsumer::McpEnvironment | CredentialConsumer::McpHeaders => {
                 return Err(error("config_credential_scope", "/credentials"));
@@ -179,7 +182,6 @@ impl PreparedRun {
         inputs: &dyn CredentialInputs,
     ) -> Result<ScopedCredential, ConfigError> {
         let entry = self
-            .deployment()
             .model_route()
             .and_then(|r| r.entries().get(index))
             .ok_or_else(|| error("config_credential_scope", "/model_route"))?;

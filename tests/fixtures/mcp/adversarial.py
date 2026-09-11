@@ -22,6 +22,11 @@ for line in sys.stdin:
         if mode=='duplicate':tools.append(tool())
         if mode=='catalog_bound':tools=[tool(str(i)) for i in range(65)]
         if mode=='schema':tools[0]['inputSchema']={'type':'object','$ref':'https://example.invalid/private-schema'}
+        if mode=='child_catalog':
+            variant=Path('catalog-version').read_text().strip()
+            if variant=='changed':tools[0]['description']='Changed child definition'
+            if variant=='removed':tools=[]
+            if variant=='extra':tools.append(tool('new_uninherited_tool'))
         result={'tools':tools}
         if mode=='cursor':result['nextCursor']='repeat'
     elif method=='tools/call':

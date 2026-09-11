@@ -34,7 +34,7 @@ pub struct Secrets {
 }
 impl Secrets {
     pub fn read(prepared: &deployment::PreparedRun, bootstrap: &Bootstrap) -> Result<Self, String> {
-        let route = prepared.deployment().model_route().cloned();
+        let route = prepared.model_route().cloned();
         let profiles = if let Some(route) = &route {
             route
                 .entries()
@@ -42,12 +42,7 @@ impl Secrets {
                 .map(|entry| entry.profile().clone())
                 .collect()
         } else {
-            vec![
-                prepared
-                    .deployment()
-                    .model_profile()
-                    .map_err(|e| e.to_string())?,
-            ]
+            vec![prepared.model_profile().map_err(|e| e.to_string())?]
         };
         let mut providers = Vec::new();
         for (index, profile) in profiles.into_iter().enumerate() {
