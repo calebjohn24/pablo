@@ -11,7 +11,8 @@ new discovery lifecycle. Tools-only client capabilities exclude roots, sampling,
 elicitation, prompts, resources, durable tasks and subscription/catalog changes.
 M02 enables stdio; M03 enables Streamable HTTP; M04 closes host/ACP and Collector
 acceptance. M01 performs configuration/policy admission only and advertises neither
-transport. M02 promotes the client-only SDK to a runtime dependency. The Rust
+transport. M02 promotes the client-only SDK to a runtime dependency. M03 shares
+normalized sessions/catalogs between stdio and Streamable HTTP. The Rust
 embedding entry point is `PreparedRun::tools_with_mcp`; synchronous `tools()`
 requires the async path for admitted MCP. CLI/ACP integration remains C3.18 (M04).
 
@@ -116,6 +117,32 @@ in this cut; disconnect is an explicit failure and remote completion may remain
 uncertain. Send bounded protocol cancellation and close local work without claiming
 the remote effect was rolled back. Own clients/catalogs/credentials per admitted
 run; any future process-level reuse must prove isolation at M04.
+
+M03 uses one POST response stream per outstanding request and no standalone GET
+stream: unsolicited server requests are outside the admitted tool-only subset.
+Accept JSON and SSE, including bounded priming/heartbeat events. A frame is at most
+2 MiB and an entire POST stream at most 4 MiB; progress retains the shared per-call
+bounds. Every response ID must match its originating POST. Incomplete streams,
+unrelated IDs, session changes and redirects fail explicitly. A 404 ends the current
+session; callers must start a fresh admitted run, never replay the interrupted call.
+
+The initialized session header is visible ASCII, 1–256 bytes; subsequent requests
+carry it and the pinned protocol version. Peer headers never change the configured
+endpoint. Private `mcp.headers` credentials are scoped to the exact server definition
+and binding. HTTP clients disable proxies, redirects and automatic retries.
+Loopback HTTP is a crate-private synthetic fixture override; ordinary host
+configuration requires HTTPS.
+
+Cancellation or disconnected uncertain calls attempt an explicit notification
+directly on the same HTTP endpoint, because the SDK sender may be occupied by a
+stalled POST. This best-effort notification uses at most 50 ms of the original
+2-second cleanup allowance. Local transport cancellation joins the SDK and drops
+response readers; an assigned session receives bounded DELETE. DELETE 404 means
+already expired and 405 means teardown is unsupported. Notification/DELETE success
+does not prove remote effects were rolled back. Tool results and metadata-only
+telemetry retain `remote_completion_uncertain` when a dispatched call lacks a
+correlated response. A valid correlated result clears that uncertainty; peer error
+text remains private. HTTP session tokens are sensitive and excluded from telemetry.
 
 ## Telemetry
 

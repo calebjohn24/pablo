@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T05:27:45.696Z",
+  "updated_at": "2026-09-11T05:49:13.296Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.17",
-  "next_action": "Activate C3.17 on merged 30a430f. Implement bounded Streamable HTTP JSON/SSE and session lifecycle with exact endpoint credentials, no replay and explicit remote uncertainty. Reuse catalog/policy/alias validation and owned cleanup. CLI/ACP MCP and Collector acceptance remain C3.18. Preserve task-relevant compaction, repair, GLM defaults, unlimited filesystem work and performance follow-ups.",
-  "latest_log_entry": "LOG-0095",
+  "next_checkpoint": "C3.18",
+  "next_action": "Merge C3.17 and activate C3.18 CLI/ACP MCP host integration and Collector/failure proof. Preserve bounded exact admission, credentials, normalized tools, cancellation and remote uncertainty. Retain the recurring F03 notification-order investigation at C3.33 and all performance follow-ups at C3.39. Keep compaction/repair/GLM defaults and unlimited filesystem work.",
+  "latest_log_entry": "LOG-0096",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -472,9 +472,11 @@
       "depends_on": [
         "C3.16"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0096"
+      ]
     },
     {
       "id": "C3.18",

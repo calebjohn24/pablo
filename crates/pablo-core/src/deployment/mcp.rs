@@ -68,7 +68,7 @@ impl ResolvedDeployment {
 
 #[cfg(unix)]
 impl PreparedRun {
-    /// Start a fresh per-run stdio catalog using only admitted host configuration.
+    /// Start a fresh per-run MCP catalog using only admitted host configuration.
     /// The runtime joins it before its terminal event; callers abandoning a prepared catalog must call close().
     pub async fn tools_with_mcp(
         &self,
@@ -101,41 +101,46 @@ impl PreparedRun {
                 continue;
             }
             let started = async {
-                let Server::Stdio { cwd, .. } = server else {
-                    return Err(error("config_unsupported_feature", "/options/mcp"));
+                let started = match server {
+                    Server::Stdio { cwd, .. } => {
+                        let root = match cwd["base"].as_str().unwrap() {
+                            "workspace" => &self.spec().workspace,
+                            "config" => &self.config_root,
+                            "binding" => self
+                                .path_bindings
+                                .get(cwd["name"].as_str().unwrap())
+                                .ok_or_else(|| error("config_path_unavailable", "/options/mcp"))?,
+                            _ => return Err(error("config_path_unavailable", "/options/mcp")),
+                        };
+                        let canonical_root = root
+                            .canonicalize()
+                            .map_err(|_| error("config_path_unavailable", "/options/mcp"))?;
+                        let cwd = root
+                            .join(cwd["path"].as_str().unwrap())
+                            .canonicalize()
+                            .map_err(|_| error("config_path_unavailable", "/options/mcp"))?;
+                        if !cwd.is_dir() || !cwd.starts_with(canonical_root) {
+                            return Err(error("config_path_unavailable", "/options/mcp"));
+                        }
+                        let env = self.mcp_environment(id, server, inputs)?;
+                        StdioSession::start(server, &cwd, env, deadline, cancellation).await
+                    }
+                    Server::Http { .. } => {
+                        let headers = self.mcp_headers(id, server, inputs)?;
+                        StdioSession::start_http(server, headers, None, deadline, cancellation)
+                            .await
+                    }
                 };
-                let root = match cwd["base"].as_str().unwrap() {
-                    "workspace" => &self.spec().workspace,
-                    "config" => &self.config_root,
-                    "binding" => self
-                        .path_bindings
-                        .get(cwd["name"].as_str().unwrap())
-                        .ok_or_else(|| error("config_path_unavailable", "/options/mcp"))?,
-                    _ => return Err(error("config_path_unavailable", "/options/mcp")),
-                };
-                let canonical_root = root
-                    .canonicalize()
-                    .map_err(|_| error("config_path_unavailable", "/options/mcp"))?;
-                let cwd = root
-                    .join(cwd["path"].as_str().unwrap())
-                    .canonicalize()
-                    .map_err(|_| error("config_path_unavailable", "/options/mcp"))?;
-                if !cwd.is_dir() || !cwd.starts_with(canonical_root) {
-                    return Err(error("config_path_unavailable", "/options/mcp"));
-                }
-                let env = self.mcp_environment(id, server, inputs)?;
-                let mut session = StdioSession::start(server, &cwd, env, deadline, cancellation)
-                    .await
-                    .map_err(|failure| {
-                        error(
-                            if failure == crate::mcp::stdio::Error::Cleanup {
-                                "config_mcp_cleanup"
-                            } else {
-                                "config_mcp_startup"
-                            },
-                            "/options/mcp",
-                        )
-                    })?;
+                let mut session = started.map_err(|failure| {
+                    error(
+                        if failure == crate::mcp::stdio::Error::Cleanup {
+                            "config_mcp_cleanup"
+                        } else {
+                            "config_mcp_startup"
+                        },
+                        "/options/mcp",
+                    )
+                })?;
                 catalog_bytes = catalog_bytes.saturating_add(session.catalog_bytes());
                 catalog_tools = catalog_tools.saturating_add(session.tools().len());
                 if catalog_bytes > crate::mcp::MAX_RESULT_BYTES

@@ -2153,9 +2153,11 @@ fn mcp_configuration_preserves_defaults_provenance_and_private_references() {
             session_id: None,
             workspace: None,
         })
-        .unwrap_err();
-    assert_eq!(e.code, "config_unsupported_feature");
-    assert_eq!(e.owner, Some("C3.17"));
+        .unwrap()
+        .tools()
+        .err()
+        .unwrap();
+    assert_eq!(e.code, "config_async_mcp_required");
     let mut wrong = document.clone();
     wrong["credentials"]["local-key"]["consumer"] = "mcp.headers".into();
     error(f.document(wrong), "config_invalid_value");

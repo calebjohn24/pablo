@@ -1,5 +1,68 @@
 //! Secrets are resolved only at use, never by config loading or inspection.
 use super::*;
+
+#[cfg(test)]
+mod mcp_tests {
+    use super::*;
+    struct Inputs;
+    impl CredentialInputs for Inputs {
+        fn environment(&self, _: &str) -> Result<Option<Vec<u8>>, CredentialReadError> {
+            panic!("ambient credential lookup")
+        }
+        fn host(&self, name: &str) -> Result<Option<Vec<u8>>, CredentialReadError> {
+            assert_eq!(name, "synthetic");
+            Ok(Some(b"synthetic-http-token".to_vec()))
+        }
+    }
+    #[test]
+    fn mcp_header_credentials_are_sensitive_and_bound_to_exact_definition() {
+        let cwd = std::env::current_dir().unwrap();
+        let mut request = ResolveRequest::new(cwd.clone(), "unused");
+        request.path_bindings.insert("workspace".into(), cwd);
+        request.entry = ConfigInput::Document(
+            serde_json::json!({"schema_version":1,"options":{"mcp":{"servers":{"remote":{"transport":"http","url":"https://synthetic.example/mcp","headers":{"x-fixture-token":"token"}}}}},"credentials":{"gateway":{"consumer":"provider.vercel","sources":[{"kind":"host","name":"unused"}]},"token":{"consumer":"mcp.headers","sources":[{"kind":"host","name":"synthetic"}]}}}),
+        );
+        let prepared = resolve(request)
+            .unwrap()
+            .prepare_run(RunInput {
+                input: "synthetic".into(),
+                workspace: None,
+                session_id: None,
+            })
+            .unwrap();
+        let server = &prepared.deployment().mcp().unwrap().servers["remote"];
+        let headers = prepared.mcp_headers("remote", server, &Inputs).unwrap();
+        assert!(headers["x-fixture-token"].is_sensitive());
+        let destination = serde_json::json!(["remote", server, "x-fixture-token"]).to_string();
+        let credential = prepared
+            .resolve_credential(
+                CredentialConsumer::McpHeaders,
+                &Value::String("token".into()),
+                &destination,
+                &Inputs,
+            )
+            .unwrap()
+            .unwrap();
+        assert!(
+            credential
+                .expose_for(
+                    CredentialConsumer::McpHeaders,
+                    "https://different.example/mcp"
+                )
+                .is_err()
+        );
+        assert!(
+            credential
+                .expose_for(CredentialConsumer::McpEnvironment, &destination)
+                .is_err()
+        );
+        assert!(
+            prepared
+                .credential(CredentialConsumer::McpHeaders, &Inputs)
+                .is_err()
+        );
+    }
+}
 use std::{
     collections::HashSet,
     path::{Component, Path},
@@ -14,6 +77,7 @@ pub enum CredentialConsumer {
     OpenResponses,
     OtelHeaders,
     McpEnvironment,
+    McpHeaders,
 }
 impl CredentialConsumer {
     pub(crate) fn name(self) -> &'static str {
@@ -23,6 +87,7 @@ impl CredentialConsumer {
             Self::OpenResponses => "provider.open_responses",
             Self::OtelHeaders => "otel.headers",
             Self::McpEnvironment => "mcp.env",
+            Self::McpHeaders => "mcp.headers",
         }
     }
 }
@@ -90,7 +155,7 @@ impl PreparedRun {
         let options = self.deployment().options();
         let model = self.deployment().selected_model();
         let (reference, destination) = match consumer {
-            CredentialConsumer::McpEnvironment => {
+            CredentialConsumer::McpEnvironment | CredentialConsumer::McpHeaders => {
                 return Err(error("config_credential_scope", "/credentials"));
             }
             CredentialConsumer::Vercel
@@ -156,6 +221,43 @@ impl PreparedRun {
         }
         Ok(values)
     }
+    pub(super) fn mcp_headers(
+        &self,
+        id: &str,
+        server: &crate::mcp::Server,
+        inputs: &dyn CredentialInputs,
+    ) -> Result<reqwest::header::HeaderMap, ConfigError> {
+        let crate::mcp::Server::Http { headers, .. } = server else {
+            return Err(error("config_credential_scope", "/credentials"));
+        };
+        let mut values = reqwest::header::HeaderMap::new();
+        let mut bytes = 0usize;
+        for (binding, reference) in headers {
+            let destination = serde_json::json!([id, server, binding]).to_string();
+            let credential = self
+                .resolve_credential(
+                    CredentialConsumer::McpHeaders,
+                    &Value::String(reference.clone()),
+                    &destination,
+                    inputs,
+                )?
+                .ok_or_else(|| error("config_credential_missing", "/credentials"))?;
+            let value = credential.expose_for(CredentialConsumer::McpHeaders, &destination)?;
+            bytes = bytes
+                .saturating_add(binding.len())
+                .saturating_add(value.len());
+            if bytes > 65536 {
+                return Err(error("config_credential_invalid", "/credentials"));
+            }
+            let name = reqwest::header::HeaderName::from_bytes(binding.as_bytes())
+                .map_err(|_| error("config_credential_invalid", "/credentials"))?;
+            let mut value = reqwest::header::HeaderValue::from_str(value)
+                .map_err(|_| error("config_credential_invalid", "/credentials"))?;
+            value.set_sensitive(true);
+            values.insert(name, value);
+        }
+        Ok(values)
+    }
     fn resolve_credential(
         &self,
         consumer: CredentialConsumer,
@@ -180,7 +282,9 @@ impl PreparedRun {
                 != match consumer {
                     CredentialConsumer::Vercel => crate::gateway::VERCEL_ENDPOINT,
                     CredentialConsumer::OpenRouter => crate::gateway::OPENROUTER_ENDPOINT,
-                    CredentialConsumer::OtelHeaders | CredentialConsumer::McpEnvironment => {
+                    CredentialConsumer::OtelHeaders
+                    | CredentialConsumer::McpEnvironment
+                    | CredentialConsumer::McpHeaders => {
                         unreachable!()
                     }
                     CredentialConsumer::OpenResponses => unreachable!(),

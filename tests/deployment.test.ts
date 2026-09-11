@@ -61,7 +61,7 @@ test('configured CLI and ACP use one lifecycle, identical identity and synthetic
       assert(outcome.status==='completed'); assert.equal(outcome.output,'configured answer');
       identity=(response._meta?.['pablo/v1'] as any).deployment;
     });
-    assert.deepEqual(identity,{schema_version:1,contract_revision:'c3.16',fingerprint:expected});
+    assert.deepEqual(identity,{schema_version:1,contract_revision:'c3.17',fingerprint:expected});
     assert.equal(seen.length,2); assert.deepEqual(seen[0],seen[1]);
     const traces=(await readdir(cwd)).filter(name=>name.endsWith('.jsonl'));assert.equal(traces.length,2);
     for(const name of traces){

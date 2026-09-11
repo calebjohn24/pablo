@@ -8,3 +8,12 @@ Source/distribution metadata: <https://pypi.org/project/mcp/2.2.0/>.
 `.pablo/mcp-fixture-venv` with the existing Python installation. No live provider
 or credential file is used. The caller creates a fresh synthetic working directory
 and supplies only `FIXTURE_TOKEN=synthetic-mcp-token`.
+
+M03's separate `http_server.py` exposes stateful JSON and SSE responses through
+the same independent pinned SDK, using a literal loopback socket and synthetic
+`x-fixture-token` header. It records only synthetic request IDs/session headers in
+the test's temporary directory. `http_fault_server.py` is an independent stdlib
+fault peer for disconnects, redirects, framing/progress bounds and cancellation.
+Run acceptance tests with `cargo test --locked -p pablo-core --lib mcp:: -- --ignored --skip measure_http`.
+The separately ignored `mcp::http_tests::measure_http` test is a release measurement;
+run it only after other tests/builds finish and retain its optimized-build flag.

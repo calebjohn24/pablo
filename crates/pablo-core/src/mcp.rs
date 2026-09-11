@@ -1,10 +1,15 @@
 //! Host-owned MCP admission and bounded transport components.
 #[cfg(unix)]
+pub mod session;
+#[cfg(unix)]
 pub mod stdio;
 #[cfg(unix)]
 pub(crate) mod tool;
 #[cfg(unix)]
 pub use tool::McpResult;
+#[cfg(all(test, unix))]
+mod http_tests;
+mod http_transport;
 mod transport;
 use crate::{
     PolicyRule,
