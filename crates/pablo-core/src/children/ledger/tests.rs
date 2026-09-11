@@ -335,3 +335,123 @@ fn execution_identity_is_bound_once_from_registered_ownership() {
     assert_eq!(ledger.total().model_calls, 0);
     assert_eq!(ledger.total().tool_calls, 0);
 }
+
+#[test]
+fn event_reservations_are_atomic_and_closing_slots_survive_admission_close() {
+    let root = AgentRef::root("root".into(), "session".into());
+    let child = root.temporary_child().unwrap();
+    let limits = RunLimits {
+        max_events: 5,
+        ..Default::default()
+    };
+    let ledger = RootLedger::new(&root, limits.clone()).unwrap();
+    ledger.register_child(&child, limits).unwrap();
+    let mut root_terminal = ledger.claim_run_event(root.agent_id()).unwrap();
+    let mut child_terminal = ledger.claim_run_event(child.agent_id()).unwrap();
+    assert!(ledger.claim_run_event(root.agent_id()).is_err());
+    assert!(ledger.claim_run_event(child.agent_id()).is_err());
+    let barrier = std::sync::Barrier::new(2);
+    let reservations = std::thread::scope(|threads| {
+        let first = threads.spawn(|| {
+            barrier.wait();
+            ledger.reserve_events(root.agent_id(), 2)
+        });
+        let second = threads.spawn(|| {
+            barrier.wait();
+            ledger.reserve_events(child.agent_id(), 2)
+        });
+        [first.join().unwrap(), second.join().unwrap()]
+    });
+    assert_eq!(reservations.iter().filter(|r| r.is_ok()).count(), 1);
+    assert_eq!(
+        ledger.event_counts(),
+        events::EventCounts {
+            used: 0,
+            reserved: 4
+        }
+    );
+    drop(reservations);
+    assert_eq!(ledger.event_counts().reserved, 2);
+    for _ in 0..3 {
+        ledger.admit_event(root.agent_id()).unwrap();
+    }
+    assert!(ledger.admit_event(child.agent_id()).is_err());
+    assert!(ledger.reserve_events(child.agent_id(), 2).is_err());
+    ledger.close_admission();
+    root_terminal.consume().unwrap();
+    child_terminal.consume().unwrap();
+    assert!(root_terminal.consume().is_err());
+    assert_eq!(
+        ledger.event_counts(),
+        events::EventCounts {
+            used: 5,
+            reserved: 0
+        }
+    );
+}
+
+#[test]
+fn child_event_exhaustion_cannot_take_the_roots_prepaid_terminal() {
+    let root = AgentRef::root("root".into(), "session".into());
+    let child = root.temporary_child().unwrap();
+    let limits = RunLimits {
+        max_events: 2,
+        ..Default::default()
+    };
+    let ledger = RootLedger::new(&root, limits.clone()).unwrap();
+    ledger.register_child(&child, limits).unwrap();
+    ledger.admit_event(child.agent_id()).unwrap();
+    assert!(ledger.claim_run_event(child.agent_id()).is_err());
+    ledger.close_admission();
+    let mut terminal = ledger.claim_run_event(root.agent_id()).unwrap();
+    terminal.consume().unwrap();
+    assert_eq!(
+        ledger.event_counts(),
+        events::EventCounts {
+            used: 2,
+            reserved: 0
+        }
+    );
+}
+
+#[test]
+fn local_event_ceiling_leaves_other_agents_admission_available() {
+    let root = AgentRef::root("root".into(), "session".into());
+    let child = root.temporary_child().unwrap();
+    let ledger = RootLedger::new(
+        &root,
+        RunLimits {
+            max_events: 8,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    ledger
+        .register_child(
+            &child,
+            RunLimits {
+                max_events: 4,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    let mut child_terminal = ledger.claim_run_event(child.agent_id()).unwrap();
+    for _ in 0..3 {
+        ledger.admit_event(child.agent_id()).unwrap();
+    }
+    assert!(ledger.admit_event(child.agent_id()).is_err());
+    ledger.admit_event(root.agent_id()).unwrap();
+    child_terminal.consume().unwrap();
+    ledger
+        .claim_run_event(root.agent_id())
+        .unwrap()
+        .consume()
+        .unwrap();
+    assert_eq!(
+        ledger.event_counts(),
+        events::EventCounts {
+            used: 6,
+            reserved: 0
+        }
+    );
+}

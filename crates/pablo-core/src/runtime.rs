@@ -377,6 +377,16 @@ where
                 None,
             )
         };
+        let run_event = self
+            .accounting_scope
+            .as_ref()
+            .map(|scope| {
+                scope
+                    .ledger
+                    .claim_run_event(&scope.agent_id)
+                    .map_err(|_| RunError::InvalidSpec("run event capacity unavailable"))
+            })
+            .transpose()?;
         let started = telemetry::now();
         let root = Context::new().with_span(
             telemetry::agent_span(
@@ -430,6 +440,9 @@ where
             ));
         }
         let mut lifecycle = Lifecycle {
+            event_scope: self.accounting_scope.as_ref(),
+            run_event,
+            operation_events: Vec::new(),
             cancellation,
             shared_deadline: self
                 .accounting_scope
@@ -560,6 +573,11 @@ where
             parent_id.as_deref(),
             finished,
         );
+        if let Some(reservation) = &mut lifecycle.run_event {
+            reservation
+                .consume()
+                .expect("reserved root/agent terminal event");
+        }
         let delivered = lifecycle.sink.emit(&terminal);
         if delivered.is_err() {
             root.span()
@@ -966,6 +984,7 @@ where
         if let Some(record) = &mut lifecycle.model_route {
             record.phase = "started".into();
         }
+        lifecycle.begin_operation()?;
         let started = telemetry::now();
         let model = input.parent.with_span(
             telemetry::agent_span(
@@ -1168,6 +1187,7 @@ where
         } else {
             None
         };
+        lifecycle.begin_operation()?;
         let started = telemetry::now();
         let context = execution.root.with_span(
             telemetry::agent_span(
@@ -1767,6 +1787,9 @@ pub fn validate_run(
 }
 
 struct Lifecycle<'a> {
+    event_scope: Option<&'a AccountingScope>,
+    run_event: Option<crate::children::ledger::events::EventReservation>,
+    operation_events: Vec<crate::children::ledger::events::EventReservation>,
     cancellation: &'a CancellationToken,
     shared_deadline: Option<Instant>,
     agent: Option<Box<crate::children::AgentIdentity>>,
@@ -1787,6 +1810,52 @@ struct Lifecycle<'a> {
 }
 
 impl Lifecycle<'_> {
+    fn event_failure(&self, error: crate::children::ledger::AdmissionError) -> RunOutcome {
+        let outcome = shared_admission_failure(error);
+        if outcome == RunOutcome::Cancelled
+            && self
+                .shared_deadline
+                .is_some_and(|deadline| Instant::now() >= deadline)
+        {
+            RunOutcome::TimedOut
+        } else {
+            outcome
+        }
+    }
+    fn begin_operation(&mut self) -> Result<(), RunOutcome> {
+        if let Some(scope) = self.event_scope {
+            let reservation = scope
+                .ledger
+                .reserve_events(&scope.agent_id, 2)
+                .map_err(|error| self.event_failure(error))?;
+            self.operation_events.push(reservation);
+        }
+        Ok(())
+    }
+    fn admit_event(&mut self, kind: &EventKind) -> Result<(), RunOutcome> {
+        let Some(scope) = self.event_scope else {
+            return Ok(());
+        };
+        let result = match kind {
+            EventKind::ModelStarted { .. }
+            | EventKind::ToolStarted { .. }
+            | EventKind::CompactionStarted => self
+                .operation_events
+                .last_mut()
+                .expect("admitted operation")
+                .consume(),
+            EventKind::ModelFinished { .. }
+            | EventKind::ToolFinished { .. }
+            | EventKind::CompactionFinished { .. } => self
+                .operation_events
+                .pop()
+                .expect("admitted operation")
+                .consume(),
+            _ => scope.ledger.admit_event(&scope.agent_id),
+        };
+        result.map_err(|error| self.event_failure(error))
+    }
+
     fn can_start_operation(&self) -> bool {
         self.seq < self.max_events.saturating_sub(2 + self.extra_closing)
     }
@@ -1876,6 +1945,7 @@ impl Lifecycle<'_> {
                 limit: LimitKind::Events,
             });
         }
+        self.admit_event(&kind)?;
         let event = self.event(kind, context, parent, time);
         self.sink.emit(&event).map_err(|error| match error {
             SinkError::Capacity => RunOutcome::LimitExceeded {

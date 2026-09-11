@@ -47,6 +47,7 @@ struct State {
     closed: bool,
     closed_token: crate::CancellationToken,
     resources: resources::ResourceState,
+    events: events::EventState,
     mutation: Arc<tokio::sync::Mutex<()>>,
 }
 /// One owned admission. Settle after the provider operation is closed/joined.
@@ -72,6 +73,9 @@ fn increment(current: u64, cap: Option<u32>, kind: LimitKind) -> Result<u64, Adm
 }
 impl RootLedger {
     pub fn new(root: &AgentRef, limits: RunLimits) -> Result<Self, AdmissionError> {
+        if limits.max_events == 0 {
+            return Err(AdmissionError::InvalidCeiling);
+        }
         if root.depth() != 0 || root.parent_agent_id().is_some() {
             return Err(AdmissionError::UnknownAgent);
         }
@@ -101,6 +105,7 @@ impl RootLedger {
             closed: false,
             closed_token: crate::CancellationToken::new(),
             resources: resources::ResourceState::default(),
+            events: events::EventState::new(root.agent_id()),
             mutation: Arc::new(tokio::sync::Mutex::new(())),
         }))))
     }
@@ -363,3 +368,5 @@ impl Drop for ModelReservation {
 mod tests;
 
 pub mod resources;
+
+pub mod events;

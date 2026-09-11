@@ -633,3 +633,181 @@ async fn child_context_growth_stays_inside_its_existing_reservation_without_doub
     assert_eq!(ledger.resources(), Resources::default());
     sdk.shutdown().unwrap();
 }
+
+#[tokio::test]
+async fn shared_native_event_limit_keeps_both_model_and_run_closings() {
+    let sdk = SdkTracerProvider::builder().build();
+    let root = AgentRef::root("root".into(), "session".into());
+    let child = root.temporary_child().unwrap();
+    let mut spec = RunSpec::new(
+        "bounded events",
+        std::env::temp_dir().canonicalize().unwrap(),
+        "fixture",
+    );
+    spec.limits.max_events = 8;
+    let ledger = RootLedger::new(&root, spec.limits.clone()).unwrap();
+    ledger.register_child(&child, spec.limits.clone()).unwrap();
+    let runtime = Runtime::new(telemetry::tracer(&sdk))
+        .with_root_ledger(ledger.clone(), root.agent_id().into())
+        .unwrap();
+    let other = Runtime::new(telemetry::tracer(&sdk))
+        .with_root_ledger(ledger.clone(), child.agent_id().into())
+        .unwrap();
+    let provider = HeldProvider {
+        root_deadline: ledger.deadline(),
+        entered: Default::default(),
+        release: Default::default(),
+        calls: AtomicUsize::new(0),
+    };
+    let mut root_events = Vec::new();
+    let mut child_events = Vec::new();
+    let first = async {
+        runtime
+            .run(&spec, &provider, &mut |event: &RunEvent| {
+                root_events.push(event.clone());
+                Ok(())
+            })
+            .await
+            .unwrap()
+    };
+    let second = async {
+        provider.entered.notified().await;
+        let result = other
+            .run(
+                &spec,
+                &ScriptedProvider::text(["cannot fit"]),
+                &mut |event: &RunEvent| {
+                    child_events.push(event.clone());
+                    Ok(())
+                },
+            )
+            .await
+            .unwrap();
+        provider.release.notify_one();
+        result
+    };
+    let (first, second) = tokio::join!(first, second);
+    assert_eq!(
+        first,
+        RunOutcome::LimitExceeded {
+            limit: LimitKind::Events
+        }
+    );
+    assert_eq!(second, first);
+    assert_eq!(root_events.len() + child_events.len(), 8);
+    for events in [&root_events, &child_events] {
+        assert!(matches!(events[0].kind, EventKind::RunStarted));
+        assert!(matches!(events[1].kind, EventKind::ModelStarted { .. }));
+        assert!(matches!(events[2].kind, EventKind::ModelFinished { .. }));
+        assert_eq!(events[1].span_id, events[2].span_id);
+        assert!(matches!(&events[3].kind, EventKind::RunFinished {outcome} if outcome == &first));
+    }
+    assert_eq!(
+        ledger.event_counts(),
+        children::ledger::events::EventCounts {
+            used: 8,
+            reserved: 0
+        }
+    );
+    assert_eq!(ledger.total().model_calls, 2);
+    sdk.shutdown().unwrap();
+}
+
+#[tokio::test]
+async fn event_opening_denial_creates_no_model_span_or_provider_charge() {
+    let exporter = InMemorySpanExporter::default();
+    let sdk = SdkTracerProvider::builder()
+        .with_simple_exporter(exporter.clone())
+        .build();
+    let root = AgentRef::root("root".into(), "session".into());
+    let child = root.temporary_child().unwrap();
+    let mut spec = RunSpec::new(
+        "no opening capacity",
+        std::env::temp_dir().canonicalize().unwrap(),
+        "fixture",
+    );
+    spec.limits.max_events = 8;
+    let ledger = RootLedger::new(&root, spec.limits.clone()).unwrap();
+    ledger.register_child(&child, spec.limits.clone()).unwrap();
+    let mut child_terminal = ledger.claim_run_event(child.agent_id()).unwrap();
+    for _ in 0..4 {
+        ledger.admit_event(child.agent_id()).unwrap();
+    }
+    child_terminal.consume().unwrap();
+    let mut events = Vec::new();
+    let outcome = Runtime::new(telemetry::tracer(&sdk))
+        .with_root_ledger(ledger.clone(), root.agent_id().into())
+        .unwrap()
+        .run(
+            &spec,
+            &ScriptedProvider::text(["must not dispatch"]),
+            &mut |event: &RunEvent| {
+                events.push(event.clone());
+                Ok(())
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        outcome,
+        RunOutcome::LimitExceeded {
+            limit: LimitKind::Events
+        }
+    );
+    assert_eq!(events.len(), 2);
+    assert_eq!(ledger.total().model_calls, 0);
+    assert_eq!(
+        ledger.event_counts(),
+        children::ledger::events::EventCounts {
+            used: 7,
+            reserved: 0
+        }
+    );
+    sdk.force_flush().unwrap();
+    let spans = exporter.get_finished_spans().unwrap();
+    assert_eq!(spans.len(), 1);
+    assert_eq!(spans[0].name, "invoke_agent pablo");
+    sdk.shutdown().unwrap();
+}
+
+#[tokio::test]
+async fn closed_event_admission_after_root_deadline_preserves_timed_out_terminal() {
+    let sdk = SdkTracerProvider::builder().build();
+    let root = AgentRef::root("root".into(), "session".into());
+    let mut spec = RunSpec::new(
+        "expired",
+        std::env::temp_dir().canonicalize().unwrap(),
+        "fixture",
+    );
+    spec.limits.max_run_duration_ms = 1;
+    let ledger = RootLedger::new(&root, spec.limits.clone()).unwrap();
+    tokio::time::sleep_until(ledger.deadline()).await;
+    ledger.close_admission();
+    let mut terminal = None;
+    let outcome = Runtime::new(telemetry::tracer(&sdk))
+        .with_root_ledger(ledger.clone(), root.agent_id().into())
+        .unwrap()
+        .run(
+            &spec,
+            &ScriptedProvider::text(["must not dispatch"]),
+            &mut |event: &RunEvent| {
+                if let EventKind::RunFinished { outcome } = &event.kind {
+                    terminal = Some(outcome.clone());
+                }
+                Ok(())
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(outcome, RunOutcome::TimedOut);
+    assert_eq!(terminal, Some(outcome));
+    assert_eq!(ledger.total().model_calls, 0);
+    assert_eq!(
+        ledger.event_counts(),
+        children::ledger::events::EventCounts {
+            used: 1,
+            reserved: 0
+        }
+    );
+    sdk.shutdown().unwrap();
+}

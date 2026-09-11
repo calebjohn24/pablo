@@ -219,6 +219,7 @@ where
         if lifecycle.max_events.saturating_sub(lifecycle.seq) < 5 {
             return Err(limit(LimitKind::Events));
         }
+        lifecycle.begin_operation()?;
         let split = select_split(execution, state);
         let before = context_bytes(execution, &state.history, &state.continuations);
         let estimate = state.calibration[state.selected].estimate(estimate_bytes(
@@ -652,6 +653,9 @@ mod tests {
                 }
             };
             let mut lifecycle = Lifecycle {
+                event_scope: None,
+                run_event: None,
+                operation_events: Vec::new(),
                 cancellation: &token,
                 shared_deadline: None,
                 agent: None,

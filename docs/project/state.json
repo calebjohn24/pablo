@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T11:08:00.725Z",
+  "updated_at": "2026-09-11T11:26:30.235Z",
   "active_checkpoint": "C3.22",
   "next_checkpoint": null,
-  "next_action": "Continue C3.22 with root-factory MCP capacity reserved before capability setup, atomic cumulative event/trace reservations with terminal space, and original native child event multiplexing with one root sequence and a bounded consumer. Root retained context now reserves encoded history/stream growth atomically, compaction covers its request and reduces accepted replacement, and children meter within their existing full-context lease without double charge. Wire configured CLI/ACP RootOwner factories and enable children only after admission is complete; run full A02 and deployment-enabled child performance before completing C3.22 or merging its PR. Preserve one active FIFO child, causal attribution, cancellation/native outcome fidelity, joined root settlement/aggregate accounting, handles/results outside compaction, GLM defaults and unlimited filesystem work. Final Node full run reproduced F03 once (264 passed, one failed); focused 18 passed, but C3.33 remains open. C3.23 follows C3.22; mixed timing/RSS/size remains C3.39.",
-  "latest_log_entry": "LOG-0116",
+  "next_action": "Continue C3.22 with shared trace-byte reservations including terminal projection space, original native child multiplexing with one root delivery sequence and bounded consumer, and root-factory MCP reservation before capability setup. Native event counts now reserve the root terminal at ledger creation, each executed agent terminal before its run span, and operation start/finish pairs before spans/effects; closings survive admission shutdown and used events are not refunded after sink failure. Keep event capacity separate from multiplex delivery order and integrate trace admission atomically. Wire configured CLI/ACP RootOwner factories and enable children only after admission is complete, then run full A02 and deployment-enabled child performance before completing C3.22 or merging. Preserve one active FIFO child, shared context/accounting, causal attribution, cancellation/native outcome fidelity, joined root settlement and handles/results outside compaction. GLM defaults and unlimited filesystem work remain; C3.23 follows C3.22, prior F03 remains C3.33 despite current Node pass, and mixed measurements remain C3.39.",
+  "latest_log_entry": "LOG-0117",
   "checkpoints": [
     {
       "id": "C1.0",

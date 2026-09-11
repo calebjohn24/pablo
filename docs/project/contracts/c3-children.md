@@ -95,6 +95,13 @@ and attested token/cost upper bounds cannot be independent reads of remaining
 allowance. A multi-resource admission succeeds wholly or changes nothing. Never
 hold its lock during provider, process, filesystem, event sink or ACP work.
 
+Native event counts reserve the root terminal when its ledger is created. Each
+executed agent claims a terminal slot before its run span; model/tool/compaction
+operations reserve start and finish together before opening. Already reserved
+closings remain deliverable after admission closes. Failed delivery attempts stay
+spent; only unused reservation slots are released. Root multiplex delivery order
+is separate from this capacity counter.
+
 Retained model context uses the existing encoded instructions/history/tool catalog
 measure, including opaque continuation bytes. Roots reserve retained context and
 stream growth atomically; children meter growth within their full admitted context
