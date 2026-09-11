@@ -1,4 +1,70 @@
 use super::*;
+#[test]
+fn atomic_child_registration_and_active_capacity_have_one_winner_without_partial_records() {
+    let root = AgentRef::root("root".into(), "session".into());
+    let ledger = RootLedger::new(&root, RunLimits::default()).unwrap();
+    let children = [
+        root.temporary_child().unwrap(),
+        root.temporary_child().unwrap(),
+    ];
+    let barrier = std::sync::Barrier::new(2);
+    let results = std::thread::scope(|scope| {
+        let handles = children
+            .iter()
+            .map(|child| {
+                let ledger = &ledger;
+                let barrier = &barrier;
+                scope.spawn(move || {
+                    barrier.wait();
+                    ledger.admit_child(
+                        child,
+                        RunLimits::default(),
+                        resources::Resources {
+                            active_children: 1,
+                            ..Default::default()
+                        },
+                    )
+                })
+            })
+            .collect::<Vec<_>>();
+        handles
+            .into_iter()
+            .map(|handle| handle.join().unwrap())
+            .collect::<Vec<_>>()
+    });
+    assert_eq!(results.iter().filter(|result| result.is_ok()).count(), 1);
+    let loser = results.iter().position(Result::is_err).unwrap();
+    assert!(ledger.agent(children[loser].agent_id()).is_none());
+    assert_eq!(ledger.resources().active_children, 1);
+    assert_eq!(ledger.total().model_calls, 0);
+    drop(results);
+    assert_eq!(ledger.resources().active_children, 0);
+    let lease = ledger
+        .admit_child(
+            &children[loser],
+            RunLimits::default(),
+            resources::Resources {
+                active_children: 1,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    drop(lease);
+    let closed_child = root.temporary_child().unwrap();
+    ledger.close_admission();
+    assert!(matches!(
+        ledger.admit_child(
+            &closed_child,
+            RunLimits::default(),
+            resources::Resources {
+                active_children: 1,
+                ..Default::default()
+            }
+        ),
+        Err(AdmissionError::Closed)
+    ));
+    assert!(ledger.agent(closed_child.agent_id()).is_none());
+}
 fn setup(calls: u32, tokens: u64, cost: u64) -> (AgentRef, AgentRef, RootLedger) {
     let root = AgentRef::root("run".into(), "session".into());
     let child = root.temporary_child().unwrap();

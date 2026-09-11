@@ -110,6 +110,13 @@ impl RootLedger {
         limits: RunLimits,
     ) -> Result<(), AdmissionError> {
         let mut s = self.0.lock().unwrap();
+        Self::register_child_locked(&mut s, child, limits)
+    }
+    fn register_child_locked(
+        s: &mut State,
+        child: &AgentRef,
+        limits: RunLimits,
+    ) -> Result<(), AdmissionError> {
         if s.closed {
             return Err(AdmissionError::Closed);
         }
@@ -135,6 +142,30 @@ impl RootLedger {
             },
         );
         Ok(())
+    }
+    /// Atomically register an authority-admitted child and its initial capacity.
+    /// A rejected reservation consumes neither a child identity nor total slots.
+    pub fn admit_child(
+        &self,
+        child: &AgentRef,
+        limits: RunLimits,
+        capacity: resources::Resources,
+    ) -> Result<resources::ResourceLease, AdmissionError> {
+        let mut s = self.0.lock().unwrap();
+        if s.closed {
+            return Err(AdmissionError::Closed);
+        }
+        if tokio::time::Instant::now() >= s.deadline {
+            return Err(AdmissionError::TimedOut);
+        }
+        Self::register_child_locked(&mut s, child, limits)?;
+        match resources::reserve_locked(self, &mut s, child.agent_id(), capacity) {
+            Ok(lease) => Ok(lease),
+            Err(error) => {
+                s.agents.remove(child.agent_id());
+                Err(error)
+            }
+        }
     }
     pub fn reserve_model(
         &self,

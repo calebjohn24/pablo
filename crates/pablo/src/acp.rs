@@ -47,6 +47,8 @@ struct Extensions {
 
 #[derive(Default)]
 struct State {
+    closed: bool,
+    admitted_child: Option<in_memory::AdmittedChild>,
     initialized: bool,
     extensions: Extensions,
     session: Option<(wire::SessionId, std::path::PathBuf)>,
@@ -335,7 +337,7 @@ async fn serve_streams(
     Ok(ExitCode::SUCCESS)
 }
 
-fn prompt_text(blocks: &[wire::ContentBlock]) -> Result<String, Error> {
+fn prompt_text(blocks: &[wire::ContentBlock], max_bytes: usize) -> Result<String, Error> {
     let mut input = String::new();
     for block in blocks {
         let text = match block {
@@ -347,8 +349,8 @@ fn prompt_text(blocks: &[wire::ContentBlock]) -> Result<String, Error> {
             }
             _ => return Err(invalid("this agent supports text and resource links only")),
         };
-        if input.len() + text.len() > pablo_core::RunLimits::default().max_input_bytes - 4096 {
-            return Err(invalid("prompt exceeds 1020 KiB"));
+        if input.len().saturating_add(text.len()) > max_bytes {
+            return Err(invalid("prompt exceeds admitted byte bound"));
         }
         input.push_str(&text);
     }

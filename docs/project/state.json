@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T08:42:17.157Z",
+  "updated_at": "2026-09-11T09:25:59.779Z",
   "active_checkpoint": "C3.22",
   "next_checkpoint": null,
-  "next_action": "Continue C3.22 by connecting PreparedRun::prepare_child to one supervised child through shared typed ACP. Factories must use PreparedRun::model_route/model_profile and the scoped cache identity; preserve narrowed tools, approved child-only Skills and fresh MCP catalog checks. Add atomic event/trace reservations, attach process/MCP/context capacity to owned work, expose immediate handles plus inspect/wait/stop, attribute agent events/spans and join every child before root settlement with aggregate accounting. Keep delegation disabled until A02, then finish child performance and checkpoint review before merging. Preserve GLM defaults, unlimited filesystem work, compaction details and F03/C3.39 follow-ups.",
-  "latest_log_entry": "LOG-0110",
+  "next_action": "Continue C3.22 with the root supervisor around the bound typed ACP dispatcher: immediate handles, inspect/wait/stop, queue promotion and terminal joining. Queued promotion must reuse admitted registration/lease. Attach process/MCP/context capacity, atomic event/trace reservations, immutable agent attribution, multiplexed root updates and aggregate terminal accounting. Keep ownership/handles outside compacted history and await close before root settlement. Delegation remains disabled until A02 and actual child performance pass; then review and merge. Preserve GLM defaults, unlimited filesystem work, compaction details and C3.33/C3.39 follow-ups.",
+  "latest_log_entry": "LOG-0111",
   "checkpoints": [
     {
       "id": "C1.0",

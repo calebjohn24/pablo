@@ -7,6 +7,9 @@ pub(super) fn initialize(
     request: wire::InitializeRequest,
 ) -> Result<wire::InitializeResponse, Error> {
     let mut state = state.lock().unwrap();
+    if state.closed {
+        return Err(invalid("connection closed"));
+    }
     if state.initialized {
         return Err(invalid("already initialized"));
     }
@@ -88,8 +91,14 @@ pub(super) fn new_session(
     request: wire::NewSessionRequest,
 ) -> Result<wire::NewSessionResponse, Error> {
     let mut state = state.lock().unwrap();
+    if state.closed {
+        return Err(invalid("connection closed"));
+    }
     if !state.initialized {
         return Err(invalid("initialize first"));
+    }
+    if state.admitted_child.is_some() && state.session.is_some() {
+        return Err(invalid("one session per temporary child"));
     }
     if state.prompt_active || (state.session.is_some() && !state.prompted) {
         return Err(invalid(
@@ -100,6 +109,9 @@ pub(super) fn new_session(
         Ok(mcp) => mcp,
         Err(message) => return Err(invalid(message)),
     };
+    if state.admitted_child.is_some() && !mcp.is_empty() {
+        return Err(invalid("child MCP selection is already admitted"));
+    }
     if !mcp.is_empty() {
         let admitted = options
             .configured()
@@ -123,10 +135,16 @@ pub(super) fn new_session(
         return Err(invalid("cwd must be a directory"));
     }
     let id = wire::SessionId::new(uuid::Uuid::new_v4().to_string());
-    if let Err(message) =
-        options.prepare_run(Some(String::new()), Some(cwd.clone()), Some(id.to_string()))
-    {
-        return Err(Error::invalid_params().data(message));
+    if let Some(child) = &state.admitted_child {
+        if cwd != child.prepared.spec().workspace {
+            return Err(invalid("child workspace is already admitted"));
+        }
+    } else {
+        if let Err(message) =
+            options.prepare_run(Some(String::new()), Some(cwd.clone()), Some(id.to_string()))
+        {
+            return Err(Error::invalid_params().data(message));
+        }
     }
     state.mcp = mcp;
     state.session = Some((id.clone(), cwd));
@@ -165,9 +183,16 @@ pub(super) fn start_prompt(
     cancellation: &CancellationToken,
     request: wire::PromptRequest,
 ) -> Result<PendingPrompt, Error> {
-    let input = prompt_text(&request.prompt)?;
-    let (cwd, extensions, mcp) = {
+    let max_input = state.lock().unwrap().admitted_child.as_ref().map_or(
+        pablo_core::RunLimits::default().max_input_bytes - 4096,
+        |child| child.prepared.spec().limits.max_input_bytes,
+    );
+    let input = prompt_text(&request.prompt, max_input)?;
+    let (cwd, extensions, mcp, admitted) = {
         let mut s = state.lock().unwrap();
+        if s.closed || cancellation.is_cancelled() {
+            return Err(invalid("connection closed"));
+        }
         let Some((id, cwd)) = &s.session else {
             return Err(invalid("create a session first"));
         };
@@ -177,18 +202,35 @@ pub(super) fn start_prompt(
         if s.prompted {
             return Err(invalid("one prompt per session; create a new session"));
         }
+        let admitted = if let Some(child) = &s.admitted_child {
+            if input != child.prepared.spec().input {
+                return Err(invalid("child input is already admitted"));
+            }
+            Some((
+                child.prepared.clone(),
+                child.accounting.clone(),
+                child.root_cancellation.clone(),
+                child.parent.clone(),
+            ))
+        } else {
+            None
+        };
         let cwd = cwd.clone();
         s.prompted = true;
-        (cwd, s.extensions, s.mcp.clone())
+        (cwd, s.extensions, s.mcp.clone(), admitted)
     };
-    let mut prepared = match options.prepare_run(
-        Some(input.clone()),
-        Some(cwd.clone()),
-        Some(request.session_id.to_string()),
-    ) {
-        Ok(prepared) => prepared,
-        Err(message) => {
-            return Err(Error::invalid_params().data(message));
+    let mut prepared = if let Some((prepared, ..)) = &admitted {
+        Some(prepared.clone())
+    } else {
+        match options.prepare_run(
+            Some(input.clone()),
+            Some(cwd.clone()),
+            Some(request.session_id.to_string()),
+        ) {
+            Ok(prepared) => prepared,
+            Err(message) => {
+                return Err(Error::invalid_params().data(message));
+            }
         }
     };
     if let Some(prepared) = &mut prepared
@@ -210,7 +252,9 @@ pub(super) fn start_prompt(
     spec.input = input;
     spec.session_id = Some(request.session_id.to_string());
     let incoming = request.meta.as_ref().and_then(|m| m.get(EXTENSION));
-    let parent = if let Some(prepared) = prepared.as_ref().filter(|_| extensions.base) {
+    let parent = if let Some((_, _, _, parent)) = &admitted {
+        parent.clone()
+    } else if let Some(prepared) = prepared.as_ref().filter(|_| extensions.base) {
         crate::otel::parent_explicit(
             incoming
                 .and_then(|m| m.get("traceparent"))
@@ -238,12 +282,22 @@ pub(super) fn start_prompt(
     };
     let capture_content = spec.trace.capture_content;
     let (tx, rx) = async_channel::bounded(QUEUE_EVENTS);
-    let cancel = cancellation.child_token();
+    let cancel = admitted.as_ref().map_or_else(
+        || cancellation.child_token(),
+        |(_, _, root, _)| root.child_token(),
+    );
     let (completed, outcome) = tokio::sync::oneshot::channel();
     {
         let mut s = state.lock().unwrap();
+        if s.closed || cancellation.is_cancelled() {
+            return Err(invalid("connection closed"));
+        }
         if s.worker.is_none() {
-            match Worker::start(options.clone()) {
+            let lease = s
+                .admitted_child
+                .as_ref()
+                .and_then(|child| child.lease.clone());
+            match Worker::start(options.clone(), lease) {
                 Ok(worker) => s.worker = Some(worker),
                 Err(_) => {
                     return Err(Error::internal_error().data("cannot start runtime worker"));
@@ -251,6 +305,7 @@ pub(super) fn start_prompt(
             }
         }
         let task = Task {
+            accounting: admitted.map(|(_, scope, _, _)| scope),
             prepared,
             spec,
             parent,

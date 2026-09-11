@@ -131,32 +131,42 @@ impl RootLedger {
         requested: Resources,
     ) -> Result<ResourceLease, AdmissionError> {
         let mut s = self.0.lock().unwrap();
-        if requested == Resources::default() || s.resources.entries.len() >= 128 {
-            return Err(AdmissionError::Capacity);
-        }
-        let next = validate(&s, agent_id, Resources::default(), requested)?;
-        let id = s
-            .resources
-            .next
-            .checked_add(1)
-            .ok_or(AdmissionError::Capacity)?;
-        s.resources.next = id;
-        s.resources.used = next;
-        s.resources.entries.insert(
-            id,
-            Entry {
-                agent_id: agent_id.into(),
-                resources: requested,
-            },
-        );
-        Ok(ResourceLease {
-            ledger: self.clone(),
-            id,
-        })
+        reserve_locked(self, &mut s, agent_id, requested)
     }
     pub fn resources(&self) -> Resources {
         self.0.lock().unwrap().resources.used
     }
+}
+pub(super) fn reserve_locked(
+    ledger: &RootLedger,
+    s: &mut State,
+    agent_id: &str,
+    requested: Resources,
+) -> Result<ResourceLease, AdmissionError> {
+    if requested == Resources::default() || s.resources.entries.len() >= 128 {
+        return Err(AdmissionError::Capacity);
+    }
+    let next = validate(s, agent_id, Resources::default(), requested)?;
+    let id = s
+        .resources
+        .next
+        .checked_add(1)
+        .ok_or(AdmissionError::Capacity)?;
+    s.resources.next = id;
+    s.resources.used = next;
+    s.resources.entries.insert(
+        id,
+        Entry {
+            agent_id: agent_id.into(),
+            resources: requested,
+        },
+    );
+    Ok(ResourceLease {
+        ledger: ledger.clone(),
+        id,
+    })
+}
+impl RootLedger {
     /// Serialize only native filesystem mutations. Shell/external writes still
     /// require host isolation. The caller retains this guard through joined I/O.
     pub async fn lock_mutation(

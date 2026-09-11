@@ -38,6 +38,10 @@ impl std::fmt::Debug for PreparedRun {
     }
 }
 impl PreparedRun {
+    /// True only for a scope derived through parent child admission.
+    pub fn is_child(&self) -> bool {
+        self.child_scope.is_some()
+    }
     pub fn has_skills(&self) -> bool {
         !self.skill_names().is_empty()
     }

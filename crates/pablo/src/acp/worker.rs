@@ -12,12 +12,18 @@ use std::{
 use tokio::sync::oneshot;
 
 pub(super) struct Task {
+    pub accounting: Option<AccountingScope>,
     pub prepared: Option<pablo_core::deployment::PreparedRun>,
     pub spec: RunSpec,
     pub parent: opentelemetry::Context,
     pub cancel: CancellationToken,
     pub events: EventSender,
     pub completed: oneshot::Sender<Result<RunOutcome, String>>,
+}
+#[derive(Clone)]
+pub(super) struct AccountingScope {
+    pub ledger: pablo_core::children::ledger::RootLedger,
+    pub agent_id: String,
 }
 
 /// Close the per-task stream even if execution unwinds before sending an outcome.
@@ -45,11 +51,32 @@ pub(super) struct Worker {
 }
 
 impl Worker {
-    pub fn start(options: Arc<Options>) -> Result<Self, String> {
+    #[cfg(test)]
+    pub(super) fn held_for_test(
+        lease: Arc<pablo_core::children::ledger::resources::ResourceLease>,
+        release: std::sync::mpsc::Receiver<()>,
+    ) -> Self {
+        let (commands, _rx) = async_channel::bounded(1);
+        let thread = std::thread::spawn(move || {
+            let _lease = lease;
+            release
+                .recv()
+                .map_err(|_| "test release closed".to_owned())?;
+            Ok(())
+        });
+        Self { commands, thread }
+    }
+    pub fn start(
+        options: Arc<Options>,
+        lease: Option<Arc<pablo_core::children::ledger::resources::ResourceLease>>,
+    ) -> Result<Self, String> {
         let (commands, rx) = async_channel::bounded(1);
         let thread = std::thread::Builder::new()
             .name("pablo-run".into())
-            .spawn(move || run(options, rx))
+            .spawn(move || {
+                let _lease = lease;
+                run(options, rx)
+            })
             .map_err(|_| "cannot start runtime worker")?;
         Ok(Self { commands, thread })
     }
@@ -249,6 +276,11 @@ async fn execute(
     if let Some(prepared) = &task.prepared {
         runtime = runtime.with_deployment(prepared.deployment());
     }
+    if let Some(scope) = &task.accounting {
+        runtime = runtime
+            .with_root_ledger(scope.ledger.clone(), scope.agent_id.clone())
+            .map_err(|_| "child accounting scope invalid")?;
+    }
     let mut slow_reported = false;
     let mut sink = |event: &RunEvent| -> Result<(), SinkError> {
         if let Some(trace) = trace.as_mut() {
@@ -277,6 +309,10 @@ async fn execute(
                 spec.limits.max_run_duration_ms,
             ))
             .ok_or("invalid run duration")?;
+        let deadline = task
+            .accounting
+            .as_ref()
+            .map_or(deadline, |scope| deadline.min(scope.ledger.deadline()));
         Some(
             options
                 .deployment
