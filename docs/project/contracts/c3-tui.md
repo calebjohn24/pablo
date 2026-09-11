@@ -83,4 +83,42 @@ bounded best-effort write if the device stops accepting output. The macOS fixtur
 keeps its terminal owner alive and drains output during process exit. It checks
 attributes after canonical handoff, allowing the kernel-owned PENDIN retype state
 to clear; no configured flags are masked out. SIGKILL cannot run cleanup. Full
-platform-specific restoration/slow-output claims require C3.30 and native gates.
+Native restoration/slow-output evidence is recorded per platform; the T02 procedure below defines the required checks for remaining native gates.
+
+## Reproducible T02 native checks
+
+`node --test tests/tui.test.ts` runs redirected selection/framing checks, the T01
+smoke and eleven T02 lifecycle cases against `target/debug/pablo`. Build first
+with `cargo build --locked -p pablo`. Python is the existing pinned A2A fixture
+interpreter at `.pablo/a2a-fixture-venv/bin/python`; absent Python or Windows skips
+these PTY cases and cannot count as acceptance.
+
+For release checks, build with `cargo build --release --locked -p pablo --bin
+pablo --example measure`, then run the fixture with that binary and each case:
+
+```
+.pablo/a2a-fixture-venv/bin/python tests/fixtures/tui/lifecycle.py target/release/pablo success
+```
+
+Cases: `success`, `model_cancel`, `model_eof`, `input_eof`, `tool_cancel`,
+`provider_error`, `resize`, `slow_output`, `sigterm`, `local_child`, `remote_child`.
+Each owns a real PTY and isolated synthetic provider, inspects exactly one native
+root terminal result, waits for Pablo to exit, and checks the original terminal
+attributes plus cursor/paste/alternate-screen restoration. Child cases also check
+one child terminal result before root settlement; remote cancellation must reach
+the pinned SDK peer exactly once. Shell cancellation checks its recorded owned
+process no longer exists. Fixtures use no live credentials.
+
+`model_eof` exercises the Ctrl-D control; `input_eof` forces an actual zero-byte
+terminal read using VMIN=VTIME=0 and checks restoration to the attributes saved
+before Pablo started. `slow_output` withholds master reads until the native trace
+records cancellation caused by the frame-write deadline, then resumes draining
+through restoration. This does not promise control sequences can reach a
+permanently disconnected terminal. `provider_error` injects malformed SSE JSON.
+
+On macOS, the owner remains alive while the fixture performs a canonical read to
+clear kernel-managed PENDIN state before comparing every termios attribute. No
+flags are masked. This is native macOS arm64 proof; each remaining platform gate
+must run its native PTY cases and record OS-specific behavior. Full grapheme-width
+layout and restoration after SIGKILL or terminal destruction remain outside the
+contract.

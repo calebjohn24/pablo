@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T20:48:33.091Z",
+  "updated_at": "2026-09-11T20:59:01.486Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.30",
-  "next_action": "Start C3.30 on feat/c3-tui-pty-proof: mark active/in_progress and prove T02 PTY resize, slow output, local/remote child status, model/tool/child cancellation, exactly one native terminal result, joined cleanup and success/cancel/EOF/error restoration. Preserve concurrent Node observations and saved performance baselines. C3.29 PR #32 merged with exact verified source parity.",
-  "latest_log_entry": "LOG-0152",
+  "next_checkpoint": "C3.31",
+  "next_action": "Merge verified C3.30 T02, then start C3.31 offline doctor and focused diagnostics. Native macOS arm64 PTY proof passes; repeat platform-specific gates later. Preserve byte-identical release baseline, measured controls and prior concurrent Node stress observations.",
+  "latest_log_entry": "LOG-0153",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -643,9 +643,11 @@
         "C3.28",
         "C3.29"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0153"
+      ]
     },
     {
       "id": "C3.31",

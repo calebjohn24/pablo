@@ -19,3 +19,18 @@ test('T01 PTY composer streams independent tasks and cancellation and restores m
  assert.deepEqual(JSON.parse(stdout),{surface:'tui',tasks:3,cancelledThroughRunToken:true,freshTaskContext:true,streamed:true,oscNeutralized:true,terminalRestored:true});
  }
 });
+
+for (const scenario of ['success', 'model_cancel', 'model_eof', 'input_eof', 'tool_cancel', 'provider_error', 'resize', 'slow_output', 'sigterm', 'local_child', 'remote_child']) {
+ test(`T02 PTY ${scenario} preserves native outcome and restores the terminal`, {timeout: 25000, skip: process.platform === 'win32' || !existsSync(python)}, async () => {
+  const {stdout} = await exec(python, [join(root, 'tests/fixtures/tui/lifecycle.py'), binary, scenario], {env: cleanEnv(), timeout: 20000});
+  const receipt = JSON.parse(stdout);
+  assert.equal(receipt.case, scenario);
+  assert.equal(receipt.exactlyOneTerminal, true);
+  assert.equal(receipt.terminalRestored, true);
+  assert.equal(receipt.pabloExited, true);
+  assert.equal(receipt.ownedShellJoined, scenario === 'tool_cancel');
+  assert.equal(receipt.childJoined, ['local_child', 'remote_child'].includes(scenario));
+  assert.equal(receipt.nativeTerminal, ['success', 'resize'].includes(scenario) ? 'completed' : scenario === 'provider_error' ? 'failed' : 'cancelled');
+  assert.equal(receipt.exitCode, ['success', 'resize'].includes(scenario) ? 0 : scenario === 'sigterm' ? 143 : ['provider_error', 'slow_output'].includes(scenario) ? 1 : 130);
+ });
+}
