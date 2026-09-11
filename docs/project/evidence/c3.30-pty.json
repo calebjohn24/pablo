@@ -1,0 +1,119 @@
+{
+  "binary_sha256": "d34cd6aebd4f3efe8eb693c936de9df6f1652b17d17ba3249072a4d5152962dc",
+  "cases": [
+    {
+      "childJoined": false,
+      "case": "success",
+      "nativeTerminal": "completed",
+      "exactlyOneTerminal": true,
+      "terminalRestored": true,
+      "pabloExited": true,
+      "ownedShellJoined": false,
+      "exitCode": 0
+    },
+    {
+      "childJoined": false,
+      "case": "model_cancel",
+      "nativeTerminal": "cancelled",
+      "exactlyOneTerminal": true,
+      "terminalRestored": true,
+      "pabloExited": true,
+      "ownedShellJoined": false,
+      "exitCode": 130
+    },
+    {
+      "childJoined": false,
+      "case": "model_eof",
+      "nativeTerminal": "cancelled",
+      "exactlyOneTerminal": true,
+      "terminalRestored": true,
+      "pabloExited": true,
+      "ownedShellJoined": false,
+      "exitCode": 130
+    },
+    {
+      "childJoined": false,
+      "case": "input_eof",
+      "nativeTerminal": "cancelled",
+      "exactlyOneTerminal": true,
+      "terminalRestored": true,
+      "pabloExited": true,
+      "ownedShellJoined": false,
+      "exitCode": 130
+    },
+    {
+      "childJoined": false,
+      "case": "tool_cancel",
+      "nativeTerminal": "cancelled",
+      "exactlyOneTerminal": true,
+      "terminalRestored": true,
+      "pabloExited": true,
+      "ownedShellJoined": true,
+      "exitCode": 130
+    },
+    {
+      "childJoined": false,
+      "case": "provider_error",
+      "nativeTerminal": "failed",
+      "exactlyOneTerminal": true,
+      "terminalRestored": true,
+      "pabloExited": true,
+      "ownedShellJoined": false,
+      "exitCode": 1
+    },
+    {
+      "childJoined": false,
+      "case": "resize",
+      "nativeTerminal": "completed",
+      "exactlyOneTerminal": true,
+      "terminalRestored": true,
+      "pabloExited": true,
+      "ownedShellJoined": false,
+      "exitCode": 0
+    },
+    {
+      "childJoined": false,
+      "case": "slow_output",
+      "nativeTerminal": "cancelled",
+      "exactlyOneTerminal": true,
+      "terminalRestored": true,
+      "pabloExited": true,
+      "ownedShellJoined": false,
+      "exitCode": 1
+    },
+    {
+      "childJoined": false,
+      "case": "sigterm",
+      "nativeTerminal": "cancelled",
+      "exactlyOneTerminal": true,
+      "terminalRestored": true,
+      "pabloExited": true,
+      "ownedShellJoined": false,
+      "exitCode": 143
+    },
+    {
+      "childJoined": true,
+      "case": "local_child",
+      "nativeTerminal": "cancelled",
+      "exactlyOneTerminal": true,
+      "terminalRestored": true,
+      "pabloExited": true,
+      "ownedShellJoined": false,
+      "exitCode": 130
+    },
+    {
+      "childJoined": true,
+      "case": "remote_child",
+      "nativeTerminal": "cancelled",
+      "exactlyOneTerminal": true,
+      "terminalRestored": true,
+      "pabloExited": true,
+      "ownedShellJoined": false,
+      "exitCode": 130
+    }
+  ],
+  "checkpoint": "C3.30",
+  "timestamp": "2026-09-11T20:59:01.486Z",
+  "platform": "darwin/arm64",
+  "source_sha256": "b8105b33418d0e0095ea5d644830d4cf3bc4f5808869140a634d3d4d2e641a06"
+}
