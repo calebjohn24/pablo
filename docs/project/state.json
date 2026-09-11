@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T13:23:07.752Z",
+  "updated_at": "2026-09-11T13:24:43.637Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.23",
-  "next_action": "Merge the exact verified C3.22 PR head, synchronize main and confirm tree parity, then activate C3.23 for two concurrent depth-one children and A03 barriers/isolation/shared-budget races. C3.22 A02 now passes configured operations, root cancellation/deadline/completion, child MCP startup failure, trace failure before setup and exported native/ACP/OTel identity correlation. Preserve root-atomic capacity/accounting, FIFO queue ownership, original native records, root-only results, agent-scoped ACP tool IDs and joined cleanup. Keep GLM defaults, unlimited filesystem work and compaction-independent handles/results. Prior F03 remains C3.33; mixed timing/RSS/size remains C3.39.",
-  "latest_log_entry": "LOG-0125",
+  "next_action": "Activate C3.23 on merged 24b8a3f: enable two concurrent depth-one children and prove A03 overlap with barriers, wait-any/all, independent stop/failure and queued cancellation. Reuse the root-atomic ledger for model/tool/process/MCP/context/event/trace and attested token/cost races; retain conservative uncertain usage and narrowed authority. Preserve original native/ACP/OTel identity, root-only task results, agent-prefixed ACP tool IDs, joined root cleanup, GLM defaults, unlimited filesystem work and compaction-independent handles/results. Continue performance checks and PR merges; prior F03 remains C3.33 and mixed measurements remain C3.39.",
+  "latest_log_entry": "LOG-0126",
   "checkpoints": [
     {
       "id": "C1.0",
