@@ -14,7 +14,7 @@ pub const MAX_PROCESSES: usize = 16;
 pub const MAX_MCP_SESSIONS: usize = 16;
 pub const MAX_WAIT_MS: u64 = 900_000;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum AgentKind {
     Root,
@@ -384,3 +384,6 @@ mod limits;
 pub use limits::InvalidChildCeiling;
 
 pub mod owner;
+
+mod identity;
+pub use identity::{AgentIdentity, ExecutionIdentity};

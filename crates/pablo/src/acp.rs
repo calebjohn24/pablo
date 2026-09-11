@@ -79,6 +79,9 @@ fn correlation(event: &RunEvent, first: u64) -> Value {
         "timestamp_unix_micros":event.timestamp_unix_micros,
         "trace_id":event.trace_id,"span_id":event.span_id,
         "parent_span_id":event.parent_span_id,"trace_flags":event.trace_flags});
+    if let Some(agent) = &event.agent {
+        value["agent"] = serde_json::to_value(agent).expect("bounded agent identity");
+    }
     if let Some(identity) = &event.deployment {
         value["deployment"] = serde_json::to_value(identity).expect("bounded identity");
     }
@@ -675,6 +678,7 @@ mod tests {
 
     fn event(seq: u64, kind: EventKind) -> RunEvent {
         RunEvent {
+            agent: None,
             model_route: None,
             compaction: None,
             output_validation: None,

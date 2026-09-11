@@ -1,6 +1,6 @@
 //! Shared accounting must gate real runtime delivery, not merely ledger helpers.
 use futures_util::{future::BoxFuture, stream};
-use opentelemetry_sdk::trace::SdkTracerProvider;
+use opentelemetry_sdk::trace::{InMemorySpanExporter, SdkTracerProvider};
 use pablo_core::{
     children::{AgentRef, ledger::RootLedger},
     provider::{AccountingBounds, ModelRequest, ProviderError, ProviderEvent, ProviderStream},
@@ -54,7 +54,10 @@ impl Provider for HeldProvider {
 }
 #[tokio::test]
 async fn root_reservation_prevents_another_runtime_from_delivering_while_first_is_active() {
-    let sdk = SdkTracerProvider::builder().build();
+    let exporter = InMemorySpanExporter::default();
+    let sdk = SdkTracerProvider::builder()
+        .with_simple_exporter(exporter.clone())
+        .build();
     let root = AgentRef::root("root".into(), "session".into());
     let child = root.temporary_child().unwrap();
     let mut spec = RunSpec::new(
@@ -137,6 +140,56 @@ async fn root_reservation_prevents_another_runtime_from_delivering_while_first_i
         own_events.last().unwrap().accounting.as_deref(),
         Some(&ledger.agent(root.agent_id()).unwrap())
     );
+    for (events, expected) in [(&own_events, &root), (&other_events, &child)] {
+        let identity = events[0].agent.as_ref().unwrap();
+        assert_eq!(identity.agent_id(), expected.agent_id());
+        assert_eq!(identity.root_run_id(), root.root_run_id());
+        assert_eq!(identity.root_session_id(), root.root_session_id());
+        assert_eq!(identity.parent_agent_id(), expected.parent_agent_id());
+        for event in events {
+            assert_eq!(event.agent.as_ref(), Some(identity));
+            assert_eq!(event.session_id, identity.session_id());
+        }
+    }
+    let mut jsonl = Vec::new();
+    {
+        let mut trace_spec = spec.clone();
+        trace_spec.trace.capture_content = false;
+        let mut sink = events::JsonlSink::new(&mut jsonl, &trace_spec).unwrap();
+        for event in &own_events {
+            sink.emit(event).unwrap();
+        }
+    }
+    let lines = String::from_utf8(jsonl).unwrap();
+    assert!(!lines.contains("actual provider result"));
+    for line in lines.lines() {
+        let event: serde_json::Value = serde_json::from_str(line).unwrap();
+        assert_eq!(event["agent"]["agent_id"], root.agent_id());
+    }
+    sdk.force_flush().unwrap();
+    let spans = exporter.get_finished_spans().unwrap();
+    assert_eq!(spans.len(), 4);
+    for span in spans {
+        let native = own_events
+            .iter()
+            .chain(&other_events)
+            .find(|event| event.span_id == span.span_context.span_id().to_string())
+            .unwrap();
+        let identity = native.agent.as_ref().unwrap();
+        for (key, expected) in [
+            ("pablo.agent.id", identity.agent_id()),
+            ("pablo.root.run.id", identity.root_run_id()),
+            ("pablo.root.session.id", identity.root_session_id()),
+            ("pablo.agent.session.id", identity.session_id()),
+        ] {
+            assert!(
+                span.attributes
+                    .iter()
+                    .any(|attribute| attribute.key.as_str() == key
+                        && attribute.value.as_str() == expected)
+            );
+        }
+    }
     sdk.shutdown().unwrap();
 }
 #[tokio::test]

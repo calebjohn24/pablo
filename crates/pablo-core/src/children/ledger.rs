@@ -25,6 +25,7 @@ pub enum AdmissionError {
 #[derive(Clone)]
 pub struct RootLedger(Arc<Mutex<State>>);
 struct Agent {
+    execution: Option<(String, String)>,
     limits: RunLimits,
     accounting: Accounting,
 }
@@ -81,6 +82,7 @@ impl RootLedger {
         let agents = [(
             root.agent_id().to_owned(),
             Agent {
+                execution: None,
                 limits: limits.clone(),
                 accounting: accounting.clone(),
             },
@@ -101,6 +103,55 @@ impl RootLedger {
             resources: resources::ResourceState::default(),
             mutation: Arc::new(tokio::sync::Mutex::new(())),
         }))))
+    }
+    /// Bind one registered agent to one native execution and its ACP/host session.
+    /// Root ownership comes from this ledger, never incoming trace metadata.
+    pub fn bind_execution(
+        &self,
+        agent_id: &str,
+        session_id: Option<&str>,
+    ) -> Result<super::ExecutionIdentity, AdmissionError> {
+        let mut s = self.0.lock().unwrap();
+        let registered = s.agents.get(agent_id).ok_or(AdmissionError::UnknownAgent)?;
+        if registered.execution.is_some() {
+            return Err(AdmissionError::UnknownAgent);
+        }
+        let is_root = agent_id == s.root_id;
+        if is_root && session_id.is_some_and(|id| id != s.root_session_id) {
+            return Err(AdmissionError::UnknownAgent);
+        }
+        let session_id = if is_root {
+            s.root_session_id.clone()
+        } else {
+            session_id
+                .map(str::to_owned)
+                .unwrap_or_else(|| uuid::Uuid::new_v4().to_string())
+        };
+        let bounded =
+            |id: &str| !id.is_empty() && id.len() <= 128 && !id.chars().any(char::is_control);
+        if !bounded(&s.root_run_id) || !bounded(&s.root_session_id) || !bounded(&session_id) {
+            return Err(AdmissionError::UnknownAgent);
+        }
+        let run_id = if is_root {
+            s.root_run_id.clone()
+        } else {
+            uuid::Uuid::new_v4().to_string()
+        };
+        let agent = super::AgentIdentity {
+            agent_id: agent_id.into(),
+            root_run_id: s.root_run_id.clone(),
+            root_session_id: s.root_session_id.clone(),
+            parent_agent_id: (!is_root).then(|| s.root_id.clone()),
+            kind: if is_root {
+                super::AgentKind::Root
+            } else {
+                super::AgentKind::LocalAcpTemporary
+            },
+            depth: u8::from(!is_root),
+            session_id: session_id.clone(),
+        };
+        s.agents.get_mut(agent_id).unwrap().execution = Some((run_id.clone(), session_id));
+        Ok(super::ExecutionIdentity { run_id, agent })
     }
     /// Register counters only after supervisor authority/capacity admission.
     /// This does not start a task or grant capabilities.
@@ -137,6 +188,7 @@ impl RootLedger {
         s.agents.insert(
             child.agent_id().into(),
             Agent {
+                execution: None,
                 accounting: initial(&limits),
                 limits,
             },

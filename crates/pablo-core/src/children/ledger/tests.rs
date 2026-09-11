@@ -297,3 +297,41 @@ fn promoted_capacity_is_bound_to_one_root_and_reductions_work_after_close() {
     drop(lease);
     assert_eq!(ledger.resources(), Resources::default());
 }
+
+#[test]
+fn execution_identity_is_bound_once_from_registered_ownership() {
+    let root = AgentRef::root("root-run".into(), "root-session".into());
+    let ledger = RootLedger::new(&root, RunLimits::default()).unwrap();
+    let child = root.temporary_child().unwrap();
+    assert!(ledger.bind_execution(child.agent_id(), None).is_err());
+    assert!(
+        ledger
+            .bind_execution(root.agent_id(), Some("spoof"))
+            .is_err()
+    );
+    ledger.register_child(&child, RunLimits::default()).unwrap();
+    let binding = ledger.bind_execution(root.agent_id(), None).unwrap();
+    assert_eq!(binding.run_id, root.root_run_id());
+    assert_eq!(binding.agent.agent_id(), root.agent_id());
+    assert_eq!(binding.agent.session_id(), root.root_session_id());
+    assert_eq!(binding.agent.parent_agent_id(), None);
+    assert_eq!(binding.agent.depth(), 0);
+    assert!(ledger.bind_execution(root.agent_id(), None).is_err());
+    let binding = ledger
+        .bind_execution(child.agent_id(), Some("child-session"))
+        .unwrap();
+    assert_ne!(binding.run_id, root.root_run_id());
+    assert_eq!(binding.agent.agent_id(), child.agent_id());
+    assert_eq!(binding.agent.root_run_id(), root.root_run_id());
+    assert_eq!(binding.agent.root_session_id(), root.root_session_id());
+    assert_eq!(binding.agent.session_id(), "child-session");
+    assert_eq!(binding.agent.parent_agent_id(), Some(root.agent_id()));
+    assert_eq!(binding.agent.depth(), 1);
+    assert!(
+        ledger
+            .bind_execution(child.agent_id(), Some("replacement"))
+            .is_err()
+    );
+    assert_eq!(ledger.total().model_calls, 0);
+    assert_eq!(ledger.total().tool_calls, 0);
+}

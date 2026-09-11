@@ -105,3 +105,17 @@ pub(crate) fn usage(context: &Context, usage: &Usage) {
         }
     }
 }
+
+/// Attribution is installed before sampling/span start, on the actual lifecycle span.
+pub(crate) fn agent_span(
+    mut builder: opentelemetry::trace::SpanBuilder,
+    agent: Option<&crate::children::AgentIdentity>,
+) -> opentelemetry::trace::SpanBuilder {
+    if let Some(agent) = agent {
+        builder
+            .attributes
+            .get_or_insert_with(Vec::new)
+            .extend(agent.attributes());
+    }
+    builder
+}

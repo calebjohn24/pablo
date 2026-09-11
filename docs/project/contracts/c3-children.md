@@ -151,6 +151,15 @@ run. Root multiplexing assigns one monotonic delivery sequence while preserving
 per-agent sequence and original span/timestamps. Filtering is a projection, not a
 second lifecycle. Task/context/resource content stays absent from OTel.
 
+Scoped native records and ACP correlation metadata expose an `agent` object:
+`agent_id`, `root_run_id`, `root_session_id`, nullable `parent_agent_id`, `kind`,
+`depth` and executing `session_id`. The root ledger binds a registered agent once
+before its run span starts. Incoming trace metadata and decoded event projections
+cannot register or reparent agents. Unscoped runs omit the object. Metadata-only
+JSONL retains it. Span-start attributes use `pablo.agent.id`, `pablo.root.run.id`,
+`pablo.root.session.id`, `pablo.agent.session.id`, `pablo.agent.kind`,
+`pablo.agent.depth` and, for children, `pablo.parent.agent.id`.
+
 Typed dispatch must retain one-prompt sessions, setup errors, update ordering,
 request cancellation, safe fallback and exactly one terminal response after joined
 work. A bounded typed update receiver acknowledges consumption before another

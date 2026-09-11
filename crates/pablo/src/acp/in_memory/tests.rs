@@ -271,6 +271,13 @@ async fn admitted_child_uses_fixed_route_root_accounting_and_joined_root_cancell
                     if let wire::AgentNotification::SessionNotification(notification) = update.notification {
                         assert_eq!(notification.session_id, session.session_id);
                         assert_eq!(notification.meta.as_ref().unwrap()[EXTENSION]["trace_id"], trace_id.to_string());
+                        let identity = &notification.meta.as_ref().unwrap()[EXTENSION]["agent"];
+                        assert_eq!(identity["agent_id"], child.agent_id());
+                        assert_eq!(identity["parent_agent_id"], root.agent_id());
+                        assert_eq!(identity["root_run_id"], root.root_run_id());
+                        assert_eq!(identity["root_session_id"], root.root_session_id());
+                        assert_eq!(identity["session_id"], session.session_id.to_string());
+
                         if let wire::SessionUpdate::AgentMessageChunk(_) = notification.update {
                             saw_text = true;
                             assert_eq!(ledger.total().model_calls, 2);

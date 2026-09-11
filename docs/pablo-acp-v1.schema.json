@@ -296,6 +296,9 @@
         },
         "output_repair": {
           "$ref": "#/$defs/output_repair"
+        },
+        "agent": {
+          "$ref": "#/$defs/agent_identity"
         }
       },
       "required": [
@@ -382,6 +385,9 @@
         },
         "compaction": {
           "$ref": "#/$defs/compaction"
+        },
+        "agent": {
+          "$ref": "#/$defs/agent_identity"
         }
       },
       "required": [
@@ -1250,6 +1256,60 @@
           "maximum": 8
         }
       }
+    },
+    "agent_identity": {
+      "type": "object",
+      "properties": {
+        "agent_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "root_run_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "root_session_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "session_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "parent_agent_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "kind": {
+          "enum": [
+            "root",
+            "local_acp_temporary"
+          ]
+        },
+        "depth": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "agent_id",
+        "root_run_id",
+        "root_session_id",
+        "session_id",
+        "parent_agent_id",
+        "kind",
+        "depth"
+      ],
+      "additionalProperties": false
     }
   }
 }

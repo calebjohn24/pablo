@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T10:26:05.384Z",
+  "updated_at": "2026-09-11T10:41:16.735Z",
   "active_checkpoint": "C3.22",
   "next_checkpoint": null,
-  "next_action": "Continue C3.22 by completing shared process/MCP permits, root resident-context accounting and atomic cumulative event/trace reservations with terminal space. Add immutable agent/root/parent fields across native/ACP/OTel records and a single root multiplex sequence; the child trace now proves actual spawn-span parenting but full attribution is still pending. Then wire RootOwner and its bounded update consumer into configured CLI/ACP factories and enable deployment children only after admission is complete. Preserve the ordinary subagent policy/accounting path, prepared parent tool-name ceilings, root terminal join/aggregate accounting, one active FIFO child, and handles/results outside compaction. Run A02 and deployment-enabled integrated-child performance before checkpoint completion and PR merge. C3.23 follows C3.22; preserve GLM defaults, unlimited filesystem work and C3.33/C3.39 follow-ups.",
-  "latest_log_entry": "LOG-0113",
+  "next_action": "Continue C3.22 with shared process/MCP permits held through joined cleanup, root resident-context accounting and atomic cumulative event/trace reservations with terminal space. Ledger-derived native/ACP/OTel execution attribution is implemented; add original native child event multiplexing with one root sequence and a bounded consumer. Then wire RootOwner into configured CLI/ACP factories and enable children only after aggregate admission is complete. Run full A02 and deployment-enabled child performance before marking C3.22 done or merging its PR. Preserve one active FIFO child, actual causal span parenting, joined root settlement and aggregate accounting, handles/results outside compaction, GLM defaults and unlimited filesystem work. C3.23 follows; C3.33 F03 and C3.39 mixed measurements remain.",
+  "latest_log_entry": "LOG-0114",
   "checkpoints": [
     {
       "id": "C1.0",

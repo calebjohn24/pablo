@@ -248,11 +248,14 @@ where
         }));
         let started = telemetry::now();
         let span = execution.root.with_span(
-            self.tracer
-                .span_builder("compact_context")
-                .with_kind(SpanKind::Internal)
-                .with_start_time(started)
-                .start_with_context(&self.tracer, execution.root),
+            telemetry::agent_span(
+                self.tracer
+                    .span_builder("compact_context")
+                    .with_kind(SpanKind::Internal)
+                    .with_start_time(started),
+                execution.agent,
+            )
+            .start_with_context(&self.tracer, execution.root),
         );
         let parent = execution.root.span().span_context().span_id().to_string();
         let record = lifecycle.compaction.as_ref().unwrap();
@@ -602,6 +605,7 @@ mod tests {
             let root = Context::new().with_span(tracer.start("root"));
             let tools = ToolRegistry::default();
             let execution = Execution {
+                agent: None,
                 child_tool: None,
                 child_catalog: None,
                 accounting_scope: None,
@@ -646,6 +650,7 @@ mod tests {
                 }
             };
             let mut lifecycle = Lifecycle {
+                agent: None,
                 model_profile: None,
                 model_route: None,
                 compaction: None,

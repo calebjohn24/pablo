@@ -163,6 +163,9 @@ impl Serialize for RedactedEvent<'_> {
         let e = self.0;
         let mut map = serializer.serialize_map(None)?;
         map.serialize_entry("schema_version", &e.schema_version)?;
+        if let Some(agent) = &e.agent {
+            map.serialize_entry("agent", agent)?;
+        }
         map.serialize_entry("seq", &e.seq)?;
         map.serialize_entry("timestamp_unix_micros", &e.timestamp_unix_micros)?;
         map.serialize_entry("run_id", &e.run_id)?;

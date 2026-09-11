@@ -61,6 +61,7 @@ pub struct Runtime<T> {
 }
 
 struct Execution<'a> {
+    agent: Option<&'a crate::children::AgentIdentity>,
     child_tool: Option<&'a dyn crate::Tool>,
     child_catalog: Option<Vec<crate::tool::ToolDescriptor>>,
     accounting_scope: Option<&'a AccountingScope>,
@@ -347,34 +348,52 @@ where
             .accounting_scope
             .as_ref()
             .map_or(deadline, |scope| deadline.min(scope.ledger.deadline()));
-        let run_id = self.root_owner.as_ref().map_or_else(
-            || Uuid::new_v4().to_string(),
-            |owner| owner.root().root_run_id().into(),
-        );
-        let session_id = self.root_owner.as_ref().map_or_else(
-            || {
+        let binding = self
+            .accounting_scope
+            .as_ref()
+            .map(|scope| {
+                scope
+                    .ledger
+                    .bind_execution(&scope.agent_id, spec.session_id.as_deref())
+                    .map_err(|_| {
+                        RunError::InvalidSpec("agent execution identity already bound or invalid")
+                    })
+            })
+            .transpose()?;
+        let (run_id, session_id, agent) = if let Some(binding) = binding {
+            (
+                binding.run_id,
+                binding.agent.session_id().to_owned(),
+                Some(Box::new(binding.agent)),
+            )
+        } else {
+            (
+                Uuid::new_v4().to_string(),
                 spec.session_id
                     .clone()
-                    .unwrap_or_else(|| Uuid::new_v4().to_string())
-            },
-            |owner| owner.root().root_session_id().into(),
-        );
+                    .unwrap_or_else(|| Uuid::new_v4().to_string()),
+                None,
+            )
+        };
         let started = telemetry::now();
         let root = Context::new().with_span(
-            self.tracer
-                .span_builder("invoke_agent pablo")
-                .with_kind(SpanKind::Internal)
-                .with_start_time(started)
-                .with_attributes([
-                    KeyValue::new("gen_ai.operation.name", "invoke_agent"),
-                    KeyValue::new("gen_ai.agent.name", "pablo"),
-                    KeyValue::new("gen_ai.request.model", spec.model.clone()),
-                    KeyValue::new("gen_ai.conversation.id", session_id.clone()),
-                    KeyValue::new("pablo.run.id", run_id.clone()),
-                    KeyValue::new("pablo.otel.mapping.version", telemetry::MAPPING_VERSION),
-                    KeyValue::new("pablo.trace.format.version", SCHEMA_VERSION),
-                ])
-                .start_with_context(&self.tracer, &self.parent),
+            telemetry::agent_span(
+                self.tracer
+                    .span_builder("invoke_agent pablo")
+                    .with_kind(SpanKind::Internal)
+                    .with_start_time(started)
+                    .with_attributes([
+                        KeyValue::new("gen_ai.operation.name", "invoke_agent"),
+                        KeyValue::new("gen_ai.agent.name", "pablo"),
+                        KeyValue::new("gen_ai.request.model", spec.model.clone()),
+                        KeyValue::new("gen_ai.conversation.id", session_id.clone()),
+                        KeyValue::new("pablo.run.id", run_id.clone()),
+                        KeyValue::new("pablo.otel.mapping.version", telemetry::MAPPING_VERSION),
+                        KeyValue::new("pablo.trace.format.version", SCHEMA_VERSION),
+                    ]),
+                agent.as_deref(),
+            )
+            .start_with_context(&self.tracer, &self.parent),
         );
         if !root.span().span_context().is_valid() {
             root.span().end();
@@ -409,6 +428,7 @@ where
             ));
         }
         let mut lifecycle = Lifecycle {
+            agent: agent.clone(),
             model_profile: None,
             model_route: None,
             output_repair: spec
@@ -445,6 +465,7 @@ where
             catalog
         });
         let execution = Execution {
+            agent: agent.as_deref(),
             child_tool,
             child_catalog,
             accounting_scope: self.accounting_scope.as_ref(),
@@ -731,10 +752,13 @@ where
                         Err(_) => return failed(FailureCode::OutputValidationFailed),
                     };
                     let span = execution.root.with_span(
-                        self.tracer
-                            .span_builder("validate_output")
-                            .with_kind(SpanKind::Internal)
-                            .start_with_context(&self.tracer, execution.root),
+                        telemetry::agent_span(
+                            self.tracer
+                                .span_builder("validate_output")
+                                .with_kind(SpanKind::Internal),
+                            execution.agent,
+                        )
+                        .start_with_context(&self.tracer, execution.root),
                     );
                     span.span().set_attribute(KeyValue::new(
                         "pablo.output.schema_sha256",
@@ -892,23 +916,26 @@ where
         }
         let started = telemetry::now();
         let model = input.parent.with_span(
-            self.tracer
-                .span_builder(format!("chat {}", input.attempt.model))
-                .with_kind(SpanKind::Client)
-                .with_start_time(started)
-                .with_attributes([
-                    KeyValue::new("gen_ai.operation.name", "chat"),
-                    KeyValue::new("gen_ai.provider.name", input.attempt.provider.name()),
-                    KeyValue::new("gen_ai.request.model", input.attempt.model.to_owned()),
-                    KeyValue::new(
-                        "gen_ai.request.max_tokens",
-                        i64::from(input.attempt.max_output_tokens),
-                    ),
-                    KeyValue::new("gen_ai.request.stream", true),
-                    KeyValue::new("gen_ai.conversation.id", lifecycle.session_id.clone()),
-                    KeyValue::new("pablo.run.id", lifecycle.run_id.clone()),
-                ])
-                .start_with_context(&self.tracer, input.parent),
+            telemetry::agent_span(
+                self.tracer
+                    .span_builder(format!("chat {}", input.attempt.model))
+                    .with_kind(SpanKind::Client)
+                    .with_start_time(started)
+                    .with_attributes([
+                        KeyValue::new("gen_ai.operation.name", "chat"),
+                        KeyValue::new("gen_ai.provider.name", input.attempt.provider.name()),
+                        KeyValue::new("gen_ai.request.model", input.attempt.model.to_owned()),
+                        KeyValue::new(
+                            "gen_ai.request.max_tokens",
+                            i64::from(input.attempt.max_output_tokens),
+                        ),
+                        KeyValue::new("gen_ai.request.stream", true),
+                        KeyValue::new("gen_ai.conversation.id", lifecycle.session_id.clone()),
+                        KeyValue::new("pablo.run.id", lifecycle.run_id.clone()),
+                    ]),
+                execution.agent,
+            )
+            .start_with_context(&self.tracer, input.parent),
         );
         let parent = input.parent.span().span_context().span_id().to_string();
         if let Some(profile) = &lifecycle.model_profile {
@@ -1091,22 +1118,25 @@ where
         };
         let started = telemetry::now();
         let context = execution.root.with_span(
-            self.tracer
-                .span_builder(format!("execute_tool {}", call.name))
-                .with_kind(if call.name.starts_with("mcp/") {
-                    SpanKind::Client
-                } else {
-                    SpanKind::Internal
-                })
-                .with_start_time(started)
-                .with_attributes([
-                    KeyValue::new("gen_ai.operation.name", "execute_tool"),
-                    KeyValue::new("gen_ai.tool.name", call.name.clone()),
-                    KeyValue::new("gen_ai.tool.type", "function"),
-                    KeyValue::new("gen_ai.tool.call.id", call.id.clone()),
-                    KeyValue::new("pablo.run.id", lifecycle.run_id.clone()),
-                ])
-                .start_with_context(&self.tracer, execution.root),
+            telemetry::agent_span(
+                self.tracer
+                    .span_builder(format!("execute_tool {}", call.name))
+                    .with_kind(if call.name.starts_with("mcp/") {
+                        SpanKind::Client
+                    } else {
+                        SpanKind::Internal
+                    })
+                    .with_start_time(started)
+                    .with_attributes([
+                        KeyValue::new("gen_ai.operation.name", "execute_tool"),
+                        KeyValue::new("gen_ai.tool.name", call.name.clone()),
+                        KeyValue::new("gen_ai.tool.type", "function"),
+                        KeyValue::new("gen_ai.tool.call.id", call.id.clone()),
+                        KeyValue::new("pablo.run.id", lifecycle.run_id.clone()),
+                    ]),
+                execution.agent,
+            )
+            .start_with_context(&self.tracer, execution.root),
         );
         let parent = execution.root.span().span_context().span_id().to_string();
         let mut event_failure = None;
@@ -1643,6 +1673,7 @@ pub fn validate_run(
 }
 
 struct Lifecycle<'a> {
+    agent: Option<Box<crate::children::AgentIdentity>>,
     compaction: Option<Box<crate::context::CompactionRecord>>,
     output_validation: Option<Box<crate::output::OutputValidation>>,
     output_repair: Option<Box<crate::output::OutputRepair>>,
@@ -1673,6 +1704,7 @@ impl Lifecycle<'_> {
         let span = context.span();
         let identity = span.span_context();
         RunEvent {
+            agent: self.agent.clone(),
             output_repair: matches!(
                 kind,
                 EventKind::ModelStarted { .. }

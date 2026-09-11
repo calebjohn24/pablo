@@ -350,7 +350,15 @@ async fn execute(
 fn event_fits(event: &RunEvent) -> bool {
     // Six bytes per input byte covers worst-case JSON escaping. Text is the hot
     // path; a conservative bound usually avoids serialization altogether.
-    if let EventKind::TextDelta { text } = &event.kind {
+    if let EventKind::TextDelta { text } = &event.kind
+        && event.deployment.is_none()
+        && event.model_profile.is_none()
+        && event.model_route.is_none()
+        && event.compaction.is_none()
+        && event.output_validation.is_none()
+        && event.output_repair.is_none()
+        && event.accounting.is_none()
+    {
         let strings = text
             .len()
             .saturating_add(event.schema_version.len())
@@ -360,7 +368,17 @@ fn event_fits(event: &RunEvent) -> bool {
             .saturating_add(event.span_id.len())
             .saturating_add(event.parent_span_id.as_deref().map_or(0, str::len))
             .saturating_add(event.trace_flags.len());
-        if strings.saturating_mul(6).saturating_add(512) <= FRAME_BYTES {
+        if strings
+            .saturating_mul(6)
+            .saturating_add(512)
+            .saturating_add(
+                event
+                    .agent
+                    .as_ref()
+                    .map_or(0, |agent| agent.json_upper_bound()),
+            )
+            <= FRAME_BYTES
+        {
             return true;
         }
     }
@@ -390,6 +408,7 @@ mod tests {
     #[test]
     fn event_capacity_admits_large_plain_text_but_rejects_its_escaped_expansion() {
         let mut event = RunEvent {
+            agent: None,
             model_route: None,
             compaction: None,
             output_validation: None,
@@ -419,5 +438,16 @@ mod tests {
             text: "\0🦀\"\\".repeat(1000),
         };
         assert!(event_fits(&event));
+        event.agent = Some(Box::new(
+            serde_json::from_value(serde_json::json!({
+                "agent_id": "id", "root_run_id": "root", "root_session_id": "session",
+                "parent_agent_id": null, "kind": "root", "depth": 0,
+                "session_id": "\0".repeat(FRAME_BYTES / 6 + 1024)
+            }))
+            .unwrap(),
+        ));
+        // Parsed event projections are not authority and can exceed runtime ID limits.
+        // They must still take the exact bounded serialization path.
+        assert!(!event_fits(&event));
     }
 }
