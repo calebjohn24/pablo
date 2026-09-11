@@ -1,6 +1,7 @@
 mod acp;
 mod config;
 mod deployment;
+mod doctor;
 mod otel;
 mod skills;
 mod tui;
@@ -24,6 +25,7 @@ async fn main() -> ExitCode {
     let args: Vec<_> = std::env::args_os().skip(1).collect();
     let json = args.first().is_none_or(|c| {
         c != "config"
+            && c != "doctor"
             && c != "skills"
             && c != "acp"
             && c != "demo"
@@ -49,6 +51,9 @@ async fn main() -> ExitCode {
                 return ExitCode::FAILURE;
             }
             eprintln!("pablo: {message}");
+            if let Some(hint) = doctor::setup_hint(&message) {
+                eprintln!("{hint}");
+            }
             ExitCode::from(2)
         }
     }
@@ -65,6 +70,9 @@ async fn execute(
     };
     let mut args = args.into_iter();
     let command = args.next().unwrap_or_else(|| "--help".into());
+    if command == "doctor" {
+        return doctor::run(args.collect()).await;
+    }
     if command == "config" {
         deployment::inspect(args.collect())?;
         return Ok(ExitCode::SUCCESS);
@@ -74,8 +82,9 @@ async fn execute(
     }
     if command == "--help" && args.len() == 0 {
         print!(
-            "{HELP}{}\nSkill metadata: pablo skills list --config PATH; pablo skills show NAME --config PATH\nActivation: run/ACP --config PATH --skill NAME (repeatable; deployment override policy applies).\n",
-            deployment::HELP
+            "{HELP}{}{}\nSkill metadata: pablo skills list --config PATH; pablo skills show NAME --config PATH\nActivation: run/ACP --config PATH --skill NAME (repeatable; deployment override policy applies).\n",
+            deployment::HELP,
+            doctor::HELP
         );
         return Ok(ExitCode::SUCCESS);
     }
@@ -404,12 +413,27 @@ async fn run_options(
             if !options.json && view.is_none() {
                 match outcome {
                     RunOutcome::Failed { code, delivery } => {
-                        eprintln!("pablo: run failed: {code:?} ({delivery:?})")
+                        eprintln!("pablo: run failed: {code:?} ({delivery:?})");
+                        if matches!(
+                            code,
+                            pablo_core::FailureCode::ProviderRejected
+                                | pablo_core::FailureCode::ProviderTransport
+                                | pablo_core::FailureCode::UnsupportedProviderContent
+                        ) {
+                            eprintln!(
+                                "Fix: check provider/model and credential configuration; run pablo doctor --probe provider with the same options for a safe cause/fix diagnosis."
+                            );
+                        }
                     }
                     RunOutcome::LimitExceeded { limit } => {
                         eprintln!("pablo: run limit exceeded: {limit:?}")
                     }
-                    RunOutcome::PolicyDenied { rule } => eprintln!("pablo: run denied: {rule:?}"),
+                    RunOutcome::PolicyDenied { rule } => {
+                        eprintln!("pablo: run denied: {rule:?}");
+                        eprintln!(
+                            "Fix: inspect the owning static policy with pablo doctor and config explain; request only host-permitted capabilities."
+                        );
+                    }
                     _ => eprintln!("pablo: run timed out; owned work cleaned up"),
                 }
             }

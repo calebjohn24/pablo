@@ -119,6 +119,18 @@ pub struct OpenResponsesProvider {
     transport: transport::Transport,
 }
 impl OpenResponsesProvider {
+    pub(super) async fn probe(
+        &self,
+        request: &ModelRequest<'_>,
+    ) -> Result<(), super::ProbeFailure> {
+        self.transport
+            .probe(
+                request_body(request, &self.profile)
+                    .map_err(|_| super::ProbeFailure::ModelRequest)?,
+                request.deadline,
+            )
+            .await
+    }
     pub fn new(profile: OpenResponsesProfile, key: &str) -> Result<Self, &'static str> {
         profile.validate()?;
         let transport = transport::Transport::with_auth(

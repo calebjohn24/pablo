@@ -13,7 +13,10 @@ use crate::{
 mod openrouter;
 mod profile;
 mod responses;
-pub use responses::{OpenResponsesProfile, OpenResponsesProvider};
+pub use responses::{
+    OpenResponsesProfile, OpenResponsesProvider, PROFILE as OPEN_RESPONSES_PROFILE,
+    REVISION as OPEN_RESPONSES_REVISION,
+};
 mod transport;
 pub use profile::{
     GatewayCapabilities, GatewayKind, ModelProfile, OPENROUTER_DEFAULT_MODEL, OPENROUTER_ENDPOINT,
@@ -36,7 +39,56 @@ struct ChatProvider {
     kind: GatewayKind,
     transport: transport::Transport,
 }
+/// Closed, body-free diagnostics for an explicitly requested reachability probe.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ProbeFailure {
+    Authentication,
+    ModelRequest,
+    Transport,
+    Response,
+}
 impl GatewayProvider {
+    /// One small request through the ordinary transport. No runtime, tools, fallback,
+    /// trace exporter, or response content is executed/exposed. Success means HTTP/SSE
+    /// request acceptance only; it does not attest generated output or remote cleanup.
+    pub async fn probe(
+        &self,
+        model: &str,
+        deadline: tokio::time::Instant,
+    ) -> Result<(), ProbeFailure> {
+        let messages = [Message::User {
+            text: "Reply OK.".into(),
+        }];
+        let request = ModelRequest {
+            model,
+            input: "Reply OK.",
+            instructions: "Reply briefly.",
+            messages: &messages,
+            continuations: &[],
+            max_continuation_bytes: 1024,
+            max_context_bytes: 4096,
+            max_tool_input_bytes: 1024,
+            max_output_bytes: 1024,
+            tools: &[],
+            allow_tool_calls: false,
+            max_output_tokens: 16,
+            deadline,
+            context: opentelemetry::Context::new(),
+            cancellation: crate::CancellationToken::new(),
+        };
+        match &self.backend {
+            Backend::Chat(chat) => {
+                chat.transport
+                    .probe(
+                        request_body(&request, chat.kind)
+                            .map_err(|_| ProbeFailure::ModelRequest)?,
+                        deadline,
+                    )
+                    .await
+            }
+            Backend::Responses(responses) => responses.probe(&request).await,
+        }
+    }
     pub fn vercel(key: &str) -> Result<Self, &'static str> {
         Self::selected(GatewayKind::Vercel, key)
     }

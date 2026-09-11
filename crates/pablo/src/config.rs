@@ -401,7 +401,7 @@ impl Options {
             .transpose()
     }
 
-    fn policy(&self) -> Result<pablo_core::policy::Policy, String> {
+    pub fn policy(&self) -> Result<pablo_core::policy::Policy, String> {
         let policy = if let Some(path) = &self.policy_path {
             let file = File::open(path).map_err(|_| "cannot read policy file")?;
             let mut bytes = Vec::new();

@@ -68,30 +68,64 @@ impl Transport {
             auth_header,
         })
     }
-    pub(super) async fn open(
-        &self,
-        body: Vec<u8>,
-        deadline: tokio::time::Instant,
-    ) -> Result<Pin<Box<dyn AsyncRead + Send>>, ProviderError> {
-        let mut response = self
-            .client
+    fn request(&self, body: Vec<u8>, deadline: tokio::time::Instant) -> reqwest::RequestBuilder {
+        self.client
             .post(self.endpoint.clone())
             .header(self.auth_header.clone(), self.authorization.clone())
             .header(header::CONTENT_TYPE, "application/json")
             .header(header::ACCEPT, "text/event-stream")
             .timeout(deadline.saturating_duration_since(tokio::time::Instant::now()))
             .body(body)
+    }
+    pub(super) async fn probe(
+        &self,
+        body: Vec<u8>,
+        deadline: tokio::time::Instant,
+    ) -> Result<(), super::ProbeFailure> {
+        let response = self
+            .request(body, deadline)
             .send()
             .await
-            .map_err(|error| ProviderError {
-                retry_class: None,
-                code: FailureCode::ProviderTransport,
-                delivery: if error.is_connect() || error.is_builder() {
-                    DeliveryCertainty::NotSent
-                } else {
-                    DeliveryCertainty::MayHaveBeenSent
-                },
-            })?;
+            .map_err(|_| super::ProbeFailure::Transport)?;
+        match response.status().as_u16() {
+            401 | 403 => Err(super::ProbeFailure::Authentication),
+            400 | 404 | 422 => Err(super::ProbeFailure::ModelRequest),
+            200..=299
+                if response
+                    .headers()
+                    .get(header::CONTENT_TYPE)
+                    .and_then(|v| v.to_str().ok())
+                    .is_some_and(|v| {
+                        v.split(';')
+                            .next()
+                            .unwrap_or("")
+                            .trim()
+                            .eq_ignore_ascii_case("text/event-stream")
+                    }) =>
+            {
+                Ok(())
+            }
+            _ => Err(super::ProbeFailure::Response),
+        }
+    }
+    pub(super) async fn open(
+        &self,
+        body: Vec<u8>,
+        deadline: tokio::time::Instant,
+    ) -> Result<Pin<Box<dyn AsyncRead + Send>>, ProviderError> {
+        let mut response =
+            self.request(body, deadline)
+                .send()
+                .await
+                .map_err(|error| ProviderError {
+                    retry_class: None,
+                    code: FailureCode::ProviderTransport,
+                    delivery: if error.is_connect() || error.is_builder() {
+                        DeliveryCertainty::NotSent
+                    } else {
+                        DeliveryCertainty::MayHaveBeenSent
+                    },
+                })?;
         if !response.status().is_success() {
             let status = response.status().as_u16();
             let mut code = FailureCode::ProviderRejected;
