@@ -431,6 +431,7 @@ impl Inner {
         self.changed.notify_waiters();
     }
     async fn run(&self) {
+        let mut active = futures::stream::FuturesUnordered::new();
         loop {
             let ready = self.ready.notified();
             tokio::pin!(ready);
@@ -441,14 +442,17 @@ impl Inner {
             {
                 break;
             }
-            let job = self.registry.lock().unwrap().queue.pop_front();
-            if let Some(job) = job {
-                self.execute(job).await;
-            } else {
-                tokio::select! {
-                    _ = ready => {}, _ = self.cancel.cancelled() => {},
-                    _ = self.updates.closed() => {}, _ = tokio::time::sleep_until(self.ledger.deadline()) => {},
-                }
+            while active.len() < pablo_core::children::MAX_ACTIVE {
+                let job = self.registry.lock().unwrap().queue.pop_front();
+                let Some(job) = job else { break };
+                active.push(self.execute(job));
+            }
+            tokio::select! {
+                _ = ready => {},
+                _ = futures::StreamExt::next(&mut active), if !active.is_empty() => {},
+                _ = self.cancel.cancelled() => {},
+                _ = self.updates.closed() => {},
+                _ = tokio::time::sleep_until(self.ledger.deadline()) => {},
             }
         }
         self.cancel.cancel();
@@ -465,6 +469,9 @@ impl Inner {
             };
             self.settle(job.child, job.lease, outcome, None, None);
         }
+        // Retain and poll every admitted execution through native delivery and
+        // joined worker cleanup; cancelling the manager never drops child work.
+        while futures::StreamExt::next(&mut active).await.is_some() {}
         self.updates.close();
     }
     async fn execute(&self, mut job: Job) {

@@ -123,124 +123,123 @@ async fn done(stream: &mut tokio::net::TcpStream) {
 }
 
 #[tokio::test]
-async fn immediate_handles_fifo_queue_stop_wait_and_joined_close() {
+async fn overlapping_children_fifo_queue_independent_stop_wait_and_joined_close() {
     tokio::time::timeout(Duration::from_secs(10), async {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let fixture = Fixture::new(&format!("http://{}", listener.local_addr().unwrap()));
         let first = fixture.spawn("first selected task");
         let second = fixture.spawn("second selected task");
-        let third = fixture.spawn("third selected task");
+        let removed = fixture.spawn("removed queued task");
+        let fourth = fixture.spawn("fourth selected task");
         assert_eq!(first.state(), AgentState::Queued);
-        assert_eq!(
-            fixture.ledger.total().model_calls,
-            0,
-            "spawn returns before a provider task can run"
-        );
+        assert_eq!(fixture.ledger.total().model_calls, 0);
         assert!(
             fixture
                 .supervisor
                 .inspect(&uuid::Uuid::new_v4().to_string())
                 .is_err()
         );
-        let bad: pablo_core::children::SpawnRequest = serde_json::from_value(
-            json!({"input":"denied","capabilities":{"tools":["unapproved"]}}),
-        )
-        .unwrap();
-        assert!(
-            fixture
-                .supervisor
-                .spawn(&bad, opentelemetry::Context::new())
-                .is_err()
-        );
-        let selected = vec![
-            third.agent_id().into(),
-            first.agent_id().into(),
-            second.agent_id().into(),
-        ];
-        assert_eq!(
-            fixture
-                .supervisor
-                .wait(&selected, WaitMode::All, 0)
-                .await
-                .unwrap()
-                .remaining
-                .len(),
-            3
-        );
-        let first_update = Arc::new(Notify::new());
         let drain = tokio::spawn({
-            let first_update = first_update.clone();
             let updates = fixture.updates.clone();
             async move {
                 let mut agents = vec![];
                 while let Ok(update) = updates.recv().await {
                     agents.push(update.agent.agent_id().to_owned());
                     let _ = update.update.consumed.send(());
-                    first_update.notify_one();
                 }
                 agents
             }
         });
-        let (mut stream, _) = listener.accept().await.unwrap();
-        let body = request(&mut stream).await;
-        assert!(body.to_string().contains("first selected task"));
-        assert!(!body.to_string().contains("parent private transcript"));
-        held(&mut stream).await;
-        first_update.notified().await;
-        let stopped = fixture.supervisor.stop(second.agent_id()).await.unwrap();
+        // Neither request receives completion until both independent model
+        // operations have reached the provider: a concurrency barrier.
+        let (mut a, _) = listener.accept().await.unwrap();
+        let a_body = request(&mut a).await.to_string();
+        let (mut b, _) = listener.accept().await.unwrap();
+        let b_body = request(&mut b).await.to_string();
+        assert!(!a_body.contains("parent private transcript"));
+        assert!(!b_body.contains("parent private transcript"));
+        let (mut first_stream, mut second_stream) = if a_body.contains("first selected task") {
+            assert!(b_body.contains("second selected task"));
+            (a, b)
+        } else {
+            assert!(a_body.contains("second selected task"));
+            assert!(b_body.contains("first selected task"));
+            (b, a)
+        };
+        held(&mut first_stream).await;
+        held(&mut second_stream).await;
+        assert_eq!(fixture.ledger.resources().active_children, 2);
+        assert_eq!(fixture.ledger.resources().pending_children, 2);
+        let stopped = fixture.supervisor.stop(removed.agent_id()).await.unwrap();
         assert_eq!(stopped.outcome, Some(RunOutcome::Cancelled));
         assert_eq!(fixture.ledger.resources().pending_children, 1);
+        let stopped = fixture.supervisor.stop(first.agent_id()).await.unwrap();
+        assert_eq!(stopped.outcome, Some(RunOutcome::Cancelled));
+        root_owner::assert_closed(&mut first_stream).await;
+        assert_ne!(
+            fixture
+                .supervisor
+                .inspect(second.agent_id())
+                .unwrap()
+                .agent
+                .state(),
+            AgentState::Settled
+        );
+        assert!(!fixture.root_cancel.is_cancelled());
+        let (mut fourth_stream, _) = listener.accept().await.unwrap();
+        assert!(
+            request(&mut fourth_stream)
+                .await
+                .to_string()
+                .contains("fourth selected task")
+        );
+        done(&mut fourth_stream).await;
+        let selected = vec![second.agent_id().to_owned(), fourth.agent_id().to_owned()];
         let any = fixture
             .supervisor
-            .wait(&selected, WaitMode::Any, 1000)
+            .wait(&selected, WaitMode::Any, 5000)
             .await
             .unwrap();
         assert_eq!(any.settled.len(), 1);
-        assert_eq!(any.settled[0].agent.agent_id(), second.agent_id());
-        assert_eq!(any.remaining[0].agent_id(), third.agent_id());
-        let stopped = fixture.supervisor.stop(first.agent_id()).await.unwrap();
-        assert_eq!(stopped.outcome, Some(RunOutcome::Cancelled));
-        root_owner::assert_closed(&mut stream).await;
-        let (mut stream, _) = listener.accept().await.unwrap();
-        assert!(
-            request(&mut stream)
-                .await
-                .to_string()
-                .contains("third selected task")
-        );
-        done(&mut stream).await;
+        assert_eq!(any.settled[0].agent.agent_id(), fourth.agent_id());
+        assert_eq!(any.remaining[0].agent_id(), second.agent_id());
+        done(&mut second_stream).await;
         let all = fixture
             .supervisor
             .wait(&selected, WaitMode::All, 5000)
             .await
             .unwrap();
         assert!(all.remaining.is_empty());
-        assert_eq!(all.settled[0].agent.agent_id(), third.agent_id());
-        assert!(all.settled[0].outcome.as_ref().unwrap().is_completed());
-        assert!(all.settled[0].trace.is_some());
-        let unchanged = fixture.supervisor.stop(third.agent_id()).await.unwrap();
-        assert_eq!(unchanged.outcome, all.settled[0].outcome);
-        assert!(!fixture.root_cancel.is_cancelled());
-        assert_eq!(fixture.ledger.total().model_calls, 2);
+        assert_eq!(all.settled[0].agent.agent_id(), second.agent_id());
+        assert!(
+            all.settled
+                .iter()
+                .all(|s| s.outcome.as_ref().unwrap().is_completed())
+        );
+        assert_eq!(
+            fixture
+                .supervisor
+                .stop(second.agent_id())
+                .await
+                .unwrap()
+                .outcome,
+            all.settled[0].outcome
+        );
+        assert_eq!(fixture.ledger.total().model_calls, 3);
         assert_eq!(fixture.ledger.resources().active_children, 0);
         assert_eq!(fixture.ledger.resources().context_bytes, 0);
         assert_eq!(
             fixture.ledger.resources().result_bytes,
-            3 * MAX_RESULT_BYTES
+            4 * MAX_RESULT_BYTES
         );
         let (a, b) = tokio::join!(fixture.supervisor.close(), fixture.supervisor.close());
         a.unwrap();
         b.unwrap();
-        let updates = drain.await.unwrap();
-        assert!(updates.iter().any(|id| id == first.agent_id()));
-        assert!(updates.iter().any(|id| id == third.agent_id()));
-        assert!(!updates.iter().any(|id| id == second.agent_id()));
-        assert!(
-            fixture
-                .supervisor
-                .spawn(&bad, opentelemetry::Context::new())
-                .is_err()
-        );
+        let delivered = drain.await.unwrap();
+        for child in [&first, &second, &fourth] {
+            assert!(delivered.iter().any(|id| id == child.agent_id()));
+        }
+        assert!(!delivered.iter().any(|id| id == removed.agent_id()));
     })
     .await
     .unwrap();
@@ -254,9 +253,13 @@ async fn stalled_ack_root_cancel_and_dropped_close_caller_cannot_abandon_childre
         let fixture = Fixture::new(&format!("http://{}", listener.local_addr().unwrap()));
         let first = fixture.spawn("held");
         let second = fixture.spawn("queued");
+        let queued = fixture.spawn("third stays queued");
         let (mut stream, _) = listener.accept().await.unwrap();
         request(&mut stream).await;
         held(&mut stream).await;
+        let (mut other, _) = listener.accept().await.unwrap();
+        request(&mut other).await;
+        held(&mut other).await;
         let held = fixture.updates.recv().await.unwrap();
         fixture.root_cancel.cancel();
         let mut close = Box::pin(fixture.supervisor.close());
@@ -269,6 +272,7 @@ async fn stalled_ack_root_cancel_and_dropped_close_caller_cannot_abandon_childre
         fixture.supervisor.close().await.unwrap();
         drop(held);
         root_owner::assert_closed(&mut stream).await;
+        root_owner::assert_closed(&mut other).await;
         assert_eq!(
             fixture
                 .supervisor
@@ -285,9 +289,17 @@ async fn stalled_ack_root_cancel_and_dropped_close_caller_cannot_abandon_childre
                 .outcome,
             Some(RunOutcome::Cancelled)
         );
+        assert_eq!(
+            fixture
+                .supervisor
+                .inspect(queued.agent_id())
+                .unwrap()
+                .outcome,
+            Some(RunOutcome::Cancelled)
+        );
         assert_eq!(fixture.ledger.resources().active_children, 0);
         assert_eq!(fixture.ledger.resources().pending_children, 0);
-        assert_eq!(fixture.ledger.total().model_calls, 1);
+        assert_eq!(fixture.ledger.total().model_calls, 2);
         assert!(
             fixture
                 .supervisor
@@ -389,9 +401,13 @@ async fn root_deadline_settles_active_and_queued_children_without_resetting_the_
             Fixture::with_duration(&format!("http://{}", listener.local_addr().unwrap()), 1000);
         let first = fixture.spawn("active before deadline");
         let second = fixture.spawn("waiting for deadline");
+        let queued = fixture.spawn("third stays queued");
         let (mut stream, _) = listener.accept().await.unwrap();
         request(&mut stream).await;
         held(&mut stream).await;
+        let (mut other, _) = listener.accept().await.unwrap();
+        request(&mut other).await;
+        held(&mut other).await;
         tokio::time::sleep_until(fixture.ledger.deadline() + Duration::from_millis(25)).await;
         // Observe manager completion without introducing an extra cancellation.
         while !fixture
@@ -412,7 +428,16 @@ async fn root_deadline_settles_active_and_queued_children_without_resetting_the_
         assert_eq!(second.outcome, Some(RunOutcome::TimedOut));
         fixture.supervisor.close().await.unwrap();
         root_owner::assert_closed(&mut stream).await;
-        assert_eq!(fixture.ledger.total().model_calls, 1);
+        root_owner::assert_closed(&mut other).await;
+        assert_eq!(fixture.ledger.total().model_calls, 2);
+        assert_eq!(
+            fixture
+                .supervisor
+                .inspect(queued.agent_id())
+                .unwrap()
+                .outcome,
+            Some(RunOutcome::TimedOut)
+        );
         assert_eq!(fixture.ledger.resources().active_children, 0);
         assert!(!fixture.root_cancel.is_cancelled());
     })
@@ -722,4 +747,51 @@ mod root_factory {
         .await
         .unwrap();
     }
+}
+
+#[tokio::test]
+async fn two_active_and_fourteen_queued_children_are_bounded_and_joined_on_root_cancel() {
+    tokio::time::timeout(Duration::from_secs(10), async {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let fixture = Fixture::new(&format!("http://{}", listener.local_addr().unwrap()));
+        let mut children = vec![fixture.spawn("active one"), fixture.spawn("active two")];
+        let (mut first, _) = listener.accept().await.unwrap();
+        request(&mut first).await;
+        held(&mut first).await;
+        let (mut second, _) = listener.accept().await.unwrap();
+        request(&mut second).await;
+        held(&mut second).await;
+        assert_eq!(fixture.ledger.resources().active_children, 2);
+        for _ in 0..14 {
+            children.push(fixture.spawn("bounded queued work"));
+        }
+        let before = fixture.ledger.resources();
+        assert_eq!(before.pending_children, 14);
+        assert_eq!(before.result_bytes, 16 * MAX_RESULT_BYTES);
+        let excess =
+            serde_json::from_value(json!({"input":"excess","capabilities":{"tools":[]}})).unwrap();
+        assert!(
+            fixture
+                .supervisor
+                .spawn(&excess, opentelemetry::Context::new())
+                .is_err()
+        );
+        assert_eq!(fixture.ledger.resources(), before);
+        fixture.root_cancel.cancel();
+        fixture.supervisor.close().await.unwrap();
+        root_owner::assert_closed(&mut first).await;
+        root_owner::assert_closed(&mut second).await;
+        for child in children {
+            let snapshot = fixture.supervisor.inspect(child.agent_id()).unwrap();
+            assert_eq!(snapshot.agent.state(), AgentState::Settled);
+            assert_eq!(snapshot.outcome, Some(RunOutcome::Cancelled));
+        }
+        let resources = fixture.ledger.resources();
+        assert_eq!(resources.active_children, 0);
+        assert_eq!(resources.pending_children, 0);
+        assert_eq!(resources.context_bytes, 0);
+        assert_eq!(fixture.ledger.total().model_calls, 2);
+    })
+    .await
+    .unwrap();
 }

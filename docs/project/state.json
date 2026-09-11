@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T13:24:43.637Z",
+  "updated_at": "2026-09-11T13:42:03.481Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.23",
-  "next_action": "Activate C3.23 on merged 24b8a3f: enable two concurrent depth-one children and prove A03 overlap with barriers, wait-any/all, independent stop/failure and queued cancellation. Reuse the root-atomic ledger for model/tool/process/MCP/context/event/trace and attested token/cost races; retain conservative uncertain usage and narrowed authority. Preserve original native/ACP/OTel identity, root-only task results, agent-prefixed ACP tool IDs, joined root cleanup, GLM defaults, unlimited filesystem work and compaction-independent handles/results. Continue performance checks and PR merges; prior F03 remains C3.33 and mixed measurements remain C3.39.",
-  "latest_log_entry": "LOG-0126",
+  "next_checkpoint": "C3.24",
+  "next_action": "Merge the exact verified C3.23 PR head, synchronize main and confirm tree parity, then activate C3.24 validated child handoffs. A03 now proves two overlapping child model operations, wait-any/all, independent stop/failure, queued promotion/cancellation, full-capacity root cleanup and root/two-child accounting/resource/trace races. Preserve original native identity, per-agent/root accounting, narrowed authority, joined cleanup and compaction-independent handles/results. Keep GLM defaults and unlimited filesystem work. F03 recurred in the initial full run and remains C3.33 despite final passing tests; mixed performance/RSS remains C3.39.",
+  "latest_log_entry": "LOG-0128",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -550,9 +550,11 @@
       "depends_on": [
         "C3.22"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0128"
+      ]
     },
     {
       "id": "C3.24",

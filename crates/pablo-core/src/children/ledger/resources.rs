@@ -98,8 +98,8 @@ fn validate(
             .max_context_bytes
             .min(crate::children::MAX_CONTEXT_BYTES)
     };
-    // C3.22 enables exactly one active child. C3.23 owns the two-child transition.
-    if next.active_children > 1
+    // Two active children share finite root capacity; each child owns one slot.
+    if next.active_children > crate::children::MAX_ACTIVE
         || next.pending_children > crate::children::MAX_PENDING
         || next.processes > crate::children::MAX_PROCESSES
         || next.mcp_sessions > crate::children::MAX_MCP_SESSIONS
