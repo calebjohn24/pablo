@@ -18,6 +18,11 @@ httpx-sse==0.4.3
 idna==3.19
 json-rpc==1.15.0
 opentelemetry-api==1.44.0
+opentelemetry-exporter-otlp-proto-common==1.44.0
+opentelemetry-exporter-otlp-proto-http==1.44.0
+opentelemetry-proto==1.44.0
+opentelemetry-sdk==1.44.0
+opentelemetry-semantic-conventions==0.65b0
 packaging==26.3
 proto-plus==1.28.4
 protobuf==7.36.1

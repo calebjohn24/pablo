@@ -68,6 +68,8 @@ async def app(scope,receive,send):
         else: assert b"traceparent" not in headers and b"tracestate" not in headers
         assert b"baggage" not in headers and b"authorization" not in headers
     await sdk_app(scope,receive,send)
-sock=socket.socket();sock.bind(("127.0.0.1",0));sock.listen(128)
-print(json.dumps({"url":f"http://127.0.0.1:{sock.getsockname()[1]}/rpc","pid":os.getpid()}),flush=True)
-uvicorn.Server(uvicorn.Config(app,log_level="error",lifespan="off")).run(sockets=[sock])
+def serve(application):
+    sock=socket.socket();sock.bind(("127.0.0.1",0));sock.listen(128)
+    print(json.dumps({"url":f"http://127.0.0.1:{sock.getsockname()[1]}/rpc","pid":os.getpid()}),flush=True)
+    uvicorn.Server(uvicorn.Config(application,log_level="error",lifespan="off")).run(sockets=[sock])
+if __name__ == "__main__": serve(app)

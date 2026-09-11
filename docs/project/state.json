@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T19:18:39.353Z",
+  "updated_at": "2026-09-11T19:33:40.139Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.28",
-  "next_action": "Merge verified C3.27 R02, then start C3.28 R03 adverse cancellation/lost-stream/input-required boundary proof and actual remote Collector correlation/exporter-outage parity. Preserve saved C3.26/C3.25 baselines and both filesystem timing orders.",
-  "latest_log_entry": "LOG-0146",
+  "next_checkpoint": "C3.29",
+  "next_action": "Merge verified C3.28 R03, then start C3.29 basic streaming TUI through the same runtime/session entry points. Preserve bounded display content and actual run-handle cancellation; TTY restoration/PTY proof remains C3.30. Keep saved C3.27/C3.26/C3.25 baselines.",
+  "latest_log_entry": "LOG-0148",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -616,9 +616,11 @@
       "depends_on": [
         "C3.27"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0148"
+      ]
     },
     {
       "id": "C3.29",

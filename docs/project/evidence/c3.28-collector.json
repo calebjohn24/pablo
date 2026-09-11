@@ -1,0 +1,15 @@
+{
+  "checkpoint": "C3.28",
+  "collector": "0.160.0",
+  "peerOtelSdk": "1.44.0",
+  "platform": "darwin/arm64",
+  "spans": 16,
+  "negotiatedRemoteParent": true,
+  "genericIndependentTrace": true,
+  "exactNativeIdentitiesAndTimestamps": true,
+  "metadataOnly": true,
+  "exporterOutageOutcomeAccountingAndRemoteResultUnchanged": true,
+  "source_sha256": "5cac43028462c5d70ebc2b45c0fe5ee66dd56f132ca9238a60a43e7854fc31b1",
+  "binary_sha256": "15a540dfa9810d593d27992015bc307a66e813c0b1903edac267c9dd0c65ce06",
+  "binary_bytes": 14859168
+}
