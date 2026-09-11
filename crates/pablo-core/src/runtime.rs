@@ -181,6 +181,26 @@ where
         cancellation: &CancellationToken,
         sink: &mut dyn EventSink,
     ) -> Result<RunOutcome, RunError> {
+        if !tools.claim() {
+            return Err(RunError::InvalidSpec("MCP catalog is owned by one run"));
+        }
+        let result = self
+            .run_with_tools_inner(spec, provider, tools, cancellation, sink)
+            .await;
+        if result.is_err() && tools.close().await.is_err() {
+            return Err(RunError::InvalidSpec("MCP cleanup failed"));
+        }
+        result
+    }
+
+    async fn run_with_tools_inner(
+        &self,
+        spec: &RunSpec,
+        provider: &dyn Provider,
+        tools: &ToolRegistry,
+        cancellation: &CancellationToken,
+        sink: &mut dyn EventSink,
+    ) -> Result<RunOutcome, RunError> {
         let compiled = spec
             .output
             .as_ref()
@@ -216,6 +236,7 @@ where
             .ok_or(RunError::InvalidSpec(
                 "run duration overflows the monotonic clock",
             ))?;
+        let deadline = tools.deadline(deadline);
         let run_id = Uuid::new_v4().to_string();
         let session_id = spec
             .session_id
@@ -241,6 +262,21 @@ where
         if !root.span().span_context().is_valid() {
             root.span().end();
             return Err(RunError::InvalidTracer);
+        }
+        if !tools.mcp_omissions().is_empty() {
+            root.span().set_attribute(KeyValue::new(
+                "pablo.mcp.omissions",
+                opentelemetry::Value::Array(
+                    tools
+                        .mcp_omissions()
+                        .iter()
+                        .map(|(id, reason)| {
+                            opentelemetry::StringValue::from(format!("{id}:{reason}"))
+                        })
+                        .collect::<Vec<_>>()
+                        .into(),
+                ),
+            ));
         }
         if let Some(identity) = &self.deployment {
             let identity = serde_json::to_value(identity).expect("bounded deployment identity");
@@ -311,6 +347,11 @@ where
                 limit(LimitKind::InputBytes)
             }
             Ok(()) => self.drive(&execution, &mut lifecycle).await,
+        };
+        let outcome = if tools.close().await.is_err() {
+            failed(FailureCode::ToolCleanup)
+        } else {
+            outcome
         };
         if let Some(record) = &mut lifecycle.output_repair {
             record.finish(outcome.is_completed());
@@ -835,7 +876,11 @@ where
         let context = execution.root.with_span(
             self.tracer
                 .span_builder(format!("execute_tool {}", call.name))
-                .with_kind(SpanKind::Internal)
+                .with_kind(if call.name.starts_with("mcp/") {
+                    SpanKind::Client
+                } else {
+                    SpanKind::Internal
+                })
                 .with_start_time(started)
                 .with_attributes([
                     KeyValue::new("gen_ai.operation.name", "execute_tool"),
@@ -1143,7 +1188,8 @@ async fn consume(
                     || id.len() > 128
                     || id.chars().any(char::is_control)
                     || name.is_empty()
-                    || name.len() > 64
+                    || (name.starts_with("mcp/") && crate::mcp::split_identity(&name).is_none())
+                    || (!name.starts_with("mcp/") && name.len() > 64)
                     || name.chars().any(char::is_control)
                     || ids.contains(&id)
                 {

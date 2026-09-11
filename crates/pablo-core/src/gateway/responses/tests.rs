@@ -293,3 +293,55 @@ fn profile_rejects_insecure_destinations_and_transport_header_override() {
             .is_ok()
     );
 }
+
+#[test]
+fn mcp_aliases_preserve_open_responses_continuation_and_canonical_tool_identity() {
+    let name = crate::mcp::qualified("remote", "read").unwrap();
+    let alias = crate::mcp::provider_alias(&name).unwrap();
+    let mut wire = events();
+    fn rename(value: &mut Value, alias: &str) {
+        match value {
+            Value::Object(map) => {
+                if map.get("name").is_some_and(|name| name == "fs_read") {
+                    map.insert("name".into(), alias.into());
+                }
+                for child in map.values_mut() {
+                    rename(child, alias);
+                }
+            }
+            Value::Array(values) => {
+                for child in values {
+                    rename(child, alias);
+                }
+            }
+            _ => {}
+        }
+    }
+    for event in &mut wire {
+        rename(event, &alias);
+    }
+    let mut completion = Completion::new(&request(), &profile());
+    completion.aliases.insert(alias.clone(), name.clone());
+    for event in &wire {
+        completion
+            .frame(
+                Some(event["type"].as_str().unwrap().as_bytes()),
+                &serde_json::to_vec(event).unwrap(),
+            )
+            .unwrap();
+    }
+    completion.frame(None, b"[DONE]").unwrap();
+    assert!(completion.pending.iter().any(
+        |event| matches!(event,ProviderEvent::ToolCallStart{name:actual,..} if actual==&name)
+    ));
+    assert!(
+        completion
+            .pending
+            .iter()
+            .any(|event| matches!(event, ProviderEvent::Continuation(_)))
+    );
+    assert!(
+        feed(&wire).is_err(),
+        "an unregistered alias cannot grant a tool"
+    );
+}

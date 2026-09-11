@@ -91,6 +91,17 @@ impl PreparedRun {
         &self.bindings_fingerprint
     }
     pub fn tools(&self) -> Result<ToolRegistry, ConfigError> {
+        let settings = self.deployment.mcp()?;
+        if settings
+            .servers
+            .iter()
+            .any(|(id, _)| settings.admit_server(id, &self.policy).is_ok())
+        {
+            return Err(error("config_async_mcp_required", "/options/mcp"));
+        }
+        self.builtin_tools()
+    }
+    pub(super) fn builtin_tools(&self) -> Result<ToolRegistry, ConfigError> {
         let options = self.deployment.options();
         ToolRegistry::configured_with_policy_set(
             options["shell"]["enabled"].as_bool().unwrap(),
@@ -321,12 +332,11 @@ impl ResolvedDeployment {
                 }
                 continue;
             }
-            let mut unavailable = error("config_unsupported_feature", "/options/mcp");
-            unavailable.owner = Some(match server {
-                crate::mcp::Server::Stdio { .. } => "C3.16",
-                crate::mcp::Server::Http { .. } => "C3.17",
-            });
-            return Err(unavailable);
+            if matches!(server, crate::mcp::Server::Http { .. }) {
+                let mut unavailable = error("config_unsupported_feature", "/options/mcp");
+                unavailable.owner = Some("C3.17");
+                return Err(unavailable);
+            }
         }
         #[cfg(unix)]
         if options["filesystem"]["enabled"] == true {

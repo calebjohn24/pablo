@@ -191,7 +191,10 @@ impl Provider for OpenResponsesProvider {
         request: ModelRequest<'a>,
     ) -> BoxFuture<'a, Result<ProviderStream<'a>, ProviderError>> {
         Box::pin(async move {
+            let aliases = super::tool_aliases(request.tools)?;
             let body = request_body(&request, &self.profile)?;
+            let mut completion = Completion::new(&request, &self.profile);
+            completion.aliases = aliases;
             let reader = self.transport.open(body, request.deadline).await?;
             let state = ResponseStream {
                 reader,
@@ -200,7 +203,7 @@ impl Provider for OpenResponsesProvider {
                 available: 0,
                 decoder: transport::SseDecoder::default(),
                 stopped: false,
-                completion: Completion::new(&request, &self.profile),
+                completion,
             };
             Ok(Box::pin(stream::unfold(state, |mut state| async move {
                 if state.stopped {
@@ -366,6 +369,7 @@ struct Item {
     final_value: Option<Value>,
 }
 struct Completion {
+    aliases: std::collections::BTreeMap<String, String>,
     scope: ContinuationScope,
     max_state: usize,
     retained: usize,
@@ -388,6 +392,7 @@ struct Completion {
 impl Completion {
     fn new(request: &ModelRequest<'_>, profile: &OpenResponsesProfile) -> Self {
         Self {
+            aliases: Default::default(),
             scope: ContinuationScope {
                 provider: "open_responses",
                 endpoint: profile.endpoint.clone(),
@@ -721,12 +726,13 @@ impl Completion {
                 require(value["status"] == "in_progress" && value["arguments"] == "")?;
                 let call_id = id(&value["call_id"], 64)?;
                 require(self.call_ids.insert(call_id.into()))?;
-                let name = native_name(id(&value["name"], 64)?).ok_or_else(unsupported)?;
+                let name =
+                    native_name(id(&value["name"], 64)?, &self.aliases).ok_or_else(unsupported)?;
                 self.calls += 1;
                 require(self.calls <= 128)?;
                 self.pending.push_back(ProviderEvent::ToolCallStart {
                     id: call_id.into(),
-                    name: name.into(),
+                    name,
                 });
             }
             "reasoning" => {

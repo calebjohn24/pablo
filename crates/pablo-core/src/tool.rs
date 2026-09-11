@@ -50,6 +50,9 @@ pub struct ToolResult {
     pub status: ToolStatus,
     pub policy_rule: Option<PolicyRule>,
     pub shell: Option<ShellResult>,
+    #[cfg(unix)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mcp: Option<Box<crate::mcp::tool::McpResult>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub filesystem: Option<Box<crate::filesystem::FilesystemResult>>,
     #[serde(default, skip_serializing_if = "<[_]>::is_empty")]
@@ -62,6 +65,8 @@ impl ToolResult {
             status,
             policy_rule: None,
             shell: None,
+            #[cfg(unix)]
+            mcp: None,
             filesystem: None,
             policy_decisions: Box::default(),
         }
@@ -71,6 +76,8 @@ impl ToolResult {
             status: ToolStatus::PolicyDenied,
             policy_rule: Some(rule),
             shell: None,
+            #[cfg(unix)]
+            mcp: None,
             filesystem: None,
             policy_decisions: Box::default(),
         }
@@ -115,6 +122,14 @@ pub struct ToolRegistry {
     filesystem: Vec<crate::filesystem::FilesystemTool>,
     policy: std::sync::Arc<crate::policy::PolicySet>,
     descriptors: Vec<ToolDescriptor>,
+    admission_deadline: Option<Instant>,
+    mcp_omissions: std::collections::BTreeMap<String, &'static str>,
+    #[cfg(unix)]
+    mcp_claimed: std::sync::atomic::AtomicBool,
+    #[cfg(unix)]
+    mcp: Vec<crate::mcp::tool::McpTool>,
+    #[cfg(unix)]
+    sessions: Vec<std::sync::Arc<tokio::sync::Mutex<crate::mcp::stdio::StdioSession>>>,
 }
 
 impl ToolRegistry {
@@ -195,6 +210,118 @@ impl ToolRegistry {
     pub fn with_filesystem_reads() -> Result<Self, ToolSetupError> {
         Self::configured(false, true, crate::policy::Policy::default())
     }
+    #[cfg(unix)]
+    pub(crate) async fn attach_mcp(
+        &mut self,
+        server: &str,
+        mut session: crate::mcp::stdio::StdioSession,
+        admitted: Vec<(String, Vec<String>)>,
+    ) -> Result<(), crate::mcp::stdio::Error> {
+        let prepared = (|| {
+            let mut descriptors = Vec::new();
+            let mut identities = crate::mcp::Identities::default();
+            let reserved = [
+                "shell_run",
+                "fs_read",
+                "fs_list",
+                "fs_search",
+                "fs_write",
+                "fs_edit",
+            ]
+            .into_iter()
+            .map(String::from)
+            .collect();
+            for tool in &self.mcp {
+                identities
+                    .insert(&tool.server, &tool.name, &reserved)
+                    .map_err(|_| ToolSetupError)?;
+            }
+            for (name, decisions) in admitted {
+                identities
+                    .insert(server, &name, &reserved)
+                    .map_err(|_| ToolSetupError)?;
+                let source = session
+                    .tools()
+                    .iter()
+                    .find(|tool| tool.name == name)
+                    .ok_or(ToolSetupError)?;
+                let descriptor = ToolDescriptor {
+                    name: crate::mcp::qualified(server, &name).map_err(|_| ToolSetupError)?,
+                    description: source.description.clone(),
+                    input_schema: source.input_schema.clone(),
+                };
+                descriptors.push((descriptor, name, decisions));
+            }
+            Ok::<_, ToolSetupError>(descriptors)
+        })();
+        let descriptors = match prepared {
+            Ok(value) => value,
+            Err(error) => {
+                session.close().await?;
+                let _ = error;
+                return Err(crate::mcp::stdio::Error::Catalog);
+            }
+        };
+        let session = std::sync::Arc::new(tokio::sync::Mutex::new(session));
+        for (descriptor, name, decisions) in descriptors {
+            self.descriptors.push(descriptor.clone());
+            self.mcp.push(crate::mcp::tool::McpTool {
+                descriptor,
+                server: server.into(),
+                name,
+                session: session.clone(),
+                decisions: decisions.into_boxed_slice(),
+            });
+        }
+        self.sessions.push(session);
+        Ok(())
+    }
+    pub(crate) fn claim(&self) -> bool {
+        #[cfg(unix)]
+        if !self.sessions.is_empty() {
+            return self
+                .mcp_claimed
+                .compare_exchange(
+                    false,
+                    true,
+                    std::sync::atomic::Ordering::AcqRel,
+                    std::sync::atomic::Ordering::Acquire,
+                )
+                .is_ok();
+        }
+        true
+    }
+    /// Join all per-run MCP resources before returning a terminal outcome.
+    pub async fn close(&self) -> Result<(), ToolSetupError> {
+        #[cfg(unix)]
+        {
+            if !self.sessions.is_empty() {
+                self.mcp_claimed
+                    .store(true, std::sync::atomic::Ordering::Release);
+            }
+            let mut failed = false;
+            for session in &self.sessions {
+                failed |= session.lock().await.close().await.is_err();
+            }
+            if failed {
+                return Err(ToolSetupError);
+            }
+        }
+        Ok(())
+    }
+    pub(crate) fn omit_mcp(&mut self, server: &str, reason: &'static str) {
+        self.mcp_omissions.insert(server.into(), reason);
+    }
+    pub fn mcp_omissions(&self) -> &std::collections::BTreeMap<String, &'static str> {
+        &self.mcp_omissions
+    }
+    pub(crate) fn constrain_deadline(&mut self, deadline: Instant) {
+        self.admission_deadline = Some(deadline);
+    }
+    pub(crate) fn deadline(&self, deadline: Instant) -> Instant {
+        self.admission_deadline
+            .map_or(deadline, |admitted| admitted.min(deadline))
+    }
     pub fn descriptors(&self) -> &[ToolDescriptor] {
         &self.descriptors
     }
@@ -207,6 +334,10 @@ impl ToolRegistry {
     pub(crate) fn get(&self, name: &str) -> Option<&dyn Tool> {
         if name == "shell.run" {
             return self.shell.as_ref().map(|tool| tool as &dyn Tool);
+        }
+        #[cfg(unix)]
+        if let Some(tool) = self.mcp.iter().find(|tool| tool.descriptor.name == name) {
+            return Some(tool as &dyn Tool);
         }
         self.descriptors
             .iter()

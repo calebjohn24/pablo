@@ -310,7 +310,7 @@ async fn serve_streams(
                                 .map_err(|_| "MCP server configuration denied by host")
                         });
                         return responder.respond_with_error(invalid(match admitted {
-                            Ok(_) => "MCP transport unsupported until its implementation checkpoint passes",
+                            Ok(_) => "MCP transport unsupported in ACP until C3.18 host integration passes",
                             Err(message) => message,
                         }));
                     }
