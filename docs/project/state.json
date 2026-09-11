@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T20:59:01.486Z",
+  "updated_at": "2026-09-11T21:00:32.322Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.31",
-  "next_action": "Merge verified C3.30 T02, then start C3.31 offline doctor and focused diagnostics. Native macOS arm64 PTY proof passes; repeat platform-specific gates later. Preserve byte-identical release baseline, measured controls and prior concurrent Node stress observations.",
-  "latest_log_entry": "LOG-0153",
+  "next_action": "Start C3.31 on feat/c3-offline-doctor: mark active/in_progress and implement D01 offline capability/configuration/credential-presence diagnosis, concise cause/fix and stable exits. Default doctor must neither run an agent, access the network nor launch configured MCP executables. C3.30 PR #33 merged with exact verified tree parity; preserve native-platform gates, concurrent Node observations and saved baselines.",
+  "latest_log_entry": "LOG-0154",
   "checkpoints": [
     {
       "id": "C1.0",
