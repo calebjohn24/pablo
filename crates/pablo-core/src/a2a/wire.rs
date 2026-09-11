@@ -189,6 +189,15 @@ pub enum Reply {
     Artifact(ArtifactUpdate),
 }
 impl Reply {
+    pub fn reported_usage(&self) -> Option<super::usage::ReportedUsage> {
+        match self {
+            Self::Message(v) => v.reported_usage,
+            Self::Task(v) => v.reported_usage,
+            Self::Status(v) => v.reported_usage,
+            Self::Artifact(v) => v.reported_usage,
+        }
+    }
+
     pub fn remote_trace(&self) -> Result<Option<super::trace::TraceContext>, Error> {
         Ok(match self {
             Self::Message(v) => v.correlation.clone(),
@@ -261,6 +270,7 @@ pub fn decode(
                     .validate_for(trace_context, &status.context_id, &status.task_id)?;
                 status.correlation =
                     super::trace::remote_metadata(&status.metadata, trace_context)?;
+                status.reported_usage = super::usage::decode(&status.metadata)?;
                 return Ok(Reply::Status(status));
             }
             let mut artifact = body.artifact_update.ok_or(Error::Invalid)?;
@@ -269,6 +279,7 @@ pub fn decode(
             artifact.artifact.validate()?;
             artifact.correlation =
                 super::trace::remote_metadata(&artifact.metadata, trace_context)?;
+            artifact.reported_usage = super::usage::decode(&artifact.metadata)?;
             Ok(Reply::Artifact(artifact))
         }
         _ => Err(Error::Invalid),
@@ -280,7 +291,7 @@ fn present<'de, D: serde::Deserializer<'de>, T: Deserialize<'de>>(
 ) -> Result<Option<T>, D::Error> {
     T::deserialize(d).map(Some)
 }
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Part {
     #[serde(
@@ -369,7 +380,7 @@ impl Part {
         }
         Ok(Some(bytes))
     }
-    fn input_bytes(&self) -> Result<usize, Error> {
+    pub(crate) fn input_bytes(&self) -> Result<usize, Error> {
         if let Some(text) = &self.text {
             return Ok(text.len());
         }
@@ -427,13 +438,15 @@ fn parts(parts: &[Part]) -> Result<(), Error> {
     }
     Ok(())
 }
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Message {
     #[serde(default, skip_serializing)]
     metadata: Value,
     #[serde(skip)]
     correlation: Option<super::trace::TraceContext>,
+    #[serde(skip)]
+    reported_usage: Option<super::usage::ReportedUsage>,
     pub message_id: String,
     pub context_id: String,
     #[serde(default)]
@@ -462,6 +475,7 @@ impl Message {
             return Err(Error::Bound);
         }
         self.correlation = super::trace::remote_metadata(&self.metadata, trace)?;
+        self.reported_usage = super::usage::decode(&self.metadata)?;
         parts(&self.parts)
     }
     pub fn remote_trace(&self) -> Result<Option<super::trace::TraceContext>, Error> {
@@ -487,7 +501,7 @@ pub enum TaskState {
     #[serde(rename = "TASK_STATE_AUTH_REQUIRED")]
     AuthRequired,
 }
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct TaskStatus {
     pub state: TaskState,
     #[serde(default)]
@@ -507,7 +521,7 @@ impl TaskStatus {
         self.message.as_mut().map_or(Ok(()), |m| m.validate(trace))
     }
 }
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Artifact {
     pub artifact_id: String,
@@ -528,13 +542,15 @@ impl Artifact {
         parts(&self.parts)
     }
 }
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Task {
     #[serde(default, skip_serializing)]
     metadata: Value,
     #[serde(skip)]
     correlation: Option<super::trace::TraceContext>,
+    #[serde(skip)]
+    reported_usage: Option<super::usage::ReportedUsage>,
     pub id: String,
     pub context_id: String,
     pub status: TaskStatus,
@@ -546,6 +562,7 @@ pub struct Task {
 impl Task {
     fn validate(&mut self, trace: bool) -> Result<(), Error> {
         self.correlation = super::trace::remote_metadata(&self.metadata, trace)?;
+        self.reported_usage = super::usage::decode(&self.metadata)?;
         id(&self.id)?;
         id(&self.context_id)?;
         self.status
@@ -563,24 +580,28 @@ impl Task {
         Ok(())
     }
 }
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StatusUpdate {
     #[serde(default, skip_serializing)]
     metadata: Value,
     #[serde(skip)]
     correlation: Option<super::trace::TraceContext>,
+    #[serde(skip)]
+    reported_usage: Option<super::usage::ReportedUsage>,
     pub task_id: String,
     pub context_id: String,
     pub status: TaskStatus,
 }
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ArtifactUpdate {
     #[serde(default, skip_serializing)]
     metadata: Value,
     #[serde(skip)]
     correlation: Option<super::trace::TraceContext>,
+    #[serde(skip)]
+    reported_usage: Option<super::usage::ReportedUsage>,
     pub task_id: String,
     pub context_id: String,
     pub artifact: Artifact,

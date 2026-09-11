@@ -16,6 +16,7 @@ use std::collections::{BTreeMap, VecDeque};
 use tokio::time::Instant;
 pub(crate) mod factory;
 mod handoff;
+mod remote;
 
 #[derive(Clone, Debug, serde::Serialize)]
 pub(super) struct Snapshot {
@@ -28,6 +29,8 @@ pub(super) struct Snapshot {
     pub trace: Option<Trace>,
     pub validation: Option<Box<pablo_core::output::OutputValidation>>,
     pub repair: Option<Box<pablo_core::output::OutputRepair>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub remote: Option<Box<remote::Snapshot>>,
 }
 #[derive(Clone, Debug, serde::Serialize)]
 pub(super) struct Trace {
@@ -52,12 +55,30 @@ struct Child {
     cancel: CancellationToken,
     retained: Mutex<Option<ResourceLease>>,
 }
-struct Job {
+struct LocalJob {
     child: Arc<Child>,
     prepared: PreparedRun,
     parent: opentelemetry::Context,
     lease: ResourceLease,
     artifacts: Vec<pablo_core::children::handoff::ArtifactReference>,
+}
+enum Job {
+    Local(Box<LocalJob>),
+    Remote(Box<remote::Job>),
+}
+impl Job {
+    fn child(&self) -> &Arc<Child> {
+        match self {
+            Self::Local(job) => &job.child,
+            Self::Remote(job) => &job.child,
+        }
+    }
+    fn release(self) -> (Arc<Child>, ResourceLease) {
+        match self {
+            Self::Local(job) => (job.child, job.lease),
+            Self::Remote(job) => (job.child, job.lease),
+        }
+    }
 }
 #[derive(Default)]
 struct Registry {
@@ -247,6 +268,7 @@ impl Supervisor {
                 trace: None,
                 validation: None,
                 repair: None,
+                remote: None,
             }),
             cancel: self.inner.cancel.child_token(),
             retained: Mutex::new(None),
@@ -254,13 +276,13 @@ impl Supervisor {
         registry
             .entries
             .insert(agent.agent_id().into(), child.clone());
-        registry.queue.push_back(Job {
+        registry.queue.push_back(Job::Local(Box::new(LocalJob {
             child,
             prepared,
             parent,
             lease,
             artifacts,
-        });
+        })));
         self.inner.ready.notify_one();
         Ok(agent)
     }
@@ -347,12 +369,13 @@ impl Supervisor {
             registry
                 .queue
                 .iter()
-                .position(|job| job.child.snapshot.lock().unwrap().agent.agent_id() == id)
+                .position(|job| job.child().snapshot.lock().unwrap().agent.agent_id() == id)
                 .and_then(|index| registry.queue.remove(index))
         };
         if let Some(job) = queued {
+            let (child, lease) = job.release();
             self.inner
-                .settle(job.child, job.lease, RunOutcome::Cancelled, None, None);
+                .settle(child, lease, RunOutcome::Cancelled, None, None);
         }
         loop {
             let changed = self.inner.changed.notified();
@@ -435,6 +458,9 @@ impl Inner {
             snapshot.result_id = None;
             snapshot.validation = None;
             snapshot.repair = None;
+            if let Some(remote) = snapshot.remote.as_mut() {
+                remote.result = None;
+            }
             snapshot.error = Some("child result exceeds retained bound");
         }
         *child.retained.lock().unwrap() = Some(lease);
@@ -478,14 +504,21 @@ impl Inner {
             } else {
                 RunOutcome::Cancelled
             };
-            self.settle(job.child, job.lease, outcome, None, None);
+            let (child, lease) = job.release();
+            self.settle(child, lease, outcome, None, None);
         }
         // Retain and poll every admitted execution through native delivery and
         // joined worker cleanup; cancelling the manager never drops child work.
         while futures::StreamExt::next(&mut active).await.is_some() {}
         self.updates.close();
     }
-    async fn execute(&self, mut job: Job) {
+    async fn execute(&self, job: Job) {
+        match job {
+            Job::Local(job) => self.execute_local(*job).await,
+            Job::Remote(job) => self.execute_remote(*job).await,
+        }
+    }
+    async fn execute_local(&self, mut job: LocalJob) {
         if job.child.cancel.is_cancelled() {
             self.settle(job.child, job.lease, RunOutcome::Cancelled, None, None);
             return;

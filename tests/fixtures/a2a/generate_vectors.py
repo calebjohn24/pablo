@@ -34,3 +34,14 @@ values["file_send"]={"jsonrpc":"2.0","id":"rpc-file","method":"SendMessage","par
 url_message=p.Message(message_id="local-message",role=p.ROLE_USER,parts=[p.Part(url="https://files.example.test/inert",media_type="application/octet-stream")])
 values["url_send"]={"jsonrpc":"2.0","id":"rpc-url","method":"SendMessage","params":MessageToDict(p.SendMessageRequest(message=url_message,configuration=file_request.configuration))}
 root.joinpath("wire.json").write_text(json.dumps(values,indent=2)+"\n")
+
+# Independent SDK assembly semantics: append extends Parts; replacement replaces
+# the whole artifact. Compare Pablo's stream result with this SDK-owned snapshot.
+from a2a.server.tasks.task_manager import append_artifact_to_task
+assembly_task=p.Task(id="remote-task",context_id="remote-context",status=p.TaskStatus(state=p.TASK_STATE_COMPLETED))
+assembly_events=[
+ p.TaskArtifactUpdateEvent(task_id="remote-task",context_id="remote-context",artifact=p.Artifact(artifact_id="assembled",parts=[p.Part(text="first")]),last_chunk=False),
+ p.TaskArtifactUpdateEvent(task_id="remote-task",context_id="remote-context",artifact=p.Artifact(artifact_id="assembled",parts=[p.Part(raw=b"\x00\xff",media_type="application/octet-stream",filename="../../inert.bin"),p.Part(url="https://files.example.test/inert")]),append=True,last_chunk=True),
+]
+for event in assembly_events: append_artifact_to_task(assembly_task,event)
+root.joinpath("assembly.json").write_text(json.dumps({"events":[MessageToDict(event) for event in assembly_events],"task":MessageToDict(assembly_task)},indent=2)+"\n")

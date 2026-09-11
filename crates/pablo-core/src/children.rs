@@ -205,6 +205,9 @@ pub enum WaitMode {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(tag = "action", rename_all = "snake_case", deny_unknown_fields)]
 pub enum ChildAction {
+    SpawnRemote {
+        remote_request: Box<crate::a2a::request::SpawnRequest>,
+    },
     Spawn {
         request: Box<SpawnRequest>,
     },
@@ -293,6 +296,7 @@ impl ChildAction {
         let valid_id = |id: &String| uuid::Uuid::parse_str(id).is_ok();
         match self {
             Self::Spawn { request } => request.validate_shape(),
+            Self::SpawnRemote { remote_request } => remote_request.validate_shape(),
             Self::Wait {
                 agent_ids,
                 timeout_ms,

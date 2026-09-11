@@ -5,8 +5,9 @@
 C3.21 freezes the contract and extracts shared stable ACP v1 handlers; it does not
 install a model tool or advertise working delegation. C3.22 admits one active child,
 C3.23 admits two, and C3.24 adds validated handoffs. Persistent agents, descendants,
-external ACP processes, automatic retry, graph scheduling and A2A are outside this
-slice. `options.children.enabled` must be explicit before any child can execute;
+external ACP processes, automatic retry and graph scheduling are outside this
+slice. C3.27 adds configured remote A2A jobs to the same supervisor; see the
+[A2A contract](c3-a2a.md#c327-supervisor-and-explicit-delegation). `options.children.enabled` must be explicit before any child can execute;
 absence means disabled. The c3.22 deployment schema admits this boolean for CLI and ACP roots. Prepared children cannot install another supervisor. A root claims one native consumer before execution, reserves MCP capacity before setup, and joins its supervisor and consumer before returning to the host. CLI machine output uses only the root terminal; child text is attributed on stderr. ACP tree notifications target the root session and preserve native child identity in correlation metadata. Projected tree tool-call IDs use an agent-ID prefix to distinguish equal provider IDs; native records keep the original IDs.
 
 One root owns temporary depth-one local ACP children. They use the existing runtime,
@@ -41,6 +42,10 @@ The model-facing built-in is `subagent`, one action union:
 - `spawn`: one bounded task, optional task overlay, explicitly selected context,
   narrowed capabilities/model route/budgets and optional output contract. Return
   an `AgentRef` immediately after atomic admission, or a typed admission error.
+- `spawn_remote` (C3.27): an explicit `remote_request` selecting a configured name,
+  Parts, output modes and optional stream/duration. Return an owned remote handle;
+  subsequent operations use the same wait/inspect/stop path and capacity limits.
+  The action is absent from the model schema when no remotes are configured.
 - `wait`: a nonempty unique list of owned handles, mode `any` or `all`, and a bounded
   timeout. Return settled snapshots and remaining handles. `any` includes all
   already-settled selections at observation; `all` waits until every selection

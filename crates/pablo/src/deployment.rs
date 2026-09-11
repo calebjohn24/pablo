@@ -15,6 +15,7 @@ pub struct Bootstrap {
     invocation: PathBuf,
     pub fixture_endpoint: Option<String>,
     fixture_mcp_endpoints: BTreeMap<String, String>,
+    pub fixture_a2a_endpoints: BTreeMap<String, String>,
     entry: PathBuf,
     root: PathBuf,
     profile: Option<String>,
@@ -196,6 +197,7 @@ impl Bootstrap {
                         | "--workspace-config"
                         | "--fixture-endpoint"
                         | "--fixture-mcp-endpoint"
+                        | "--fixture-a2a-endpoint"
                 )
             )
         }) {
@@ -211,6 +213,7 @@ impl Bootstrap {
         let mut locked = false;
         let mut fixture_endpoint = None;
         let mut fixture_mcp_endpoints = BTreeMap::new();
+        let mut fixture_a2a_endpoints = BTreeMap::new();
         let mut seen = HashSet::new();
         let mut rest = Vec::new();
         let mut args = std::mem::take(arguments).into_iter();
@@ -232,11 +235,15 @@ impl Bootstrap {
                     | "--locked"
                     | "--fixture-endpoint"
                     | "--fixture-mcp-endpoint"
+                    | "--fixture-a2a-endpoint"
             ) {
                 rest.push(argument);
                 continue;
             }
-            if !matches!(name, "--bind" | "--fixture-mcp-endpoint") && !seen.insert(name.to_owned())
+            if !matches!(
+                name,
+                "--bind" | "--fixture-mcp-endpoint" | "--fixture-a2a-endpoint"
+            ) && !seen.insert(name.to_owned())
             {
                 return Err(invalid());
             }
@@ -254,6 +261,28 @@ impl Bootstrap {
                 "--config-root" => root = Some(absolute(&cwd, Path::new(value))?),
                 "--profile" => profile = Some(value.to_owned()),
                 "--fixture-endpoint" => fixture_endpoint = Some(value.to_owned()),
+                "--fixture-a2a-endpoint" => {
+                    let (id, endpoint) = value.split_once('=').ok_or_else(invalid)?;
+                    let target = reqwest::Url::parse(endpoint).map_err(|_| invalid())?;
+                    if id.is_empty()
+                        || id.len() > 128
+                        || !id
+                            .bytes()
+                            .all(|b| b.is_ascii_alphanumeric() || b"_.-".contains(&b))
+                        || target.scheme() != "http"
+                        || !matches!(target.host_str(), Some("127.0.0.1" | "[::1]"))
+                        || !target.username().is_empty()
+                        || target.password().is_some()
+                        || target.query().is_some()
+                        || target.fragment().is_some()
+                        || fixture_a2a_endpoints.len() >= 16
+                        || fixture_a2a_endpoints
+                            .insert(id.into(), endpoint.into())
+                            .is_some()
+                    {
+                        return Err(invalid());
+                    }
+                }
                 "--fixture-mcp-endpoint" => {
                     let (id, endpoint) = value.split_once('=').ok_or_else(invalid)?;
                     if id.is_empty()
@@ -284,13 +313,19 @@ impl Bootstrap {
         }
         *arguments = rest;
         let Some(entry) = entry else {
-            return if seen.is_empty() && bindings.is_empty() && fixture_mcp_endpoints.is_empty() {
+            return if seen.is_empty()
+                && bindings.is_empty()
+                && fixture_mcp_endpoints.is_empty()
+                && fixture_a2a_endpoints.is_empty()
+            {
                 Ok(None)
             } else {
                 Err(invalid())
             };
         };
-        if !fixture_mcp_endpoints.is_empty() && fixture_endpoint.is_none() {
+        if (!fixture_mcp_endpoints.is_empty() || !fixture_a2a_endpoints.is_empty())
+            && fixture_endpoint.is_none()
+        {
             return Err(invalid());
         }
         let root = root.unwrap_or_else(|| entry.parent().unwrap().to_path_buf());
@@ -298,6 +333,7 @@ impl Bootstrap {
             invocation: cwd,
             fixture_endpoint,
             fixture_mcp_endpoints,
+            fixture_a2a_endpoints,
             entry,
             root,
             profile,

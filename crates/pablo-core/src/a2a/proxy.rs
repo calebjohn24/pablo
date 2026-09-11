@@ -87,3 +87,76 @@ impl RemoteProxy {
         &self.remote
     }
 }
+
+/// Offline admitted remote ownership. Reserve root capacity before fetching a
+/// card; resolving this ticket preserves the queued local identity.
+#[derive(Debug)]
+pub struct PendingRemote {
+    name: String,
+    agent: AgentRef,
+    remote: super::settings::Remote,
+}
+impl PendingRemote {
+    pub(crate) fn new(name: String, agent: AgentRef, remote: super::settings::Remote) -> Self {
+        Self {
+            name,
+            agent,
+            remote,
+        }
+    }
+    pub fn agent(&self) -> &AgentRef {
+        &self.agent
+    }
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+    pub async fn resolve(
+        self,
+        deadline: tokio::time::Instant,
+        cancellation: &crate::CancellationToken,
+    ) -> Result<RemoteProxy, ResolveError> {
+        self.resolve_inner(None, deadline, cancellation).await
+    }
+    #[doc(hidden)]
+    pub async fn resolve_fixture(
+        self,
+        loopback: &str,
+        deadline: tokio::time::Instant,
+        cancellation: &crate::CancellationToken,
+    ) -> Result<RemoteProxy, ResolveError> {
+        self.resolve_inner(Some(loopback), deadline, cancellation)
+            .await
+    }
+    async fn resolve_inner(
+        self,
+        loopback: Option<&str>,
+        deadline: tokio::time::Instant,
+        cancellation: &crate::CancellationToken,
+    ) -> Result<RemoteProxy, ResolveError> {
+        let selection = self
+            .remote
+            .admission()
+            .map_err(|e| ResolveError::Fetch(super::FetchError::Admission(e)))?;
+        let client = super::CardClient::new().map_err(ResolveError::Fetch)?;
+        let card = match loopback {
+            Some(target) => {
+                client
+                    .fetch_fixture(
+                        &selection,
+                        &self.remote.card_url,
+                        target,
+                        deadline,
+                        cancellation,
+                    )
+                    .await
+            }
+            None => {
+                client
+                    .fetch(&selection, &self.remote.card_url, deadline, cancellation)
+                    .await
+            }
+        }
+        .map_err(ResolveError::Fetch)?;
+        Ok(RemoteProxy::admitted(self.name, self.agent, card))
+    }
+}

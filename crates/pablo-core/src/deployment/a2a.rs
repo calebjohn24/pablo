@@ -75,6 +75,28 @@ impl ResolvedDeployment {
         self.resolve_a2a_inner(parent, name, Some(loopback), deadline, cancellation)
             .await
     }
+    /// Offline named admission for a supervisor queue. No HTTP, credential lookup,
+    /// ledger reservation or task submission occurs until the owner promotes it.
+    pub fn prepare_a2a(
+        &self,
+        parent: &crate::children::AgentRef,
+        name: &str,
+    ) -> Result<crate::a2a::PendingRemote, crate::a2a::ResolveError> {
+        use crate::a2a::{PendingRemote, ResolveError};
+        let settings = self.a2a().map_err(ResolveError::Configuration)?;
+        let remote = settings
+            .remotes
+            .get(name)
+            .ok_or_else(|| {
+                ResolveError::Configuration(error(
+                    "config_authority_violation",
+                    "/options/a2a/remotes",
+                ))
+            })?
+            .clone();
+        let agent = parent.remote_proxy().map_err(ResolveError::Ownership)?;
+        Ok(PendingRemote::new(name.into(), agent, remote))
+    }
     async fn resolve_a2a_inner(
         &self,
         parent: &crate::children::AgentRef,
@@ -83,29 +105,14 @@ impl ResolvedDeployment {
         deadline: tokio::time::Instant,
         cancellation: &crate::CancellationToken,
     ) -> Result<crate::a2a::RemoteProxy, crate::a2a::ResolveError> {
-        use crate::a2a::{CardClient, RemoteProxy, ResolveError};
-        let settings = self.a2a().map_err(ResolveError::Configuration)?;
-        let remote = settings.remotes.get(name).ok_or_else(|| {
-            ResolveError::Configuration(error("config_authority_violation", "/options/a2a/remotes"))
-        })?;
-        let agent = parent.remote_proxy().map_err(ResolveError::Ownership)?;
-        let selection = remote
-            .admission()
-            .map_err(|e| ResolveError::Fetch(crate::a2a::FetchError::Admission(e)))?;
-        let client = CardClient::new().map_err(ResolveError::Fetch)?;
-        let card = match loopback {
+        let pending = self.prepare_a2a(parent, name)?;
+        match loopback {
             Some(target) => {
-                client
-                    .fetch_fixture(&selection, &remote.card_url, target, deadline, cancellation)
+                pending
+                    .resolve_fixture(target, deadline, cancellation)
                     .await
             }
-            None => {
-                client
-                    .fetch(&selection, &remote.card_url, deadline, cancellation)
-                    .await
-            }
+            None => pending.resolve(deadline, cancellation).await,
         }
-        .map_err(ResolveError::Fetch)?;
-        Ok(RemoteProxy::admitted(name.into(), agent, card))
     }
 }

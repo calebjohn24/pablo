@@ -331,6 +331,40 @@ async fn independent_sdk_dispatcher_roundtrips_send_sse_cancel_and_version_error
                 before
             );
             assert_eq!(before.lines().count(), 5);
+            let mut response = client
+                .post(url)
+                .header("A2A-Version", "1.0")
+                .header("Content-Type", "application/json")
+                .body(wire::send_request("rpc", "message", "assembly", true).unwrap())
+                .send()
+                .await
+                .unwrap();
+            let mut framing = pablo_core::a2a::sse::Decoder::default();
+            let mut lifecycle = pablo_core::a2a::lifecycle::Lifecycle::default();
+            let mut count = 0;
+            while let Some(chunk) = response.chunk().await.unwrap() {
+                for byte in chunk {
+                    if let Some(data) = framing.push(byte).unwrap() {
+                        lifecycle.ingest(&data, "rpc", Mode::Stream, false).unwrap();
+                        count += 1;
+                    }
+                }
+            }
+            framing.finish().unwrap();
+            let result = lifecycle.finish().unwrap();
+            let expected: Value =
+                serde_json::from_str(include_str!("../../../tests/fixtures/a2a/assembly.json"))
+                    .unwrap();
+            assert_eq!(count, 4);
+            assert_eq!(
+                serde_json::to_value(&result.artifacts).unwrap(),
+                expected["task"]["artifacts"]
+            );
+            assert_eq!(result.remote.task_id.as_deref(), Some("remote-task"));
+            assert_eq!(
+                result.disposition,
+                Some(pablo_core::a2a::lifecycle::Disposition::Completed)
+            );
             let trace = pablo_core::a2a::trace::TraceContext::new(
                 &format!("00-{}-{}-01", "1".repeat(32), "2".repeat(16)),
                 Some("vendor=value"),
@@ -395,13 +429,138 @@ async fn independent_sdk_dispatcher_roundtrips_send_sse_cancel_and_version_error
                 };
                 assert_eq!(serde_json::to_value(&message.parts[0]).unwrap(), expected);
             }
-            assert_eq!(
-                std::fs::read_to_string(cwd.join("calls.jsonl"))
+            use pablo_core::a2a::transport::{CancelReceipt, Request, TaskClient};
+            use tokio::time::Instant;
+            let card =
+                pablo_core::a2a::CardAdmission::new("https://agent.example.test/rpc", None, false)
                     .unwrap()
-                    .lines()
-                    .count(),
-                10
+                    .validate(include_bytes!("../../../tests/fixtures/a2a/card.json"))
+                    .unwrap();
+            let transport = TaskClient::fixture(&card, url).unwrap();
+            let modes = ["text/plain", "application/octet-stream"];
+            for (input, stream) in [("transport", false), ("task", false), ("assembly", true)] {
+                let parts = [wire::Part::text(input)];
+                let request = Request {
+                    parts: &parts,
+                    accepted_output_modes: &modes,
+                    stream,
+                    trace: None,
+                    deadline: Instant::now() + std::time::Duration::from_secs(2),
+                    cleanup_deadline: Instant::now() + std::time::Duration::from_secs(3),
+                };
+                let execution = transport
+                    .execute(request, &pablo_core::CancellationToken::new(), &mut ())
+                    .await;
+                assert_eq!(
+                    execution.delivery,
+                    pablo_core::DeliveryCertainty::ResponseReceived
+                );
+                assert_eq!(execution.cancellation, CancelReceipt::NotNeeded);
+                let result = execution.result.unwrap();
+                assert_eq!(
+                    result.disposition,
+                    Some(pablo_core::a2a::lifecycle::Disposition::Completed)
+                );
+                if input == "assembly" {
+                    assert_eq!(
+                        serde_json::to_value(&result.artifacts).unwrap(),
+                        expected["task"]["artifacts"]
+                    );
+                }
+            }
+            struct CancelSink(pablo_core::CancellationToken);
+            impl pablo_core::a2a::transport::Sink for CancelSink {
+                fn update<'a>(
+                    &'a mut self,
+                    _: pablo_core::a2a::lifecycle::Update,
+                    _: &'a pablo_core::a2a::lifecycle::ResultData,
+                ) -> futures_util::future::BoxFuture<
+                    'a,
+                    Result<(), pablo_core::a2a::transport::Error>,
+                > {
+                    self.0.cancel();
+                    Box::pin(async { Ok(()) })
+                }
+            }
+            for deadline in [false, true] {
+                let token = pablo_core::CancellationToken::new();
+                let parts = [wire::Part::text("hold")];
+                let request = Request {
+                    parts: &parts,
+                    accepted_output_modes: &modes,
+                    stream: true,
+                    trace: None,
+                    deadline: Instant::now()
+                        + std::time::Duration::from_millis(if deadline { 100 } else { 2000 }),
+                    cleanup_deadline: Instant::now() + std::time::Duration::from_secs(3),
+                };
+                let execution = if deadline {
+                    transport.execute(request, &token, &mut ()).await
+                } else {
+                    transport
+                        .execute(request, &token, &mut CancelSink(token.clone()))
+                        .await
+                };
+                assert_eq!(
+                    execution.result.unwrap_err(),
+                    if deadline {
+                        pablo_core::a2a::transport::Error::TimedOut
+                    } else {
+                        pablo_core::a2a::transport::Error::Cancelled
+                    }
+                );
+                assert_eq!(execution.remote.task_id.as_deref(), Some("remote-task"));
+                assert_eq!(
+                    execution.cancellation,
+                    CancelReceipt::Received(wire::TaskState::Canceled)
+                );
+            }
+            let before = std::fs::read_to_string(cwd.join("calls.jsonl")).unwrap();
+            let unsupported = [wire::Part::file(b"synthetic", "image/png", None).unwrap()];
+            let execution = transport
+                .execute(
+                    Request {
+                        parts: &unsupported,
+                        accepted_output_modes: &modes,
+                        stream: true,
+                        trace: None,
+                        deadline: Instant::now() + std::time::Duration::from_secs(2),
+                        cleanup_deadline: Instant::now() + std::time::Duration::from_secs(3),
+                    },
+                    &pablo_core::CancellationToken::new(),
+                    &mut (),
+                )
+                .await;
+            assert_eq!(
+                execution.result.unwrap_err(),
+                pablo_core::a2a::transport::Error::Selection
             );
+            assert_eq!(execution.delivery, pablo_core::DeliveryCertainty::NotSent);
+
+            let token = pablo_core::CancellationToken::new();
+            token.cancel();
+            let parts = [wire::Part::text("not sent")];
+            let execution = transport
+                .execute(
+                    Request {
+                        parts: &parts,
+                        accepted_output_modes: &modes,
+                        stream: true,
+                        trace: None,
+                        deadline: Instant::now() + std::time::Duration::from_secs(2),
+                        cleanup_deadline: Instant::now() + std::time::Duration::from_secs(3),
+                    },
+                    &token,
+                    &mut (),
+                )
+                .await;
+            assert_eq!(execution.delivery, pablo_core::DeliveryCertainty::NotSent);
+            assert_eq!(execution.cancellation, CancelReceipt::NotNeeded);
+            assert_eq!(
+                std::fs::read_to_string(cwd.join("calls.jsonl")).unwrap(),
+                before
+            );
+            assert_eq!(before.lines().count(), 18);
         })
         .catch_unwind(),
     )

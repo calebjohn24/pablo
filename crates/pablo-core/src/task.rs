@@ -297,7 +297,7 @@ mod decimal {
         }
     }
 }
-mod optional_decimal {
+pub(crate) mod optional_decimal {
     use serde::{Deserialize, Deserializer, Serializer};
     pub fn serialize<S: Serializer>(value: &Option<u64>, serializer: S) -> Result<S::Ok, S::Error> {
         match value {

@@ -130,6 +130,7 @@ pub enum DeliveryCertainty {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum FailureCode {
+    RemoteTask,
     ChildAdmission,
     ContextOverflow,
     CompactionFailed,
@@ -311,6 +312,8 @@ pub struct RunEvent {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum EventKind {
+    #[serde(rename = "a2a.update")]
+    A2aUpdate { remote: crate::a2a::events::Record },
     #[cfg(unix)]
     #[serde(rename = "skill.activated")]
     SkillActivated {
