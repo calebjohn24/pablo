@@ -1,0 +1,21 @@
+{
+  "checkpoint": "C3.25",
+  "collector": "0.160.0",
+  "platform": "darwin/arm64",
+  "surface": "acp",
+  "spans": 37,
+  "rootAndChildRuns": 4,
+  "models": 17,
+  "tools": 11,
+  "compactions": 1,
+  "validations": 4,
+  "mcpTools": 2,
+  "exactNativeIdentities": true,
+  "exactNativeTimestamps": true,
+  "metadataOnly": true,
+  "exporterOutageOutcomeAndAccountingUnchanged": true,
+  "source_sha256": "acc51e884e7d3abef64a4b49a4f46dca182040d21f530c0720c8b7d37bba614c",
+  "binary_sha256": "c0a87d02f08f8695824068663b6f82b1635f4e6a6f1548ee2c5481caeea229d1",
+  "binary": "target/debug/pablo",
+  "timestamp_scope": "Exact timestamps for native run/model/tool/compaction pairs; four validation spans have exact parent/agent/schema attribution and lie within their corresponding run."
+}

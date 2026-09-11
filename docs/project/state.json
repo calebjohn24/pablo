@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T14:08:04.682Z",
+  "updated_at": "2026-09-11T14:26:34.925Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.25",
-  "next_action": "Activate C3.25 on merged 31dc111: fresh-build E01 through Rust embedding and TypeScript ACP, combining MCP, an explicitly activated Skill resource, two children and validated output/handoff. Force basic compaction while preserving active capability/child ownership and completed result IDs; include root cancellation and denied authority. Run offline suites and real Collector identity/privacy/outage proof. Review source-matched OpenRouter and explicit Vercel live evidence, rerunning bounded live checks only where provider/lifecycle changes invalidate it. Continue performance checks and PR merges. Preserve GLM defaults, task-relevant compaction, unlimited filesystem work, F03 at C3.33 and release/platform gates.",
-  "latest_log_entry": "LOG-0132",
+  "next_checkpoint": "C3.26",
+  "next_action": "Merge exact verified C3.25 head, synchronize main and confirm tree parity. Prepare C3.26: pin A2A 1.0 and one JSON-RPC-over-HTTP/SSE binding, resolve allowlisted Agent Cards as untrusted remote proxy descriptions and reject invalid/unsupported/redirected authority before task submission. Preserve local child/MCP/Skill/compaction defaults and proofs; F03 remains C3.33 and four-target native/release acceptance remains pending.",
+  "latest_log_entry": "LOG-0134",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -577,9 +577,11 @@
         "C3.7",
         "C3.24"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0134"
+      ]
     },
     {
       "id": "C3.26",
