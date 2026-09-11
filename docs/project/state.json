@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T21:39:11.299Z",
+  "updated_at": "2026-09-11T21:40:56.457Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.32",
-  "next_action": "Merge final verified C3.31 D01, then start C3.32 G04 complete composed preset acceptance across CLI, ACP and embedding, including fallback, denied command, clean/noisy locked parity and public option inventory. Preserve doctor offline/interrupt ownership, native-platform gates, prior concurrent Node observations and saved baselines.",
-  "latest_log_entry": "LOG-0157",
+  "next_action": "Start C3.32 on feat/c3-preset-acceptance: mark active/in_progress and prove G04 complete base/production/development presets across CLI, ACP and embedding, eligible fallback, denied command, locked clean/noisy parity, option inventory and migration guidance. C3.31 PR #34 merged with exact verified tree parity; preserve doctor offline/interrupt ownership, native gates, concurrent Node observations and saved baselines.",
+  "latest_log_entry": "LOG-0158",
   "checkpoints": [
     {
       "id": "C1.0",
