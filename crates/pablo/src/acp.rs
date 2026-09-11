@@ -29,13 +29,19 @@ const INPUT_MESSAGES: usize = 128;
 const QUEUE_EVENTS: usize = 8;
 const WRITE_TIMEOUT: Duration = Duration::from_secs(30);
 
+#[derive(Clone, Copy, Default)]
+struct Extensions {
+    base: bool,
+    task: bool,
+    route: bool,
+    compaction: bool,
+    output: bool,
+}
+
 #[derive(Default)]
 struct State {
     initialized: bool,
-    extended: bool,
-    task_extended: bool,
-    route_extended: bool,
-    compaction_extended: bool,
+    extensions: Extensions,
     session: Option<(wire::SessionId, std::path::PathBuf)>,
     prompted: bool,
     prompt_active: bool,
@@ -205,37 +211,46 @@ async fn serve_streams(
                     // ACP negotiation returns our supported version. A client that
                     // cannot speak v1 must disconnect; draft v2 is never selected.
                     state.initialized = true;
-                    state.extended = request
+                    state.extensions.base = request
                         .client_capabilities
                         .meta
                         .as_ref()
                         .and_then(|m| m.get(EXTENSION))
                         == Some(&json!(true));
-                    state.task_extended = state.extended
+                    state.extensions.task = state.extensions.base
                         && request
                             .client_capabilities
                             .meta
                             .as_ref()
                             .and_then(|m| m.get("pablo/task-v1"))
                             == Some(&json!(true));
-                    state.route_extended = state.extended
+                    state.extensions.route = state.extensions.base
                         && request
                             .client_capabilities
                             .meta
                             .as_ref()
                             .and_then(|m| m.get("pablo/model-route-v1"))
                             == Some(&json!(true));
-                    state.compaction_extended = state.extended
+                    state.extensions.compaction = state.extensions.base
                         && request
                             .client_capabilities
                             .meta
                             .as_ref()
                             .and_then(|m| m.get("pablo/compaction-v1"))
                             == Some(&json!(true));
+                    state.extensions.output = state.extensions.base
+                        && state.extensions.task
+                        && request
+                            .client_capabilities
+                            .meta
+                            .as_ref()
+                            .and_then(|m| m.get("pablo/output-v1"))
+                            == Some(&json!(true));
                     let mut capabilities = meta(json!(true));
                     capabilities.insert("pablo/task-v1".into(), json!(true));
                     capabilities.insert("pablo/model-route-v1".into(), json!(true));
                     capabilities.insert("pablo/compaction-v1".into(), json!(true));
+                    capabilities.insert("pablo/output-v1".into(), json!(true));
                     let caps = wire::AgentCapabilities::new().meta(capabilities);
                     responder.respond(
                         wire::InitializeResponse::new(
@@ -330,7 +345,7 @@ async fn serve_streams(
                         Ok(input) => input,
                         Err(error) => return responder.respond_with_error(error),
                     };
-                    let (cwd, extended, task_extended, route_extended, compaction_extended) = {
+                    let (cwd, extensions) = {
                         let mut s = state.lock().unwrap();
                         let Some((id, cwd)) = &s.session else {
                             return responder.respond_with_error(invalid("create a session first"));
@@ -345,13 +360,7 @@ async fn serve_streams(
                         }
                         let cwd = cwd.clone();
                         s.prompted = true;
-                        (
-                            cwd,
-                            s.extended,
-                            s.task_extended,
-                            s.route_extended,
-                            s.compaction_extended,
-                        )
+                        (cwd, s.extensions)
                     };
                     let prepared = match options.prepare_run(
                         Some(input.clone()),
@@ -380,32 +389,33 @@ async fn serve_streams(
                     spec.input = input;
                     spec.session_id = Some(request.session_id.to_string());
                     let incoming = request.meta.as_ref().and_then(|m| m.get(EXTENSION));
-                    let parent = if let Some(prepared) = prepared.as_ref().filter(|_| extended) {
-                        crate::otel::parent_explicit(
-                            incoming
-                                .and_then(|m| m.get("traceparent"))
-                                .and_then(Value::as_str),
-                            incoming
-                                .and_then(|m| m.get("tracestate"))
-                                .and_then(Value::as_str),
-                            prepared.deployment().options()["otel"]["propagators"]
-                                .as_array()
-                                .unwrap()
-                                .iter()
-                                .any(|v| v == "tracecontext"),
-                        )
-                    } else if extended {
-                        crate::otel::parent(
-                            incoming
-                                .and_then(|m| m.get("traceparent"))
-                                .and_then(Value::as_str),
-                            incoming
-                                .and_then(|m| m.get("tracestate"))
-                                .and_then(Value::as_str),
-                        )
-                    } else {
-                        opentelemetry::Context::new()
-                    };
+                    let parent =
+                        if let Some(prepared) = prepared.as_ref().filter(|_| extensions.base) {
+                            crate::otel::parent_explicit(
+                                incoming
+                                    .and_then(|m| m.get("traceparent"))
+                                    .and_then(Value::as_str),
+                                incoming
+                                    .and_then(|m| m.get("tracestate"))
+                                    .and_then(Value::as_str),
+                                prepared.deployment().options()["otel"]["propagators"]
+                                    .as_array()
+                                    .unwrap()
+                                    .iter()
+                                    .any(|v| v == "tracecontext"),
+                            )
+                        } else if extensions.base {
+                            crate::otel::parent(
+                                incoming
+                                    .and_then(|m| m.get("traceparent"))
+                                    .and_then(Value::as_str),
+                                incoming
+                                    .and_then(|m| m.get("tracestate"))
+                                    .and_then(Value::as_str),
+                            )
+                        } else {
+                            opentelemetry::Context::new()
+                        };
                     let capture_content = spec.trace.capture_content;
                     let (tx, rx) = async_channel::bounded(QUEUE_EVENTS);
                     let cancel = cancellation.child_token();
@@ -444,15 +454,8 @@ async fn serve_streams(
                     let sender = cx.clone();
                     cx.spawn(async move {
                         let request_cancel = responder.cancellation();
-                        let forwarding = forward_events(
-                            rx,
-                            &sender,
-                            &written,
-                            extended,
-                            route_extended,
-                            compaction_extended,
-                            capture_content,
-                        );
+                        let forwarding =
+                            forward_events(rx, &sender, &written, extensions, capture_content);
                         tokio::pin!(forwarding);
                         let terminal = tokio::select! {
                             result = &mut forwarding => result,
@@ -470,10 +473,7 @@ async fn serve_streams(
                         responder.respond_with_result(prompt_response(
                             outcome,
                             terminal,
-                            extended,
-                            task_extended,
-                            route_extended,
-                            compaction_extended,
+                            extensions,
                             cancel.is_cancelled(),
                         ))
                     })
@@ -616,9 +616,7 @@ async fn forward_events(
     rx: async_channel::Receiver<RunEvent>,
     cx: &ConnectionTo<Client>,
     written: &Written,
-    extended: bool,
-    route_extended: bool,
-    compaction_extended: bool,
+    extensions: Extensions,
     capture_content: bool,
 ) -> Result<Option<RunEvent>, Error> {
     let mut events = EventStream::new(rx);
@@ -629,7 +627,7 @@ async fn forward_events(
             terminal = Some(event.clone());
         }
         let mut notification_sent = false;
-        if compaction_extended
+        if extensions.compaction
             && matches!(
                 event.kind,
                 EventKind::CompactionStarted | EventKind::CompactionFinished { .. }
@@ -659,7 +657,7 @@ async fn forward_events(
             ))?;
             notification_sent = true;
         }
-        if route_extended
+        if extensions.route
             && event.model_route.is_some()
             && matches!(
                 event.kind,
@@ -681,8 +679,13 @@ async fn forward_events(
         }
         if let Some(update) = project(&event)? {
             let mut notification = wire::SessionNotification::new(event.session_id.clone(), update);
-            if extended {
-                notification.meta = Some(meta(correlation(&event, first)));
+            if extensions.base {
+                let mut details = correlation(&event, first);
+                if extensions.output && event.output_validation.is_some() {
+                    details["output_validation"] = serde_json::to_value(&event.output_validation)
+                        .map_err(|_| Error::internal_error())?;
+                }
+                notification.meta = Some(meta(details));
             }
             cx.send_notification(notification)?;
             notification_sent = true;
@@ -743,10 +746,7 @@ fn project(event: &RunEvent) -> Result<Option<wire::SessionUpdate>, Error> {
 fn prompt_response(
     outcome: Result<RunOutcome, String>,
     terminal: Option<RunEvent>,
-    extended: bool,
-    task_extended: bool,
-    route_extended: bool,
-    compaction_extended: bool,
+    extensions: Extensions,
     cancelled: bool,
 ) -> Result<wire::PromptResponse, Error> {
     let outcome = outcome.map_err(|message| {
@@ -759,19 +759,22 @@ fn prompt_response(
     let terminal =
         terminal.ok_or_else(|| Error::internal_error().data("terminal event unavailable"))?;
     let mut details = correlation(&terminal, terminal.seq);
-    if route_extended && terminal.model_route.is_some() {
+    if extensions.route && terminal.model_route.is_some() {
         details["model_route"] =
             serde_json::to_value(&terminal.model_route).map_err(|_| Error::internal_error())?;
     }
-    if compaction_extended && terminal.compaction.is_some() {
+    if extensions.compaction && terminal.compaction.is_some() {
         details["compaction"] =
             serde_json::to_value(&terminal.compaction).map_err(|_| Error::internal_error())?;
     }
-    if task_extended {
-        details["task"] = serde_json::to_value(
-            pablo_core::TaskResult::from_terminal(&terminal).ok_or_else(Error::internal_error)?,
-        )
-        .map_err(|_| Error::internal_error())?;
+    if extensions.task {
+        let mut task =
+            pablo_core::TaskResult::from_terminal(&terminal).ok_or_else(Error::internal_error)?;
+        if !extensions.output {
+            task.output_validation = None;
+            task.schema_version = pablo_core::task::TASK_SCHEMA_VERSION.into();
+        }
+        details["task"] = serde_json::to_value(task).map_err(|_| Error::internal_error())?;
     } else {
         details["outcome"] = serde_json::to_value(&outcome).map_err(|_| Error::internal_error())?;
     }
@@ -792,7 +795,7 @@ fn prompt_response(
                 limit: LimitKind::ModelCalls | LimitKind::ToolCalls,
             } => wire::StopReason::MaxTurnRequests,
             _ => {
-                return Err(Error::internal_error().data(if extended {
+                return Err(Error::internal_error().data(if extensions.base {
                     json!({"pablo/v1":details})
                 } else {
                     json!({"status":outcome.label()})
@@ -801,7 +804,7 @@ fn prompt_response(
         }
     };
     let mut response = wire::PromptResponse::new(reason);
-    if extended {
+    if extensions.base {
         response.meta = Some(meta(details));
     }
     Ok(response)
@@ -816,6 +819,7 @@ mod tests {
         RunEvent {
             model_route: None,
             compaction: None,
+            output_validation: None,
             model_profile: None,
             deployment: None,
             accounting: None,

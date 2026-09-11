@@ -67,7 +67,8 @@ impl<W: Write> JsonlSink<W> {
             0
         };
         let terminal_reserve = 4096usize
-            .checked_add(content_reserve)
+            .checked_add(if spec.output.is_some() { 4096 } else { 0 })
+            .and_then(|n| n.checked_add(content_reserve))
             .ok_or(SinkError::Capacity)?;
         if spec.trace.max_bytes < terminal_reserve.saturating_add(4096) {
             return Err(SinkError::Capacity);
@@ -170,6 +171,14 @@ impl Serialize for RedactedEvent<'_> {
         map.serialize_entry("span_id", &e.span_id)?;
         map.serialize_entry("parent_span_id", &e.parent_span_id)?;
         map.serialize_entry("trace_flags", &e.trace_flags)?;
+        if let Some(validation) = &e.output_validation {
+            let mut validation = validation.clone();
+            for issue in &mut validation.diagnostics {
+                issue.instance_path.clear();
+                issue.schema_path.clear();
+            }
+            map.serialize_entry("output_validation", &validation)?;
+        }
         if let Some(compaction) = &e.compaction {
             map.serialize_entry("compaction", compaction)?;
         }

@@ -286,6 +286,13 @@ impl ResolvedDeployment {
         spec.context = serde_json::from_value(options["context"].clone())
             .map_err(|_| error("config_invalid_value", "/options/context"))?;
         spec.context.window_tokens = self.model_profile()?.context_window_tokens;
+        if let Some(schema) = options["output"]["schema"].as_str() {
+            spec.output = Some(crate::output::OutputSettings {
+                schema: serde_json::from_str(schema)
+                    .map_err(|_| error("config_invalid_value", "/options/output/schema"))?,
+                max_validation_work: options["output"]["max_validation_work"].as_u64().unwrap(),
+            });
+        }
         spec.session_id = input.session_id;
         spec.instructions = options["run"]["instructions"].as_str().unwrap().into();
         spec.limits = serde_json::from_value(limits)

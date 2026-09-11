@@ -20,8 +20,13 @@ export function outcomeOf(response: PromptResponse): RunOutcome {
   return parseOutcome(response._meta?.['pablo/v1']);
 }
 
+export interface OutputValidation {
+  schema_version: 'output-validation-v1'; schema_sha256: string;
+  status: 'unvalidated' | 'valid' | 'invalid';
+  diagnostics: {code: string; instance_path: string; schema_path: string}[];
+}
 export interface TaskResult {
-  schema_version: 'c2.3'; run_id: string; session_id: string; trace_id: string;
+  schema_version: 'c2.3' | 'c3.13'; output_validation?: OutputValidation; run_id: string; session_id: string; trace_id: string;
   outcome: RunOutcome; error: null;
   accounting: { model_calls: string; tool_calls: string;
     usage: Record<'input_tokens' | 'output_tokens' | 'cache_read_input_tokens' | 'cache_write_input_tokens', string | null>;
@@ -31,11 +36,19 @@ function parseTask(value: unknown): TaskResult {
   const t = value as TaskResult;
   const decimal = (v: unknown): boolean => typeof v === 'string' && /^(0|[1-9][0-9]{0,19})$/.test(v) && BigInt(v) <= 18446744073709551615n;
   const nullable = (v: unknown): boolean => v === null || decimal(v);
-  if (!t || t.schema_version !== 'c2.3' || t.error !== null ||
+  if (!t || !['c2.3','c3.13'].includes(t.schema_version) || t.error !== null ||
       ![t.run_id, t.session_id, t.trace_id].every(v => typeof v === 'string' && v.length > 0) ||
       !t.accounting || !decimal(t.accounting.model_calls) || !decimal(t.accounting.tool_calls) ||
       !t.accounting.usage || !['input_tokens','output_tokens','cache_read_input_tokens','cache_write_input_tokens'].every(k => nullable((t.accounting.usage as Record<string, unknown>)[k])) ||
       !['cost_microusd','charged_tokens','charged_cost_microusd'].every(k => nullable((t.accounting as unknown as Record<string, unknown>)[k]))) throw new Error('Invalid Pablo task accounting');
+  const v=t.output_validation;
+  if (t.schema_version==='c3.13') {
+    if (!v || v.schema_version!=='output-validation-v1' || !/^sha256:[0-9a-f]{64}$/.test(v.schema_sha256) || !['unvalidated','valid','invalid'].includes(v.status) ||
+      !Array.isArray(v.diagnostics) || v.diagnostics.length>8 || Buffer.byteLength(JSON.stringify(v.diagnostics))>2048 ||
+      v.diagnostics.some(d=>!['malformed_json','json_bytes','validation_work','json_structure','schema_violation'].includes(d.code) || typeof d.instance_path!=='string' || typeof d.schema_path!=='string' || Buffer.byteLength(d.instance_path)>256 || Buffer.byteLength(d.schema_path)>256) ||
+      (v.status==='invalid')!==(v.diagnostics.length>0) || (v.status==='valid'&&t.outcome.status!=='completed') ||
+      (v.status==='invalid'&&(t.outcome.status!=='failed'||t.outcome.code!=='output_validation_failed'))) throw new Error('Invalid Pablo output validation');
+  } else if (v!==undefined) throw new Error('Unexpected Pablo output validation');
   return t;
 }
 /** Exact counts are decimal strings; use BigInt when arithmetic is needed. */
@@ -43,6 +56,13 @@ export function taskOf(response: PromptResponse): TaskResult {
   const task = parseTask((response._meta?.['pablo/v1'] as Record<string, unknown>)?.task);
   parseOutcome(response._meta?.['pablo/v1']);
   return task;
+}
+
+/** Parse structured output only after the runtime's local validation succeeded. */
+export function structuredOf(response: PromptResponse): unknown {
+  const task=taskOf(response);
+  if(task.output_validation?.status!=='valid'||task.outcome.status!=='completed') throw new Error('Output is not validated');
+  return JSON.parse(task.outcome.output);
 }
 
 function parseOutcome(value: unknown): RunOutcome {

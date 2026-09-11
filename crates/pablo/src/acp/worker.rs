@@ -314,6 +314,7 @@ mod tests {
         let mut event = RunEvent {
             model_route: None,
             compaction: None,
+            output_validation: None,
             model_profile: None,
             deployment: None,
             accounting: None,

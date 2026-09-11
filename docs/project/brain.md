@@ -7,15 +7,12 @@ This file holds durable context. [State](state.json) reports current progress, [
 Read [the architecture brief](../context.md) selectively: section 29.1 defines the 0.1 contract; section 37.1 the C1 spike; sections 12–14 contracts/lifecycle/cancellation/shell; sections 19/21 providers and OTel; sections 28/31/32 performance/release/tests. [Backlog](backlog.md) retains deferred slices and promotion conditions.
 
 ### D001 — One checkpoint per implementation session
-
 The user selected this cadence to keep changes manageable. Finish verification and project records, leave the next checkpoint ready, and stop. Partial checkpoints can resume across sessions; explicit user steering can change the cadence.
 
 ### D002 — Cycle C1 proves the focused spike
-
 Use section 37.1, not the whole 0.1 release or alpha.1, as the completion boundary. Prove one model/shell loop through ACP plus native/OTel trace correlation. Keep filesystem tools, other providers, extensibility, TUI, and durable runtime state in later slices.
 
 ### D003 — Repository files are the development memory
-
 Use curated Markdown, one structured current-state file, and append-only JSONL work history. A dependency-free Node helper reads and validates those records. This keeps context inspectable in Git and avoids introducing a database or separate service before a runtime exists.
 
 ### D004 — Vercel is the first live provider
@@ -197,3 +194,6 @@ C3.10 names profiles and composes ordered routes offline, validating every entry
 ### D045 — Basic compaction belongs in C3
 
 The user explicitly added compaction to C3. C3.12a closes the omitted section 23/28.8 bounded-run requirement with one summary pass and one overflow recovery, preserving prefix, task constraints, recent complete tool pairs, private continuation and shared budgets. Codex informs the summary-and-history replacement pattern; GLM providers remain default, and durable memory/tokenizers are deferred. C3.12a implements conservative profile-local estimates, atomic smaller replacement and negotiated metadata with content-controlled summaries; explicit machine-code overflow is the only recovery trigger. The user-selected C3.12b refinement summarizes recent bulk too, preserving task-relevant facts rather than archiving raw outputs; retain raw turns only by configuration or source-capacity necessity. See [contract](contracts/c3-compaction.md) and [scope](evidence/c3-compaction-scope.md).
+
+### D046 — Validate final JSON locally before exposing structured success
+C3.13 pins an optional bounded Draft 2020-12 subset and a 16-entry canonical schema cache. Provider hints cannot establish validity; schema-enabled CLI/negotiated ACP tasks carry explicit provisional/valid/invalid metadata. Unsupported schemas reject before dispatch; invalid finals fail without hidden calls. Format stays annotation-only, diagnostics exclude values, and compilation/validation share finite input/work bounds. C3.14 owns the separate bounded repair. See [J01](contracts/c3-output-validation.md).

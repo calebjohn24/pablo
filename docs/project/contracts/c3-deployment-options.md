@@ -18,6 +18,7 @@ Each row inherits owner C3.3, availability `c3.1` contract / C3.2 resolver / C3.
 | `model.credential` | Name, `gateway` | Must refer to one matching `provider.vercel`, `provider.openrouter` or `provider.open_responses` record; explicit presets declare it; compatibility mode synthesizes legacy references privately |
 | `model.capability_profile`, `model.auth_header`, `model.auth_scheme` | Open Responses only: required `open-responses-text-tools-v1`, default `Authorization` and `bearer` | [Pinned profile](c3-open-responses.md) defines endpoint/model/header admission; no implicit Open Responses model/key/endpoint; these fields reject for other providers |
 | `models`, `routes`, `model_route` | Named model/route maps and optional selected route | C3.10 offline resolution and single-entry execution; [F01](c3-model-routes.md) fixes exact fields, defaults, composition, capability/credential authority and inherited subsequences. C3.11 implements multi-entry fallback and separate attempt deadlines with shared root budgets |
+| `output.schema`, `output.max_validation_work` | Unset, inline JSON string or bound file path; work default 16,777,216, range 1–1,000,000,000 | C3.13 [J01](c3-output-validation.md): pinned local Draft 2020-12 subset, bounded compilation/cache/validation, format annotation-only; locked overrides retain schema and only narrow work |
 | `context` | Enabled; 10% margin, 1024 summary tokens, 16384 summary bytes, zero mandatory raw recent turns | C3.12b [CP01/CP02](c3-compaction.md) fixes exact bounds, one summary/recovery, atomic retention and privacy |
 | `model.context_window_tokens`, `models.*.context_window_tokens` | Positive integer through 1,000,000,000 or `{unset=true}` (default unknown) | C3.12a; per-profile declared capacity, ordinary scalar replacement/unset; never inferred from model names |
 | `limits.max_model_calls`, `limits.max_tool_calls` | Optional u32 counts, `unlimited` each | `RunLimits`; never replace unlimited defaults with incidental config/parser limits |
@@ -68,7 +69,7 @@ These namespaces are reserved and rejected by the baseline schema. The listed ow
 
 | Reserved surface | Owner and availability gate | Required options and authority coverage |
 | --- | --- | --- |
-| `output` | C3.13 validation; C3.14 repair | Local schema reference/digest, supported Draft 2020-12 subset and work bounds, output mode, one-repair choice/feedback budget; envelope stdout remains separate |
+| `output.repair` | C3.14 | One-repair choice/feedback budget; C3.13 rejects repair settings |
 | `mcp` | C3.15 contracts; C3.16 stdio, C3.17 HTTP, C3.18 integration | Named servers; executable/argv/cwd/cleared env or endpoint; scoped credential refs; required/optional startup; exact server/tool catalog/policy; request/result/progress/process/concurrency/startup/cleanup bounds |
 | `skills` | C3.19 discovery; C3.20 activation | Explicit approved roots/activations, metadata/resource/instruction scan and byte bounds, identity/digest/duplicate handling, resource/tool/child authority; no install/auto-match |
 | `children` | C3.21 contracts; C3.22 one, C3.23 two; C3.24 handoffs | Explicit enablement; depth one, active/total/queue/context/process/MCP/event limits; allowed routes/tools/Skills/MCP; workspace and output/handoff schemas/byte limits; narrowed budgets and joined cancellation |
@@ -90,6 +91,7 @@ Inventory audit sources are current [CLI configuration](../../../crates/pablo/sr
 | `--workspace`, ACP cwd, Rust workspace | `run.workspace` after typed binding/override admission; locked ACP cwd must match or be an expressly permitted contained workspace |
 | `--provider`, `--model`, Rust `ModelProfile` | `model.provider`, `model.id`; configured host resolves the same provider identity/default/endpoint |
 | `--no-shell`, `--no-filesystem`, `--allow-write` | `shell.enabled = false`, `filesystem.enabled = false`, `filesystem.write = true` |
+| `--output-schema PATH` | `output.schema` bound file reference, authorized before opening; resolves to pinned canonical JSON |
 | `--policy PATH` | Parse existing bounded C2 JSON policy as one explicit ordinary policy layer; cannot erase accumulated authority. C3.3 retains legacy behavior; rendered output contains typed rules, not a second live policy-file reference |
 | Timeout and `--max-*` flags | Corresponding `limits` leaves; seconds convert with checked multiplication by 1,000, u64 ceilings normalize to decimal strings |
 | `--trace`, `--capture-content`, `--json` | `trace.path`, `trace.capture_content`, `interfaces.cli_output` |

@@ -86,5 +86,11 @@
     "max_summary_tokens": 1024,
     "max_summary_bytes": 16384,
     "keep_recent_turns": 0
+  },
+  "output": {
+    "schema": {
+      "unset": true
+    },
+    "max_validation_work": 16777216
   }
 }

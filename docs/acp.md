@@ -140,3 +140,16 @@ answer chunks. Peers without the capability keep existing shapes; each new sessi
 has fresh history and compaction allowance. The task schema remains `c2.3`.
 See [the contract](project/contracts/c3-compaction.md) and the reference client's
 `onCompaction` callback.
+
+### Negotiated structured output
+
+Clients enable `pablo/output-v1` together with `pablo/v1` and `pablo/task-v1`.
+For schema-enabled tasks, provisional text correlation carries an `unvalidated`
+record; the terminal `c3.13` task carries the final validation status and bounded
+diagnostics. The reference client's `structuredOf(response)` parses output only
+when validation succeeded. A local validation failure uses JSON-RPC `-32603` and
+`output_validation_failed` in the terminal task. It makes no repair request.
+
+Legacy task peers retain the `c2.3` envelope, while generic peers receive standard
+text updates and terminal stop/error behavior. See the
+[J01 contract](project/contracts/c3-output-validation.md) for configuration and bounds.

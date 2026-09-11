@@ -624,6 +624,7 @@ mod tests {
                 model_profile: None,
                 model_route: None,
                 compaction: None,
+                output_validation: None,
                 extra_closing: 0,
                 deployment: None,
                 sink: &mut sink,

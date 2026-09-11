@@ -17,6 +17,8 @@ pub struct RunSpec {
     pub limits: RunLimits,
     #[serde(default)]
     pub context: crate::context::ContextSettings,
+    #[serde(default)]
+    pub output: Option<crate::output::OutputSettings>,
     pub trace: TraceSettings,
 }
 
@@ -30,6 +32,7 @@ impl RunSpec {
             session_id: None,
             limits: RunLimits::default(),
             context: crate::context::ContextSettings::default(),
+            output: None,
             trace: TraceSettings::default(),
         }
     }
@@ -129,6 +132,7 @@ pub enum DeliveryCertainty {
 pub enum FailureCode {
     ContextOverflow,
     CompactionFailed,
+    OutputValidationFailed,
     ModelAttemptTimedOut,
     ContinuationIncompatible,
     UnsupportedProviderContent,
@@ -272,6 +276,8 @@ pub struct ModelRouteRecord {
 pub struct RunEvent {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub compaction: Option<Box<crate::context::CompactionRecord>>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub output_validation: Option<Box<crate::output::OutputValidation>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model_route: Option<Box<ModelRouteRecord>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

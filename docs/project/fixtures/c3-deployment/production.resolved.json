@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_revision": "c3.12b",
+  "contract_revision": "c3.13",
   "config": {
     "options": {
       "run": {
@@ -96,6 +96,12 @@
         "max_summary_tokens": 1024,
         "max_summary_bytes": 16384,
         "keep_recent_turns": 0
+      },
+      "output": {
+        "schema": {
+          "unset": true
+        },
+        "max_validation_work": 16777216
       }
     },
     "deployment": {
@@ -156,13 +162,13 @@
       }
     ]
   },
-  "fingerprint": "sha256:1ddf775de32990a2be5db7a225134988ab6d6c68250988d8a4448cf770d0babb",
+  "fingerprint": "sha256:4a8f9c1944bea23ee03caf093c3f9ad836744af0da625d3476dc44fc1d679ec5",
   "sources": [
     {
       "id": "source-0000",
       "kind": "defaults",
       "locator": "deployment-defaults-v1.json",
-      "digest": "sha256:28da68d2504cc0e6d66f7b42c52dc7b49615caa12a78bfd34f54df507e6384c4"
+      "digest": "sha256:78e6319dccf0d386d4188b030ba6610a1ba69a273fe60e8bcdc7c8d4954422c4"
     },
     {
       "id": "source-0001",
@@ -728,6 +734,24 @@
         "operation": "default"
       }
     ],
+    "/config/options/output/max_validation_work": [
+      {
+        "source": "source-0000",
+        "operation": "default"
+      }
+    ],
+    "/config/options/output/schema": [
+      {
+        "source": "source-0000",
+        "operation": "default"
+      }
+    ],
+    "/config/options/output/schema/unset": [
+      {
+        "source": "source-0000",
+        "operation": "default"
+      }
+    ],
     "/config/options/policy": [
       {
         "source": "source-0000",
@@ -847,5 +871,5 @@
       }
     ]
   },
-  "input_fingerprint": "sha256:167119d1c1efaf669ecf4ea1ec8cdbdea4022bf1008f45418c40bdffacf932bc"
+  "input_fingerprint": "sha256:23695679130334663b34c6f799492326a74ea8be919a11be064a5ff509eaab44"
 }
