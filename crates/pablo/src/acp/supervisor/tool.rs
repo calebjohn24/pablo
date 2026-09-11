@@ -28,7 +28,8 @@ impl RootOwner for Supervisor {
         self.inner.registry.lock().unwrap().closed = true;
         self.inner.cancel.cancel();
         self.inner.ledger.close_admission();
-        self.inner.updates.close();
+        // The manager closes updates after active work and its native closings
+        // settle. Closing here would discard healthy cancellation delivery.
     }
     fn close(&self) -> futures::future::BoxFuture<'_, Result<(), &'static str>> {
         Box::pin(async move { Supervisor::close(self).await })

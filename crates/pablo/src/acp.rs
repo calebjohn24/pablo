@@ -729,6 +729,7 @@ mod tests {
         let (sender, receiver) = async_channel::bounded(1);
         let delivery = delivery::Delivery::Native {
             sender,
+            execution_cancel: CancellationToken::new(),
             closed: CancellationToken::new(),
         };
         let forwarding = forward_events(rx, &delivery, Extensions::default(), false);
@@ -754,6 +755,7 @@ mod tests {
             let (sender, receiver) = async_channel::bounded(1);
             let delivery = delivery::Delivery::Native {
                 sender,
+                execution_cancel: CancellationToken::new(),
                 closed: CancellationToken::new(),
             };
             let forwarding = delivery.forward_native(rx);
@@ -777,6 +779,69 @@ mod tests {
             drop(held);
             drop(tx);
         }
+    }
+
+    #[tokio::test]
+    async fn cancellation_bounds_receipts_but_waits_for_owned_cleanup_events() {
+        let (tx, rx) = async_channel::bounded(8);
+        let (sender, receiver) = async_channel::bounded(1);
+        let cancelled = CancellationToken::new();
+        let delivery = delivery::Delivery::Native {
+            sender,
+            closed: CancellationToken::new(),
+            execution_cancel: cancelled.clone(),
+        };
+        tx.send(event(1, EventKind::RunStarted)).await.unwrap();
+        let forwarding = delivery.forward_native(rx);
+        tokio::pin!(forwarding);
+        let held = tokio::select! {
+            result = &mut forwarding => panic!("unexpected result: {result:?}"),
+            update = receiver.recv() => update.unwrap(),
+        };
+        let started = tokio::time::Instant::now();
+        cancelled.cancel();
+        assert!(
+            tokio::time::timeout(Duration::from_secs(2), forwarding)
+                .await
+                .unwrap()
+                .is_err()
+        );
+        assert!(started.elapsed() >= delivery::CANCEL_ACK_TIMEOUT);
+        drop(held);
+        drop(tx);
+
+        let (tx, rx) = async_channel::bounded(8);
+        let (sender, receiver) = async_channel::bounded(1);
+        let cancelled = CancellationToken::new();
+        cancelled.cancel();
+        let delivery = delivery::Delivery::Native {
+            sender,
+            closed: CancellationToken::new(),
+            execution_cancel: cancelled,
+        };
+        let cleanup = async {
+            tokio::time::sleep(delivery::CANCEL_ACK_TIMEOUT * 2).await;
+            tx.send(event(
+                1,
+                EventKind::RunFinished {
+                    outcome: RunOutcome::Cancelled,
+                },
+            ))
+            .await
+            .unwrap();
+            tx.close();
+        };
+        let consume = async {
+            let update = receiver.recv().await.unwrap();
+            update.consumed.send(()).unwrap();
+        };
+        let (result, (), ()) = tokio::join!(delivery.forward_native(rx), cleanup, consume);
+        assert!(matches!(
+            result.unwrap().unwrap().kind,
+            EventKind::RunFinished {
+                outcome: RunOutcome::Cancelled
+            }
+        ));
     }
 
     #[tokio::test]

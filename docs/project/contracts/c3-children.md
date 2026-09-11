@@ -198,6 +198,12 @@ native lifecycle record and delta reaches the bounded root update stream; the
 consumer owns its acknowledgement. Losing the receiver wakes forwarding even
 while idle or holding an unacknowledged event. Acknowledging the terminal finishes
 delivery, while the dispatcher still awaits worker settlement and owned cleanup.
+Cancellation signals owned work while keeping native forwarding open for closing
+records. The manager closes root updates after active execution settles. An
+outstanding native delivery/acknowledgement has a 250 ms window once cancellation
+is observed, allowing stalled consumers to release producers promptly. This timer
+applies to delivery, not waiting for cleanup to produce its next event. Lost
+receivers close transport immediately; all paths still join owned work.
 
 Typed dispatch must retain one-prompt sessions, setup errors, update ordering,
 request cancellation, safe fallback and exactly one terminal response after joined

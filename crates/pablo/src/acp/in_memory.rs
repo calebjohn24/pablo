@@ -149,9 +149,20 @@ impl Dispatcher {
     /// the supervising host. No reconstruction from lossy wire notifications.
     pub fn native_output(mut self) -> (Self, async_channel::Receiver<delivery::NativeUpdate>) {
         let (sender, receiver) = async_channel::bounded(1);
+        let execution_cancel = self
+            .state
+            .lock()
+            .unwrap()
+            .admitted_child
+            .as_ref()
+            .map_or_else(
+                || self.cancellation.clone(),
+                |child| child.root_cancellation.clone(),
+            );
         self.delivery = delivery::Delivery::Native {
             sender,
             closed: self.cancellation.clone(),
+            execution_cancel,
         };
         (self, receiver)
     }

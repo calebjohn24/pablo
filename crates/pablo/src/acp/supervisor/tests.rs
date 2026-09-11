@@ -192,12 +192,7 @@ async fn immediate_handles_fifo_queue_stop_wait_and_joined_close() {
         assert_eq!(any.remaining[0].agent_id(), third.agent_id());
         let stopped = fixture.supervisor.stop(first.agent_id()).await.unwrap();
         assert_eq!(stopped.outcome, Some(RunOutcome::Cancelled));
-        let mut byte = [0; 1];
-        assert_eq!(
-            stream.read(&mut byte).await.unwrap(),
-            0,
-            "stop joined the held provider"
-        );
+        root_owner::assert_closed(&mut stream).await;
         let (mut stream, _) = listener.accept().await.unwrap();
         assert!(
             request(&mut stream)
@@ -524,6 +519,82 @@ async fn root_consumer_failure_cancels_and_joins_owned_children() {
         );
         assert_eq!(fixture.ledger.resources().active_children, 0);
         assert_eq!(fixture.ledger.resources().pending_children, 0);
+    })
+    .await
+    .unwrap();
+}
+
+#[tokio::test]
+async fn healthy_consumer_receives_stop_and_deadline_closings_before_settlement() {
+    for deadline in [false, true] {
+        tokio::time::timeout(Duration::from_secs(10), async {
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let fixture = Fixture::with_duration(&format!("http://{}", listener.local_addr().unwrap()), if deadline { 1000 } else { 900_000 });
+            let delivered = Arc::new(Mutex::new(Vec::new()));
+            let sink = pablo_core::events::tree::TreeSink::new({
+                let delivered = delivered.clone();
+                move |event: &RunEvent| { delivered.lock().unwrap().push(event.clone()); Ok(()) }
+            }, &fixture.ledger, fixture.supervisor.inner.root.clone()).unwrap();
+            let drain = tokio::spawn(Supervisor::consume_updates(fixture.updates.clone(), sink, fixture.root_cancel.clone()));
+            let child = fixture.spawn("cancel through native consumer");
+            let (mut stream, _) = listener.accept().await.unwrap();
+            request(&mut stream).await;
+            held(&mut stream).await;
+            if deadline {
+                tokio::time::sleep_until(fixture.ledger.deadline()).await;
+                while !fixture.supervisor.join.lock().await.task.as_ref().unwrap().is_finished() {
+                    tokio::time::sleep(Duration::from_millis(1)).await;
+                }
+            } else {
+                let stopped = fixture.supervisor.stop(child.agent_id()).await.unwrap();
+                assert_eq!(stopped.outcome, Some(RunOutcome::Cancelled));
+            }
+            let expected = if deadline { RunOutcome::TimedOut } else { RunOutcome::Cancelled };
+            let snapshot = fixture.supervisor.inspect(child.agent_id()).unwrap();
+            assert_eq!(snapshot.agent.state(), AgentState::Settled);
+            assert_eq!(snapshot.outcome, Some(expected.clone()));
+            assert!(snapshot.error.is_none());
+            let events = delivered.lock().unwrap().clone();
+            assert!(matches!(events.first().unwrap().kind, EventKind::RunStarted));
+            assert!(matches!(events[events.len()-2].kind, EventKind::ModelFinished { .. }));
+            assert!(matches!(&events.last().unwrap().kind, EventKind::RunFinished { outcome } if *outcome == expected));
+            assert_eq!(events.iter().filter(|event|matches!(event.kind, EventKind::RunFinished { .. })).count(), 1);
+            for (index, event) in events.iter().enumerate() { assert_eq!(event.seq, index as u64 + 1); assert_eq!(event.root_seq, Some(index as u64 + 1)); }
+            assert_eq!(fixture.ledger.event_counts().used, events.len() as u64);
+            assert_eq!(fixture.ledger.resources().active_children, 0);
+            root_owner::assert_closed(&mut stream).await;
+            fixture.supervisor.close().await.unwrap();
+            drain.await.unwrap().unwrap();
+        }).await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn cancellation_drains_owned_work_even_when_the_root_update_queue_is_full() {
+    tokio::time::timeout(Duration::from_secs(10), async {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let fixture = Fixture::new(&format!("http://{}", listener.local_addr().unwrap()));
+        // Each stopped run leaves its unacknowledged first update in the bounded
+        // root queue. The ninth real child reaches a full queue, with no consumer.
+        for index in 0..=QUEUE_EVENTS {
+            let child = fixture.spawn("stalled native consumer");
+            let (mut stream, _) = listener.accept().await.unwrap();
+            request(&mut stream).await;
+            let snapshot = tokio::time::timeout(
+                Duration::from_secs(2),
+                fixture.supervisor.stop(child.agent_id()),
+            )
+            .await
+            .unwrap()
+            .unwrap();
+            assert_eq!(snapshot.agent.state(), AgentState::Settled);
+            assert_eq!(snapshot.outcome, Some(RunOutcome::Cancelled));
+            assert_eq!(fixture.ledger.resources().active_children, 0);
+            assert_eq!(fixture.ledger.resources().pending_children, 0);
+            assert_eq!(fixture.updates.len(), (index + 1).min(QUEUE_EVENTS));
+            root_owner::assert_closed(&mut stream).await;
+        }
+        fixture.supervisor.close().await.unwrap();
     })
     .await
     .unwrap();

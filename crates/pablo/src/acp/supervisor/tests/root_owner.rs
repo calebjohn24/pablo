@@ -65,8 +65,8 @@ async fn native_root_completion_joins_model_spawned_child_and_rolls_up_accountin
         let runtime=Runtime::new(pablo_core::telemetry::tracer(&sdk)).with_root_owner(fixture.supervisor.clone()).unwrap();
         let provider=Parent{calls:AtomicUsize::new(0),child_entered:Notify::new(),child_id:Mutex::new(None)};
         let mut events: Vec<RunEvent>=vec![];
-        let mut sink=|event:&RunEvent| {
-                if matches!(event.kind,EventKind::RunFinished{..}) {
+        let sink=|event:&RunEvent| {
+                if matches!(event.kind,EventKind::RunFinished{..}) && event.agent.as_ref().unwrap().depth() == 0 {
                     let id=provider.child_id.lock().unwrap().clone().unwrap();
                     assert_eq!(fixture.supervisor.inspect(&id).unwrap().agent.state(),AgentState::Settled);
                     assert_eq!(fixture.ledger.resources().active_children,0);
@@ -81,6 +81,8 @@ async fn native_root_completion_joins_model_spawned_child_and_rolls_up_accountin
                 }
                 events.push(event.clone());Ok(())
             };
+        let mut sink=pablo_core::events::tree::TreeSink::new(sink,&fixture.ledger,fixture.supervisor.inner.root.clone()).unwrap();
+        let consumer=Supervisor::consume_updates(fixture.updates.clone(),sink.clone(),fixture.root_cancel.clone());
         let root=runtime.run_with_tools(fixture.supervisor.inner.parent.spec(),&provider,
             &fixture.supervisor.inner.parent_tools,&fixture.root_cancel,&mut sink);
         let child=async {
@@ -91,11 +93,23 @@ async fn native_root_completion_joins_model_spawned_child_and_rolls_up_accountin
             held(&mut stream).await;provider.child_entered.notify_one();
             assert_closed(&mut stream).await;
         };
-        let (outcome,())=tokio::join!(root,child);
+        let (outcome,(),drained)=tokio::join!(root,child,consumer);
+        drained.unwrap();
+        drop(sink);
         assert!(outcome.unwrap().is_completed());
         assert!(!fixture.root_cancel.is_cancelled(),"normal root completion must stay successful");
         let id=provider.child_id.lock().unwrap().clone().unwrap();
         assert_eq!(fixture.supervisor.inspect(&id).unwrap().outcome,Some(RunOutcome::Cancelled));
+        let child_events:Vec<_>=events.iter().filter(|event|event.agent.as_ref().unwrap().agent_id()==id).collect();
+        assert!(matches!(child_events.first().unwrap().kind,EventKind::RunStarted));
+        assert!(matches!(child_events.last().unwrap().kind,EventKind::RunFinished{outcome:RunOutcome::Cancelled}));
+        assert!(matches!(child_events[child_events.len()-2].kind,EventKind::ModelFinished{..}));
+        for (i,event) in child_events.iter().enumerate(){assert_eq!(event.seq,i as u64+1);}
+        assert_eq!(child_events.iter().filter(|e|matches!(e.kind,EventKind::RunFinished{..})).count(),1);
+        assert_eq!(events.last().unwrap().agent.as_ref().unwrap().depth(),0);
+        for (i,event) in events.iter().enumerate(){assert_eq!(event.root_seq,Some(i as u64+1));}
+        assert_eq!(fixture.ledger.event_counts().used,events.len() as u64);
+        assert!(fixture.supervisor.inspect(&id).unwrap().error.is_none());
         assert_eq!(fixture.ledger.total().model_calls,3);
         assert_eq!(fixture.ledger.agent(fixture.supervisor.inner.root.agent_id()).unwrap().model_calls,2);
         assert_eq!(events.iter().filter(|event|matches!(event.kind,EventKind::ToolFinished{ref name,ref result,..} if name=="subagent"&&result.status==pablo_core::tool::ToolStatus::Completed)).count(),1);

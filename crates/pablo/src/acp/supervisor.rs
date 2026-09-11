@@ -511,12 +511,13 @@ impl Inner {
                 );
                 let prompt = dispatcher.prompt_observed(request, &job.child.cancel, receipt);
                 tokio::pin!(prompt);
-                loop {
+                let mut stopping = false;
+                'forwarding: loop {
                     tokio::select! {
                         biased;
-                        _ = job.child.cancel.cancelled() => { let _ = dispatcher.close().await; let _ = prompt.await; break; },
-                        _ = tokio::time::sleep_until(self.ledger.deadline()) => {
-                            job.child.cancel.cancel(); let _ = dispatcher.close().await; let _ = prompt.await; break;
+                        _ = job.child.cancel.cancelled(), if !stopping => { stopping = true; },
+                        _ = tokio::time::sleep_until(self.ledger.deadline()), if !stopping => {
+                            job.child.cancel.cancel(); stopping = true;
                         },
                         _ = self.updates.closed() => {
                             error = Some("root update receiver closed");
@@ -526,12 +527,28 @@ impl Inner {
                         update = updates.recv() => {
                             if let Ok(update) = update {
                                 let agent = job.child.snapshot.lock().unwrap().agent.clone();
-                                tokio::select! {
-                                    _ = job.child.cancel.cancelled() => {},
-                                    _ = tokio::time::sleep_until(self.ledger.deadline()) => { job.child.cancel.cancel(); },
-                                    result = self.updates.send(Update {agent, update}) => {
-                                        if result.is_err() { job.child.cancel.cancel(); error = Some("root update receiver closed"); }
-                                    },
+                                let send = self.updates.send(Update {agent, update});
+                                tokio::pin!(send);
+                                loop {
+                                    tokio::select! {
+                                        biased;
+                                        _ = job.child.cancel.cancelled(), if !stopping => { stopping = true; },
+                                        _ = tokio::time::sleep_until(self.ledger.deadline()), if !stopping => {
+                                            job.child.cancel.cancel(); stopping = true;
+                                        },
+                                        result = &mut prompt => {
+                                            if result.is_err() { error = Some("child event delivery failed"); }
+                                            break 'forwarding;
+                                        },
+                                        result = &mut send => {
+                                            if result.is_err() {
+                                                job.child.cancel.cancel(); error = Some("root update receiver closed");
+                                                let _ = dispatcher.close().await; let _ = prompt.await;
+                                                break 'forwarding;
+                                            }
+                                            break;
+                                        },
+                                    }
                                 }
                             }
                         }

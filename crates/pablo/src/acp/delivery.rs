@@ -1,6 +1,10 @@
 //! One notification in flight, acknowledged by the actual consumer.
 use super::*;
 
+// Cancellation still joins owned work. Only an outstanding consumer receipt gets
+// this shorter deadline, so slow cleanup is not mistaken for stalled delivery.
+pub(super) const CANCEL_ACK_TIMEOUT: Duration = Duration::from_millis(250);
+
 #[allow(dead_code)] // Consumed by the C3.21 internal host; enabled supervision follows at C3.22.
 pub(super) struct TypedUpdate {
     pub notification: wire::AgentNotification,
@@ -18,6 +22,7 @@ pub(super) enum Delivery {
     Native {
         sender: async_channel::Sender<NativeUpdate>,
         closed: CancellationToken,
+        execution_cancel: CancellationToken,
     },
     Typed {
         sender: async_channel::Sender<TypedUpdate>,
@@ -33,7 +38,12 @@ impl Delivery {
         &self,
         events: async_channel::Receiver<RunEvent>,
     ) -> Result<Option<RunEvent>, Error> {
-        let Self::Native { sender, closed } = self else {
+        let Self::Native {
+            sender,
+            closed,
+            execution_cancel,
+        } = self
+        else {
             return Err(Error::internal_error());
         };
         let mut terminal = None;
@@ -54,9 +64,14 @@ impl Delivery {
                     .map_err(|_| Error::internal_error())?;
                 receipt.await.map_err(|_| Error::internal_error())
             });
+            let cancelled_delivery = async {
+                execution_cancel.cancelled().await;
+                tokio::time::sleep(CANCEL_ACK_TIMEOUT).await;
+            };
             tokio::select! {
                 biased;
                 result = delivery => result.map_err(|_| Error::internal_error())??,
+                _ = cancelled_delivery => return Err(Error::internal_error()),
                 _ = closed.cancelled() => return Err(Error::internal_error()),
                 _ = sender.closed() => return Err(Error::internal_error()),
             }
