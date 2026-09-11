@@ -151,6 +151,27 @@ impl ScopedCredential {
 }
 
 impl PreparedRun {
+    /// Resolve declared MCP credentials privately for an explicit local diagnostic.
+    /// No transport, executable, or tool catalog is started; only the count escapes.
+    pub fn mcp_credential_presence(
+        &self,
+        name: &str,
+        inputs: &dyn CredentialInputs,
+    ) -> Result<usize, ConfigError> {
+        let settings = self.deployment().mcp()?;
+        let server = settings
+            .servers
+            .get(name)
+            .ok_or_else(|| error("config_credential_scope", "/options/mcp"))?;
+        match server {
+            crate::mcp::Server::Stdio { .. } => self
+                .mcp_environment(name, server, inputs)
+                .map(|values| values.len()),
+            crate::mcp::Server::Http { url, .. } => self
+                .mcp_headers(name, server, url, inputs)
+                .map(|values| values.len()),
+        }
+    }
     pub fn credential(
         &self,
         consumer: CredentialConsumer,

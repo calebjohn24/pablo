@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T20:59:01.486Z",
+  "updated_at": "2026-09-11T21:39:11.299Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.31",
-  "next_action": "Merge verified C3.30 T02, then start C3.31 offline doctor and focused diagnostics. Native macOS arm64 PTY proof passes; repeat platform-specific gates later. Preserve byte-identical release baseline, measured controls and prior concurrent Node stress observations.",
-  "latest_log_entry": "LOG-0153",
+  "next_checkpoint": "C3.32",
+  "next_action": "Merge final verified C3.31 D01, then start C3.32 G04 complete composed preset acceptance across CLI, ACP and embedding, including fallback, denied command, clean/noisy locked parity and public option inventory. Preserve doctor offline/interrupt ownership, native-platform gates, prior concurrent Node observations and saved baselines.",
+  "latest_log_entry": "LOG-0157",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -657,9 +657,11 @@
         "C3.28",
         "C3.30"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0157"
+      ]
     },
     {
       "id": "C3.32",
