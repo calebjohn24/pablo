@@ -130,8 +130,8 @@ Decoding never activates an OTel context or reparents the local run.
 
 Independent SDK fixtures prove send/stream/cancel shapes, file/data/URL round trips,
 negotiated headers/metadata and generic-peer fallback. Required-version rejection
-occurs before handler invocation. Actual propagated remote spans, metadata-only
-Collector export and exporter-outage parity remain C3.28 acceptance.
+occurs before handler invocation. C3.28 proves propagated remote spans, metadata-only Collector export and
+exporter-outage parity with the independent Python OpenTelemetry SDK peer.
 
 ## C3.27 lifecycle assembly increment
 
@@ -208,7 +208,7 @@ carry IDs, status, artifact IDs and optional usage; Parts remain in the explicit
 result. Native start/update/finish events use the same acknowledged root consumer.
 ACP projects these as standard attributed tool-call updates in the root session.
 The local remote-run span is parented by the delegation operation; actual remote
-Collector propagation and outage parity remain R03 gates.
+Collector propagation and outage parity are covered by the R03 proof below.
 
 Optional response metadata `urn:pablo:a2a:reported-usage:v1` contains only
 `inputTokens`, `outputTokens`, `totalTokens` and `costMicrousd`. Each supplied value
@@ -223,3 +223,28 @@ Explicit local tests may pass `--fixture-a2a-endpoint NAME=RPC_URL` alongside
 `--fixture-endpoint`. Overrides accept only literal loopback HTTP URLs without
 credentials, query or fragment, and never bypass original configured authority.
 The public fixture card is read at the same origin's `/.well-known/agent-card.json`.
+
+
+## C3.28 failure and observability proof
+
+The CLI/ACP boundary matrix covers interruption before assignment (`unassigned`),
+after assignment with accepted or rejected cancellation, and a cancellation reply
+reporting a late completion. Local cancellation remains cancelled in each case;
+the separate receipt retains the observed remote state or numeric rejection.
+A dropped stream fails without resubmission. A deadline remains timed out,
+oversized content remains an output limit, and input-required remains a distinct
+remote result with best-effort cancellation. A nonresponsive cancel endpoint
+produces `unconfirmed` after the two-second exchange bound. At most one send and
+one cancel occur. Actual CLI SIGINT and ACP session cancellation also join the
+proxy before the root terminal result. These are local lifecycle guarantees;
+none asserts remote work stopped, usage was refunded or local tool policy applied
+to the peer.
+
+The independent Python peer uses OpenTelemetry SDK 1.44.0 to extract negotiated
+W3C context and export its task span through the pinned real Collector. With the
+extension enabled, its parent is the native proxy span; without the extension it
+runs successfully on a separate trace. The proof checks original remote IDs,
+local native trace/span IDs and exact local start/end timestamps, metadata-only
+content exclusion and unchanged outcomes/accounting/results when the Collector
+is stopped. The peer's export can fail without becoming a task failure. This is
+fixture interoperability proof, not a guarantee about arbitrary remote services.

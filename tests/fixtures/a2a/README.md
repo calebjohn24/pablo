@@ -26,8 +26,8 @@ Run:
 cargo test --locked -p pablo-core --test a2a_cards -- --include-ignored
 ```
 
-These fixtures prove R01 admission and wire conformance, not implemented supervised
-remote task execution. Check project state/evidence for the acceptance status.
+The R01 fixtures prove admission and wire conformance. C3.27 additionally exercises
+the configured supervisor through CLI/ACP; see the project evidence for each gate.
 
 `wire_server.py` runs the official SDK JSONRPC/SSE dispatcher with deterministic
 synthetic handlers. The explicit wire test sends encoded requests, decodes SDK
@@ -40,3 +40,18 @@ supervised task transport.
 ```
 cargo test --locked -p pablo-core --test a2a_wire -- --include-ignored
 ```
+
+
+`boundary_server.py` drives one selected adverse SDK lifecycle per process. The
+CLI/ACP matrix exercises model stop and actual root SIGINT/session cancellation,
+assignment boundaries, cancel rejection/completion races, stream loss, deadline,
+oversized artifacts, input-required states and nonresponsive cancellation. Call
+receipts prove a single submission and at most one cancellation, not rollback.
+
+`telemetry_server.py` creates an actual task span using Python OpenTelemetry SDK
+1.44.0 and its pinned OTLP/HTTP exporter. It accepts the explicit optional W3C
+profile only when advertised, verifies matching headers/metadata, and exports
+through the real pinned Collector. Generic peers start an independent trace.
+`node scripts/smoke-a2a-collector.ts` checks remote parenting, native identity and
+exact timestamps, content redaction and exporter-outage outcome/accounting parity.
+All fixture dependencies remain isolated from the Rust runtime.

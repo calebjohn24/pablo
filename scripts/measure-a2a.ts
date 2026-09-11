@@ -22,6 +22,8 @@ const ready=new Promise<string>((resolve,reject)=>{
   exited.then(()=>{clearTimeout(timer);reject(new Error('SDK exited'));},reject);
 });
 let gateway:Awaited<ReturnType<typeof server>>|undefined;
+const checkpoint=process.env.PABLO_MEASURE_CHECKPOINT??'C3.27';
+assert(/^C[0-9]+\.[0-9]+$/.test(checkpoint));
 const samples:number[]=[];
 try {
   const rpc=await ready;
@@ -62,6 +64,6 @@ try {
   }
 }
 const sorted=samples.toSorted((a,b)=>a-b);
-const report={checkpoint:'C3.27',timestamp:new Date().toISOString(),source_sha256:await sourceFingerprint(root),binary_sha256:createHash('sha256').update(await readFile(binary)).digest('hex'),platform:`${process.platform}/${process.arch}`,node:process.version,method:{samples:30,warmup:5,timing:'Fresh ACP process initialize/session/prompt and joined shutdown; three mock model calls, two subagent tool calls, card GET, streamed SDK task/artifact, typed result validation, metadata-only trace. SDK/gateway setup excluded; SDK remains alive between samples.',comparison:'End-to-end supervised workload baseline, not an isolated supervisor overhead delta or live network/model/TLS measurement. Sequential after builds/tests.',cleanup:'SDK process joined and temporary workspace removed before report'},stats:{fresh_acp_ms:{min:sorted[0],p50:sorted[14],p95:sorted[28],max:sorted[29]}},samples_ms:samples};
-await writeFile(join(root,'.pablo/measurements/c3.27-supervised.json'),JSON.stringify(report,null,2)+'\n');
+const report={checkpoint,timestamp:new Date().toISOString(),source_sha256:await sourceFingerprint(root),binary_sha256:createHash('sha256').update(await readFile(binary)).digest('hex'),platform:`${process.platform}/${process.arch}`,node:process.version,method:{samples:30,warmup:5,timing:'Fresh ACP process initialize/session/prompt and joined shutdown; three mock model calls, two subagent tool calls, card GET, streamed SDK task/artifact, typed result validation, metadata-only trace. SDK/gateway setup excluded; SDK remains alive between samples.',comparison:'End-to-end supervised workload baseline, not an isolated supervisor overhead delta or live network/model/TLS measurement. Sequential after builds/tests.',cleanup:'SDK process joined and temporary workspace removed before report'},stats:{fresh_acp_ms:{min:sorted[0],p50:sorted[14],p95:sorted[28],max:sorted[29]}},samples_ms:samples};
+await writeFile(join(root,`.pablo/measurements/${checkpoint.toLowerCase()}-supervised.json`),JSON.stringify(report,null,2)+'\n');
 console.log(JSON.stringify(report));
