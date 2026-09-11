@@ -61,13 +61,6 @@ fn initial(limits: &RunLimits) -> Accounting {
         ..Accounting::default()
     }
 }
-fn narrow<T: PartialOrd>(root: Option<T>, child: Option<T>) -> bool {
-    match (root, child) {
-        (None, _) => true,
-        (Some(root), Some(child)) => child <= root,
-        (Some(_), None) => false,
-    }
-}
 fn increment(current: u64, cap: Option<u32>, kind: LimitKind) -> Result<u64, AdmissionError> {
     current
         .checked_add(1)
@@ -131,11 +124,7 @@ impl RootLedger {
         if s.agents.len() > super::MAX_TOTAL {
             return Err(AdmissionError::Capacity);
         }
-        if !narrow(s.limits.max_model_calls, limits.max_model_calls)
-            || !narrow(s.limits.max_tool_calls, limits.max_tool_calls)
-            || !narrow(s.limits.max_total_tokens, limits.max_total_tokens)
-            || !narrow(s.limits.max_cost_microusd, limits.max_cost_microusd)
-        {
+        if !super::limits::inherits(&s.limits, &limits) {
             return Err(AdmissionError::InvalidCeiling);
         }
         s.agents.insert(

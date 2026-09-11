@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T08:06:43.439Z",
+  "updated_at": "2026-09-11T08:19:32.177Z",
   "active_checkpoint": "C3.22",
   "next_checkpoint": null,
-  "next_action": "Continue C3.22 with full narrowed child authority and atomic event/trace capacity, then one supervised child through the shared typed ACP path. Attach process/MCP/context leases to actual ownership, return immediate handles, implement inspect/wait/stop, immutable event/trace attribution and root accounting rollup, and join all child work before root settlement. Keep delegation disabled until A02 holds. Preserve compaction details, GLM defaults and unlimited filesystem work; retain F03 C3.33 and mixed C3.39 observations.",
-  "latest_log_entry": "LOG-0108",
+  "next_action": "Continue C3.22 with PreparedRun child authority projection and supervisor integration. Use ChildCeilings::apply_to for inherited limits; ledger registration now rejects every widened RunLimits field. Intersect tools, command/filesystem policies, approved Skill roots, MCP definitions/credentials and exact ordered model-route entries. Add atomic event/trace reservations, attach process/MCP/context capacity to owned work, and implement one typed ACP child with immediate handle, inspect/wait/stop, attributed updates and joined root settlement. Keep delegation disabled until A02; then run full regressions and child performance before merging. Preserve GLM defaults, unlimited filesystem work, compaction details and F03/C3.39 follow-ups.",
+  "latest_log_entry": "LOG-0109",
   "checkpoints": [
     {
       "id": "C1.0",
