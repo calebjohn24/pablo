@@ -3,6 +3,7 @@ mod config;
 mod deployment;
 mod otel;
 mod skills;
+mod tui;
 
 use std::{
     fs::OpenOptions,
@@ -16,7 +17,7 @@ use pablo_core::{
     telemetry,
 };
 
-const HELP: &str = "pablo — headless Rust runtime\n\nUsage:\n  pablo \"TASK\" [RUN OPTIONS...]\n  pablo run \"TASK\" [--json] [--workspace PATH] [--provider vercel|openrouter] [--model ID] [--no-shell]\n                 [--env-file PATH] [--timeout SECONDS] [--tool-timeout SECONDS]\n                 [--max-tool-calls N] [--max-model-calls N]\n                 [--max-total-tokens N] [--max-cost-microusd N]\n                 [--trace PATH] [--capture-content]\n  pablo acp --stdio [--provider vercel|openrouter] [--model ID] [--no-shell] [--env-file PATH]\n                  [--max-tool-calls N] [--max-model-calls N]\n                 [--max-total-tokens N] [--max-cost-microusd N]\n                  [--timeout SECONDS] [--tool-timeout SECONDS] [--trace PATH] [--capture-content]\n  pablo demo [--trace PATH] [--capture-content]\n  CLI trace context: --traceparent VALUE [--tracestate VALUE] (run/demo)\n  pablo --version\n  pablo --help\n\n--output-schema PATH validates the final JSON answer against a local schema.\n--json writes one task envelope plus LF; output remains a string.\nRun sends one task to the selected gateway using direct HTTP.\nDefault provider: vercel. Models: Vercel zai/glm-5.3-flash; OpenRouter z-ai/glm-5.3-flash. Workspace: current directory.\nReads AI_GATEWAY_API_KEY (alias VERCEL_AI_GATEWAY) for Vercel, or OPENROUTER_API_KEY for OpenRouter, from the environment\nor .env in the invoking directory.\nShell and filesystem reads are enabled for run/ACP; use --no-shell and --no-filesystem for text only. Use --allow-write to enable revision-checked write/edit; --policy PATH sets tool, launcher and filesystem-root rules. Ctrl-C cancels and cleans up.\nDefaults: 3600 seconds per run, 900 seconds per shell call. Timeouts accept 1–86400.\nModel and tool call counts are unlimited by default; use --max-*-calls to cap them.\nHard aggregate token/cost ceilings require an attested adapter; the live gateway currently rejects them before delivery.\nEach run/session is a fresh task (no saved chat history).\nACP reuses its process across successive sessions; use {session_id} in --trace paths for separate files.\nDemo is offline. Trace files must be new; native content is off by default.\nNetwork telemetry is off by default; set OTEL_TRACES_EXPORTER=otlp for OTLP/HTTP Protobuf.\n";
+const HELP: &str = "pablo — headless Rust runtime\n\nUsage:\n  pablo tui [TASK] [RUN OPTIONS...] (terminal required)\n  pablo (terminal: composer; redirected: help)\n  pablo \"TASK\" [RUN OPTIONS...]\n  pablo run \"TASK\" [--json] [--workspace PATH] [--provider vercel|openrouter] [--model ID] [--no-shell]\n                 [--env-file PATH] [--timeout SECONDS] [--tool-timeout SECONDS]\n                 [--max-tool-calls N] [--max-model-calls N]\n                 [--max-total-tokens N] [--max-cost-microusd N]\n                 [--trace PATH] [--capture-content]\n  pablo acp --stdio [--provider vercel|openrouter] [--model ID] [--no-shell] [--env-file PATH]\n                  [--max-tool-calls N] [--max-model-calls N]\n                 [--max-total-tokens N] [--max-cost-microusd N]\n                  [--timeout SECONDS] [--tool-timeout SECONDS] [--trace PATH] [--capture-content]\n  pablo demo [--trace PATH] [--capture-content]\n  CLI trace context: --traceparent VALUE [--tracestate VALUE] (run/demo)\n  pablo --version\n  pablo --help\n\n--output-schema PATH validates the final JSON answer against a local schema.\n--json writes one task envelope plus LF; output remains a string.\nRun sends one task to the selected gateway using direct HTTP.\nDefault provider: vercel. Models: Vercel zai/glm-5.3-flash; OpenRouter z-ai/glm-5.3-flash. Workspace: current directory.\nReads AI_GATEWAY_API_KEY (alias VERCEL_AI_GATEWAY) for Vercel, or OPENROUTER_API_KEY for OpenRouter, from the environment\nor .env in the invoking directory.\nShell and filesystem reads are enabled for run/ACP; use --no-shell and --no-filesystem for text only. Use --allow-write to enable revision-checked write/edit; --policy PATH sets tool, launcher and filesystem-root rules. Ctrl-C cancels and cleans up.\nDefaults: 3600 seconds per run, 900 seconds per shell call. Timeouts accept 1–86400.\nModel and tool call counts are unlimited by default; use --max-*-calls to cap them.\nHard aggregate token/cost ceilings require an attested adapter; the live gateway currently rejects them before delivery.\nEach run/session is a fresh task (no saved chat history).\nACP reuses its process across successive sessions; use {session_id} in --trace paths for separate files.\nDemo is offline. Trace files must be new; native content is off by default.\nNetwork telemetry is off by default; set OTEL_TRACES_EXPORTER=otlp for OTLP/HTTP Protobuf.\n";
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> ExitCode {
@@ -57,6 +58,11 @@ async fn execute(
     args: Vec<std::ffi::OsString>,
     stage: &mut TaskErrorCode,
 ) -> Result<ExitCode, String> {
+    let args = if args.is_empty() && tui::available() {
+        vec!["tui".into()]
+    } else {
+        args
+    };
     let mut args = args.into_iter();
     let command = args.next().unwrap_or_else(|| "--help".into());
     if command == "config" {
@@ -82,14 +88,29 @@ async fn execute(
         );
         return Ok(ExitCode::SUCCESS);
     }
-    let mut options = config::Options::parse(command, args)?;
+    let options = config::Options::parse(command, args)?;
+    if options.interactive {
+        return tui::serve(options).await;
+    }
     if options.acp {
         return acp::serve(options).await;
     }
+    run_options(options, stage, None, CancellationToken::new()).await
+}
+
+async fn run_options(
+    mut options: config::Options,
+    stage: &mut TaskErrorCode,
+    view: Option<tui::Shared>,
+    cancellation: CancellationToken,
+) -> Result<ExitCode, String> {
     *stage = TaskErrorCode::InvalidConfiguration;
     let prepared = options.prepare_run(None, None, Some(uuid::Uuid::new_v4().to_string()))?;
     if let Some(prepared) = &prepared {
         options.json = prepared.deployment().options()["interfaces"]["cli_output"] == "json";
+    }
+    if view.is_some() && options.json {
+        return Err("TUI requires text CLI output; use pablo run for JSON".into());
     }
     let spec = match &prepared {
         Some(prepared) => prepared.spec().clone(),
@@ -220,7 +241,6 @@ async fn execute(
     if let Some(prepared) = &prepared {
         runtime = runtime.with_deployment(prepared.deployment());
     }
-    let cancellation = CancellationToken::new();
     // Register before starting work. Poll signals alongside the same run future;
     // never drop a running shell future on Ctrl-C.
     #[cfg(unix)]
@@ -229,7 +249,7 @@ async fn execute(
     let mut stdout = io::stdout();
     let mut stderr = io::stderr();
     let mut needs_newline = false;
-    if options.live && !options.json {
+    if options.live && !options.json && view.is_none() {
         writeln!(
             stderr,
             "pablo: running with {} (Ctrl-C to cancel)",
@@ -245,6 +265,10 @@ async fn execute(
         }
         if let Some(trace) = native_trace.as_mut() {
             trace.emit(event)?;
+        }
+        if let Some(view) = &view {
+            view.lock().unwrap().event(event);
+            return Ok(());
         }
         if options.json {
             return Ok(());
@@ -363,19 +387,21 @@ async fn execute(
         return Ok(ExitCode::FAILURE);
     }
     if delivery_failed {
-        eprintln!("pablo: terminal event delivery failed");
+        if view.is_none() {
+            eprintln!("pablo: terminal event delivery failed");
+        }
         return Ok(ExitCode::FAILURE);
     }
     match outcome {
         RunOutcome::Completed { .. } => Ok(ExitCode::SUCCESS),
         RunOutcome::Cancelled => {
-            if !options.json {
+            if !options.json && view.is_none() {
                 eprintln!("pablo: cancelled; owned work cleaned up");
             }
             Ok(ExitCode::from(130))
         }
         outcome => {
-            if !options.json {
+            if !options.json && view.is_none() {
                 match outcome {
                     RunOutcome::Failed { code, delivery } => {
                         eprintln!("pablo: run failed: {code:?} ({delivery:?})")

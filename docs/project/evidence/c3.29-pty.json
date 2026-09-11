@@ -1,0 +1,13 @@
+{
+  "surface": "tui",
+  "tasks": 3,
+  "cancelledThroughRunToken": true,
+  "freshTaskContext": true,
+  "streamed": true,
+  "oscNeutralized": true,
+  "terminalRestored": true,
+  "checkpoint": "C3.29",
+  "source_sha256": "2bd0d01512fd7492ac5fc16e9b0fa7081b7b4d4f098932f8e9b302764e9cbe8c",
+  "binary_sha256": "d34cd6aebd4f3efe8eb693c936de9df6f1652b17d17ba3249072a4d5152962dc",
+  "binary_bytes": 14909344
+}

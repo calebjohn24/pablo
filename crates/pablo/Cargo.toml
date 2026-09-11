@@ -25,6 +25,9 @@ async-trait = "=0.1.92"
 opentelemetry-proto = { version = "=0.32.0", default-features = false, features = ["trace", "gen-tonic-messages"] }
 prost = { version = "=0.14.4", default-features = false, features = ["std"] }
 
+[target.'cfg(unix)'.dependencies]
+rustix = { workspace = true, features = ["termios"] }
+
 [dev-dependencies]
 serde_json.workspace = true
 
