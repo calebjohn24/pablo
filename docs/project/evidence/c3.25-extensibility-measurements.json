@@ -1,0 +1,31 @@
+{
+  "checkpoint": "C3.25",
+  "source_sha256": "acc51e884e7d3abef64a4b49a4f46dca182040d21f530c0720c8b7d37bba614c",
+  "binary_sha256": "b4ec4b022c3235234f71e813d8a9a1554a1b5b21b24f2e52df40b313880adaa5",
+  "platform": "darwin/arm64",
+  "node": "v24.11.0",
+  "method": {
+    "samples": 30,
+    "warmup": 5,
+    "timing": "Complete fresh ACP process including MCP startup, Skill activation/read, two-child fan-out, forced overflow and compaction with active/completed children, post-compaction MCP reuse, verified handoff/fan-in, native trace and joined shutdown. Fixture setup/verification excluded; each iteration has an independent Python MCP process. Sequential after builds/tests.",
+    "models": 17,
+    "tools": 11,
+    "child_runs": 3,
+    "compactions": 1,
+    "comparison": "Combined workload baseline only; includes Python startup and synthetic HTTP delivery, not a causal comparison or live-provider latency."
+  },
+  "stats": {
+    "fresh_acp_ms": {
+      "min": 260.6336659999997,
+      "p50": 265.8655000000001,
+      "p95": 276.03358300000014,
+      "max": 285.4656669999995
+    },
+    "compaction_after_before_bytes": {
+      "min": 0.2285813872429418,
+      "p50": 0.2285813872429418,
+      "p95": 0.2285813872429418,
+      "max": 0.2285813872429418
+    }
+  }
+}

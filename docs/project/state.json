@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T14:06:16.444Z",
+  "updated_at": "2026-09-11T14:26:34.925Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.25",
-  "next_action": "Merge exact verified C3.24 PR head, synchronize main and confirm tree parity; prepare C3.25 E01 combined MCP/Skill/two-child/validated-handoff/forced-compaction acceptance, root cancellation/authority variants and real Collector proof. Reference reviewed live provider evidence and rerun only if lifecycle/provider changes invalidate it. Keep F03 at C3.33 and mixed measurements at C3.39; preserve GLM defaults, task-relevant compaction and unlimited filesystem work.",
-  "latest_log_entry": "LOG-0131",
+  "next_checkpoint": "C3.26",
+  "next_action": "Merge exact verified C3.25 head, synchronize main and confirm tree parity. Prepare C3.26: pin A2A 1.0 and one JSON-RPC-over-HTTP/SSE binding, resolve allowlisted Agent Cards as untrusted remote proxy descriptions and reject invalid/unsupported/redirected authority before task submission. Preserve local child/MCP/Skill/compaction defaults and proofs; F03 remains C3.33 and four-target native/release acceptance remains pending.",
+  "latest_log_entry": "LOG-0134",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -577,9 +577,11 @@
         "C3.7",
         "C3.24"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0134"
+      ]
     },
     {
       "id": "C3.26",

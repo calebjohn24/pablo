@@ -936,3 +936,5 @@ async fn handoff_rejects_invalid_oversize_cancelled_and_unvalidated_sources() {
         drain.await.unwrap();
     }).await.unwrap();
 }
+
+mod extensibility;

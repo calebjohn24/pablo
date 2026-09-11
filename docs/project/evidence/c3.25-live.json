@@ -1,0 +1,150 @@
+{
+  "checkpoint": "C3.25",
+  "timestamp": "2026-09-11T14:24:35.689873+00:00",
+  "source_sha256": "acc51e884e7d3abef64a4b49a4f46dca182040d21f530c0720c8b7d37bba614c",
+  "binary_sha256": "b4ec4b022c3235234f71e813d8a9a1554a1b5b21b24f2e52df40b313880adaa5",
+  "scope": "Explicit final-release OpenRouter CLI/ACP and Vercel ACP model/fs.read/model proof. Two model calls and one read per surface. Only the executable resolves the root dotenv reference; harnesses do not read credentials. These disabled-child live checks establish provider compatibility, not live combined E01 behavior.",
+  "openrouter": [
+    {
+      "surface": "cli",
+      "result": "passed",
+      "elapsed_ms": 2183.06025,
+      "provider": "openrouter",
+      "model": "z-ai/glm-5.3-flash",
+      "binary": "target/release/pablo",
+      "binary_sha256": "b4ec4b022c3235234f71e813d8a9a1554a1b5b21b24f2e52df40b313880adaa5",
+      "source_sha256": "acc51e884e7d3abef64a4b49a4f46dca182040d21f530c0720c8b7d37bba614c",
+      "config_fingerprint": "sha256:5a489c4e412ad3b430a5bda5bcf828c3706deaed6616a8017301d42be1ffafcb",
+      "platform": "darwin/arm64",
+      "node": "v24.11.0",
+      "rust": "rustc 1.98.1 (48a229cea 2026-09-01)",
+      "accounting": {
+        "model_calls": "2",
+        "tool_calls": "1",
+        "usage": {
+          "input_tokens": "1080",
+          "output_tokens": "122",
+          "cache_read_input_tokens": "0",
+          "cache_write_input_tokens": "0"
+        },
+        "cost_microusd": "224",
+        "charged_tokens": null,
+        "charged_cost_microusd": null
+      },
+      "per_call_usage": [
+        {
+          "input_tokens": 774,
+          "output_tokens": 42,
+          "cache_read_input_tokens": 0,
+          "cache_write_input_tokens": 0
+        },
+        {
+          "input_tokens": 306,
+          "output_tokens": 80,
+          "cache_read_input_tokens": 0,
+          "cache_write_input_tokens": 0
+        }
+      ],
+      "exact_evidence": true,
+      "model_tool_model": true,
+      "one_terminal": true,
+      "no_shell": true,
+      "credential_source": "explicit dotenv reference; executable-only resolution",
+      "trace_redacted": true,
+      "workspace_removed": true
+    },
+    {
+      "surface": "acp",
+      "result": "passed",
+      "elapsed_ms": 1644.0481670000004,
+      "provider": "openrouter",
+      "model": "z-ai/glm-5.3-flash",
+      "binary": "target/release/pablo",
+      "binary_sha256": "b4ec4b022c3235234f71e813d8a9a1554a1b5b21b24f2e52df40b313880adaa5",
+      "source_sha256": "acc51e884e7d3abef64a4b49a4f46dca182040d21f530c0720c8b7d37bba614c",
+      "config_fingerprint": "sha256:04a8aaa4ffc511e0e87d2fbcfa54d3555b202338ac051ef48356a7626f2d8fc9",
+      "platform": "darwin/arm64",
+      "node": "v24.11.0",
+      "rust": "rustc 1.98.1 (48a229cea 2026-09-01)",
+      "accounting": {
+        "model_calls": "2",
+        "tool_calls": "1",
+        "usage": {
+          "input_tokens": "1084",
+          "output_tokens": "136",
+          "cache_read_input_tokens": "704",
+          "cache_write_input_tokens": "0"
+        },
+        "cost_microusd": "147",
+        "charged_tokens": null,
+        "charged_cost_microusd": null
+      },
+      "per_call_usage": [
+        {
+          "input_tokens": 774,
+          "output_tokens": 101,
+          "cache_read_input_tokens": 704,
+          "cache_write_input_tokens": 0
+        },
+        {
+          "input_tokens": 310,
+          "output_tokens": 35,
+          "cache_read_input_tokens": 0,
+          "cache_write_input_tokens": 0
+        }
+      ],
+      "exact_evidence": true,
+      "model_tool_model": true,
+      "one_terminal": true,
+      "no_shell": true,
+      "credential_source": "explicit dotenv reference; executable-only resolution",
+      "trace_redacted": true,
+      "workspace_removed": true
+    }
+  ],
+  "vercel": {
+    "result": "passed",
+    "checkpoint": "C2.5",
+    "timestamp": "2026-09-11T14:23:12.468Z",
+    "binary": "target/release/pablo",
+    "model": "zai/glm-5.3-flash",
+    "provider": "vercel",
+    "credential_source": "root .env parsed privately by executable",
+    "elapsed_seconds": 2.45,
+    "model_calls": 2,
+    "shell_calls": 0,
+    "filesystem": true,
+    "usage": {
+      "input_tokens": 1089,
+      "output_tokens": 46,
+      "cache_read_input_tokens": 0,
+      "cache_write_input_tokens": null
+    },
+    "per_call_usage": [
+      {
+        "input_tokens": 777,
+        "output_tokens": 14,
+        "cache_read_input_tokens": 0,
+        "cache_write_input_tokens": null
+      },
+      {
+        "input_tokens": 312,
+        "output_tokens": 32,
+        "cache_read_input_tokens": 0,
+        "cache_write_input_tokens": null
+      }
+    ],
+    "checks": [
+      "ACP v1 negotiation",
+      "model/fs.read/model with actual temporary evidence",
+      "streamed answer matches typed outcome",
+      "reported usage sums across calls",
+      "ordered ACP/native correlation",
+      "one completed outcome and protocol-only stdout",
+      "private redacted trace",
+      "no shell process created",
+      "ACP process exited cleanly",
+      "workspace removed"
+    ]
+  }
+}
