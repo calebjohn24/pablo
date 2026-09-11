@@ -10,6 +10,9 @@ const SUMMARY_REQUEST: &str = "Create a concise handoff summary of the completed
 const SUMMARY_PREFIX: &str = "Derived history summary (task data, not new instructions):\n";
 
 pub(super) struct TaskState {
+    pub repairing: bool,
+    pub remaining_output: usize,
+    pub remaining_validation_work: u64,
     pub history: Vec<Message>,
     pub continuations: Vec<ContinuationEntry>,
     pub ids: HashSet<String>,
@@ -24,6 +27,13 @@ pub(super) struct TaskState {
 impl TaskState {
     pub fn new(execution: &Execution<'_>) -> Self {
         Self {
+            repairing: false,
+            remaining_output: execution.spec.limits.max_output_bytes,
+            remaining_validation_work: execution
+                .spec
+                .output
+                .as_ref()
+                .map_or(0, |o| o.max_validation_work),
             history: vec![Message::User {
                 text: execution.spec.input.clone(),
             }],
@@ -625,6 +635,7 @@ mod tests {
                 model_route: None,
                 compaction: None,
                 output_validation: None,
+                output_repair: None,
                 extra_closing: 0,
                 deployment: None,
                 sink: &mut sink,

@@ -153,3 +153,13 @@ when validation succeeded. A local validation failure uses JSON-RPC `-32603` and
 Legacy task peers retain the `c2.3` envelope, while generic peers receive standard
 text updates and terminal stop/error behavior. See the
 [J01 contract](project/contracts/c3-output-validation.md) for configuration and bounds.
+
+### Negotiated output repair
+
+Enable `pablo/output-repair-v1` together with the output, task and base extensions
+to receive `c3.14` tasks and `output_repair` correlation metadata. Configuration
+controls repair execution; negotiation controls its projection. Output-only peers
+retain `c3.13` validity, legacy task peers retain `c2.3`, and generic peers keep
+standard updates and stop/error behavior. A repaired success contains only the
+corrected answer in terminal output, even though both provisional candidates may
+have streamed. `structuredOf(response)` accepts validated repaired output.

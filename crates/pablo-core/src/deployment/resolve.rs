@@ -680,6 +680,9 @@ impl Resolver {
     fn complete_output(&mut self) -> Result<(), ConfigError> {
         let value = self.config["options"]["output"]["schema"].clone();
         if value.get("unset") == Some(&Value::Bool(true)) {
+            if self.config["options"]["output"]["repair"]["enabled"] == true {
+                return Err(error("config_invalid_value", "/options/output/repair"));
+            }
             return Ok(());
         }
         let schema = if let Some(text) = value.as_str() {

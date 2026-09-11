@@ -171,6 +171,9 @@ impl Serialize for RedactedEvent<'_> {
         map.serialize_entry("span_id", &e.span_id)?;
         map.serialize_entry("parent_span_id", &e.parent_span_id)?;
         map.serialize_entry("trace_flags", &e.trace_flags)?;
+        if let Some(repair) = &e.output_repair {
+            map.serialize_entry("output_repair", repair)?;
+        }
         if let Some(validation) = &e.output_validation {
             let mut validation = validation.clone();
             for issue in &mut validation.diagnostics {

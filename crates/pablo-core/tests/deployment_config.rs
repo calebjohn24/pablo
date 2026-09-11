@@ -2086,3 +2086,38 @@ fn provider_switches_recompute_only_defaults_and_preserve_explicit_values_and_au
     assert_eq!(error.code, "config_authority_violation");
     assert_eq!(error.authority_id.as_deref(), Some("host"));
 }
+
+#[test]
+fn output_repair_admission_requires_schema_and_locked_overrides_only_narrow() {
+    let f = Fixture::new();
+    error(
+        f.document(json!({"options":{"output":{"repair":{"enabled":true}}}})),
+        "config_invalid_value",
+    );
+    for bad in [511, 4097] {
+        error(f.document(json!({"options":{"output":{"schema":"true","repair":{"enabled":true,"max_feedback_bytes":bad}}}})),"config_invalid_value");
+    }
+    for (enabled, option, value, allowed) in [
+        (false, "output.schema", json!("true"), true),
+        (false, "output.schema", json!("false"), false),
+        (false, "output.max_validation_work", json!(1), true),
+        (
+            false,
+            "output.max_validation_work",
+            json!(1000000000),
+            false,
+        ),
+        (false, "output.repair.enabled", json!(true), false),
+        (true, "output.repair.enabled", json!(false), true),
+        (true, "output.repair.max_feedback_bytes", json!(512), true),
+        (true, "output.repair.max_feedback_bytes", json!(4096), false),
+    ] {
+        let mut request=f.document(json!({"deployment":{"locked":true,"allowed_run_overrides":["output.schema","output.max_validation_work","output.repair.enabled","output.repair.max_feedback_bytes"]},"options":{"output":{"schema":"true","repair":{"enabled":enabled,"max_feedback_bytes":1024}}}}));
+        request.overrides.insert(option.into(), value);
+        if allowed {
+            deployment::resolve(request).unwrap();
+        } else {
+            error(request, "config_authority_violation");
+        }
+    }
+}

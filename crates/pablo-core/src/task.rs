@@ -195,6 +195,8 @@ pub struct TaskError {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TaskResult {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output_repair: Option<Box<crate::output::OutputRepair>>,
     pub schema_version: String,
     pub run_id: Option<String>,
     pub session_id: Option<String>,
@@ -216,6 +218,7 @@ impl TaskResult {
             accounting: None,
             error: Some(TaskError { code }),
             output_validation: None,
+            output_repair: None,
         }
     }
     pub fn from_terminal(event: &RunEvent) -> Option<Self> {
@@ -223,7 +226,10 @@ impl TaskResult {
             return None;
         };
         Some(Self {
-            schema_version: if event.output_validation.is_some() {
+            output_repair: event.output_repair.clone(),
+            schema_version: if event.output_repair.is_some() {
+                "c3.14"
+            } else if event.output_validation.is_some() {
                 "c3.13"
             } else {
                 TASK_SCHEMA_VERSION

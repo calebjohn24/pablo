@@ -25,8 +25,10 @@ export interface OutputValidation {
   status: 'unvalidated' | 'valid' | 'invalid';
   diagnostics: {code: string; instance_path: string; schema_path: string}[];
 }
+export interface OutputRepair { schema_version: 'output-repair-v1'; status: 'available'|'pending'|'started'|'not_needed'|'succeeded'|'failed'|'blocked'; attempts: number; validation_attempts: number; feedback_bytes: number; previous_error_count: number; }
 export interface TaskResult {
-  schema_version: 'c2.3' | 'c3.13'; output_validation?: OutputValidation; run_id: string; session_id: string; trace_id: string;
+  output_repair?: OutputRepair;
+  schema_version: 'c2.3' | 'c3.13' | 'c3.14'; output_validation?: OutputValidation; run_id: string; session_id: string; trace_id: string;
   outcome: RunOutcome; error: null;
   accounting: { model_calls: string; tool_calls: string;
     usage: Record<'input_tokens' | 'output_tokens' | 'cache_read_input_tokens' | 'cache_write_input_tokens', string | null>;
@@ -36,19 +38,25 @@ function parseTask(value: unknown): TaskResult {
   const t = value as TaskResult;
   const decimal = (v: unknown): boolean => typeof v === 'string' && /^(0|[1-9][0-9]{0,19})$/.test(v) && BigInt(v) <= 18446744073709551615n;
   const nullable = (v: unknown): boolean => v === null || decimal(v);
-  if (!t || !['c2.3','c3.13'].includes(t.schema_version) || t.error !== null ||
+  if (!t || !['c2.3','c3.13','c3.14'].includes(t.schema_version) || t.error !== null ||
       ![t.run_id, t.session_id, t.trace_id].every(v => typeof v === 'string' && v.length > 0) ||
       !t.accounting || !decimal(t.accounting.model_calls) || !decimal(t.accounting.tool_calls) ||
       !t.accounting.usage || !['input_tokens','output_tokens','cache_read_input_tokens','cache_write_input_tokens'].every(k => nullable((t.accounting.usage as Record<string, unknown>)[k])) ||
       !['cost_microusd','charged_tokens','charged_cost_microusd'].every(k => nullable((t.accounting as unknown as Record<string, unknown>)[k]))) throw new Error('Invalid Pablo task accounting');
   const v=t.output_validation;
-  if (t.schema_version==='c3.13') {
+  if (t.schema_version==='c3.13'||t.schema_version==='c3.14') {
     if (!v || v.schema_version!=='output-validation-v1' || !/^sha256:[0-9a-f]{64}$/.test(v.schema_sha256) || !['unvalidated','valid','invalid'].includes(v.status) ||
       !Array.isArray(v.diagnostics) || v.diagnostics.length>8 || Buffer.byteLength(JSON.stringify(v.diagnostics))>2048 ||
       v.diagnostics.some(d=>!['malformed_json','json_bytes','validation_work','json_structure','schema_violation'].includes(d.code) || typeof d.instance_path!=='string' || typeof d.schema_path!=='string' || Buffer.byteLength(d.instance_path)>256 || Buffer.byteLength(d.schema_path)>256) ||
       (v.status==='invalid')!==(v.diagnostics.length>0) || (v.status==='valid'&&t.outcome.status!=='completed') ||
       (v.status==='invalid'&&(t.outcome.status!=='failed'||t.outcome.code!=='output_validation_failed'))) throw new Error('Invalid Pablo output validation');
   } else if (v!==undefined) throw new Error('Unexpected Pablo output validation');
+  const r=t.output_repair;
+  if(t.schema_version==='c3.14') {
+    if(!r || r.schema_version!=='output-repair-v1' || !['not_needed','succeeded','failed','blocked'].includes(r.status) ||
+      ![r.attempts,r.validation_attempts,r.feedback_bytes,r.previous_error_count].every(n=>Number.isInteger(n)&&n>=0) || r.attempts>1 || r.validation_attempts>2 || r.feedback_bytes>4096 || r.previous_error_count>8 ||
+      (r.status==='succeeded'&&(r.attempts!==1||r.validation_attempts!==2||v?.status!=='valid'))) throw new Error('Invalid Pablo output repair');
+  } else if(r!==undefined) throw new Error('Unexpected Pablo output repair');
   return t;
 }
 /** Exact counts are decimal strings; use BigInt when arithmetic is needed. */

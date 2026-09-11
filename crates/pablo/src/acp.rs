@@ -36,6 +36,7 @@ struct Extensions {
     route: bool,
     compaction: bool,
     output: bool,
+    repair: bool,
 }
 
 #[derive(Default)]
@@ -246,11 +247,19 @@ async fn serve_streams(
                             .as_ref()
                             .and_then(|m| m.get("pablo/output-v1"))
                             == Some(&json!(true));
+                    state.extensions.repair = state.extensions.output
+                        && request
+                            .client_capabilities
+                            .meta
+                            .as_ref()
+                            .and_then(|m| m.get("pablo/output-repair-v1"))
+                            == Some(&json!(true));
                     let mut capabilities = meta(json!(true));
                     capabilities.insert("pablo/task-v1".into(), json!(true));
                     capabilities.insert("pablo/model-route-v1".into(), json!(true));
                     capabilities.insert("pablo/compaction-v1".into(), json!(true));
                     capabilities.insert("pablo/output-v1".into(), json!(true));
+                    capabilities.insert("pablo/output-repair-v1".into(), json!(true));
                     let caps = wire::AgentCapabilities::new().meta(capabilities);
                     responder.respond(
                         wire::InitializeResponse::new(
@@ -685,6 +694,10 @@ async fn forward_events(
                     details["output_validation"] = serde_json::to_value(&event.output_validation)
                         .map_err(|_| Error::internal_error())?;
                 }
+                if extensions.repair && event.output_repair.is_some() {
+                    details["output_repair"] = serde_json::to_value(&event.output_repair)
+                        .map_err(|_| Error::internal_error())?;
+                }
                 notification.meta = Some(meta(details));
             }
             cx.send_notification(notification)?;
@@ -770,6 +783,12 @@ fn prompt_response(
     if extensions.task {
         let mut task =
             pablo_core::TaskResult::from_terminal(&terminal).ok_or_else(Error::internal_error)?;
+        if !extensions.repair {
+            task.output_repair = None;
+            if task.output_validation.is_some() {
+                task.schema_version = "c3.13".into();
+            }
+        }
         if !extensions.output {
             task.output_validation = None;
             task.schema_version = pablo_core::task::TASK_SCHEMA_VERSION.into();
@@ -820,6 +839,7 @@ mod tests {
             model_route: None,
             compaction: None,
             output_validation: None,
+            output_repair: None,
             model_profile: None,
             deployment: None,
             accounting: None,

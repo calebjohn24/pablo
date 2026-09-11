@@ -292,6 +292,9 @@
         },
         "output_validation": {
           "$ref": "#/$defs/output_validation"
+        },
+        "output_repair": {
+          "$ref": "#/$defs/output_repair"
         }
       },
       "required": [
@@ -507,7 +510,8 @@
         "schema_version": {
           "enum": [
             "c2.3",
-            "c3.13"
+            "c3.13",
+            "c3.14"
           ]
         },
         "run_id": {
@@ -574,6 +578,9 @@
         },
         "output_validation": {
           "$ref": "#/$defs/output_validation"
+        },
+        "output_repair": {
+          "$ref": "#/$defs/output_repair"
         }
       },
       "additionalProperties": false,
@@ -637,7 +644,10 @@
           "if": {
             "properties": {
               "schema_version": {
-                "const": "c3.13"
+                "enum": [
+                  "c3.13",
+                  "c3.14"
+                ]
               }
             }
           },
@@ -721,6 +731,78 @@
                   "status",
                   "code"
                 ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "schema_version": {
+                "const": "c3.14"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "output_repair"
+            ],
+            "properties": {
+              "output_repair": {
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "not_needed",
+                      "succeeded",
+                      "failed",
+                      "blocked"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "else": {
+            "not": {
+              "required": [
+                "output_repair"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "output_repair"
+            ],
+            "properties": {
+              "output_repair": {
+                "properties": {
+                  "status": {
+                    "const": "succeeded"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "output_validation": {
+                "properties": {
+                  "status": {
+                    "const": "valid"
+                  }
+                }
+              },
+              "output_repair": {
+                "properties": {
+                  "attempts": {
+                    "const": 1
+                  },
+                  "validation_attempts": {
+                    "const": 2
+                  }
+                }
               }
             }
           }
@@ -1118,6 +1200,54 @@
           }
         }
       ]
+    },
+    "output_repair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "status",
+        "attempts",
+        "validation_attempts",
+        "feedback_bytes",
+        "previous_error_count"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "output-repair-v1"
+        },
+        "status": {
+          "enum": [
+            "available",
+            "pending",
+            "started",
+            "not_needed",
+            "succeeded",
+            "failed",
+            "blocked"
+          ]
+        },
+        "attempts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "validation_attempts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "feedback_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "previous_error_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8
+        }
+      }
     }
   }
 }

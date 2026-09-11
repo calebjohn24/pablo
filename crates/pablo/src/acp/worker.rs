@@ -315,6 +315,7 @@ mod tests {
             model_route: None,
             compaction: None,
             output_validation: None,
+            output_repair: None,
             model_profile: None,
             deployment: None,
             accounting: None,

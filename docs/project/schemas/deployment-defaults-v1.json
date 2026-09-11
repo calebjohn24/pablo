@@ -91,6 +91,10 @@
     "schema": {
       "unset": true
     },
-    "max_validation_work": 16777216
+    "max_validation_work": 16777216,
+    "repair": {
+      "enabled": false,
+      "max_feedback_bytes": 4096
+    }
   }
 }
