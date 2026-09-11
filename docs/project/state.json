@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T02:36:31.016Z",
+  "updated_at": "2026-09-11T02:44:33.730Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.13",
-  "next_action": "Merge C3.12b, then activate C3.13 and restore saved output-validation WIP onto the merged base while preserving current records. Continue final-output validation and matched performance.",
-  "latest_log_entry": "LOG-0085",
+  "next_action": "Activate C3.13 on feat/c3-output-schema-resume; restore saved output-validation WIP without overwriting current records or stronger compaction, complete J01 and matched performance, then merge.",
+  "latest_log_entry": "LOG-0086",
   "checkpoints": [
     {
       "id": "C1.0",
