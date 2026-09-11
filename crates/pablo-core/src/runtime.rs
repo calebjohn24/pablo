@@ -981,10 +981,10 @@ where
         if !lifecycle.can_start_operation() {
             return Err(limit(LimitKind::Events));
         }
+        lifecycle.begin_operation()?;
         if let Some(record) = &mut lifecycle.model_route {
             record.phase = "started".into();
         }
-        lifecycle.begin_operation()?;
         let started = telemetry::now();
         let model = input.parent.with_span(
             telemetry::agent_span(

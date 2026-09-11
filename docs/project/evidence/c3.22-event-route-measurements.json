@@ -1,0 +1,627 @@
+{
+  "checkpoint": "C3.22",
+  "scope": "Existing unscoped configured runtime and filesystem paths after routed admission correction; child-enabled performance remains pending.",
+  "execution": "Sequential final-source baseline/current configured then baseline/current filesystem, after all tests and builds finished.",
+  "baseline": {
+    "schema_version": 1,
+    "checkpoint": "C3.22",
+    "timestamp": "2026-09-11T11:37:20.109Z",
+    "source_sha256": "3da696adf6582d4c8e33e4da4479245c19e4c1601f8b48731d5222a5bd9f4f5f",
+    "harness_sha256": "41f6d25245cc61080f8528649d4d1c14ec309f41ffbe77e1b4462001f0118435",
+    "platform": {
+      "os": "darwin",
+      "arch": "arm64",
+      "kernel": "25.5.0",
+      "cpu": "Apple M4 Pro",
+      "logical_cpus": 14,
+      "memory_bytes": 25769803776,
+      "node": "v24.11.0",
+      "rust": "rustc 1.98.1 (48a229cea 2026-09-01)",
+      "environment": "local host"
+    },
+    "build": {
+      "profile": "lto = \"thin\"\ncodegen-units = 1\nstrip = \"symbols\"",
+      "binary_bytes": 13795856,
+      "stripped_binary_bytes": 13795888,
+      "strip_method": "platform strip on a copy; timings use original release executable",
+      "binary_sha256": "c0bd38461b7f7dc5ea830198ef773fefeee01728cb120b4af3d04fe4a2e51214"
+    },
+    "method": {
+      "provider": "vercel",
+      "model": "zai/glm-5.3-flash",
+      "output_validation": false,
+      "output_repair": false,
+      "cli_output": "streaming text",
+      "route_events": false,
+      "configuration": "explicit deployment file; re-resolved per admitted task",
+      "samples": 30,
+      "warmup": 5,
+      "cache": "warm filesystem; no forced cache eviction",
+      "workload": "2 local HTTP calls, one bare printf shell command, 32 final output deltas (512 text bytes)",
+      "startup": "Node monotonic spawn to first loopback provider request arrival; separate --version process wall time",
+      "baseline": "direct core run_with_tools in measurement host; SDK/provider/tool construction excluded from core_run_ms",
+      "acp": "official TS SDK; one new process/session/prompt per sample; prompt includes per-run provider/tool/SDK setup; total excludes deliberate RSS wait and session creation",
+      "first_delta": "server write of one text delta to TS client update; local HTTP/SSE and ACP; provider waits 40 ms before finishing",
+      "reuse": "up to 40 measured independent sessions per process after five warm-up tasks; prompt timing excludes session creation; same HTTP/shell workload",
+      "rss": "ps RSS in KiB 50 ms after ACP initialize; one fresh process per sample",
+      "events": "normalized ProviderEvent yield to inline TextDelta sink entry; includes measurement mutex/clock; 1000 x 32-byte deltas per run",
+      "trace": "same event workload with/without metadata-only buffered JSONL; includes writer flush but excludes file creation; no fsync",
+      "limits": "single-run warm-cache microbenchmarks; no network/TLS/model latency; no concurrency or remote provider claim"
+    },
+    "stats": {
+      "version_process_ms": {
+        "n": 30,
+        "min": 4.367957999999817,
+        "p50": 5.526083000000199,
+        "p95": 6.6730420000003505,
+        "p99": 6.87304099999983,
+        "max": 6.87304099999983
+      },
+      "cli_provider_ready_ms": {
+        "n": 30,
+        "min": 10.248916000000008,
+        "p50": 12.782124999999724,
+        "p95": 14.387957999999344,
+        "p99": 15.197166999998444,
+        "max": 15.197166999998444
+      },
+      "cli_total_ms": {
+        "n": 30,
+        "min": 17.40650000000005,
+        "p50": 20.96429199999966,
+        "p95": 29.481000000000677,
+        "p99": 33.580667000000176,
+        "max": 33.580667000000176
+      },
+      "core_run_ms": {
+        "n": 30,
+        "min": 6.899167,
+        "p50": 13.337125,
+        "p95": 15.231542000000001,
+        "p99": 15.988417000000002,
+        "max": 15.988417000000002
+      },
+      "core_host_total_ms": {
+        "n": 30,
+        "min": 18.730374999999185,
+        "p50": 25.655917000000045,
+        "p95": 32.34437500000058,
+        "p99": 33.49524999999994,
+        "max": 33.49524999999994
+      },
+      "acp_initialize_ms": {
+        "n": 30,
+        "min": 8.534458000000086,
+        "p50": 10.6884170000003,
+        "p95": 12.375417000001107,
+        "p99": 14.398291999999856,
+        "max": 14.398291999999856
+      },
+      "acp_prompt_ms": {
+        "n": 30,
+        "min": 9.087625000000116,
+        "p50": 16.53054199999997,
+        "p95": 17.551832999999533,
+        "p99": 17.797333999999864,
+        "max": 17.797333999999864
+      },
+      "acp_total_ms": {
+        "n": 30,
+        "min": 20.17949899999985,
+        "p50": 28.413667000000714,
+        "p95": 30.566875000000437,
+        "p99": 32.336833999999726,
+        "max": 32.336833999999726
+      },
+      "acp_first_text_ms": {
+        "n": 30,
+        "min": 8.968374999999924,
+        "p50": 16.244333000000097,
+        "p95": 17.345957999999882,
+        "p99": 17.604041999999936,
+        "max": 17.604041999999936
+      },
+      "idle_rss_kib": {
+        "n": 30,
+        "min": 16560,
+        "p50": 16640,
+        "p95": 16784,
+        "p99": 16784,
+        "max": 16784
+      },
+      "acp_first_delta_delivery_ms": {
+        "n": 30,
+        "min": 0.209791000000223,
+        "p50": 0.2668749999997999,
+        "p95": 0.404791999999361,
+        "p99": 0.4752910000006523,
+        "max": 0.4752910000006523
+      },
+      "acp_warm_prompt_ms": {
+        "n": 30,
+        "min": 7.340040999999474,
+        "p50": 14.127291999999215,
+        "p95": 15.810959000000366,
+        "p99": 15.82262499999888,
+        "max": 15.82262499999888
+      },
+      "acp_warm_first_text_ms": {
+        "n": 30,
+        "min": 7.1927080000004935,
+        "p50": 13.981916999999157,
+        "p95": 15.551084000000628,
+        "p99": 15.61700000000019,
+        "max": 15.61700000000019
+      },
+      "warm_idle_rss_kib": {
+        "n": 30,
+        "min": 18240,
+        "p50": 18256,
+        "p95": 18336,
+        "p99": 18336,
+        "max": 18336
+      }
+    },
+    "events": {
+      "mode": "events",
+      "chunks_per_run": 1000,
+      "bytes_per_chunk": 32,
+      "warmup_pairs": 5,
+      "samples": 30,
+      "event_latency_ns": {
+        "n": 30000,
+        "min": 83,
+        "p50": 208,
+        "p95": 250,
+        "p99": 292,
+        "max": 4750
+      },
+      "no_trace_ms": {
+        "n": 30,
+        "min": 0.496,
+        "p50": 0.5788749999999999,
+        "p95": 0.798917,
+        "p99": 0.802792,
+        "max": 0.802792
+      },
+      "trace_ms": {
+        "n": 30,
+        "min": 1.065916,
+        "p50": 1.271458,
+        "p95": 1.766625,
+        "p99": 1.856792,
+        "max": 1.856792
+      },
+      "trace_bytes_per_run": 390882
+    },
+    "comparisons": {
+      "acp_prompt_minus_core_p50_ms": 3.193416999999968,
+      "acp_prompt_over_core_p50_ratio": 1.2394381847662048,
+      "acp_total_minus_core_host_p50_ms": 2.7577500000006694,
+      "trace_p50_overhead_percent": 119.64292809328443
+    }
+  },
+  "current": {
+    "schema_version": 1,
+    "checkpoint": "C3.22",
+    "timestamp": "2026-09-11T11:37:33.347Z",
+    "source_sha256": "9472fb6f5bc22c8d01f98f5da064e54ff403596b99621864104610091efadb5b",
+    "harness_sha256": "41f6d25245cc61080f8528649d4d1c14ec309f41ffbe77e1b4462001f0118435",
+    "platform": {
+      "os": "darwin",
+      "arch": "arm64",
+      "kernel": "25.5.0",
+      "cpu": "Apple M4 Pro",
+      "logical_cpus": 14,
+      "memory_bytes": 25769803776,
+      "node": "v24.11.0",
+      "rust": "rustc 1.98.1 (48a229cea 2026-09-01)",
+      "environment": "local host"
+    },
+    "build": {
+      "profile": "lto = \"thin\"\ncodegen-units = 1\nstrip = \"symbols\"",
+      "binary_bytes": 13946320,
+      "stripped_binary_bytes": 13946336,
+      "strip_method": "platform strip on a copy; timings use original release executable",
+      "binary_sha256": "b0c743a4e229be641e195ea91ba4c61698956c2f38c832ea874abd850678197c"
+    },
+    "method": {
+      "provider": "vercel",
+      "model": "zai/glm-5.3-flash",
+      "output_validation": false,
+      "output_repair": false,
+      "cli_output": "streaming text",
+      "route_events": false,
+      "configuration": "explicit deployment file; re-resolved per admitted task",
+      "samples": 30,
+      "warmup": 5,
+      "cache": "warm filesystem; no forced cache eviction",
+      "workload": "2 local HTTP calls, one bare printf shell command, 32 final output deltas (512 text bytes)",
+      "startup": "Node monotonic spawn to first loopback provider request arrival; separate --version process wall time",
+      "baseline": "direct core run_with_tools in measurement host; SDK/provider/tool construction excluded from core_run_ms",
+      "acp": "official TS SDK; one new process/session/prompt per sample; prompt includes per-run provider/tool/SDK setup; total excludes deliberate RSS wait and session creation",
+      "first_delta": "server write of one text delta to TS client update; local HTTP/SSE and ACP; provider waits 40 ms before finishing",
+      "reuse": "up to 40 measured independent sessions per process after five warm-up tasks; prompt timing excludes session creation; same HTTP/shell workload",
+      "rss": "ps RSS in KiB 50 ms after ACP initialize; one fresh process per sample",
+      "events": "normalized ProviderEvent yield to inline TextDelta sink entry; includes measurement mutex/clock; 1000 x 32-byte deltas per run",
+      "trace": "same event workload with/without metadata-only buffered JSONL; includes writer flush but excludes file creation; no fsync",
+      "limits": "single-run warm-cache microbenchmarks; no network/TLS/model latency; no concurrency or remote provider claim"
+    },
+    "stats": {
+      "version_process_ms": {
+        "n": 30,
+        "min": 3.8115840000009484,
+        "p50": 5.2587080000012065,
+        "p95": 6.79858299999978,
+        "p99": 7.201207999999951,
+        "max": 7.201207999999951
+      },
+      "cli_provider_ready_ms": {
+        "n": 30,
+        "min": 9.383582999999817,
+        "p50": 12.795458000000508,
+        "p95": 14.484250000001339,
+        "p99": 15.017791000000216,
+        "max": 15.017791000000216
+      },
+      "cli_total_ms": {
+        "n": 30,
+        "min": 16.747583000000304,
+        "p50": 20.490959000000657,
+        "p95": 27.94891699999971,
+        "p99": 28.80229099999997,
+        "max": 28.80229099999997
+      },
+      "core_run_ms": {
+        "n": 30,
+        "min": 7.465458,
+        "p50": 9.064499999999999,
+        "p95": 14.688625,
+        "p99": 14.695834,
+        "max": 14.695834
+      },
+      "core_host_total_ms": {
+        "n": 30,
+        "min": 17.741374999999607,
+        "p50": 22.43429100000003,
+        "p95": 31.24879200000032,
+        "p99": 31.988292,
+        "max": 31.988292
+      },
+      "acp_initialize_ms": {
+        "n": 30,
+        "min": 8.198040999999648,
+        "p50": 10.210332999999082,
+        "p95": 11.720375000000331,
+        "p99": 11.861249999999927,
+        "max": 11.861249999999927
+      },
+      "acp_prompt_ms": {
+        "n": 30,
+        "min": 8.588249999999789,
+        "p50": 16.206583000000137,
+        "p95": 18.06366700000035,
+        "p99": 19.005667000000358,
+        "max": 19.005667000000358
+      },
+      "acp_total_ms": {
+        "n": 30,
+        "min": 17.747082999999293,
+        "p50": 26.83379100000093,
+        "p95": 31.32179200000064,
+        "p99": 31.49329200000011,
+        "max": 31.49329200000011
+      },
+      "acp_first_text_ms": {
+        "n": 30,
+        "min": 8.436249999999745,
+        "p50": 16.016208000000006,
+        "p95": 17.815958000001046,
+        "p99": 18.811542000000372,
+        "max": 18.811542000000372
+      },
+      "idle_rss_kib": {
+        "n": 30,
+        "min": 16800,
+        "p50": 16912,
+        "p95": 17008,
+        "p99": 17024,
+        "max": 17024
+      },
+      "acp_first_delta_delivery_ms": {
+        "n": 30,
+        "min": 0.2093750000003638,
+        "p50": 0.26499999999987267,
+        "p95": 0.3505000000000109,
+        "p99": 0.4336669999993319,
+        "max": 0.4336669999993319
+      },
+      "acp_warm_prompt_ms": {
+        "n": 30,
+        "min": 7.449999999998909,
+        "p50": 14.799124999999549,
+        "p95": 15.584624999999505,
+        "p99": 15.914457999999286,
+        "max": 15.914457999999286
+      },
+      "acp_warm_first_text_ms": {
+        "n": 30,
+        "min": 7.341666999998779,
+        "p50": 14.58020899999974,
+        "p95": 15.400166999999783,
+        "p99": 15.663582999999562,
+        "max": 15.663582999999562
+      },
+      "warm_idle_rss_kib": {
+        "n": 30,
+        "min": 18208,
+        "p50": 18240,
+        "p95": 18320,
+        "p99": 18368,
+        "max": 18368
+      }
+    },
+    "events": {
+      "mode": "events",
+      "chunks_per_run": 1000,
+      "bytes_per_chunk": 32,
+      "warmup_pairs": 5,
+      "samples": 30,
+      "event_latency_ns": {
+        "n": 30000,
+        "min": 125,
+        "p50": 208,
+        "p95": 292,
+        "p99": 334,
+        "max": 7291
+      },
+      "no_trace_ms": {
+        "n": 30,
+        "min": 0.501958,
+        "p50": 0.593916,
+        "p95": 0.843959,
+        "p99": 0.885375,
+        "max": 0.885375
+      },
+      "trace_ms": {
+        "n": 30,
+        "min": 0.925125,
+        "p50": 1.102791,
+        "p95": 1.4753749999999999,
+        "p99": 1.63475,
+        "max": 1.63475
+      },
+      "trace_bytes_per_run": 390882
+    },
+    "comparisons": {
+      "acp_prompt_minus_core_p50_ms": 7.142083000000138,
+      "acp_prompt_over_core_p50_ratio": 1.7879180318826344,
+      "acp_total_minus_core_host_p50_ms": 4.399500000000899,
+      "trace_p50_overhead_percent": 85.68130846786414
+    }
+  },
+  "filesystem_baseline": {
+    "checkpoint": "C3.22",
+    "timestamp": "2026-09-11T11:37:34.247Z",
+    "platform": "darwin/arm64",
+    "source_sha256": "3da696adf6582d4c8e33e4da4479245c19e4c1601f8b48731d5222a5bd9f4f5f",
+    "binary_sha256": "c0bd38461b7f7dc5ea830198ef773fefeee01728cb120b4af3d04fe4a2e51214",
+    "method": {
+      "provider": "vercel",
+      "model": "zai/glm-5.3-flash",
+      "configuration": "explicit deployment file; re-resolved per task",
+      "samples": 30,
+      "warmup": 5,
+      "cache": "warm filesystem; no forced eviction",
+      "prompt": "two loopback HTTP/SSE calls plus one real filesystem tool and ACP envelope delivery; fresh sessions in reused process",
+      "tool": "native tool.started to tool.finished timestamps; includes joined worker and filesystem work",
+      "search_bytes": 1048700,
+      "setup": "fixture construction and process/catalog/SDK setup excluded from measured warm samples",
+      "baseline": "new capability workload; no equivalent C1 native filesystem tool"
+    },
+    "measurements": {
+      "read_128k": {
+        "prompt_ms": {
+          "n": 30,
+          "p50": 1.4341249999999945,
+          "p95": 2.0284169999999904,
+          "p99": 2.308458999999999,
+          "min": 1.3441669999999988,
+          "max": 2.308458999999999
+        },
+        "tool_ms": {
+          "n": 30,
+          "p50": 0.132,
+          "p95": 0.146,
+          "p99": 0.154,
+          "min": 0.128,
+          "max": 0.154
+        }
+      },
+      "list_1000": {
+        "prompt_ms": {
+          "n": 30,
+          "p50": 2.119624999999985,
+          "p95": 2.3468749999999545,
+          "p99": 2.356166999999971,
+          "min": 1.9934170000000222,
+          "max": 2.356166999999971
+        },
+        "tool_ms": {
+          "n": 30,
+          "p50": 0.988,
+          "p95": 1.095,
+          "p99": 1.184,
+          "min": 0.925,
+          "max": 1.184
+        }
+      },
+      "search_1m": {
+        "prompt_ms": {
+          "n": 30,
+          "p50": 2.9584580000000074,
+          "p95": 3.0855000000000246,
+          "p99": 3.6880409999999983,
+          "min": 2.8047090000000026,
+          "max": 3.6880409999999983
+        },
+        "tool_ms": {
+          "n": 30,
+          "p50": 2.066,
+          "p95": 2.233,
+          "p99": 2.415,
+          "min": 2.017,
+          "max": 2.415
+        }
+      },
+      "replace_128k": {
+        "prompt_ms": {
+          "n": 30,
+          "p50": 2.327250000000049,
+          "p95": 3.0427499999999554,
+          "p99": 3.121208000000024,
+          "min": 2.0976249999999936,
+          "max": 3.121208000000024
+        },
+        "tool_ms": {
+          "n": 30,
+          "p50": 0.54,
+          "p95": 0.822,
+          "p99": 0.843,
+          "min": 0.478,
+          "max": 0.843
+        }
+      },
+      "edit_128k": {
+        "prompt_ms": {
+          "n": 30,
+          "p50": 1.5071669999999813,
+          "p95": 1.885167000000024,
+          "p99": 2.1322910000000093,
+          "min": 1.2682920000000877,
+          "max": 2.1322910000000093
+        },
+        "tool_ms": {
+          "n": 30,
+          "p50": 0.647,
+          "p95": 0.922,
+          "p99": 1.019,
+          "min": 0.413,
+          "max": 1.019
+        }
+      }
+    }
+  },
+  "filesystem_current": {
+    "checkpoint": "C3.22",
+    "timestamp": "2026-09-11T11:37:34.953Z",
+    "platform": "darwin/arm64",
+    "source_sha256": "9472fb6f5bc22c8d01f98f5da064e54ff403596b99621864104610091efadb5b",
+    "binary_sha256": "b0c743a4e229be641e195ea91ba4c61698956c2f38c832ea874abd850678197c",
+    "method": {
+      "provider": "vercel",
+      "model": "zai/glm-5.3-flash",
+      "configuration": "explicit deployment file; re-resolved per task",
+      "samples": 30,
+      "warmup": 5,
+      "cache": "warm filesystem; no forced eviction",
+      "prompt": "two loopback HTTP/SSE calls plus one real filesystem tool and ACP envelope delivery; fresh sessions in reused process",
+      "tool": "native tool.started to tool.finished timestamps; includes joined worker and filesystem work",
+      "search_bytes": 1048700,
+      "setup": "fixture construction and process/catalog/SDK setup excluded from measured warm samples",
+      "baseline": "new capability workload; no equivalent C1 native filesystem tool"
+    },
+    "measurements": {
+      "read_128k": {
+        "prompt_ms": {
+          "n": 30,
+          "p50": 1.5617920000000254,
+          "p95": 2.120582999999982,
+          "p99": 6.473583000000019,
+          "min": 1.336749999999995,
+          "max": 6.473583000000019
+        },
+        "tool_ms": {
+          "n": 30,
+          "p50": 0.135,
+          "p95": 0.267,
+          "p99": 3.273,
+          "min": 0.128,
+          "max": 3.273
+        }
+      },
+      "list_1000": {
+        "prompt_ms": {
+          "n": 30,
+          "p50": 2.195959000000016,
+          "p95": 2.8780830000000037,
+          "p99": 2.8906670000000076,
+          "min": 2.0730839999999944,
+          "max": 2.8906670000000076
+        },
+        "tool_ms": {
+          "n": 30,
+          "p50": 0.996,
+          "p95": 1.348,
+          "p99": 1.379,
+          "min": 0.944,
+          "max": 1.379
+        }
+      },
+      "search_1m": {
+        "prompt_ms": {
+          "n": 30,
+          "p50": 2.911625000000015,
+          "p95": 3.099749999999972,
+          "p99": 3.140083000000004,
+          "min": 2.7759999999999536,
+          "max": 3.140083000000004
+        },
+        "tool_ms": {
+          "n": 30,
+          "p50": 2.05,
+          "p95": 2.141,
+          "p99": 2.227,
+          "min": 2.004,
+          "max": 2.227
+        }
+      },
+      "replace_128k": {
+        "prompt_ms": {
+          "n": 30,
+          "p50": 2.474375000000009,
+          "p95": 3.1840839999999844,
+          "p99": 3.3512079999999287,
+          "min": 2.17087499999991,
+          "max": 3.3512079999999287
+        },
+        "tool_ms": {
+          "n": 30,
+          "p50": 0.751,
+          "p95": 0.903,
+          "p99": 0.934,
+          "min": 0.489,
+          "max": 0.934
+        }
+      },
+      "edit_128k": {
+        "prompt_ms": {
+          "n": 30,
+          "p50": 1.4837090000000899,
+          "p95": 1.6253340000000662,
+          "p99": 3.103291000000013,
+          "min": 1.2589999999999009,
+          "max": 3.103291000000013
+        },
+        "tool_ms": {
+          "n": 30,
+          "p50": 0.642,
+          "p95": 0.736,
+          "p99": 1.017,
+          "min": 0.434,
+          "max": 1.017
+        }
+      }
+    }
+  }
+}

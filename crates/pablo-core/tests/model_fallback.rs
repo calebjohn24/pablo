@@ -630,3 +630,48 @@ async fn f03_begun_tool_call_and_closing_sink_failure_never_fallback() {
     assert_eq!(accounting(&events).model_calls, 1);
     assert!(s.seen[1].lock().unwrap().is_empty());
 }
+
+#[tokio::test]
+async fn shared_event_denial_reports_a_blocked_route_without_starting_a_provider() {
+    let mut fixture = setup([vec![], vec![], vec![]], json!({}), Duration::ZERO, false);
+    fixture.spec.limits.max_events = 8;
+    let root = children::AgentRef::root("root".into(), "session".into());
+    let child = root.temporary_child().unwrap();
+    let ledger = children::ledger::RootLedger::new(&root, fixture.spec.limits.clone()).unwrap();
+    ledger
+        .register_child(&child, fixture.spec.limits.clone())
+        .unwrap();
+    let mut child_terminal = ledger.claim_run_event(child.agent_id()).unwrap();
+    for _ in 0..4 {
+        ledger.admit_event(child.agent_id()).unwrap();
+    }
+    child_terminal.consume().unwrap();
+    let sdk = SdkTracerProvider::builder().build();
+    let mut events = Vec::new();
+    let outcome = Runtime::new(telemetry::tracer(&sdk))
+        .with_root_ledger(ledger, root.agent_id().into())
+        .unwrap()
+        .run(&fixture.spec, &fixture.route, &mut |event: &RunEvent| {
+            events.push(event.clone());
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        outcome,
+        RunOutcome::LimitExceeded {
+            limit: LimitKind::Events
+        }
+    );
+    assert!(
+        fixture
+            .seen
+            .iter()
+            .all(|calls| calls.lock().unwrap().is_empty())
+    );
+    assert_eq!(events.len(), 2);
+    let route = events.last().unwrap().model_route.as_ref().unwrap();
+    assert_eq!(route.phase, "blocked");
+    assert!(!route.dispatched);
+    sdk.shutdown().unwrap();
+}
