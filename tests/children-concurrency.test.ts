@@ -42,7 +42,11 @@ for(const mode of ['stop','fail','cancel'] as const)test(mode==='cancel'?'A03 ro
       // Both calls reached the provider without either completing; C cannot
       // start until one slot is released. This is a barrier, not a timing guess.
       await both;assert(!seen.has('child-C'));
-      if(mode==='cancel'){await cancelRoot();res.writeHead(200,{'content-type':'text/event-stream'});res.end(wire({content:'unused'}));return;}
+      if(mode==='cancel'){
+        // Notification write completion is not server-side cancellation receipt.
+        // Keep this model operation pending so a final answer cannot win that race.
+        await cancelRoot();return;
+      }
       if(mode==='fail'){failA();args={action:'wait',agent_ids:[ids[0]],mode:'all',timeout_ms:5000};}
       else args={action:'stop',agent_id:ids[0]};
     }else if(results.length===4){

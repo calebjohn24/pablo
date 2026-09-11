@@ -467,3 +467,102 @@ async fn child_mcp_catalogs_are_fresh_narrowed_and_joined_on_definition_change()
     );
     assert!(credentials.0.lock().unwrap().is_empty());
 }
+
+#[tokio::test]
+async fn artifact_handoff_uses_narrowed_read_authority_physical_paths_and_revision() {
+    use pablo_core::children::handoff::{ArtifactError, ArtifactReference};
+    let f = Fixture::new();
+    fs::write(f.0.join("result.json"), b"{}").unwrap();
+    let reference = ArtifactReference {
+        path: "result.json".into(),
+        revision: "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a".into(),
+    };
+    let parent = f.prepared(json!({}));
+    let child = parent
+        .prepare_child(
+            &spawn(json!({"capabilities":{"tools":["fs.read"]}})),
+            &parent.tools().unwrap(),
+        )
+        .unwrap();
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
+    let cancel = CancellationToken::new();
+    assert_eq!(
+        child.verify_artifact(&reference, deadline, &cancel).await,
+        Ok(())
+    );
+    let denied = parent
+        .prepare_child(
+            &spawn(json!({"capabilities":{"tools":[]}})),
+            &parent.tools().unwrap(),
+        )
+        .unwrap();
+    assert_eq!(
+        denied.verify_artifact(&reference, deadline, &cancel).await,
+        Err(ArtifactError::Unauthorized)
+    );
+    let restricted = f.prepared(json!({"options":{"policy":{"read_roots":{"default":"deny"}}}}));
+    assert_eq!(
+        restricted
+            .verify_artifact(&reference, deadline, &cancel)
+            .await,
+        Err(ArtifactError::Unauthorized)
+    );
+    let limited = f.prepared(json!({"options":{"limits":{"filesystem":{"max_file_bytes":1}}}}));
+    assert_eq!(
+        limited.verify_artifact(&reference, deadline, &cancel).await,
+        Err(ArtifactError::WorkLimit)
+    );
+    let mut malformed = reference.clone();
+    malformed.revision = "bad digest".into();
+    assert_eq!(
+        child.verify_artifact(&malformed, deadline, &cancel).await,
+        Err(ArtifactError::InvalidReference)
+    );
+    fs::write(f.0.join("result.json"), b"changed").unwrap();
+    assert_eq!(
+        child.verify_artifact(&reference, deadline, &cancel).await,
+        Err(ArtifactError::Stale)
+    );
+    std::os::unix::fs::symlink("result.json", f.0.join("alias.json")).unwrap();
+    let alias = ArtifactReference {
+        path: "alias.json".into(),
+        ..reference.clone()
+    };
+    assert_eq!(
+        child.verify_artifact(&alias, deadline, &cancel).await,
+        Err(ArtifactError::Unavailable)
+    );
+    for path in ["../result.json", "/result.json", ".", ""] {
+        let invalid = ArtifactReference {
+            path: path.into(),
+            ..reference.clone()
+        };
+        assert_eq!(
+            child.verify_artifact(&invalid, deadline, &cancel).await,
+            Err(ArtifactError::InvalidReference)
+        );
+    }
+    cancel.cancel();
+    assert_eq!(
+        child.verify_artifact(&reference, deadline, &cancel).await,
+        Err(ArtifactError::Cancelled)
+    );
+    assert_eq!(
+        child
+            .verify_artifact(
+                &reference,
+                tokio::time::Instant::now(),
+                &CancellationToken::new()
+            )
+            .await,
+        Err(ArtifactError::TimedOut)
+    );
+    let unresolved = spawn(
+        json!({"handoffs":[{"source_agent_id":uuid::Uuid::new_v4().to_string(),"result_id":uuid::Uuid::new_v4().to_string(),"kind":"inline"}]}),
+    );
+    assert!(
+        parent
+            .prepare_child(&unresolved, &parent.tools().unwrap())
+            .is_err()
+    );
+}

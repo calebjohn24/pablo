@@ -422,6 +422,71 @@ mod unix {
         path: PathBuf,
     }
     impl Workspace {
+        pub(crate) fn verify_reference(
+            &self,
+            reference: &crate::children::handoff::ArtifactReference,
+            policy: &PolicySet,
+            limits: &RunLimits,
+            deadline: Instant,
+            cancellation: &CancellationToken,
+        ) -> Result<(), crate::children::handoff::ArtifactError> {
+            use crate::children::handoff::ArtifactError;
+            use aws_lc_rs::digest;
+            let check = || {
+                if Instant::now() >= deadline {
+                    Err(ArtifactError::TimedOut)
+                } else if cancellation.is_cancelled() {
+                    Err(ArtifactError::Cancelled)
+                } else {
+                    Ok(())
+                }
+            };
+            check()?;
+            reference
+                .validate()
+                .map_err(|_| ArtifactError::InvalidReference)?;
+            let path = self
+                .relative(&reference.path)
+                .map_err(|_| ArtifactError::Unauthorized)?;
+            policy
+                .decide("read_roots", path.to_str().unwrap_or(""), false)
+                .map_err(|_| ArtifactError::Unauthorized)?;
+            let mut file = self
+                .open(&path, false)
+                .map_err(|_| ArtifactError::Unavailable)?;
+            let mut hash = digest::Context::new(&digest::SHA256);
+            let mut bytes = 0usize;
+            let mut buffer = [0u8; 8192];
+            loop {
+                check()?;
+                let n = file
+                    .read(&mut buffer)
+                    .map_err(|_| ArtifactError::Unavailable)?;
+                if n == 0 {
+                    break;
+                }
+                bytes = bytes.checked_add(n).ok_or(ArtifactError::WorkLimit)?;
+                if limits
+                    .filesystem
+                    .max_file_bytes
+                    .is_some_and(|max| bytes > max)
+                {
+                    return Err(ArtifactError::WorkLimit);
+                }
+                hash.update(&buffer[..n]);
+            }
+            check()?;
+            let actual = hash
+                .finish()
+                .as_ref()
+                .iter()
+                .map(|b| format!("{b:02x}"))
+                .collect::<String>();
+            if actual != reference.revision {
+                return Err(ArtifactError::Stale);
+            }
+            Ok(())
+        }
         pub(crate) fn new(path: &Path, policy: &PolicySet) -> Result<Self, &'static str> {
             policy.validate()?;
             let path = path

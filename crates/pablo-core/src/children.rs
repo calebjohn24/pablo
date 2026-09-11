@@ -1,6 +1,8 @@
 //! Temporary child contract. No supervisor or delegation tool is installed here.
 use serde::{Deserialize, Serialize};
 
+pub mod handoff;
+
 pub const MAX_DEPTH: u8 = 1;
 pub const MAX_ACTIVE: usize = 2;
 pub const MAX_TOTAL: usize = 16;
@@ -174,6 +176,8 @@ pub struct SpawnRequest {
     pub ceilings: ChildCeilings,
     #[serde(default)]
     pub output_schema: Option<serde_json::Value>,
+    #[serde(default)]
+    pub handoffs: Vec<handoff::HandoffSelection>,
 }
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -203,6 +207,12 @@ impl SpawnRequest {
     /// Shape bounds only. C3.22 must additionally intersect authority and reserve
     /// root capacity atomically before any child starts.
     pub fn validate_shape(&self) -> Result<(), ContractError> {
+        if self.handoffs.len() > MAX_TOTAL {
+            return Err(ContractError::InputBound);
+        }
+        for handoff in &self.handoffs {
+            handoff.validate()?;
+        }
         let bytes = self.context.iter().fold(
             self.input
                 .len()

@@ -28,6 +28,9 @@ impl PreparedRun {
         if self.child_scope.is_some() {
             return Err(denied("/child/depth"));
         }
+        if !request.handoffs.is_empty() {
+            return Err(denied("/child/handoffs"));
+        }
         request
             .validate_shape()
             .map_err(|_| error("config_invalid_value", "/child"))?;
@@ -265,5 +268,45 @@ impl PreparedRun {
             return Err(error("config_child_capability_changed", "/child/tools"));
         }
         Ok(true)
+    }
+}
+
+impl PreparedRun {
+    /// Check a workspace reference using the same physical path/read authority
+    /// and SHA-256 contract as filesystem tools. This never grants a capability.
+    #[cfg(unix)]
+    pub async fn verify_artifact(
+        &self,
+        reference: &crate::children::handoff::ArtifactReference,
+        deadline: tokio::time::Instant,
+        cancellation: &crate::CancellationToken,
+    ) -> Result<(), crate::children::handoff::ArtifactError> {
+        use crate::children::handoff::ArtifactError;
+        reference
+            .validate()
+            .map_err(|_| ArtifactError::InvalidReference)?;
+        if self.policy.decide("tools", "fs.read", false).is_err()
+            || !self
+                .builtin_tools()
+                .map_err(|_| ArtifactError::Unauthorized)?
+                .descriptors()
+                .iter()
+                .any(|tool| tool.name == "fs.read")
+        {
+            return Err(ArtifactError::Unauthorized);
+        }
+        let reference = reference.clone();
+        let workspace = self.spec.workspace.clone();
+        let policy = self.policy.clone();
+        let limits = self.spec.limits.clone();
+        let cancellation = cancellation.clone();
+        // Retain the join on cancellation, just like ordinary filesystem work.
+        tokio::task::spawn_blocking(move || {
+            let workspace = crate::filesystem::Workspace::new(&workspace, &policy)
+                .map_err(|_| ArtifactError::Unavailable)?;
+            workspace.verify_reference(&reference, &policy, &limits, deadline, &cancellation)
+        })
+        .await
+        .map_err(|_| ArtifactError::Unavailable)?
     }
 }

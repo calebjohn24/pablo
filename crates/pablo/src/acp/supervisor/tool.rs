@@ -39,7 +39,7 @@ impl Tool for Supervisor {
     fn descriptor(&self) -> ToolDescriptor {
         ToolDescriptor {
             name: "subagent".into(),
-            description: "Run up to two concurrent temporary children with explicitly selected tasks and inherited capabilities. Spawn returns a handle immediately; inspect and wait return bounded state/results; stop joins owned child work. Children share the workspace and root budgets.".into(),
+            description: "Run up to two concurrent temporary children with explicitly selected tasks and inherited capabilities. Spawn returns a handle immediately; inspect and wait return bounded state/results; stop joins owned child work. Children share the workspace and root budgets. Select handoffs by source_agent_id and result_id from settled schema-valid results; inline passes structured output, artifact passes a verified workspace path/revision.".into(),
             input_schema: serde_json::json!({
                 "type":"object","additionalProperties":false,
                 "properties":{
@@ -48,6 +48,15 @@ impl Tool for Supervisor {
                         "properties":{
                             "input":{"type":"string","minLength":1,"maxLength":1048576},
                             "overlay":{"type":["string","null"]},"context":{"type":"array","items":{"type":"string"}},
+                            "handoffs":{"type":"array","maxItems":16,"items":{
+                                "type":"object","additionalProperties":false,
+                                "required":["source_agent_id","result_id","kind"],
+                                "properties":{
+                                    "source_agent_id":{"type":"string","format":"uuid"},
+                                    "result_id":{"type":"string","format":"uuid"},
+                                    "kind":{"enum":["inline","artifact"]}
+                                }
+                            }},
                             "capabilities":{"type":"object","additionalProperties":false,"properties":{
                                 "tools":{"type":["array","null"],"items":{"type":"string"}},
                                 "skills":{"type":["array","null"],"items":{"type":"string"}},

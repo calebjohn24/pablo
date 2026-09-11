@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T13:43:49.745Z",
+  "updated_at": "2026-09-11T14:06:16.444Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.24",
-  "next_action": "Activate C3.24 on merged 44bd3b4: pass bounded schema-valid completed-child results or workspace-relative artifact references into a later child, prove fan-out and explicit parent fan-in without copying transcripts, reject invalid/oversized/stale/unauthorized references before downstream work, and preserve source/result IDs, validation/accounting and trace links. Use existing filesystem paths/revisions; add no artifact store, persistence, scheduler or retry. Preserve two-child owned concurrency, atomic root budgets, narrowed authority, joined cleanup and GLM/compaction/filesystem defaults. Continue performance checks and PR merges; F03 remains C3.33 and mixed measurements remain C3.39.",
-  "latest_log_entry": "LOG-0129",
+  "next_checkpoint": "C3.25",
+  "next_action": "Merge exact verified C3.24 PR head, synchronize main and confirm tree parity; prepare C3.25 E01 combined MCP/Skill/two-child/validated-handoff/forced-compaction acceptance, root cancellation/authority variants and real Collector proof. Reference reviewed live provider evidence and rerun only if lifecycle/provider changes invalidate it. Keep F03 at C3.33 and mixed measurements at C3.39; preserve GLM defaults, task-relevant compaction and unlimited filesystem work.",
+  "latest_log_entry": "LOG-0131",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -563,9 +563,11 @@
       "depends_on": [
         "C3.23"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0131"
+      ]
     },
     {
       "id": "C3.25",

@@ -15,11 +15,14 @@ use pablo_core::{
 use std::collections::{BTreeMap, VecDeque};
 use tokio::time::Instant;
 pub(crate) mod factory;
+mod handoff;
 
 #[derive(Clone, Debug, serde::Serialize)]
 pub(super) struct Snapshot {
     pub agent: AgentRef,
     pub accounting: Accounting,
+    pub result_id: Option<String>,
+    pub handoffs: Vec<pablo_core::children::handoff::HandoffSelection>,
     pub outcome: Option<RunOutcome>,
     pub error: Option<&'static str>,
     pub trace: Option<Trace>,
@@ -54,6 +57,7 @@ struct Job {
     prepared: PreparedRun,
     parent: opentelemetry::Context,
     lease: ResourceLease,
+    artifacts: Vec<pablo_core::children::handoff::ArtifactReference>,
 }
 #[derive(Default)]
 struct Registry {
@@ -200,10 +204,11 @@ impl Supervisor {
         request: &pablo_core::children::SpawnRequest,
         parent: opentelemetry::Context,
     ) -> Result<AgentRef, &'static str> {
+        let (resolved, artifacts) = self.resolve_handoffs(request)?;
         let prepared = self
             .inner
             .parent
-            .prepare_child(request, &self.inner.parent_tools)
+            .prepare_child(&resolved, &self.inner.parent_tools)
             .map_err(|_| "child authority rejected")?;
         let mut registry = self.inner.registry.lock().unwrap();
         if registry.closed
@@ -235,6 +240,8 @@ impl Supervisor {
             snapshot: Mutex::new(Snapshot {
                 agent: agent.clone(),
                 accounting: Accounting::default(),
+                result_id: None,
+                handoffs: request.handoffs.clone(),
                 outcome: None,
                 error: None,
                 trace: None,
@@ -252,6 +259,7 @@ impl Supervisor {
             prepared,
             parent,
             lease,
+            artifacts,
         });
         self.inner.ready.notify_one();
         Ok(agent)
@@ -397,6 +405,8 @@ impl Inner {
             })
             .expect("joined execution only releases capacity");
         let mut snapshot = child.snapshot.lock().unwrap();
+        snapshot.result_id = matches!(outcome, RunOutcome::Completed { .. })
+            .then(|| uuid::Uuid::new_v4().to_string());
         snapshot.outcome = Some(outcome);
         snapshot.error = error;
         snapshot.accounting = self
@@ -422,6 +432,7 @@ impl Inner {
             snapshot.outcome = Some(RunOutcome::LimitExceeded {
                 limit: LimitKind::OutputBytes,
             });
+            snapshot.result_id = None;
             snapshot.validation = None;
             snapshot.repair = None;
             snapshot.error = Some("child result exceeds retained bound");
@@ -524,6 +535,31 @@ impl Inner {
                 .expect("queued child");
             snapshot.agent.clone()
         };
+        let artifact_deadline = (Instant::now()
+            + Duration::from_millis(job.prepared.spec().limits.max_run_duration_ms))
+        .min(self.ledger.deadline());
+        for reference in &job.artifacts {
+            if let Err(error) = job
+                .prepared
+                .verify_artifact(reference, artifact_deadline, &job.child.cancel)
+                .await
+            {
+                use pablo_core::children::handoff::ArtifactError;
+                let outcome = match error {
+                    ArtifactError::Cancelled => RunOutcome::Cancelled,
+                    ArtifactError::TimedOut => RunOutcome::TimedOut,
+                    _ => admission_failed(),
+                };
+                self.settle(
+                    job.child,
+                    job.lease,
+                    outcome,
+                    Some("child artifact rejected"),
+                    None,
+                );
+                return;
+            }
+        }
         let input = job.prepared.spec().input.clone();
         let cwd = job.prepared.spec().workspace.clone();
         let lease = Arc::new(job.lease);
