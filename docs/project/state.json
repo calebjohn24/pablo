@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T06:27:18.779Z",
+  "updated_at": "2026-09-11T06:47:27.303Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.19",
-  "next_action": "Merge verified C3.18; then activate C3.19 local Skill discovery.",
-  "latest_log_entry": "LOG-0098",
+  "next_checkpoint": "C3.20",
+  "next_action": "Merge verified C3.19; then activate C3.20 explicit Skill activation and selected resources.",
+  "latest_log_entry": "LOG-0100",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -498,9 +498,11 @@
       "depends_on": [
         "C3.18"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0100"
+      ]
     },
     {
       "id": "C3.20",

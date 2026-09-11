@@ -8,6 +8,31 @@ use std::{
 
 struct Fixture(PathBuf);
 
+#[test]
+fn skill_root_authority_rechecks_task_workspace_and_intersects_every_layer() {
+    let f = Fixture::new();
+    let value = json!({"options":{"skills":{"roots":{"local":{"base":"workspace","path":".agents/skills"}}}},"authority":[{"id":"host","skill_roots":[{"base":"config","path":"."}]}]});
+    let resolved = f.resolve(value.clone());
+    assert!(resolved.skill_roots(None).is_ok());
+    let outside = Fixture::new();
+    let error = resolved.skill_roots(Some(&outside.0)).unwrap_err();
+    assert_eq!(error.code, "config_authority_violation");
+    assert_eq!(error.authority_id.as_deref(), Some("host"));
+    assert!(resolved.skill_roots(Some(&f.0.join("child"))).is_ok());
+    let mut denied = value;
+    denied["authority"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"id":"narrow","skill_roots":[]}));
+    assert_eq!(
+        deployment::resolve(f.document(denied))
+            .unwrap_err()
+            .authority_id
+            .as_deref(),
+        Some("narrow")
+    );
+}
+
 #[derive(Default)]
 struct PrivateInputs {
     environment: Option<Vec<u8>>,
@@ -1396,11 +1421,11 @@ fn unknown_unsupported_and_schema_versions_are_explicit_and_redacted() {
         "config_unknown_option",
     );
     let e = deployment::resolve(
-        f.document(json!({"profiles":{"unused":{"options":{"skills":{"enabled":false}}}}})),
+        f.document(json!({"profiles":{"unused":{"options":{"skills":{"activate":[]}}}}})),
     )
     .unwrap_err();
     assert_eq!(e.code, "config_unsupported_feature");
-    assert_eq!(e.owner, Some("C3.19"));
+    assert_eq!(e.owner, Some("C3.20"));
     error(
         f.document(json!({"options":{"model":{"provider":"open_responses"}}})),
         "config_invalid_value",

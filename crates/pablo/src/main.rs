@@ -2,6 +2,7 @@ mod acp;
 mod config;
 mod deployment;
 mod otel;
+mod skills;
 
 use std::{
     fs::OpenOptions,
@@ -21,7 +22,12 @@ const HELP: &str = "pablo — headless Rust runtime\n\nUsage:\n  pablo \"TASK\" 
 async fn main() -> ExitCode {
     let args: Vec<_> = std::env::args_os().skip(1).collect();
     let json = args.first().is_none_or(|c| {
-        c != "config" && c != "acp" && c != "demo" && c != "--help" && c != "--version"
+        c != "config"
+            && c != "skills"
+            && c != "acp"
+            && c != "demo"
+            && c != "--help"
+            && c != "--version"
     }) && !args
         .iter()
         .take_while(|a| *a != "--")
@@ -57,8 +63,14 @@ async fn execute(
         deployment::inspect(args.collect())?;
         return Ok(ExitCode::SUCCESS);
     }
+    if command == "skills" {
+        return skills::inspect(args.collect());
+    }
     if command == "--help" && args.len() == 0 {
-        print!("{HELP}{}", deployment::HELP);
+        print!(
+            "{HELP}{}\nSkill metadata: pablo skills list --config PATH; pablo skills show NAME --config PATH\n",
+            deployment::HELP
+        );
         return Ok(ExitCode::SUCCESS);
     }
     if command == "--version" && args.len() == 0 {

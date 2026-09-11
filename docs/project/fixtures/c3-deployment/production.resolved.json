@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_revision": "c3.18",
+  "contract_revision": "c3.19",
   "config": {
     "options": {
       "run": {
@@ -110,6 +110,9 @@
       "mcp": {
         "servers": {},
         "policies": []
+      },
+      "skills": {
+        "roots": {}
       }
     },
     "deployment": {
@@ -170,13 +173,13 @@
       }
     ]
   },
-  "fingerprint": "sha256:544c643e4e520cb12d717d7ad4b2f59db53d0d7cab1a1f8a882ea8d49a48ac9e",
+  "fingerprint": "sha256:c7ad55e9f3b1e74862479dbd85b581a7e20855904cc699ddf80ef391129afa89",
   "sources": [
     {
       "id": "source-0000",
       "kind": "defaults",
       "locator": "deployment-defaults-v1.json",
-      "digest": "sha256:02849457f9653d4799becf62eea9b2f0d9d0e837bfd757600691164b53c900cf"
+      "digest": "sha256:56fabd0477c522d9e30574504051e43951ed9c7505096e98f246b432a057e99e"
     },
     {
       "id": "source-0001",
@@ -878,6 +881,12 @@
         "operation": "default"
       }
     ],
+    "/config/options/skills/roots": [
+      {
+        "source": "source-0000",
+        "operation": "default"
+      }
+    ],
     "/config/options/trace/capture_content": [
       {
         "source": "source-0000",
@@ -903,5 +912,5 @@
       }
     ]
   },
-  "input_fingerprint": "sha256:2789f6a9c3ad7b068596b038a93a9a0aaff84154ccf79d3e92ff2bc593cb0bf0"
+  "input_fingerprint": "sha256:ea3a83d9c2cacbb182b4fb2e30e0e10581ecc6d42bc6789afbd1024775ec172e"
 }

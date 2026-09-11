@@ -11,6 +11,7 @@ mod render;
 mod resolve;
 mod routes;
 mod shell;
+mod skills;
 mod validate;
 
 use serde::Serialize;
@@ -25,7 +26,7 @@ pub use credentials::{
 pub use resolve::{LoadedDeployment, load, resolve};
 pub use routes::{ResolvedRoute, RouteEntry, RoutePolicy};
 
-pub const CONTRACT_REVISION: &str = "c3.18";
+pub const CONTRACT_REVISION: &str = "c3.19";
 pub const DOCUMENT_SCHEMA: &str =
     include_str!("../../../../docs/project/schemas/deployment-v1.schema.json");
 pub const DEFAULT_OPTIONS: &str =
