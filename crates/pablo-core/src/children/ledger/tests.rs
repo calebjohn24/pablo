@@ -1,8 +1,19 @@
 use super::*;
 #[test]
-fn atomic_child_registration_and_active_capacity_have_one_winner_without_partial_records() {
+fn atomic_child_registration_races_for_last_active_slot_without_partial_records() {
     let root = AgentRef::root("root".into(), "session".into());
     let ledger = RootLedger::new(&root, RunLimits::default()).unwrap();
+    let occupying = root.temporary_child().unwrap();
+    let occupied = ledger
+        .admit_child(
+            &occupying,
+            RunLimits::default(),
+            resources::Resources {
+                active_children: 1,
+                ..Default::default()
+            },
+        )
+        .unwrap();
     let children = [
         root.temporary_child().unwrap(),
         root.temporary_child().unwrap(),
@@ -35,9 +46,10 @@ fn atomic_child_registration_and_active_capacity_have_one_winner_without_partial
     assert_eq!(results.iter().filter(|result| result.is_ok()).count(), 1);
     let loser = results.iter().position(Result::is_err).unwrap();
     assert!(ledger.agent(children[loser].agent_id()).is_none());
-    assert_eq!(ledger.resources().active_children, 1);
+    assert_eq!(ledger.resources().active_children, 2);
     assert_eq!(ledger.total().model_calls, 0);
     drop(results);
+    drop(occupied);
     assert_eq!(ledger.resources().active_children, 0);
     let lease = ledger
         .admit_child(
@@ -80,11 +92,19 @@ fn setup(calls: u32, tokens: u64, cost: u64) -> (AgentRef, AgentRef, RootLedger)
     (root, child, ledger)
 }
 #[test]
-fn racing_root_and_child_cannot_both_spend_the_last_allowance() {
+fn racing_root_and_two_children_cannot_share_the_last_allowance() {
     let (root, child, ledger) = setup(1, 100, 10);
-    let barrier = Arc::new(std::sync::Barrier::new(2));
+    let sibling = root.temporary_child().unwrap();
+    let limits = ledger.0.lock().unwrap().limits.clone();
+    ledger.register_child(&sibling, limits).unwrap();
+    let barrier = Arc::new(std::sync::Barrier::new(3));
     let results = std::thread::scope(|scope| {
-        let handles = [root.agent_id().to_owned(), child.agent_id().to_owned()].map(|id| {
+        let handles = [
+            root.agent_id().to_owned(),
+            child.agent_id().to_owned(),
+            sibling.agent_id().to_owned(),
+        ]
+        .map(|id| {
             let ledger = ledger.clone();
             let barrier = barrier.clone();
             scope.spawn(move || {
@@ -204,9 +224,17 @@ fn not_sent_refunds_liability_but_not_attempts_and_bound_violation_keeps_charge(
 #[test]
 fn tool_admission_races_and_foreign_or_widened_registration_fail_closed() {
     let (root, child, ledger) = setup(2, 100, 10);
-    let barrier = Arc::new(std::sync::Barrier::new(2));
+    let sibling = root.temporary_child().unwrap();
+    let limits = ledger.0.lock().unwrap().limits.clone();
+    ledger.register_child(&sibling, limits).unwrap();
+    let barrier = Arc::new(std::sync::Barrier::new(3));
     let winners = std::thread::scope(|scope| {
-        let handles = [root.agent_id().to_owned(), child.agent_id().to_owned()].map(|id| {
+        let handles = [
+            root.agent_id().to_owned(),
+            child.agent_id().to_owned(),
+            sibling.agent_id().to_owned(),
+        ]
+        .map(|id| {
             let l = ledger.clone();
             let b = barrier.clone();
             scope.spawn(move || {
@@ -454,4 +482,50 @@ fn local_event_ceiling_leaves_other_agents_admission_available() {
             reserved: 0
         }
     );
+}
+
+#[test]
+fn root_and_two_children_race_attested_token_and_cost_liability_separately() {
+    for token_bound in [true, false] {
+        let (root, child, ledger) = setup(
+            3,
+            if token_bound { 100 } else { 300 },
+            if token_bound { 30 } else { 10 },
+        );
+        let sibling = root.temporary_child().unwrap();
+        let limits = ledger.0.lock().unwrap().limits.clone();
+        ledger.register_child(&sibling, limits).unwrap();
+        let barrier = std::sync::Barrier::new(3);
+        let reservations = std::thread::scope(|scope| {
+            let threads = [&root, &child, &sibling].map(|agent| {
+                let ledger = &ledger;
+                let barrier = &barrier;
+                scope.spawn(move || {
+                    barrier.wait();
+                    ledger.reserve_model(
+                        agent.agent_id(),
+                        AccountingBounds {
+                            tokens: Some(100),
+                            cost_microusd: Some(10),
+                        },
+                    )
+                })
+            });
+            threads.map(|thread| thread.join().unwrap())
+        });
+        assert_eq!(reservations.iter().filter(|r| r.is_ok()).count(), 1);
+        for error in reservations.iter().filter_map(|r| r.as_ref().err()) {
+            assert!(
+                matches!(error, AdmissionError::Outcome(RunOutcome::LimitExceeded { limit })
+                if *limit == if token_bound { LimitKind::TotalTokens } else { LimitKind::Cost })
+            );
+        }
+        assert_eq!(ledger.total().model_calls, 1);
+        assert_eq!(ledger.total().charged_tokens, Some(100));
+        assert_eq!(ledger.total().charged_cost_microusd, Some(10));
+        drop(reservations); // Uncertain delivery keeps its attested liability.
+        assert_eq!(ledger.total().charged_tokens, Some(100));
+        assert_eq!(ledger.total().charged_cost_microusd, Some(10));
+        assert_eq!(ledger.total().usage.input_tokens, None);
+    }
 }

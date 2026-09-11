@@ -35,3 +35,5 @@ C3.33 compatibility checks should retain C3.15's transient F03 notification-coun
 C3.39 should retain [C3.15 configured comparisons](evidence/c3.15.md#matched-performance): final warm prompt p50 rose 14.410→15.024 ms while p95 stayed 15.961→15.943; initialization/fresh medians rose too, while the preliminary warm median was lower. Filesystem medians remain mixed. Preserve all five reports and isolate host/admission effects before claiming equivalent performance.
 
 C3.33 should retain the recurrence of the same F03 explicit-uncertainty notification-count race during C3.17: one full run observed three callbacks instead of four; focused and subsequent full reruns passed unchanged. This strengthens the need to isolate notification/callback ordering rather than infer resolution from passing reruns. See [C3.17 evidence](evidence/c3.17.md).
+
+C3.23 reproduced F03 primary-to-third with three callbacks instead of four (273/274 full-suite pass); focused fallback passed unchanged. Retain this occurrence for C3.33 alongside C3.15/C3.17. See [C3.23 progress](evidence/c3.23-progress.md).

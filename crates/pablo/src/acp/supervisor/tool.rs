@@ -39,7 +39,7 @@ impl Tool for Supervisor {
     fn descriptor(&self) -> ToolDescriptor {
         ToolDescriptor {
             name: "subagent".into(),
-            description: "Run one temporary child with an explicitly selected task and inherited capabilities. Spawn returns a handle immediately; inspect and wait return bounded state/results; stop joins owned child work. Children share the workspace and root budgets.".into(),
+            description: "Run up to two concurrent temporary children with explicitly selected tasks and inherited capabilities. Spawn returns a handle immediately; inspect and wait return bounded state/results; stop joins owned child work. Children share the workspace and root budgets.".into(),
             input_schema: serde_json::json!({
                 "type":"object","additionalProperties":false,
                 "properties":{

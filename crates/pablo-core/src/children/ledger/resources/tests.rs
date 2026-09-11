@@ -12,6 +12,17 @@ fn setup() -> (AgentRef, AgentRef, AgentRef, RootLedger) {
 #[test]
 fn active_transition_is_atomic_and_capacity_is_released_only_by_its_owner() {
     let (root, one, two, ledger) = setup();
+    let third = root.temporary_child().unwrap();
+    ledger.register_child(&third, RunLimits::default()).unwrap();
+    let other_active = ledger
+        .reserve_resources(
+            third.agent_id(),
+            Resources {
+                active_children: 1,
+                ..Default::default()
+            },
+        )
+        .unwrap();
     let occupied = ledger
         .reserve_resources(
             one.agent_id(),
@@ -70,6 +81,7 @@ fn active_transition_is_atomic_and_capacity_is_released_only_by_its_owner() {
         )
         .unwrap();
     drop(occupied);
+    drop(other_active);
     queued
         .replace(Resources {
             active_children: 1,
@@ -93,8 +105,19 @@ fn active_transition_is_atomic_and_capacity_is_released_only_by_its_owner() {
     assert_eq!(ledger.resources(), Resources::default());
 }
 #[test]
-fn racing_children_cannot_both_claim_the_one_active_slot() {
-    let (_, one, two, ledger) = setup();
+fn racing_children_cannot_both_claim_the_last_active_slot() {
+    let (root, one, two, ledger) = setup();
+    let third = root.temporary_child().unwrap();
+    ledger.register_child(&third, RunLimits::default()).unwrap();
+    let occupied = ledger
+        .reserve_resources(
+            third.agent_id(),
+            Resources {
+                active_children: 1,
+                ..Default::default()
+            },
+        )
+        .unwrap();
     let barrier = Arc::new(std::sync::Barrier::new(2));
     let results = std::thread::scope(|scope| {
         let handles = [one.agent_id().to_owned(), two.agent_id().to_owned()].map(|id| {
@@ -118,8 +141,9 @@ fn racing_children_cannot_both_claim_the_one_active_slot() {
             .collect::<Vec<_>>()
     });
     assert_eq!(results.iter().filter(|r| r.is_ok()).count(), 1);
-    assert_eq!(ledger.resources().active_children, 1);
+    assert_eq!(ledger.resources().active_children, 2);
     drop(results);
+    drop(occupied);
     assert_eq!(ledger.resources(), Resources::default());
 }
 #[test]
@@ -235,4 +259,54 @@ async fn mutation_waiters_cancel_timeout_or_close_without_entering_the_critical_
     ledger.close_admission();
     assert!(matches!(waiting.await, Err(AdmissionError::Closed)));
     drop(acquired);
+}
+
+#[test]
+fn two_children_race_for_last_process_and_mcp_capacity_without_partial_admission() {
+    for exhaust_process in [true, false] {
+        let (root, one, two, ledger) = setup();
+        let occupied = ledger
+            .reserve_resources(
+                root.agent_id(),
+                Resources {
+                    processes: if exhaust_process { 15 } else { 0 },
+                    mcp_sessions: if exhaust_process { 0 } else { 15 },
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        let barrier = std::sync::Barrier::new(2);
+        let leases = std::thread::scope(|scope| {
+            let threads = [&one, &two].map(|child| {
+                let ledger = &ledger;
+                let barrier = &barrier;
+                scope.spawn(move || {
+                    barrier.wait();
+                    ledger.reserve_resources(
+                        child.agent_id(),
+                        Resources {
+                            active_children: 1,
+                            processes: 1,
+                            mcp_sessions: 1,
+                            ..Default::default()
+                        },
+                    )
+                })
+            });
+            threads.map(|thread| thread.join().unwrap())
+        });
+        assert_eq!(leases.iter().filter(|lease| lease.is_ok()).count(), 1);
+        assert_eq!(ledger.resources().active_children, 1);
+        assert_eq!(
+            ledger.resources().processes,
+            if exhaust_process { 16 } else { 1 }
+        );
+        assert_eq!(
+            ledger.resources().mcp_sessions,
+            if exhaust_process { 1 } else { 16 }
+        );
+        drop(leases);
+        drop(occupied);
+        assert_eq!(ledger.resources(), Resources::default());
+    }
 }

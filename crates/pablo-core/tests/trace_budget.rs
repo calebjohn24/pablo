@@ -71,7 +71,7 @@ async fn counted_projection_matches_full_and_redacted_writer_with_exact_capacity
 }
 
 #[tokio::test]
-async fn atomic_trace_race_keeps_counts_and_both_terminal_reservations() {
+async fn atomic_trace_race_keeps_counts_and_three_terminal_reservations() {
     let mut spec = spec();
     spec.trace.capture_content = true;
     let records = records(&spec).await;
@@ -79,19 +79,24 @@ async fn atomic_trace_race_keeps_counts_and_both_terminal_reservations() {
     let terminal = records.last().unwrap();
     let root = AgentRef::root("root".into(), "session".into());
     let child = root.temporary_child().unwrap();
+    let sibling = root.temporary_child().unwrap();
     let ledger = RootLedger::new(&root, spec.limits.clone()).unwrap();
-    // Leave exactly one ordinary record after protecting both terminals.
+    // Leave exactly one ordinary record after protecting all three terminals.
     let bound = 12 * 1024 + spec.limits.max_output_bytes * 6;
     let size = jsonl_size(event, true, usize::MAX).unwrap();
-    spec.trace.max_bytes = bound * 2 + size;
+    spec.trace.max_bytes = bound * 3 + size;
     ledger.configure_trace(&spec.trace).unwrap();
     ledger.configure_trace(&spec.trace).unwrap();
     ledger.register_child(&child, spec.limits.clone()).unwrap();
+    ledger
+        .register_child(&sibling, spec.limits.clone())
+        .unwrap();
+    let mut sibling_terminal = ledger.claim_run_event(sibling.agent_id()).unwrap();
     let mut root_terminal = ledger.claim_run_event(root.agent_id()).unwrap();
     let mut child_terminal = ledger.claim_run_event(child.agent_id()).unwrap();
-    let barrier = std::sync::Barrier::new(2);
+    let barrier = std::sync::Barrier::new(3);
     let results = std::thread::scope(|scope| {
-        let jobs: Vec<_> = [root.agent_id(), child.agent_id()]
+        let jobs: Vec<_> = [root.agent_id(), child.agent_id(), sibling.agent_id()]
             .into_iter()
             .map(|agent| {
                 let ledger = &ledger;
@@ -117,14 +122,14 @@ async fn atomic_trace_race_keeps_counts_and_both_terminal_reservations() {
         ledger.event_counts(),
         EventCounts {
             used: 1,
-            reserved: 2
+            reserved: 3
         }
     );
     assert_eq!(
         ledger.trace_counts(),
         Some(TraceCounts {
             used: size,
-            reserved: bound * 2
+            reserved: bound * 3
         })
     );
     // Legacy count-only calls cannot bypass a traced ledger.
@@ -135,24 +140,25 @@ async fn atomic_trace_race_keeps_counts_and_both_terminal_reservations() {
         ledger.event_counts(),
         EventCounts {
             used: 1,
-            reserved: 2
+            reserved: 3
         }
     );
     ledger.close_admission();
+    sibling_terminal.consume_record(terminal).unwrap();
     child_terminal.consume_record(terminal).unwrap();
     root_terminal.consume_record(terminal).unwrap();
     assert!(root_terminal.consume_record(terminal).is_err());
     assert_eq!(
         ledger.event_counts(),
         EventCounts {
-            used: 3,
+            used: 4,
             reserved: 0
         }
     );
     assert_eq!(
         ledger.trace_counts(),
         Some(TraceCounts {
-            used: size + 2 * jsonl_size(terminal, true, usize::MAX).unwrap(),
+            used: size + 3 * jsonl_size(terminal, true, usize::MAX).unwrap(),
             reserved: 0,
         })
     );

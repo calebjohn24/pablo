@@ -341,6 +341,17 @@ async fn admitted_child_uses_fixed_route_root_accounting_and_joined_root_cancell
         1,
         "worker still owns setup until close"
     );
+    let occupying = root.temporary_child().unwrap();
+    let occupied = ledger
+        .admit_child(
+            &occupying,
+            parent.spec().limits.clone(),
+            Resources {
+                active_children: 1,
+                ..Default::default()
+            },
+        )
+        .unwrap();
     let other = root.temporary_child().unwrap();
     assert!(
         ledger
@@ -358,6 +369,8 @@ async fn admitted_child_uses_fixed_route_root_accounting_and_joined_root_cancell
     let (first, second) = tokio::join!(dispatcher.close(), dispatcher.close());
     first.unwrap();
     second.unwrap();
+    assert_eq!(ledger.resources().active_children, 1);
+    drop(occupied);
     assert_eq!(ledger.resources().active_children, 0);
     assert!(
         dispatcher
