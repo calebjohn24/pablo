@@ -13,11 +13,14 @@
     "streaming": true
   },
   "defaultInputModes": [
-    "text/plain"
+    "text/plain",
+    "application/json",
+    "application/octet-stream"
   ],
   "defaultOutputModes": [
     "text/plain",
-    "application/json"
+    "application/json",
+    "application/octet-stream"
   ],
   "skills": [
     {

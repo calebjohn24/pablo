@@ -155,5 +155,52 @@
       },
       "lastChunk": true
     }
+  },
+  "file_send": {
+    "jsonrpc": "2.0",
+    "id": "rpc-file",
+    "method": "SendMessage",
+    "params": {
+      "message": {
+        "messageId": "local-message",
+        "role": "ROLE_USER",
+        "parts": [
+          {
+            "raw": "AP9zeW50aGV0aWMgZmlsZQ==",
+            "filename": "fixture.bin",
+            "mediaType": "application/octet-stream"
+          }
+        ]
+      },
+      "configuration": {
+        "acceptedOutputModes": [
+          "application/octet-stream"
+        ],
+        "historyLength": 0
+      }
+    }
+  },
+  "url_send": {
+    "jsonrpc": "2.0",
+    "id": "rpc-url",
+    "method": "SendMessage",
+    "params": {
+      "message": {
+        "messageId": "local-message",
+        "role": "ROLE_USER",
+        "parts": [
+          {
+            "url": "https://files.example.test/inert",
+            "mediaType": "application/octet-stream"
+          }
+        ]
+      },
+      "configuration": {
+        "acceptedOutputModes": [
+          "application/octet-stream"
+        ],
+        "historyLength": 0
+      }
+    }
   }
 }

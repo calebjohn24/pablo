@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T15:33:36.664Z",
-  "active_checkpoint": "C3.26",
-  "next_checkpoint": null,
-  "next_action": "Continue C3.26: correct the earlier unjustified file-Part exclusion by implementing bounded file content and inert URL references with explicit input/output-mode handling and SDK proof. Then validate optional negotiated W3C trace metadata/headers without baggage/private policy or remote reparenting. Text/data wire codecs and SDK send/SSE/cancel/version-error proof pass; full R01 is still pending. Complete final regression/performance and exact-head PR merge before C3.27 production transport.",
-  "latest_log_entry": "LOG-0139",
+  "updated_at": "2026-09-11T16:16:41.542Z",
+  "active_checkpoint": null,
+  "next_checkpoint": "C3.27",
+  "next_action": "C3.26 R01 passes. Merge its exact verified PR head, then start C3.27 R02: supervised scoped remote task transport, bounded SSE/status/artifact assembly and immediate/terminal results, host/model delegation, separate remote usage, and joined cancellation/deadline cleanup. Preserve C3.25 baseline and both valid C3.26 performance orders.",
+  "latest_log_entry": "LOG-0141",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -590,9 +590,11 @@
       "depends_on": [
         "C3.25"
       ],
-      "status": "in_progress",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0141"
+      ]
     },
     {
       "id": "C3.27",

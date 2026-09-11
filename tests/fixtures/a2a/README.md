@@ -26,14 +26,16 @@ Run:
 cargo test --locked -p pablo-core --test a2a_cards -- --include-ignored
 ```
 
-Card/deployment admission and full R01 integration are still in progress; these
-fixtures are not evidence of implemented remote task execution.
+These fixtures prove R01 admission and wire conformance, not implemented supervised
+remote task execution. Check project state/evidence for the acceptance status.
 
 `wire_server.py` runs the official SDK JSONRPC/SSE dispatcher with deterministic
 synthetic handlers. The explicit wire test sends encoded requests, decodes SDK
 Message/Task/status/artifact/cancel replies and verifies unsupported-version
-rejection before a handler call. It checks only selected synthetic input and
-historyLength zero; it is not the production supervised task transport.
+rejection before a handler call. It checks selected synthetic text/data/file/URL input, explicit output modes,
+historyLength zero, negotiated trace headers/metadata and generic fallback. The
+fixture never follows a file URL or reads a local filename. It is not the production
+supervised task transport.
 
 ```
 cargo test --locked -p pablo-core --test a2a_wire -- --include-ignored

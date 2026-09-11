@@ -1,0 +1,59 @@
+{
+  "method": {
+    "samples": 30,
+    "warmup": 5,
+    "decodes_per_sample": 1000,
+    "scope": "CPU-only SDK fixture JSONRPC decode, typed output, validation and bounds; excludes HTTP/SSE framing and remote execution."
+  },
+  "measurements": {
+    "message_result": {
+      "response_bytes": 166,
+      "microseconds_per_decode": {
+        "min": 0.759166,
+        "p50": 0.8484999999999999,
+        "p95": 1.0932920000000002,
+        "max": 1.1850829999999999
+      }
+    },
+    "task_result": {
+      "response_bytes": 222,
+      "microseconds_per_decode": {
+        "min": 0.783916,
+        "p50": 0.856208,
+        "p95": 0.975209,
+        "max": 0.985417
+      }
+    },
+    "stream_artifact": {
+      "response_bytes": 208,
+      "microseconds_per_decode": {
+        "min": 0.593166,
+        "p50": 0.619291,
+        "p95": 0.644292,
+        "max": 0.647625
+      }
+    },
+    "cancel_result": {
+      "response_bytes": 213,
+      "microseconds_per_decode": {
+        "min": 0.566,
+        "p50": 0.579625,
+        "p95": 0.6285419999999999,
+        "max": 0.633959
+      }
+    },
+    "large_file_result": {
+      "response_bytes": 43962,
+      "microseconds_per_decode": {
+        "min": 16.069457999999997,
+        "p50": 16.542042,
+        "p95": 16.835084000000002,
+        "max": 17.008916
+      }
+    }
+  },
+  "checkpoint": "C3.26",
+  "source_sha256": "355a3ffb2d0620ffe59e50cbfc340e6ec17ff8ab86e2bab92e50db70cb9d637c",
+  "binary_sha256": "6879982b15186c537f35e4839ee4962f523c4d2bcdcec64ec6d820860e83dbf1",
+  "execution": "Sequential after all build/test/live processes and matched configured/filesystem controls terminated; before the separately recorded reverse-order runtime repeat."
+}

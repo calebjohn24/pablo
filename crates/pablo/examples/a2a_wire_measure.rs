@@ -3,13 +3,22 @@ use pablo_core::a2a::wire::{Mode, decode};
 use serde_json::{Value, json};
 fn main() {
     let path = std::env::args().nth(1).expect("a2a_wire_measure WIRE_JSON");
-    let vectors: Value = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+    let mut vectors: Value = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+    vectors["large_file_result"] = vectors["task_result"].clone();
+    vectors["large_file_result"]["task"]["artifacts"][0]["parts"] =
+        json!([pablo_core::a2a::wire::Part::file(
+            &vec![1; pablo_core::a2a::wire::MAX_FILE_BYTES],
+            "application/octet-stream",
+            Some("fixture.bin")
+        )
+        .unwrap()]);
     let mut measurements = serde_json::Map::new();
     for (name, mode) in [
         ("message_result", Mode::Send),
         ("task_result", Mode::Send),
         ("stream_artifact", Mode::Stream),
         ("cancel_result", Mode::Cancel),
+        ("large_file_result", Mode::Send),
     ] {
         let bytes = serde_json::to_vec(&json!({"jsonrpc":"2.0","id":"rpc","result":vectors[name]}))
             .unwrap();

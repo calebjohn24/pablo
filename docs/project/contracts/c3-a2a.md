@@ -1,148 +1,135 @@
 # R01–R03 — Configured A2A client
 
-C3.26 is in progress. The implemented core currently validates cards and retrieves
-public cards through bounded, no-redirect HTTP. Deployment definitions, RPC
-credential scoping and named fetch/local proxy identity are implemented; bounded
-wire codecs and independent SDK RPC/SSE proof are implemented. Required file-Part support, trace-extension
-metadata validation and final R01 acceptance review remain pending. Task execution
-and cancellation belong to C3.27/C3.28; no A2A capability is advertised yet.
+C3.26 supplies configured public-card admission, owned local proxy descriptions
+and bounded wire codecs. Production supervised task transport/artifact assembly
+belongs to C3.27; adverse cancellation and Collector proof belong to C3.28. The
+presence of configuration or a proxy description does not claim task execution.
 
 ## Immutable protocol and reference
 
-Use [A2A v1.0.0](https://github.com/a2aproject/A2A/tree/173695755607e884aa9acf8ce4feed90e32727a1),
-including its normative `specification/a2a.proto` and `docs/specification.md`, and
-[Python SDK 1.0.2](https://github.com/a2aproject/a2a-python/tree/eb37091fcd6411b3b01481ea3fd3e001c6fb55c0)
-as the independent reference. [Fixture lock](../../../tests/fixtures/a2a/lock.json)
-records commits/content hashes; mutable `latest` is not a build pin. Generated
-[wire examples](../../../tests/fixtures/a2a/wire.json) come from SDK protobuf JSON.
+Pin [A2A v1.0.0](https://github.com/a2aproject/A2A/tree/173695755607e884aa9acf8ce4feed90e32727a1),
+including its normative proto, and [Python SDK 1.0.2](https://github.com/a2aproject/a2a-python/tree/eb37091fcd6411b3b01481ea3fd3e001c6fb55c0).
+[The fixture lock](../../../tests/fixtures/a2a/lock.json) records commits, source
+hashes and the SDK wheel hash. [Wire vectors](../../../tests/fixtures/a2a/wire.json)
+are generated through SDK protobuf JSON; the SDK's JSONRPC/SSE dispatcher supplies
+independent HTTP conformance. Some pinned Markdown examples retain 0.3 aliases;
+the normative v1.0 proto and independent SDK define this profile.
 
-Select protocol `1.0` and binding `JSONRPC`. Send `A2A-Version: 1.0`; method names
-are `SendMessage`, `SendStreamingMessage` and `CancelTask`. Message requests wrap
-`message` plus optional `configuration`/`metadata`. Send results wrap exactly one
-`message` or `task`; SSE data frames wrap JSON-RPC envelopes whose results contain
-exactly one `task`, `message`, `statusUpdate` or `artifactUpdate`. Use v1.0 Part
-oneof fields and protobuf enum strings, not v0.3 `kind` discriminators or lower-case
-role/state aliases. Some examples in the pinned specification still mention 0.3;
-the normative v1.0 types and independent SDK determine this selected wire profile.
+Select protocol `1.0`, binding `JSONRPC`, and header `A2A-Version: 1.0`. Use
+`SendMessage`, `SendStreamingMessage`, and `CancelTask`; the first two wrap their
+results, while CancelTask returns a Task directly. Parts use protobuf oneof fields
+and roles/states use `ROLE_*` / `TASK_STATE_*`, without v0.3 kind discriminators.
 
-## Host authority and card admission
+## Host selection, credentials and Agent Cards
 
-The host selects an exact HTTPS RPC endpoint and explicit card URL. Cards cannot
-redirect either selection, choose credential sources, widen input, activate local
-Skills/tools or modify local policy. Public-card GETs carry no inferred credentials;
-HTTP redirects fail, including same-origin redirects. The isolated fixture hook
-can replace transport only with literal loopback HTTP after validating original
-host URLs. No broad discovery, authenticated extended-card discovery, server
-listener, OAuth flow or remote file URL fetching is introduced.
+`options.a2a.remotes.<name>` requires HTTPS `card_url` and `endpoint`; optional
+`bearer = { scheme, credential }` selects a declared HTTP Bearer scheme and private
+credential reference. `trace_context` defaults false. Defaults contain no remotes;
+at most sixteen names of 1–128 ASCII letters/digits/underscore/dot/hyphen are
+allowed. URLs are bounded to 4096 bytes, without userinfo, query or fragment.
 
-Validate at most 64 KiB of card bytes within the earlier of the caller deadline or
-ten seconds. Require a unique matching `supportedInterfaces` entry with `JSONRPC`,
-`1.0`, no tenant and the exact host endpoint. Remote name/description/version are
-bounded display data. Card digest is SHA-256 of received bytes, not a claim of JWS
-verification or agent identity. Unknown optional metadata grants no authority.
-Malformed/ambiguous cards, required unknown extensions and unsupported security
-requirements reject before any task submission. A configured bearer scheme name
-must match the card's HTTP Bearer declaration; scoped credentials themselves are
-not card data. `options.a2a.remotes.<name>` contains required `card_url` and
-`endpoint`, optional `bearer = { scheme, credential }`, and `trace_context`
-(default false). Remote names use 1–128 ASCII letters/digits/underscore/dot/hyphen;
-at most sixteen definitions are admitted. Defaults contain no remote definitions.
-Each optional `authority[].a2a_remotes` map restricts exact named card/RPC URL
-pairs; all layers intersect and an empty map denies every remote. Ordinary
-configuration cannot widen a host layer. Credential declarations use the separate
-`a2a.bearer` consumer and remain subject to `credential_ids` ceilings. Resolution,
-rendering and card-byte admission do not look up secrets. Prepared runs resolve a
-credential only by configured remote name and expose it only for that RPC endpoint
-and consumer, never for the card URL or another provider. Public-card-only
-retrieval intentionally excludes authenticated card discovery.
+Every optional `authority[].a2a_remotes` map intersects exact named card/RPC URL
+pairs; an empty map denies all remotes. Credential references also intersect
+`credential_ids` ceilings. `a2a.bearer` is a distinct consumer: prepared runs resolve
+only configured names and expose a credential only to that exact RPC endpoint.
+Resolution/rendering/card-byte admission never look up secrets. Public card GETs
+never carry credentials or follow redirects, including same-origin redirects.
+No OAuth flow, authenticated-card discovery, broad discovery or runtime listener
+is introduced. The explicit fixture override validates original host authority
+before substituting literal loopback HTTP transport.
 
-Configured retrieval selects only an admitted remote name and creates a fresh
-local `AgentRef` of kind `remote_a2a` beneath a running depth-zero root. Card
-admission leaves remote `context_id` and `task_id` absent. Observed remote IDs are
-opaque nonempty UTF-8 strings of at most 256 bytes without control characters;
-context may bind once and task may be added once, with conflicting changes
-rejected atomically. Remote IDs never bind a local session. The root ledger stores
-the registered agent kind and verifies it against event projections, preventing
-kind substitution. Card retrieval creates a description only; supervisor capacity
-admission and execution remain C3.27.
+Read at most 64 KiB within the earlier of the caller deadline or ten seconds.
+Reject an already-expired/cancelled request before network polling. Require one
+matching interface with JSONRPC, 1.0, no tenant and the exact host endpoint.
+Nonempty input/output mode lists are bounded to sixteen 128-byte media labels;
+file-only and structured-data-only peers are supported. Labels and their parameters
+remain descriptive data. Card name/description/version are bounded untrusted
+metadata. Raw-byte SHA-256 is a content identity, not authentication or JWS proof.
+Unknown optional extensions are ignored; unknown required extensions fail before
+submission. Cards cannot select credentials, endpoints, tools, Skills, policy or
+private local context.
 
-The optional selected trace extension is `urn:pablo:a2a:tracecontext:v1`. It is
-understood only with explicit host opt-in, matching card declaration and no unknown
-parameters. Unknown optional extensions are ignored; required unsupported ones
-fail. The later task binding will carry only validated W3C traceparent/tracestate,
-without baggage or local policy, in negotiated extension metadata. Remote metadata
-must never reparent the local run. Task/stream implementation must prove this before
-R03 acceptance.
+## Local and remote identity
 
-## Mappings selected for execution checkpoints
+Named retrieval creates a fresh `AgentRef` of kind `remote_a2a` beneath a running
+depth-zero root. It retains the selected card/endpoint/protocol identities but
+performs no ledger registration or task submission. Remote context/task IDs start
+absent, bind separately and cannot change once observed. Failed observations leave
+both IDs unchanged. Neither ID becomes a local session or registry key. The root
+ledger stores each registered kind and rejects event projections that substitute
+a local-child kind or different execution identity.
 
-- A local `remote_a2a` proxy gets an owned local agent ID. Remote context, task,
-  message and artifact IDs remain distinct opaque bounded strings. Card digest,
-  selected protocol/binding and endpoint identify the admitted transport. Remote
-  IDs never become a local registry lookup or authority source.
-- Only explicitly delegated task/context becomes a user Message. Local trusted
-  instructions, full transcripts, tool catalogs, Skill bodies, credentials and
-  policy do not transfer implicitly. Parts support bounded text/structured data;
-  file Parts are also required by the release design and remain unfinished in the
-  current codec. URL references must remain inert without automatic fetching.
-- Immediate agent Message results require their remote context and message IDs.
-  Task results and subsequent status/artifact events must retain the same context
-  and task identity. Submitted/working are nonterminal; completed requires a valid
-  bounded result. Failed/rejected/canceled remain distinct terminal dispositions.
-  Input/auth-required remain explicit interruptions, without automatic resubmission.
-- Preserve artifact ID and append/last-chunk semantics within the selected result
-  bound. No file-store or concurrent-write-isolation claim follows from an artifact.
-- Cancel a known remote task with `CancelTask`; local transport cleanup and remote
-  cancellation acknowledgement are different observations. Disconnection never
-  proves rollback or stops remote work by itself. No automatic reconnect/replay.
-- Keep standard JSON-RPC errors and local transport/bounds failures separate.
-  A2A -32001 through -32009 have their pinned standard meanings; untrusted error
-  messages/details must not enter private diagnostics or change local authority.
+## Parts, results and limits
 
-## Current bounded wire codec
+Only explicitly selected Parts enter a new user Message; no full RunSpec, trusted
+instructions, transcripts, tool/Skill catalogs, policy or credentials transfer
+implicitly. Requests explicitly select accepted output modes and historyLength
+zero. A returned nonempty history rejects. Text, structured JSON (including null),
+bounded inline file bytes and inert HTTP(S) URL references are supported. Base64
+accepts standard/URL-safe alphabets with or without padding; encoding uses standard
+padded base64. Invalid encoding and excess decoded bytes reject. URL references
+are never fetched, and filenames never become local paths. No file is opened or
+written by the codec. Media labels remain metadata; the Part oneof determines how
+content is represented. Unknown content variants reject.
 
-`a2a::wire` encodes only explicitly selected input into a new user Message. It
-requests `historyLength: 0`; nonempty returned history rejects. Send/stream methods
-use their distinct response unions; `CancelTask` returns a direct Task. Duplicate
-known fields, ambiguous unions, mismatched JSONRPC IDs/versions, invalid role/state
-aliases and unknown content variants reject. Text and structured JSON (including
-explicit null) are implemented. The current raw/base64 and URL rejection is a
-temporary implementation gap, not the release cut: bounded file Parts and inert
-URL references must be added before R01 completion. Optional
-filename/name/description remain untrusted display data, never local file paths.
-Only text/plain for text and application/json for data are accepted when a media
-type is supplied. Unknown metadata is ignored and grants no local authority.
+Send responses contain exactly one Message or Task. SSE result envelopes contain
+exactly one Message, Task, statusUpdate or artifactUpdate. Preserve remote IDs,
+status dispositions, artifact IDs and append/lastChunk flags. Status-message
+context/task identities must agree with their enclosing task. Submitted/working,
+completed, failed, canceled, rejected and input/auth-required remain distinct;
+execution and interruption handling are C3.27 responsibilities. No automatic
+replay, reconnect, continuation or remote file fetching follows from decoding.
+Remote-reported usage cannot replace enforceable local accounting.
 
-| Resource | Selected bound |
+| Resource | Bound |
 | --- | --- |
-| Explicit input UTF-8 | 32 KiB |
-| Encoded request | 256 KiB, allowing worst-case input escaping |
+| Explicit input content | 32 KiB total (decoded file bytes, UTF-8 text/URL, serialized JSON data) |
+| One decoded inline file | 32 KiB |
+| Inert HTTP(S) file URL | 4096 bytes; no userinfo |
+| Encoded request | 256 KiB, allowing input escaping/base64 |
 | One JSONRPC response or SSE data envelope | 64 KiB |
 | Stream envelope bytes / updates | 1 MiB / 256 |
 | Parts per Message/Artifact | 32, at least one |
-| Artifacts per Task | 16; distinct IDs |
-| Local request / remote message, context, task, artifact IDs | 256 UTF-8 bytes, nonempty, no controls |
-| Artifact name / description and Part filename | 256 / 8192 / 256 bytes |
-| Remote error message | 1024 bytes; never copied to local diagnostic |
-| Task wall time / stream idle | 900 s / 10 s, clamped to remaining caller/root time |
-| Cancellation exchange | 2 s bounded cleanup window, or the earlier host cleanup deadline |
+| Artifacts per Task | 16, distinct IDs |
+| Request/message/context/task/artifact IDs | 256 UTF-8 bytes, nonempty, no controls |
+| Artifact name / description / Part filename | 256 / 8192 / 256 bytes |
+| Accepted output modes / media label | 16 / 128 bytes |
+| Remote error message | 1024 bytes, excluded from local diagnostics |
+| Task wall time / stream idle | 900 s / 10 s, clamped to caller/root time |
+| Cancellation exchange | 2 s cleanup window, or earlier host cleanup deadline |
 
-The codec enforces structural/byte/count limits. Transport framing, idle timers,
-root deadline clamping and joined cancellation must be enforced by C3.27's reader;
-no execution claim follows from constants alone. Numeric JSONRPC/A2A error codes
-remain remote outcomes, distinct from local Invalid/Bound/UnsupportedContent and
-UnsupportedExtension failures. Unknown remote numeric errors retain their code
-without promoting arbitrary error text or details.
+Typed deserialization rejects duplicate known fields and ambiguous unions.
+JSONRPC response ID/version must match the request. Local bound/shape/content
+failures remain distinct from numeric remote JSONRPC/A2A errors. Unknown numeric
+remote errors retain their code; their untrusted message/data grants no authority.
+The codec enforces byte/count/content limits. C3.27 must additionally enforce raw
+SSE framing bytes, wall/idle timers, assembled-result limits, root admission and
+joined cleanup; constants alone do not prove those execution guarantees.
 
-The pinned SDK dispatcher independently accepts Pablo's send/stream/cancel
-requests, emits Message/Task/SSE status/artifact/terminal response shapes decoded
-by Pablo, returns task-not-found, and rejects unsupported versions before handler
-invocation. SDK-generated vectors independently pin byte-independent JSON shapes.
-See `tests/fixtures/a2a/wire_server.py` and `crates/pablo-core/tests/a2a_wire.rs`.
-This fixture is not the supervised production task transport.
+## Optional trace-context extension
 
-Remaining R01 work is bounded file-Part/inert URL support (required by the release
-design), explicit trace-extension metadata/header validation and a
-final requirement-by-requirement admission review. C3.27 still owns production
-transport, artifact assembly and supervised task execution; C3.28 owns adverse
-cancellation/remote-boundary proof.
+Select `urn:pablo:a2a:tracecontext:v1` only with host opt-in and a matching card
+extension declaration with no unknown parameters. Generic peers continue with
+reduced correlation: send encoding omits extension metadata/declaration and trace
+headers unless negotiation succeeds and an explicit validated local context is
+provided. Card-required unsupported extensions still fail admission.
+
+A negotiated send request carries `params.metadata[URI] = { traceparent,
+tracestate? }`, `message.extensions = [URI]`, `A2A-Extensions: URI`, and matching
+HTTP traceparent/tracestate headers. The same validated header profile can carry
+cancel correlation after negotiation; no nonstandard CancelTask parameter is added.
+No baggage, private policy or arbitrary metadata is copied into this profile.
+
+This profile accepts W3C version-00 traceparent (55 lowercase ASCII characters,
+nonzero trace/span IDs) and optional printable-ASCII tracestate (512 bytes, at most
+32 unique valid members). Empty tracestate is omitted. Extension metadata is
+bounded to 1024 bytes and its field set is closed. Invalid negotiated metadata
+rejects. Unknown optional message extensions and unnegotiated trace metadata are
+ignored rather than breaking base messages. Only validated negotiated correlation
+is retained in a separate receipt; raw metadata is excluded from typed serialization.
+Decoding never activates an OTel context or reparents the local run.
+
+Independent SDK fixtures prove send/stream/cancel shapes, file/data/URL round trips,
+negotiated headers/metadata and generic-peer fallback. Required-version rejection
+occurs before handler invocation. Actual propagated remote spans, metadata-only
+Collector export and exporter-outage parity remain C3.28 acceptance.

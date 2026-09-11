@@ -2,6 +2,7 @@
 mod fetch;
 mod proxy;
 mod settings;
+pub mod trace;
 pub mod wire;
 pub use fetch::{CardClient, FetchError};
 pub use proxy::{IdentityError, MAX_REMOTE_ID_BYTES, RemoteIdentity, RemoteProxy, ResolveError};
@@ -78,15 +79,15 @@ impl CardAdmission {
             || card.default_output_modes.len() > 16
             || card.security_schemes.len() > 16
             || card.security_requirements.len() > 16
+            || card
+                .default_input_modes
+                .iter()
+                .chain(&card.default_output_modes)
+                .any(|mode| !wire::media_type(mode))
         {
             return Err(AdmissionError::InvalidCard);
         }
-        if !card.default_input_modes.iter().any(|s| s == "text/plain")
-            || !card
-                .default_output_modes
-                .iter()
-                .any(|s| s == "text/plain" || s == "application/json")
-        {
+        if card.default_input_modes.is_empty() || card.default_output_modes.is_empty() {
             return Err(AdmissionError::UnsupportedInterface);
         }
         let mut matched = card.supported_interfaces.iter().filter(|interface| {
@@ -162,6 +163,8 @@ impl CardAdmission {
             name: card.name,
             description: card.description,
             version: card.version,
+            input_modes: card.default_input_modes,
+            output_modes: card.default_output_modes,
             streaming: card.capabilities.streaming,
             trace_context,
         })
@@ -182,6 +185,8 @@ pub struct ValidatedCard {
     pub name: String,
     pub description: String,
     pub version: String,
+    pub input_modes: Vec<String>,
+    pub output_modes: Vec<String>,
     pub streaming: bool,
     pub trace_context: bool,
 }

@@ -1,3 +1,4 @@
+use futures_util::FutureExt;
 use pablo_core::a2a::{AdmissionError, CardAdmission, MAX_CARD_BYTES, TRACE_EXTENSION};
 use serde_json::{Value, json};
 fn fixture() -> Value {
@@ -153,7 +154,7 @@ async fn independent_sdk_card_is_fetched_with_version_and_no_task_or_credentials
         .kill_on_drop(true)
         .spawn()
         .unwrap();
-    let outcome=tokio::time::timeout(std::time::Duration::from_secs(15),async {
+    let outcome=tokio::time::timeout(std::time::Duration::from_secs(15),std::panic::AssertUnwindSafe(async {
         let mut lines=BufReader::new(peer.stdout.take().unwrap()).lines();
         let ready:Value=serde_json::from_str(&lines.next_line().await.unwrap().unwrap()).unwrap();
         let mut request=ResolveRequest::new(cwd.canonicalize().unwrap(),"unused");
@@ -188,11 +189,11 @@ async fn independent_sdk_card_is_fetched_with_version_and_no_task_or_credentials
         assert_eq!(first.remote(),&bound);assert_eq!(serde_json::to_value(first.agent()).unwrap(),local);
         let requests=std::fs::read_to_string(cwd.join("requests.jsonl")).unwrap();let requests:Vec<Value>=requests.lines().map(|l|serde_json::from_str(l).unwrap()).collect();
         assert_eq!(requests,vec![json!({"method":"GET","path":"/.well-known/agent-card.json","version":"1.0","authenticated":false});2]);
-    }).await;
+    }).catch_unwind()).await;
     peer.kill().await.unwrap();
     peer.wait().await.unwrap();
     std::fs::remove_dir_all(cwd).unwrap();
-    outcome.unwrap();
+    outcome.unwrap().unwrap();
 }
 
 #[tokio::test]
@@ -306,4 +307,29 @@ fn verify_proxy_ledger(
     );
     event["agent"]["kind"] = "local_acp_temporary".into();
     assert!(!ledger.event_source_matches(&serde_json::from_value::<RunEvent>(event).unwrap()));
+}
+
+#[test]
+fn media_admission_supports_file_only_and_structured_peers() {
+    for (input, output) in [
+        ("application/pdf", "image/png"),
+        ("application/json", "application/json"),
+        ("text/markdown; charset=utf-8", "text/*"),
+    ] {
+        let mut card = fixture();
+        card["defaultInputModes"] = json!([input]);
+        card["defaultOutputModes"] = json!([output]);
+        let admitted = host()
+            .validate(&serde_json::to_vec(&card).unwrap())
+            .unwrap();
+        assert_eq!(admitted.input_modes, [input]);
+        assert_eq!(admitted.output_modes, [output]);
+    }
+    let mut card = fixture();
+    card["defaultInputModes"] = json!([]);
+    assert!(
+        host()
+            .validate(&serde_json::to_vec(&card).unwrap())
+            .is_err()
+    );
 }
