@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T06:27:18.779Z",
+  "updated_at": "2026-09-11T06:28:57.662Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.19",
-  "next_action": "Merge verified C3.18; then activate C3.19 local Skill discovery.",
-  "latest_log_entry": "LOG-0098",
+  "next_action": "Activate C3.19 local Skill discovery on merged C3.18, preserving per-task MCP ownership and all recorded release/performance follow-ups.",
+  "latest_log_entry": "LOG-0099",
   "checkpoints": [
     {
       "id": "C1.0",
