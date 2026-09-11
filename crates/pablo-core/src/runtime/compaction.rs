@@ -83,7 +83,7 @@ pub(super) fn context_bytes(
     let mut bytes = serde_json::to_vec(&(
         &execution.spec.instructions,
         history,
-        execution.tools.descriptors(),
+        execution.descriptors(),
     ))
     .expect("serializable request")
     .len();
@@ -100,7 +100,7 @@ pub(super) fn context_bytes(
 pub(super) fn estimate_bytes(execution: &Execution<'_>, raw: usize, messages: usize) -> usize {
     raw.saturating_add(512).saturating_add(
         messages
-            .saturating_add(execution.tools.descriptors().len())
+            .saturating_add(execution.descriptors().len())
             .saturating_mul(64),
     )
 }
@@ -130,7 +130,7 @@ fn select_split(execution: &Execution<'_>, state: &TaskState) -> Option<(usize, 
             bytes,
             history.len(),
         ));
-        if bytes <= execution.spec.limits.max_context_bytes
+        if bytes <= execution.context_capacity()
             && selected.window_tokens.is_none_or(|cap| {
                 tokens.saturating_add(u64::from(
                     settings.max_summary_tokens.min(selected.max_output_tokens),
@@ -219,6 +219,7 @@ where
         if lifecycle.max_events.saturating_sub(lifecycle.seq) < 5 {
             return Err(limit(LimitKind::Events));
         }
+        lifecycle.begin_operation()?;
         let split = select_split(execution, state);
         let before = context_bytes(execution, &state.history, &state.continuations);
         let estimate = state.calibration[state.selected].estimate(estimate_bytes(
@@ -248,11 +249,14 @@ where
         }));
         let started = telemetry::now();
         let span = execution.root.with_span(
-            self.tracer
-                .span_builder("compact_context")
-                .with_kind(SpanKind::Internal)
-                .with_start_time(started)
-                .start_with_context(&self.tracer, execution.root),
+            telemetry::agent_span(
+                self.tracer
+                    .span_builder("compact_context")
+                    .with_kind(SpanKind::Internal)
+                    .with_start_time(started),
+                execution.agent,
+            )
+            .start_with_context(&self.tracer, execution.root),
         );
         let parent = execution.root.span().span_context().span_id().to_string();
         let record = lifecycle.compaction.as_ref().unwrap();
@@ -349,6 +353,7 @@ where
         // No await or effect between the accepted boundary and the replacement.
         state.history = candidate.history;
         state.continuations = candidate.continuations;
+        execution.retain_context(candidate.bytes)?;
         Ok(())
     }
 
@@ -379,7 +384,7 @@ where
             .collect();
         let bytes = context_bytes(execution, &history, &continuations);
         let max_output_tokens = settings.max_summary_tokens.min(selected.max_output_tokens);
-        if bytes > spec.limits.max_context_bytes
+        if bytes > execution.context_capacity()
             || selected.window_tokens.is_some_and(|cap| {
                 state.calibration[state.selected]
                     .estimate(estimate_bytes(execution, bytes, history.len()))
@@ -423,7 +428,7 @@ where
             deadline,
             history: &history,
             continuations: &continuations,
-            remaining_context: spec.limits.max_context_bytes - bytes,
+            remaining_context: execution.context_capacity().saturating_sub(bytes),
             allow_tool_calls: false,
             summary: true,
             max_output_bytes: settings.max_summary_bytes.min(spec.limits.max_output_bytes),
@@ -477,7 +482,7 @@ where
             history.len(),
         ));
         if bytes >= context_bytes(execution, &state.history, &state.continuations)
-            || bytes > spec.limits.max_context_bytes
+            || bytes > execution.context_capacity()
             || selected.window_tokens.is_some_and(|cap| {
                 tokens.saturating_add(u64::from(selected.max_output_tokens)) > settings.usable(cap)
             })
@@ -602,6 +607,11 @@ mod tests {
             let root = Context::new().with_span(tracer.start("root"));
             let tools = ToolRegistry::default();
             let execution = Execution {
+                resident: None,
+                agent: None,
+                child_tool: None,
+                child_catalog: None,
+                accounting_scope: None,
                 attempts: attempts(&spec, &provider).unwrap(),
                 route_policy: None,
                 route: None,
@@ -643,6 +653,12 @@ mod tests {
                 }
             };
             let mut lifecycle = Lifecycle {
+                event_scope: None,
+                run_event: None,
+                operation_events: Vec::new(),
+                cancellation: &token,
+                shared_deadline: None,
+                agent: None,
                 model_profile: None,
                 model_route: None,
                 compaction: None,

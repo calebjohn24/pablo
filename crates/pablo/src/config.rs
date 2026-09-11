@@ -7,6 +7,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+#[derive(Clone)]
 pub struct Options {
     pub deployment: Option<crate::deployment::Bootstrap>,
     explicit: HashSet<String>,

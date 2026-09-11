@@ -60,6 +60,7 @@ impl Accounting {
     }
 }
 /// One run-local ledger. Reservations are charged before the delivery boundary.
+#[derive(Clone)]
 pub(crate) struct Ledger {
     bounds: crate::provider::AccountingBounds,
     token_cap: Option<u64>,
@@ -79,17 +80,29 @@ impl Ledger {
         max_output_tokens: u32,
     ) -> Result<Self, &'static str> {
         let bounds = provider.accounting_bounds(model, max_output_tokens);
-        if (spec.limits.max_total_tokens.is_some() && bounds.tokens.is_none())
-            || (spec.limits.max_cost_microusd.is_some() && bounds.cost_microusd.is_none())
+        Self::for_bounds(
+            spec.limits.max_total_tokens,
+            spec.limits.max_cost_microusd,
+            bounds,
+        )
+    }
+    pub(crate) fn for_bounds(
+        token_cap: Option<u64>,
+        cost_cap: Option<u64>,
+        bounds: crate::provider::AccountingBounds,
+    ) -> Result<Self, &'static str> {
+        if (token_cap.is_some() && bounds.tokens.is_none())
+            || (cost_cap.is_some() && bounds.cost_microusd.is_none())
         {
             return Err("provider cannot attest requested hard accounting ceilings");
         }
         Ok(Self {
             bounds,
-            token_cap: spec.limits.max_total_tokens,
-            cost_cap: spec.limits.max_cost_microusd,
+            token_cap,
+            cost_cap,
         })
     }
+
     pub(crate) fn initialize(&self, a: &mut Accounting) {
         a.charged_tokens = self.token_cap.map(|_| 0);
         a.charged_cost_microusd = self.cost_cap.map(|_| 0);

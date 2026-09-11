@@ -1,30 +1,67 @@
 //! Official ACP values dispatched directly; no JSON-RPC envelopes or SDK queues.
 //! The owner must await `close` before discarding the dispatcher.
 use super::*;
+use pablo_core::{
+    children::{
+        AgentRef,
+        ledger::{
+            RootLedger,
+            resources::{ResourceLease, Resources},
+        },
+    },
+    deployment::PreparedRun,
+};
+
+pub(super) struct AdmittedChild {
+    pub prepared: PreparedRun,
+    pub accounting: worker::AccountingScope,
+    pub root_cancellation: CancellationToken,
+    pub parent: opentelemetry::Context,
+    pub lease: Option<Arc<ResourceLease>>,
+}
 
 pub(super) struct Dispatcher {
     state: Arc<Mutex<State>>,
     options: Arc<Options>,
     cancellation: CancellationToken,
     delivery: delivery::Delivery,
+    closing: tokio::sync::Mutex<CloseState>,
+}
+#[derive(Default)]
+struct CloseState {
+    task: Option<tokio::task::JoinHandle<Result<(), String>>>,
+    result: Option<Result<(), String>>,
 }
 impl Dispatcher {
     fn ensure_open(&self) -> Result<(), Error> {
         if self.cancellation.is_cancelled() {
             Err(Error::internal_error().data("typed ACP connection closed"))
         } else {
+            if self
+                .state
+                .lock()
+                .unwrap()
+                .admitted_child
+                .as_ref()
+                .is_some_and(|child| child.root_cancellation.is_cancelled())
+            {
+                return Err(Error::internal_error().data("root cancelled"));
+            }
             Ok(())
         }
     }
 
-    pub fn new(options: Options) -> (Self, async_channel::Receiver<delivery::TypedUpdate>) {
+    pub fn new(
+        options: impl Into<Arc<Options>>,
+    ) -> (Self, async_channel::Receiver<delivery::TypedUpdate>) {
         let (tx, rx) = async_channel::bounded(1);
         let cancellation = CancellationToken::new();
         (
             Self {
                 state: Arc::new(Mutex::new(State::default())),
-                options: Arc::new(options),
+                options: options.into(),
                 cancellation: cancellation.clone(),
+                closing: tokio::sync::Mutex::new(CloseState::default()),
                 delivery: delivery::Delivery::Typed {
                     sender: tx,
                     closed: cancellation,
@@ -32,6 +69,102 @@ impl Dispatcher {
             },
             rx,
         )
+    }
+    /// Internal C3.22 execution path. Authority was fixed by prepare_child;
+    /// registration and the active slot commit together before any task starts.
+    /// MCP and context capacity remains held through joined worker cleanup.
+    pub fn new_child(
+        options: Options,
+        prepared: PreparedRun,
+        ledger: RootLedger,
+        agent: &AgentRef,
+        root_cancellation: CancellationToken,
+        parent: opentelemetry::Context,
+    ) -> Result<(Self, async_channel::Receiver<delivery::TypedUpdate>), String> {
+        if !prepared.is_child() || options.deployment.is_none() || root_cancellation.is_cancelled()
+        {
+            return Err("invalid child admission".into());
+        }
+        let lease = ledger
+            .admit_child(
+                agent,
+                prepared.spec().limits.clone(),
+                Resources {
+                    active_children: 1,
+                    context_bytes: prepared.spec().limits.max_context_bytes,
+                    ..prepared
+                        .mcp_resources()
+                        .map_err(|_| "invalid child MCP capacity")?
+                },
+            )
+            .map_err(|_| "child admission rejected")?;
+        Self::bind_child(
+            Arc::new(options),
+            prepared,
+            ledger,
+            agent,
+            root_cancellation,
+            parent,
+            Arc::new(lease),
+        )
+    }
+    /// Bind an already admitted/promoted child without registering it twice.
+    pub fn bind_child(
+        options: Arc<Options>,
+        prepared: PreparedRun,
+        ledger: RootLedger,
+        agent: &AgentRef,
+        root_cancellation: CancellationToken,
+        parent: opentelemetry::Context,
+        lease: Arc<ResourceLease>,
+    ) -> Result<(Self, async_channel::Receiver<delivery::TypedUpdate>), String> {
+        let required = Resources {
+            active_children: 1,
+            context_bytes: prepared.spec().limits.max_context_bytes,
+            ..prepared
+                .mcp_resources()
+                .map_err(|_| "invalid child MCP capacity")?
+        };
+        if !prepared.is_child()
+            || options.deployment.is_none()
+            || !lease.is_active_child(&ledger, agent.agent_id())
+            || !lease.covers(&ledger, agent.agent_id(), required)
+        {
+            return Err("invalid child admission".into());
+        }
+        let (dispatcher, updates) = Self::new(options);
+        dispatcher.state.lock().unwrap().admitted_child = Some(AdmittedChild {
+            prepared,
+            accounting: worker::AccountingScope {
+                ledger,
+                agent_id: agent.agent_id().into(),
+            },
+            root_cancellation,
+            parent,
+            lease: Some(lease),
+        });
+        Ok((dispatcher, updates))
+    }
+    /// Same admitted typed ACP handlers/worker, with original native output for
+    /// the supervising host. No reconstruction from lossy wire notifications.
+    pub fn native_output(mut self) -> (Self, async_channel::Receiver<delivery::NativeUpdate>) {
+        let (sender, receiver) = async_channel::bounded(1);
+        let execution_cancel = self
+            .state
+            .lock()
+            .unwrap()
+            .admitted_child
+            .as_ref()
+            .map_or_else(
+                || self.cancellation.clone(),
+                |child| child.root_cancellation.clone(),
+            );
+        self.delivery = delivery::Delivery::Native {
+            sender,
+            closed: self.cancellation.clone(),
+            execution_cancel,
+        };
+        (self, receiver)
     }
     pub fn initialize(
         &self,
@@ -65,28 +198,72 @@ impl Dispatcher {
         .finish(&self.delivery, request_cancel.cancelled())
         .await
     }
+    pub async fn prompt_observed(
+        &self,
+        request: wire::PromptRequest,
+        request_cancel: &CancellationToken,
+        receipt: tokio::sync::oneshot::Sender<handlers::Completion>,
+    ) -> Result<wire::PromptResponse, Error> {
+        self.ensure_open()?;
+        handlers::start_prompt(
+            self.state.clone(),
+            self.options.clone(),
+            &self.cancellation,
+            request,
+        )?
+        .finish_observed(&self.delivery, request_cancel.cancelled(), Some(receipt))
+        .await
+    }
     pub async fn close(&self) -> Result<(), String> {
+        let mut closing = self.closing.lock().await;
+        if let Some(result) = &closing.result {
+            return result.clone();
+        }
         self.cancellation.cancel();
         if let delivery::Delivery::Typed { sender, .. } = &self.delivery {
             sender.close();
         }
-        if let Some(events) = self.state.lock().unwrap().events.take() {
-            events.close();
+        {
+            let mut state = self.state.lock().unwrap();
+            state.closed = true;
+            if let Some(cancel) = &state.cancellation {
+                cancel.cancel();
+            }
+            if let Some(events) = state.events.take() {
+                events.close();
+            }
         }
-        let worker = self.state.lock().unwrap().worker.take();
-        if let Some(worker) = worker {
-            worker
-                .shutdown()
-                .await
-                .map_err(|_| "ACP runtime cleanup failed")?;
+        if closing.task.is_none() {
+            let worker = self.state.lock().unwrap().worker.take();
+            if let Some(worker) = worker {
+                closing.task = Some(tokio::spawn(async move { worker.shutdown().await }));
+            }
         }
-        Ok(())
+        // Retain the join handle across cancellation of an individual close
+        // caller. A later caller must await the same shutdown, never skip it.
+        let result = if let Some(task) = &mut closing.task {
+            match task.await {
+                Ok(result) => result,
+                Err(_) => Err("ACP runtime cleanup failed".into()),
+            }
+        } else {
+            Ok(())
+        };
+        closing.task = None;
+        closing.result = Some(result.clone());
+        self.state.lock().unwrap().admitted_child.take();
+        result
     }
 }
 impl Drop for Dispatcher {
     fn drop(&mut self) {
         self.cancellation.cancel();
-        if let Some(events) = self.state.lock().unwrap().events.as_ref() {
+        let mut state = self.state.lock().unwrap();
+        state.closed = true;
+        if let Some(cancel) = &state.cancellation {
+            cancel.cancel();
+        }
+        if let Some(events) = state.events.as_ref() {
             events.close();
         }
     }

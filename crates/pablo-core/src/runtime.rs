@@ -20,6 +20,7 @@ use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 mod compaction;
+mod resident;
 mod routing;
 use compaction::{TaskState, context_bytes, estimate_bytes};
 
@@ -48,13 +49,24 @@ impl fmt::Display for RunError {
 impl std::error::Error for RunError {}
 
 /// The caller drives one future; tools complete cleanup before it settles.
+struct AccountingScope {
+    ledger: crate::children::ledger::RootLedger,
+    agent_id: String,
+}
 pub struct Runtime<T> {
+    root_owner: Option<std::sync::Arc<dyn crate::children::owner::RootOwner>>,
+    accounting_scope: Option<AccountingScope>,
     deployment: Option<crate::deployment::DeploymentIdentity>,
     tracer: T,
     parent: Context,
 }
 
 struct Execution<'a> {
+    resident: Option<resident::ResidentContext>,
+    agent: Option<&'a crate::children::AgentIdentity>,
+    child_tool: Option<&'a dyn crate::Tool>,
+    child_catalog: Option<Vec<crate::tool::ToolDescriptor>>,
+    accounting_scope: Option<&'a AccountingScope>,
     attempts: Vec<Attempt<'a>>,
     route_policy: Option<&'a crate::deployment::RoutePolicy>,
     route: Option<&'a crate::deployment::ResolvedRoute>,
@@ -121,8 +133,21 @@ fn attempts<'a>(
     }
 }
 impl Execution<'_> {
+    fn descriptors(&self) -> &[crate::tool::ToolDescriptor] {
+        self.child_catalog
+            .as_deref()
+            .unwrap_or_else(|| self.tools.descriptors())
+    }
     fn stop(&self) -> Option<RunOutcome> {
-        if self.cancellation.is_cancelled() {
+        // A supervisor may signal joined shutdown when the shared root clock
+        // expires. Preserve that deadline in native terminal truth, rather than
+        // reclassifying the outcome later at the child protocol boundary.
+        if self
+            .accounting_scope
+            .is_some_and(|scope| Instant::now() >= scope.ledger.deadline())
+        {
+            Some(RunOutcome::TimedOut)
+        } else if self.cancellation.is_cancelled() {
             Some(RunOutcome::Cancelled)
         } else if Instant::now() >= self.deadline {
             Some(RunOutcome::TimedOut)
@@ -138,10 +163,51 @@ where
 {
     pub fn new(tracer: T) -> Self {
         Self {
+            root_owner: None,
+            accounting_scope: None,
             deployment: None,
             tracer,
             parent: Context::new(),
         }
+    }
+
+    /// Attach the already admitted root accounting scope. This is not child
+    /// authority or capacity admission and does not install a delegation tool.
+    pub fn with_root_ledger(
+        mut self,
+        ledger: crate::children::ledger::RootLedger,
+        agent_id: String,
+    ) -> Result<Self, RunError> {
+        if self.root_owner.is_some() || ledger.agent(&agent_id).is_none() {
+            return Err(RunError::InvalidSpec("unknown root accounting agent"));
+        }
+        self.accounting_scope = Some(AccountingScope { ledger, agent_id });
+        Ok(self)
+    }
+
+    /// Attach one already-admitted temporary root owner. It supplies the policy-
+    /// checked subagent tool and is joined before native root terminal emission.
+    pub fn with_root_owner(
+        mut self,
+        owner: std::sync::Arc<dyn crate::children::owner::RootOwner>,
+    ) -> Result<Self, RunError> {
+        if self.accounting_scope.is_some()
+            || owner.root().depth() != 0
+            || Uuid::parse_str(owner.root().root_run_id()).is_err()
+            || owner.root().root_session_id().is_empty()
+            || owner.root().root_session_id().len() > 128
+            || owner.root().root_session_id().chars().any(char::is_control)
+            || owner.ledger().agent(owner.root().agent_id()).is_none()
+            || owner.descriptor().name != "subagent"
+        {
+            return Err(RunError::InvalidSpec("invalid child root owner"));
+        }
+        self.accounting_scope = Some(AccountingScope {
+            ledger: owner.ledger().clone(),
+            agent_id: owner.root().agent_id().into(),
+        });
+        self.root_owner = Some(owner);
+        Ok(self)
     }
 
     /// Explicit host context; never reads or installs a thread-local context.
@@ -181,14 +247,47 @@ where
         cancellation: &CancellationToken,
         sink: &mut dyn EventSink,
     ) -> Result<RunOutcome, RunError> {
+        if self
+            .root_owner
+            .as_ref()
+            .is_some_and(|owner| !owner.claim_root())
+        {
+            return Err(RunError::InvalidSpec("child root is owned by one run"));
+        }
         if !tools.claim() {
+            if let Some(owner) = &self.root_owner {
+                let _ = owner.close().await;
+            }
             return Err(RunError::InvalidSpec("MCP catalog is owned by one run"));
         }
-        let result = self
-            .run_with_tools_inner(spec, provider, tools, cancellation, sink)
-            .await;
-        if result.is_err() && tools.close().await.is_err() {
-            return Err(RunError::InvalidSpec("MCP cleanup failed"));
+        let owned_cancel = self.root_owner.as_ref().map(|_| cancellation.child_token());
+        let task_cancel = owned_cancel.as_ref().unwrap_or(cancellation);
+        let running = self.run_with_tools_inner(spec, provider, tools, task_cancel, sink);
+        tokio::pin!(running);
+        let result = if let Some(owner) = &self.root_owner {
+            tokio::select! {
+                biased;
+                _ = cancellation.cancelled() => { task_cancel.cancel(); owner.cancel(); running.await },
+                _ = owner.cancellation().cancelled() => { task_cancel.cancel(); owner.cancel(); running.await },
+                result = &mut running => result,
+            }
+        } else {
+            running.await
+        };
+        // Preflight and terminal-delivery errors also retain joined root ownership.
+        if result.is_err() {
+            let child_failed = if let Some(owner) = &self.root_owner {
+                owner.close().await.is_err()
+            } else {
+                false
+            };
+            let tools_failed = tools.close().await.is_err();
+            if child_failed {
+                return Err(RunError::InvalidSpec("child cleanup failed"));
+            }
+            if tools_failed {
+                return Err(RunError::InvalidSpec("MCP cleanup failed"));
+            }
         }
         result
     }
@@ -201,6 +300,16 @@ where
         cancellation: &CancellationToken,
         sink: &mut dyn EventSink,
     ) -> Result<RunOutcome, RunError> {
+        if let Some(owner) = &self.root_owner
+            && spec
+                .session_id
+                .as_deref()
+                .is_some_and(|id| id != owner.root().root_session_id())
+        {
+            return Err(RunError::InvalidSpec(
+                "child root session does not match run",
+            ));
+        }
         let compiled = spec
             .output
             .as_ref()
@@ -237,27 +346,66 @@ where
                 "run duration overflows the monotonic clock",
             ))?;
         let deadline = tools.deadline(deadline);
-        let run_id = Uuid::new_v4().to_string();
-        let session_id = spec
-            .session_id
-            .clone()
-            .unwrap_or_else(|| Uuid::new_v4().to_string());
+        let deadline = self
+            .accounting_scope
+            .as_ref()
+            .map_or(deadline, |scope| deadline.min(scope.ledger.deadline()));
+        let binding = self
+            .accounting_scope
+            .as_ref()
+            .map(|scope| {
+                scope
+                    .ledger
+                    .bind_execution(&scope.agent_id, spec.session_id.as_deref())
+                    .map_err(|_| {
+                        RunError::InvalidSpec("agent execution identity already bound or invalid")
+                    })
+            })
+            .transpose()?;
+        let (run_id, session_id, agent) = if let Some(binding) = binding {
+            (
+                binding.run_id,
+                binding.agent.session_id().to_owned(),
+                Some(Box::new(binding.agent)),
+            )
+        } else {
+            (
+                Uuid::new_v4().to_string(),
+                spec.session_id
+                    .clone()
+                    .unwrap_or_else(|| Uuid::new_v4().to_string()),
+                None,
+            )
+        };
+        let run_event = self
+            .accounting_scope
+            .as_ref()
+            .map(|scope| {
+                scope
+                    .ledger
+                    .claim_run_event(&scope.agent_id)
+                    .map_err(|_| RunError::InvalidSpec("run event capacity unavailable"))
+            })
+            .transpose()?;
         let started = telemetry::now();
         let root = Context::new().with_span(
-            self.tracer
-                .span_builder("invoke_agent pablo")
-                .with_kind(SpanKind::Internal)
-                .with_start_time(started)
-                .with_attributes([
-                    KeyValue::new("gen_ai.operation.name", "invoke_agent"),
-                    KeyValue::new("gen_ai.agent.name", "pablo"),
-                    KeyValue::new("gen_ai.request.model", spec.model.clone()),
-                    KeyValue::new("gen_ai.conversation.id", session_id.clone()),
-                    KeyValue::new("pablo.run.id", run_id.clone()),
-                    KeyValue::new("pablo.otel.mapping.version", telemetry::MAPPING_VERSION),
-                    KeyValue::new("pablo.trace.format.version", SCHEMA_VERSION),
-                ])
-                .start_with_context(&self.tracer, &self.parent),
+            telemetry::agent_span(
+                self.tracer
+                    .span_builder("invoke_agent pablo")
+                    .with_kind(SpanKind::Internal)
+                    .with_start_time(started)
+                    .with_attributes([
+                        KeyValue::new("gen_ai.operation.name", "invoke_agent"),
+                        KeyValue::new("gen_ai.agent.name", "pablo"),
+                        KeyValue::new("gen_ai.request.model", spec.model.clone()),
+                        KeyValue::new("gen_ai.conversation.id", session_id.clone()),
+                        KeyValue::new("pablo.run.id", run_id.clone()),
+                        KeyValue::new("pablo.otel.mapping.version", telemetry::MAPPING_VERSION),
+                        KeyValue::new("pablo.trace.format.version", SCHEMA_VERSION),
+                    ]),
+                agent.as_deref(),
+            )
+            .start_with_context(&self.tracer, &self.parent),
         );
         if !root.span().span_context().is_valid() {
             root.span().end();
@@ -292,6 +440,15 @@ where
             ));
         }
         let mut lifecycle = Lifecycle {
+            event_scope: self.accounting_scope.as_ref(),
+            run_event,
+            operation_events: Vec::new(),
+            cancellation,
+            shared_deadline: self
+                .accounting_scope
+                .as_ref()
+                .map(|scope| scope.ledger.deadline()),
+            agent: agent.clone(),
             model_profile: None,
             model_route: None,
             output_repair: spec
@@ -314,7 +471,31 @@ where
             accounting: crate::task::Accounting::default(),
         };
         attempts[0].ledger.initialize(&mut lifecycle.accounting);
+        let child_tool = self
+            .root_owner
+            .as_ref()
+            .filter(|owner| {
+                owner.model_tool_allowed()
+                    && tools.policy().decide("tools", "subagent", false).is_ok()
+            })
+            .map(|owner| owner.as_ref() as &dyn crate::Tool);
+        let child_catalog = child_tool.map(|tool| {
+            let mut catalog = tools.descriptors().to_vec();
+            catalog.push(tool.descriptor());
+            catalog
+        });
         let execution = Execution {
+            resident: self.accounting_scope.as_ref().map(|scope| {
+                resident::ResidentContext::new(
+                    scope,
+                    agent.as_ref().is_some_and(|a| a.depth() == 0),
+                    spec.limits.max_context_bytes,
+                )
+            }),
+            agent: agent.as_deref(),
+            child_tool,
+            child_catalog,
+            accounting_scope: self.accounting_scope.as_ref(),
             attempts,
             route_policy: provider.route().map(|r| r.resolved.policy()),
             route: provider.route().map(|r| &r.resolved),
@@ -348,11 +529,20 @@ where
             }
             Ok(()) => self.drive(&execution, &mut lifecycle).await,
         };
-        let outcome = if tools.close().await.is_err() {
+        let child_cleanup_failed = if let Some(owner) = &self.root_owner {
+            owner.close().await.is_err()
+        } else {
+            false
+        };
+        let outcome = if tools.close().await.is_err() || child_cleanup_failed {
             failed(FailureCode::ToolCleanup)
         } else {
             outcome
         };
+        // drive has dropped retained history and every owned child/tool has joined.
+        execution
+            .retain_context(0)
+            .expect("releasing context cannot fail");
         if let Some(record) = &mut lifecycle.output_repair {
             record.finish(outcome.is_completed());
             root.span().set_attribute(KeyValue::new(
@@ -370,6 +560,9 @@ where
             record.phase = "blocked".into();
             record.outcome(Some(&outcome));
         }
+        if let Some(owner) = &self.root_owner {
+            lifecycle.accounting = owner.ledger().total();
+        }
         let finished = telemetry::now();
         telemetry::outcome(&root, &outcome);
         let terminal = lifecycle.event(
@@ -380,7 +573,12 @@ where
             parent_id.as_deref(),
             finished,
         );
-        let delivered = lifecycle.sink.emit(&terminal);
+        let admitted = lifecycle.run_event.as_mut().map_or(Ok(()), |reservation| {
+            reservation
+                .consume_record(&terminal)
+                .map_err(|_| SinkError::Capacity)
+        });
+        let delivered = admitted.and_then(|()| lifecycle.sink.emit(&terminal));
         if delivered.is_err() {
             root.span()
                 .set_attribute(KeyValue::new("pablo.event.delivery_failed", true));
@@ -396,6 +594,15 @@ where
     async fn drive(&self, execution: &Execution<'_>, lifecycle: &mut Lifecycle<'_>) -> RunOutcome {
         let spec = execution.spec;
         let mut state = TaskState::new(execution);
+        if execution.resident.is_some()
+            && let Err(outcome) = execution.retain_context(context_bytes(
+                execution,
+                &state.history,
+                &state.continuations,
+            ))
+        {
+            return outcome;
+        }
         #[cfg(unix)]
         if let Some(skills) = execution.tools.activated_skills() {
             let records = skills.records();
@@ -438,11 +645,14 @@ where
                 return outcome;
             }
             let context_bytes = context_bytes(execution, &state.history, &state.continuations);
+            if let Err(outcome) = execution.retain_context(context_bytes) {
+                return outcome;
+            }
             let estimated_bytes = estimate_bytes(execution, context_bytes, state.history.len());
             let tokens = state.calibration[state.selected].estimate(estimated_bytes);
             let attempt = &execution.attempts[state.selected];
-            let near = context_bytes as u64
-                >= spec.context.usable(spec.limits.max_context_bytes as u64)
+            let context_capacity = execution.context_capacity();
+            let near = context_bytes as u64 >= spec.context.usable(context_capacity as u64)
                 || attempt.window_tokens.is_some_and(|cap| {
                     tokens.saturating_add(u64::from(attempt.max_output_tokens))
                         >= spec.context.usable(cap)
@@ -461,7 +671,7 @@ where
                 }
                 continue;
             }
-            if context_bytes > spec.limits.max_context_bytes {
+            if context_bytes > context_capacity {
                 return limit(LimitKind::ContextBytes);
             }
             state.operation += 1; // Each state.operation consumes bounded native event slots.
@@ -517,11 +727,11 @@ where
                     deadline,
                     history: &state.history,
                     continuations: &state.continuations,
-                    remaining_context: spec.limits.max_context_bytes - context_bytes,
+                    remaining_context: context_capacity - context_bytes,
                     allow_tool_calls: !state.repairing
                         && state.remaining_tools != Some(0)
                         && state.remaining_models != Some(0)
-                        && !execution.tools.descriptors().is_empty(),
+                        && !execution.descriptors().is_empty(),
                 };
                 let mut progress = ModelProgress::default();
                 attempts_used += 1;
@@ -590,10 +800,13 @@ where
                         Err(_) => return failed(FailureCode::OutputValidationFailed),
                     };
                     let span = execution.root.with_span(
-                        self.tracer
-                            .span_builder("validate_output")
-                            .with_kind(SpanKind::Internal)
-                            .start_with_context(&self.tracer, execution.root),
+                        telemetry::agent_span(
+                            self.tracer
+                                .span_builder("validate_output")
+                                .with_kind(SpanKind::Internal),
+                            execution.agent,
+                        )
+                        .start_with_context(&self.tracer, execution.root),
                     );
                     span.span().set_attribute(KeyValue::new(
                         "pablo.output.schema_sha256",
@@ -678,7 +891,18 @@ where
                                 text: progress.output,
                                 tool_calls: Vec::new(),
                             });
-                            state.history.push(Message::User { text: feedback });
+                            let message = Message::User { text: feedback };
+                            if execution.resident.is_some()
+                                && let Err(outcome) = execution.grow_context(
+                                    serde_json::to_vec(&message)
+                                        .expect("serializable feedback")
+                                        .len()
+                                        .saturating_add(1),
+                                )
+                            {
+                                return outcome;
+                            }
+                            state.history.push(message);
                             state.repairing = true;
                             continue 'generation;
                         }
@@ -725,11 +949,22 @@ where
                 if let Some(remaining) = &mut state.remaining_tools {
                     *remaining -= 1;
                 }
-                state.history.push(Message::Tool {
+                let message = Message::Tool {
                     call_id: call.id,
                     name: call.name,
                     result,
-                });
+                };
+                if execution.resident.is_some()
+                    && let Err(outcome) = execution.grow_context(
+                        serde_json::to_vec(&message)
+                            .expect("serializable tool result")
+                            .len()
+                            .saturating_add(1),
+                    )
+                {
+                    return outcome;
+                }
+                state.history.push(message);
             }
         }
     }
@@ -746,28 +981,32 @@ where
         if !lifecycle.can_start_operation() {
             return Err(limit(LimitKind::Events));
         }
+        lifecycle.begin_operation()?;
         if let Some(record) = &mut lifecycle.model_route {
             record.phase = "started".into();
         }
         let started = telemetry::now();
         let model = input.parent.with_span(
-            self.tracer
-                .span_builder(format!("chat {}", input.attempt.model))
-                .with_kind(SpanKind::Client)
-                .with_start_time(started)
-                .with_attributes([
-                    KeyValue::new("gen_ai.operation.name", "chat"),
-                    KeyValue::new("gen_ai.provider.name", input.attempt.provider.name()),
-                    KeyValue::new("gen_ai.request.model", input.attempt.model.to_owned()),
-                    KeyValue::new(
-                        "gen_ai.request.max_tokens",
-                        i64::from(input.attempt.max_output_tokens),
-                    ),
-                    KeyValue::new("gen_ai.request.stream", true),
-                    KeyValue::new("gen_ai.conversation.id", lifecycle.session_id.clone()),
-                    KeyValue::new("pablo.run.id", lifecycle.run_id.clone()),
-                ])
-                .start_with_context(&self.tracer, input.parent),
+            telemetry::agent_span(
+                self.tracer
+                    .span_builder(format!("chat {}", input.attempt.model))
+                    .with_kind(SpanKind::Client)
+                    .with_start_time(started)
+                    .with_attributes([
+                        KeyValue::new("gen_ai.operation.name", "chat"),
+                        KeyValue::new("gen_ai.provider.name", input.attempt.provider.name()),
+                        KeyValue::new("gen_ai.request.model", input.attempt.model.to_owned()),
+                        KeyValue::new(
+                            "gen_ai.request.max_tokens",
+                            i64::from(input.attempt.max_output_tokens),
+                        ),
+                        KeyValue::new("gen_ai.request.stream", true),
+                        KeyValue::new("gen_ai.conversation.id", lifecycle.session_id.clone()),
+                        KeyValue::new("pablo.run.id", lifecycle.run_id.clone()),
+                    ]),
+                execution.agent,
+            )
+            .start_with_context(&self.tracer, input.parent),
         );
         let parent = input.parent.span().span_context().span_id().to_string();
         if let Some(profile) = &lifecycle.model_profile {
@@ -825,6 +1064,15 @@ where
                 progress.cost_microusd,
                 not_sent,
             ) {
+                progress.retry_class = None;
+                result = Err(outcome);
+            }
+        }
+        if let Some(reservation) = progress.shared_reservation.take() {
+            let not_sent = progress.delivery == Some(DeliveryCertainty::NotSent);
+            if let Err(outcome) =
+                reservation.settle(&progress.usage, progress.cost_microusd, not_sent)
+            {
                 progress.retry_class = None;
                 result = Err(outcome);
             }
@@ -889,7 +1137,12 @@ where
         if !lifecycle.can_start_operation() {
             return Err(limit(LimitKind::Events));
         }
-        let Some(tool) = execution.tools.get(&call.name) else {
+        let tool = if call.name == "subagent" {
+            execution.child_tool
+        } else {
+            execution.tools.get(&call.name)
+        };
+        let Some(tool) = tool else {
             return Err(RunOutcome::PolicyDenied {
                 rule: PolicyRule::ToolUnavailable,
             });
@@ -908,24 +1161,54 @@ where
         if let Some(outcome) = execution.stop() {
             return Err(outcome);
         }
+        let tool_deadline = if execution.accounting_scope.is_some() {
+            Instant::now()
+                .checked_add(Duration::from_millis(
+                    execution.spec.limits.max_tool_duration_ms,
+                ))
+                .map_or(execution.deadline, |deadline| {
+                    deadline.min(execution.deadline)
+                })
+        } else {
+            execution.deadline
+        };
+        let _mutation = if matches!(call.name.as_str(), "fs.write" | "fs.edit") {
+            if let Some(scope) = execution.accounting_scope {
+                Some(
+                    scope
+                        .ledger
+                        .lock_mutation(&scope.agent_id, execution.cancellation, tool_deadline)
+                        .await
+                        .map_err(shared_admission_failure)?,
+                )
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        lifecycle.begin_operation()?;
         let started = telemetry::now();
         let context = execution.root.with_span(
-            self.tracer
-                .span_builder(format!("execute_tool {}", call.name))
-                .with_kind(if call.name.starts_with("mcp/") {
-                    SpanKind::Client
-                } else {
-                    SpanKind::Internal
-                })
-                .with_start_time(started)
-                .with_attributes([
-                    KeyValue::new("gen_ai.operation.name", "execute_tool"),
-                    KeyValue::new("gen_ai.tool.name", call.name.clone()),
-                    KeyValue::new("gen_ai.tool.type", "function"),
-                    KeyValue::new("gen_ai.tool.call.id", call.id.clone()),
-                    KeyValue::new("pablo.run.id", lifecycle.run_id.clone()),
-                ])
-                .start_with_context(&self.tracer, execution.root),
+            telemetry::agent_span(
+                self.tracer
+                    .span_builder(format!("execute_tool {}", call.name))
+                    .with_kind(if call.name.starts_with("mcp/") {
+                        SpanKind::Client
+                    } else {
+                        SpanKind::Internal
+                    })
+                    .with_start_time(started)
+                    .with_attributes([
+                        KeyValue::new("gen_ai.operation.name", "execute_tool"),
+                        KeyValue::new("gen_ai.tool.name", call.name.clone()),
+                        KeyValue::new("gen_ai.tool.type", "function"),
+                        KeyValue::new("gen_ai.tool.call.id", call.id.clone()),
+                        KeyValue::new("pablo.run.id", lifecycle.run_id.clone()),
+                    ]),
+                execution.agent,
+            )
+            .start_with_context(&self.tracer, execution.root),
         );
         let parent = execution.root.span().span_context().span_id().to_string();
         let mut event_failure = None;
@@ -936,9 +1219,37 @@ where
             started,
             false,
         );
+        // Kept across the actual tool future: tools return only after owned cleanup.
+        let mut _process_lease = None;
         let mut result = if let Err(outcome) = start {
             event_failure = Some(outcome);
             ToolResult::status(ToolStatus::EventSinkFailed)
+        } else if let Err(outcome) = execution.accounting_scope.map_or(Ok(()), |scope| {
+            let lease = if call.name == "shell.run" {
+                Some(
+                    scope
+                        .ledger
+                        .reserve_resources(
+                            &scope.agent_id,
+                            crate::children::ledger::resources::Resources {
+                                processes: 1,
+                                ..Default::default()
+                            },
+                        )
+                        .map_err(shared_admission_failure)?,
+                )
+            } else {
+                None
+            };
+            scope
+                .ledger
+                .admit_tool(&scope.agent_id)
+                .map_err(shared_admission_failure)?;
+            _process_lease = lease;
+            Ok(())
+        }) {
+            event_failure = Some(outcome);
+            ToolResult::status(ToolStatus::AdmissionFailed)
         } else {
             lifecycle.accounting.tool_calls = lifecycle
                 .accounting
@@ -966,7 +1277,7 @@ where
                 ToolContext {
                     workspace: &execution.spec.workspace,
                     filesystem: execution.filesystem.as_ref(),
-                    deadline: execution.deadline,
+                    deadline: tool_deadline,
                     limits: &execution.spec.limits,
                     policy_decisions: &decisions,
                     cancellation: execution.cancellation,
@@ -1017,6 +1328,8 @@ where
                 "mcp_tool_error"
             } else if call.name == "skill.read" {
                 "skill_resource_error"
+            } else if call.name == "subagent" {
+                "child_operation_error"
             } else {
                 "filesystem_error"
             };
@@ -1046,6 +1359,7 @@ where
 
 #[derive(Default)]
 struct ModelProgress {
+    shared_reservation: Option<crate::children::ledger::ModelReservation>,
     closing_failed: bool,
     delivery: Option<DeliveryCertainty>,
     retry_class: Option<&'static str>,
@@ -1097,7 +1411,7 @@ async fn consume(
         max_context_bytes: spec.limits.max_context_bytes,
         max_tool_input_bytes: spec.limits.max_tool_input_bytes,
         max_output_bytes: input.max_output_bytes,
-        tools: execution.tools.descriptors(),
+        tools: execution.descriptors(),
         allow_tool_calls: input.allow_tool_calls,
         max_output_tokens: input.attempt.max_output_tokens,
         deadline: input.deadline,
@@ -1107,12 +1421,37 @@ async fn consume(
     if let Some(outcome) = execution.stop() {
         return Err(outcome);
     }
-    input.attempt.ledger.reserve(&mut lifecycle.accounting)?;
-    lifecycle.accounting.model_calls = lifecycle
-        .accounting
+    if let Some(resident) = &execution.resident {
+        let bytes = context_bytes(execution, input.history, input.continuations);
+        if input.summary {
+            // Keep old retained history covered while admitting the summary request.
+            resident.cover(bytes)?;
+        } else {
+            resident.set(bytes)?;
+        }
+    }
+    execution.grow_context(128)?; // Assistant message/container framing.
+    let mut admitted = lifecycle.accounting.clone();
+    input.attempt.ledger.reserve(&mut admitted)?;
+    admitted.model_calls = admitted
         .model_calls
         .checked_add(1)
         .ok_or_else(|| limit(LimitKind::ModelCalls))?;
+    if let Some(scope) = execution.accounting_scope {
+        progress.shared_reservation = Some(
+            scope
+                .ledger
+                .reserve_model(
+                    &scope.agent_id,
+                    input
+                        .attempt
+                        .provider
+                        .accounting_bounds(input.attempt.model, input.attempt.max_output_tokens),
+                )
+                .map_err(shared_admission_failure)?,
+        );
+    }
+    lifecycle.accounting = admitted;
     if let Some(record) = &mut lifecycle.output_repair
         && record.status == "pending"
     {
@@ -1124,7 +1463,7 @@ async fn consume(
     progress.delivery = Some(DeliveryCertainty::MayHaveBeenSent);
     let opened = tokio::select! {
         biased;
-        _ = execution.cancellation.cancelled() => return Err(RunOutcome::Cancelled),
+        _ = execution.cancellation.cancelled() => return Err(execution.stop().expect("cancelled execution")),
         _ = sleep_until(input.deadline) => return Err(attempt_timeout(execution, progress)),
         result = input.attempt.provider.stream(request) => result,
     };
@@ -1144,7 +1483,7 @@ async fn consume(
         }
         let next = tokio::select! {
             biased;
-            _ = execution.cancellation.cancelled() => return Err(RunOutcome::Cancelled),
+            _ = execution.cancellation.cancelled() => return Err(execution.stop().expect("cancelled execution")),
             _ = sleep_until(input.deadline) => return Err(attempt_timeout(execution, progress)),
             result = stream.next() => result,
         };
@@ -1188,6 +1527,7 @@ async fn consume(
                 if value.bytes() > input.remaining_context {
                     return Err(limit(LimitKind::ContextBytes));
                 }
+                execution.grow_context(value.bytes())?;
                 if progress.continuation.replace(value).is_some() {
                     return Err(malformed());
                 }
@@ -1200,6 +1540,10 @@ async fn consume(
             Some(Ok(ProviderEvent::TextDelta(text))) => {
                 if text.len() > input.max_output_bytes.saturating_sub(progress.output.len()) {
                     return Err(limit(LimitKind::OutputBytes));
+                }
+                if execution.resident.is_some() {
+                    let encoded = serde_json::to_vec(&text).expect("serializable text").len();
+                    execution.grow_context(encoded.saturating_sub(2))?;
                 }
                 if !input.summary {
                     lifecycle.emit(
@@ -1245,6 +1589,12 @@ async fn consume(
                 {
                     return Err(limit(LimitKind::ToolCalls));
                 }
+                execution.grow_context(
+                    id.len()
+                        .saturating_add(name.len())
+                        .saturating_mul(6)
+                        .saturating_add(128),
+                )?;
                 ids.insert(id.clone());
                 progress.pending.push(PendingCall {
                     id,
@@ -1264,6 +1614,7 @@ async fn consume(
                 {
                     return Err(limit(LimitKind::ToolInputBytes));
                 }
+                execution.grow_context(delta.len().saturating_mul(6))?;
                 call.arguments.push_str(&delta);
             }
             Some(Ok(ProviderEvent::Finished { reason, usage })) => {
@@ -1298,6 +1649,22 @@ async fn consume(
     }
 }
 
+fn shared_admission_failure(error: crate::children::ledger::AdmissionError) -> RunOutcome {
+    use crate::children::ledger::AdmissionError;
+    match error {
+        AdmissionError::Outcome(outcome) => outcome,
+        AdmissionError::Closed | AdmissionError::Cancelled => RunOutcome::Cancelled,
+        AdmissionError::TimedOut => RunOutcome::TimedOut,
+        AdmissionError::UnknownAgent
+        | AdmissionError::InvalidCeiling
+        | AdmissionError::Capacity
+        | AdmissionError::Unattested => RunOutcome::Failed {
+            code: FailureCode::ChildAdmission,
+            delivery: DeliveryCertainty::NotSent,
+        },
+    }
+}
+
 fn limit(limit: LimitKind) -> RunOutcome {
     RunOutcome::LimitExceeded { limit }
 }
@@ -1313,6 +1680,7 @@ fn malformed() -> RunOutcome {
 fn tool_failure(result: &ToolResult) -> Option<RunOutcome> {
     Some(match result.status {
         ToolStatus::Completed | ToolStatus::RecoverableError => return None,
+        ToolStatus::AdmissionFailed => failed(FailureCode::ChildAdmission),
         ToolStatus::WorkLimit => limit(LimitKind::FilesystemWork),
         ToolStatus::Cancelled => RunOutcome::Cancelled,
         ToolStatus::TimedOut => RunOutcome::TimedOut,
@@ -1419,6 +1787,12 @@ pub fn validate_run(
 }
 
 struct Lifecycle<'a> {
+    event_scope: Option<&'a AccountingScope>,
+    run_event: Option<crate::children::ledger::events::EventReservation>,
+    operation_events: Vec<crate::children::ledger::events::EventReservation>,
+    cancellation: &'a CancellationToken,
+    shared_deadline: Option<Instant>,
+    agent: Option<Box<crate::children::AgentIdentity>>,
     compaction: Option<Box<crate::context::CompactionRecord>>,
     output_validation: Option<Box<crate::output::OutputValidation>>,
     output_repair: Option<Box<crate::output::OutputRepair>>,
@@ -1436,6 +1810,52 @@ struct Lifecycle<'a> {
 }
 
 impl Lifecycle<'_> {
+    fn event_failure(&self, error: crate::children::ledger::AdmissionError) -> RunOutcome {
+        let outcome = shared_admission_failure(error);
+        if outcome == RunOutcome::Cancelled
+            && self
+                .shared_deadline
+                .is_some_and(|deadline| Instant::now() >= deadline)
+        {
+            RunOutcome::TimedOut
+        } else {
+            outcome
+        }
+    }
+    fn begin_operation(&mut self) -> Result<(), RunOutcome> {
+        if let Some(scope) = self.event_scope {
+            let reservation = scope
+                .ledger
+                .reserve_events(&scope.agent_id, 2)
+                .map_err(|error| self.event_failure(error))?;
+            self.operation_events.push(reservation);
+        }
+        Ok(())
+    }
+    fn admit_event(&mut self, event: &RunEvent) -> Result<(), RunOutcome> {
+        let Some(scope) = self.event_scope else {
+            return Ok(());
+        };
+        let result = match &event.kind {
+            EventKind::ModelStarted { .. }
+            | EventKind::ToolStarted { .. }
+            | EventKind::CompactionStarted => self
+                .operation_events
+                .last_mut()
+                .expect("admitted operation")
+                .consume_record(event),
+            EventKind::ModelFinished { .. }
+            | EventKind::ToolFinished { .. }
+            | EventKind::CompactionFinished { .. } => self
+                .operation_events
+                .pop()
+                .expect("admitted operation")
+                .consume_record(event),
+            _ => scope.ledger.admit_event_record(&scope.agent_id, event),
+        };
+        result.map_err(|error| self.event_failure(error))
+    }
+
     fn can_start_operation(&self) -> bool {
         self.seq < self.max_events.saturating_sub(2 + self.extra_closing)
     }
@@ -1449,6 +1869,8 @@ impl Lifecycle<'_> {
         let span = context.span();
         let identity = span.span_context();
         RunEvent {
+            root_seq: None,
+            agent: self.agent.clone(),
             output_repair: matches!(
                 kind,
                 EventKind::ModelStarted { .. }
@@ -1525,10 +1947,21 @@ impl Lifecycle<'_> {
             });
         }
         let event = self.event(kind, context, parent, time);
+        self.admit_event(&event)?;
         self.sink.emit(&event).map_err(|error| match error {
             SinkError::Capacity => RunOutcome::LimitExceeded {
                 limit: LimitKind::TraceBytes,
             },
+            SinkError::Io(_) if self.cancellation.is_cancelled() => {
+                if self
+                    .shared_deadline
+                    .is_some_and(|deadline| Instant::now() >= deadline)
+                {
+                    RunOutcome::TimedOut
+                } else {
+                    RunOutcome::Cancelled
+                }
+            }
             SinkError::Io(_) => RunOutcome::Failed {
                 code: FailureCode::EventSinkIo,
                 delivery: self.delivery,

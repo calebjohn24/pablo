@@ -203,6 +203,7 @@
                 "tool_execution",
                 "tool_cleanup",
                 "accounting_bound_violated",
+                "child_admission",
                 "context_overflow",
                 "compaction_failed",
                 "output_validation_failed"
@@ -295,6 +296,14 @@
         },
         "output_repair": {
           "$ref": "#/$defs/output_repair"
+        },
+        "agent": {
+          "$ref": "#/$defs/agent_identity"
+        },
+        "root_seq": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Root consumer delivery sequence of the final native event in this projection; per-agent seq_start/seq_end remain unchanged."
         }
       },
       "required": [
@@ -381,6 +390,9 @@
         },
         "compaction": {
           "$ref": "#/$defs/compaction"
+        },
+        "agent": {
+          "$ref": "#/$defs/agent_identity"
         }
       },
       "required": [
@@ -958,6 +970,7 @@
                 "tool_execution",
                 "tool_cleanup",
                 "accounting_bound_violated",
+                "child_admission",
                 "context_overflow",
                 "compaction_failed",
                 "output_validation_failed"
@@ -1248,6 +1261,60 @@
           "maximum": 8
         }
       }
+    },
+    "agent_identity": {
+      "type": "object",
+      "properties": {
+        "agent_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "root_run_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "root_session_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "session_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "parent_agent_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "kind": {
+          "enum": [
+            "root",
+            "local_acp_temporary"
+          ]
+        },
+        "depth": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "agent_id",
+        "root_run_id",
+        "root_session_id",
+        "session_id",
+        "parent_agent_id",
+        "kind",
+        "depth"
+      ],
+      "additionalProperties": false
     }
   }
 }

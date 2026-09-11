@@ -97,6 +97,29 @@ impl ResolvedDeployment {
 
 #[cfg(unix)]
 impl PreparedRun {
+    /// Conservative per-task MCP capacity, after selection and server policy.
+    /// Hold the whole reservation until all admitted capability work has joined,
+    /// including failed/omitted optional servers. This method starts no resources.
+    pub fn mcp_resources(
+        &self,
+    ) -> Result<crate::children::ledger::resources::Resources, ConfigError> {
+        let settings = self.deployment().mcp()?;
+        let policy = self.deployment().mcp_policy()?;
+        let mut resources = crate::children::ledger::resources::Resources::default();
+        for (id, server) in &settings.servers {
+            if self
+                .mcp_selection
+                .as_ref()
+                .is_some_and(|selected| !selected.contains(id))
+                || settings.admit_server(id, &policy).is_err()
+            {
+                continue;
+            }
+            resources.mcp_sessions += 1;
+            resources.processes += usize::from(matches!(server, crate::mcp::Server::Stdio { .. }));
+        }
+        Ok(resources)
+    }
     /// Prepare fresh configured MCP and explicitly activated Skill capabilities.
     pub async fn tools_with_capabilities(
         &self,
@@ -148,12 +171,7 @@ impl PreparedRun {
         let mut tools = self.builtin_tools()?;
         tools.constrain_deadline(deadline);
         if self.has_skills() {
-            let names = self.deployment().options()["skills"]["activate"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(|name| name.as_str().unwrap().to_owned())
-                .collect();
+            let names = self.skill_names();
             let roots = self
                 .deployment()
                 .skill_roots(Some(&self.spec().workspace))?;
@@ -238,16 +256,28 @@ impl PreparedRun {
                         .map_err(|_| error("config_mcp_cleanup", "/options/mcp"))?;
                     return Err(error("config_mcp_catalog_bound", "/options/mcp"));
                 }
-                let admitted = session
-                    .tools()
-                    .iter()
-                    .filter_map(|tool| {
-                        self.deployment()
-                            .admit_mcp_tool(id, &tool.name)
-                            .ok()
-                            .map(|decisions| (tool.name.clone(), decisions))
-                    })
-                    .collect();
+                let admitted = (|| {
+                    let mut admitted = Vec::new();
+                    for tool in session.tools() {
+                        let Ok(decisions) = self.deployment().admit_mcp_tool(id, &tool.name) else {
+                            continue;
+                        };
+                        if self.child_mcp_tool(id, tool)? {
+                            admitted.push((tool.name.clone(), decisions));
+                        }
+                    }
+                    Ok::<_, ConfigError>(admitted)
+                })();
+                let admitted = match admitted {
+                    Ok(admitted) => admitted,
+                    Err(error) => {
+                        session
+                            .close()
+                            .await
+                            .map_err(|_| super::error("config_mcp_cleanup", "/options/mcp"))?;
+                        return Err(error);
+                    }
+                };
                 tools
                     .attach_mcp(id, session, admitted)
                     .await
@@ -265,6 +295,7 @@ impl PreparedRun {
             .await;
             if let Err(error) = started {
                 if error.code == "config_mcp_cleanup"
+                    || error.code == "config_child_capability_changed"
                     || server.required()
                     || cancellation.is_cancelled()
                     || tokio::time::Instant::now() >= deadline
@@ -277,6 +308,14 @@ impl PreparedRun {
                 }
                 tools.omit_mcp(id, error.code);
             }
+        }
+        self.restrict_tools(&mut tools);
+        if let Err(error) = self.check_child_tools(&tools) {
+            tools
+                .close()
+                .await
+                .map_err(|_| super::error("config_mcp_cleanup", "/options/mcp"))?;
+            return Err(error);
         }
         Ok(tools)
     }

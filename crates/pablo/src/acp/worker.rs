@@ -12,12 +12,19 @@ use std::{
 use tokio::sync::oneshot;
 
 pub(super) struct Task {
+    pub accounting: Option<AccountingScope>,
+    pub terminal: Option<Arc<std::sync::Mutex<Option<RunEvent>>>>,
     pub prepared: Option<pablo_core::deployment::PreparedRun>,
     pub spec: RunSpec,
     pub parent: opentelemetry::Context,
     pub cancel: CancellationToken,
     pub events: EventSender,
     pub completed: oneshot::Sender<Result<RunOutcome, String>>,
+}
+#[derive(Clone)]
+pub(super) struct AccountingScope {
+    pub ledger: pablo_core::children::ledger::RootLedger,
+    pub agent_id: String,
 }
 
 /// Close the per-task stream even if execution unwinds before sending an outcome.
@@ -45,11 +52,32 @@ pub(super) struct Worker {
 }
 
 impl Worker {
-    pub fn start(options: Arc<Options>) -> Result<Self, String> {
+    #[cfg(test)]
+    pub(super) fn held_for_test(
+        lease: Arc<pablo_core::children::ledger::resources::ResourceLease>,
+        release: std::sync::mpsc::Receiver<()>,
+    ) -> Self {
+        let (commands, _rx) = async_channel::bounded(1);
+        let thread = std::thread::spawn(move || {
+            let _lease = lease;
+            release
+                .recv()
+                .map_err(|_| "test release closed".to_owned())?;
+            Ok(())
+        });
+        Self { commands, thread }
+    }
+    pub fn start(
+        options: Arc<Options>,
+        lease: Option<Arc<pablo_core::children::ledger::resources::ResourceLease>>,
+    ) -> Result<Self, String> {
         let (commands, rx) = async_channel::bounded(1);
         let thread = std::thread::Builder::new()
             .name("pablo-run".into())
-            .spawn(move || run(options, rx))
+            .spawn(move || {
+                let _lease = lease;
+                run(options, rx)
+            })
             .map_err(|_| "cannot start runtime worker")?;
         Ok(Self { commands, thread })
     }
@@ -211,13 +239,22 @@ async fn execute(
     task: &Task,
 ) -> Result<RunOutcome, String> {
     let spec = &task.spec;
+    let root_factory =
+        super::supervisor::factory::RootFactory::configured(options, task.prepared.as_ref())?;
+    let root_run_id = root_factory
+        .as_ref()
+        .map(|f| f.root.root_run_id().to_owned());
     let mut trace = if let Some(prepared) = &task.prepared {
         prepared
             .create_trace_file()
             .map_err(|e| e.to_string())?
             .map(|file| {
-                JsonlSink::new(BufWriter::new(file), spec)
-                    .map_err(|_| "config_invalid_value at /options/trace")
+                (if let Some(id) = &root_run_id {
+                    JsonlSink::for_tree(BufWriter::new(file), spec, id.clone())
+                } else {
+                    JsonlSink::new(BufWriter::new(file), spec)
+                })
+                .map_err(|_| "config_invalid_value at /options/trace")
             })
             .transpose()?
     } else if let Some(path) = &options.trace_path {
@@ -249,8 +286,19 @@ async fn execute(
     if let Some(prepared) = &task.prepared {
         runtime = runtime.with_deployment(prepared.deployment());
     }
+    if let Some(scope) = &task.accounting {
+        runtime = runtime
+            .with_root_ledger(scope.ledger.clone(), scope.agent_id.clone())
+            .map_err(|_| "child accounting scope invalid")?;
+    }
     let mut slow_reported = false;
     let mut sink = |event: &RunEvent| -> Result<(), SinkError> {
+        if matches!(event.kind, EventKind::RunFinished { .. })
+            && root_run_id.as_ref().is_none_or(|id| *id == event.run_id)
+            && let Some(terminal) = &task.terminal
+        {
+            *terminal.lock().unwrap() = Some(event.clone());
+        }
         if let Some(trace) = trace.as_mut() {
             trace.emit(event)?;
         }
@@ -267,6 +315,21 @@ async fn execute(
             .map_err(|_| io::Error::other("ACP consumer closed"))?;
         Ok(())
     };
+    if let Some(factory) = root_factory {
+        return match factory
+            .run(
+                runtime,
+                resources.provider.as_ref(),
+                &task.cancel,
+                &mut sink,
+            )
+            .await?
+        {
+            Ok(outcome) => Ok(outcome),
+            Err(RunError::EventDelivery { outcome, .. }) => Ok(*outcome),
+            Err(_) => Err("runtime rejected the run".into()),
+        };
+    }
     let task_tools = if let Some(prepared) = task
         .prepared
         .as_ref()
@@ -277,6 +340,10 @@ async fn execute(
                 spec.limits.max_run_duration_ms,
             ))
             .ok_or("invalid run duration")?;
+        let deadline = task
+            .accounting
+            .as_ref()
+            .map_or(deadline, |scope| deadline.min(scope.ledger.deadline()));
         Some(
             options
                 .deployment
@@ -308,7 +375,15 @@ async fn execute(
 fn event_fits(event: &RunEvent) -> bool {
     // Six bytes per input byte covers worst-case JSON escaping. Text is the hot
     // path; a conservative bound usually avoids serialization altogether.
-    if let EventKind::TextDelta { text } = &event.kind {
+    if let EventKind::TextDelta { text } = &event.kind
+        && event.deployment.is_none()
+        && event.model_profile.is_none()
+        && event.model_route.is_none()
+        && event.compaction.is_none()
+        && event.output_validation.is_none()
+        && event.output_repair.is_none()
+        && event.accounting.is_none()
+    {
         let strings = text
             .len()
             .saturating_add(event.schema_version.len())
@@ -318,7 +393,22 @@ fn event_fits(event: &RunEvent) -> bool {
             .saturating_add(event.span_id.len())
             .saturating_add(event.parent_span_id.as_deref().map_or(0, str::len))
             .saturating_add(event.trace_flags.len());
-        if strings.saturating_mul(6).saturating_add(512) <= FRAME_BYTES {
+        if strings
+            .saturating_mul(6)
+            .saturating_add(512)
+            .saturating_add(if event.root_seq.is_some() {
+                pablo_core::events::ROOT_SEQUENCE_BYTES
+            } else {
+                0
+            })
+            .saturating_add(
+                event
+                    .agent
+                    .as_ref()
+                    .map_or(0, |agent| agent.json_upper_bound()),
+            )
+            <= FRAME_BYTES
+        {
             return true;
         }
     }
@@ -348,6 +438,8 @@ mod tests {
     #[test]
     fn event_capacity_admits_large_plain_text_but_rejects_its_escaped_expansion() {
         let mut event = RunEvent {
+            root_seq: None,
+            agent: None,
             model_route: None,
             compaction: None,
             output_validation: None,
@@ -377,5 +469,16 @@ mod tests {
             text: "\0🦀\"\\".repeat(1000),
         };
         assert!(event_fits(&event));
+        event.agent = Some(Box::new(
+            serde_json::from_value(serde_json::json!({
+                "agent_id": "id", "root_run_id": "root", "root_session_id": "session",
+                "parent_agent_id": null, "kind": "root", "depth": 0,
+                "session_id": "\0".repeat(FRAME_BYTES / 6 + 1024)
+            }))
+            .unwrap(),
+        ));
+        // Parsed event projections are not authority and can exceed runtime ID limits.
+        // They must still take the exact bounded serialization path.
+        assert!(!event_fits(&event));
     }
 }

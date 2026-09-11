@@ -102,6 +102,11 @@ async fn execute(
         Some(_) => None,
         None => Some(options.tools()?),
     };
+    let root_factory =
+        acp::supervisor::factory::RootFactory::configured(&options, prepared.as_ref())?;
+    let root_run_id = root_factory
+        .as_ref()
+        .map(|f| f.root.root_run_id().to_owned());
     let secrets = prepared
         .as_ref()
         .map(|prepared| deployment::Secrets::read(prepared, options.deployment.as_ref().unwrap()))
@@ -152,16 +157,19 @@ async fn execute(
     let mut native_trace = if let Some(prepared) = &prepared {
         match prepared.create_trace_file().and_then(|file| {
             file.map(|file| {
-                JsonlSink::new(BufWriter::new(file), &spec).map_err(|_| {
-                    pablo_core::deployment::ConfigError {
-                        code: "config_invalid_value",
-                        option: "/options/trace".into(),
-                        source: None,
-                        line: None,
-                        owner: None,
-                        authority_id: None,
-                        chain: Vec::new(),
-                    }
+                (if let Some(id) = &root_run_id {
+                    JsonlSink::for_tree(BufWriter::new(file), &spec, id.clone())
+                } else {
+                    JsonlSink::new(BufWriter::new(file), &spec)
+                })
+                .map_err(|_| pablo_core::deployment::ConfigError {
+                    code: "config_invalid_value",
+                    option: "/options/trace".into(),
+                    source: None,
+                    line: None,
+                    owner: None,
+                    authority_id: None,
+                    chain: Vec::new(),
                 })
             })
             .transpose()
@@ -231,7 +239,8 @@ async fn execute(
     }
     let mut task_result = None;
     let mut sink = |event: &RunEvent| -> Result<(), SinkError> {
-        if options.json && matches!(event.kind, EventKind::RunFinished { .. }) {
+        let is_root = root_run_id.as_ref().is_none_or(|id| *id == event.run_id);
+        if options.json && is_root && matches!(event.kind, EventKind::RunFinished { .. }) {
             task_result = TaskResult::from_terminal(event);
         }
         if let Some(trace) = native_trace.as_mut() {
@@ -244,6 +253,9 @@ async fn execute(
             #[cfg(unix)]
             EventKind::SkillActivated { skill, .. } => {
                 writeln!(stderr, "pablo: activated Skill {}", skill.qualified_name)?;
+            }
+            EventKind::TextDelta { text } if !is_root => {
+                writeln!(stderr, "pablo: child {}: {}", event.session_id, text)?;
             }
             EventKind::TextDelta { text } => {
                 stdout.write_all(text.as_bytes())?;
@@ -283,6 +295,11 @@ async fn execute(
     };
     let result = {
         let run = async {
+            if let Some(factory) = root_factory {
+                return factory
+                    .run(runtime, provider.as_ref(), &cancellation, &mut sink)
+                    .await;
+            }
             let configured_tools = if let Some(prepared) = prepared
                 .as_ref()
                 .filter(|prepared| prepared.needs_async_tools())

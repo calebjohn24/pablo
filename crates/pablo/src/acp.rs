@@ -24,6 +24,8 @@ mod handlers;
 // C3.21 prepares this internal path; child execution is enabled at C3.22.
 #[allow(dead_code)]
 mod in_memory;
+#[allow(dead_code)] // Some direct host operations are exercised only by internal acceptance tests.
+pub(crate) mod supervisor;
 mod worker;
 use worker::{Task, Worker};
 
@@ -47,6 +49,8 @@ struct Extensions {
 
 #[derive(Default)]
 struct State {
+    closed: bool,
+    admitted_child: Option<in_memory::AdmittedChild>,
     initialized: bool,
     extensions: Extensions,
     session: Option<(wire::SessionId, std::path::PathBuf)>,
@@ -75,6 +79,12 @@ fn correlation(event: &RunEvent, first: u64) -> Value {
         "timestamp_unix_micros":event.timestamp_unix_micros,
         "trace_id":event.trace_id,"span_id":event.span_id,
         "parent_span_id":event.parent_span_id,"trace_flags":event.trace_flags});
+    if let Some(seq) = event.root_seq {
+        value["root_seq"] = json!(seq);
+    }
+    if let Some(agent) = &event.agent {
+        value["agent"] = serde_json::to_value(agent).expect("bounded agent identity");
+    }
     if let Some(identity) = &event.deployment {
         value["deployment"] = serde_json::to_value(identity).expect("bounded identity");
     }
@@ -335,7 +345,7 @@ async fn serve_streams(
     Ok(ExitCode::SUCCESS)
 }
 
-fn prompt_text(blocks: &[wire::ContentBlock]) -> Result<String, Error> {
+fn prompt_text(blocks: &[wire::ContentBlock], max_bytes: usize) -> Result<String, Error> {
     let mut input = String::new();
     for block in blocks {
         let text = match block {
@@ -347,8 +357,8 @@ fn prompt_text(blocks: &[wire::ContentBlock]) -> Result<String, Error> {
             }
             _ => return Err(invalid("this agent supports text and resource links only")),
         };
-        if input.len() + text.len() > pablo_core::RunLimits::default().max_input_bytes - 4096 {
-            return Err(invalid("prompt exceeds 1020 KiB"));
+        if input.len().saturating_add(text.len()) > max_bytes {
+            return Err(invalid("prompt exceeds admitted byte bound"));
         }
         input.push_str(&text);
     }
@@ -403,6 +413,7 @@ impl EventStream {
                 {
                     text.push_str(more);
                     event.seq = next.seq;
+                    event.root_seq = next.root_seq;
                     event.timestamp_unix_micros = next.timestamp_unix_micros;
                 } else {
                     self.pending = Some(next);
@@ -423,10 +434,15 @@ async fn forward_events(
     extensions: Extensions,
     capture_content: bool,
 ) -> Result<Option<RunEvent>, Error> {
+    if matches!(delivery, delivery::Delivery::Native { .. }) {
+        return delivery.forward_native(rx).await;
+    }
     let mut events = EventStream::new(rx);
     let mut terminal = None;
     while let Some((event, first)) = events.next().await {
-        if matches!(event.kind, EventKind::RunFinished { .. }) {
+        if matches!(event.kind, EventKind::RunFinished { .. })
+            && (event.root_seq.is_none() || event.agent.as_ref().is_none_or(|a| a.depth() == 0))
+        {
             terminal = Some(event.clone());
         }
         #[cfg(unix)]
@@ -436,7 +452,7 @@ async fn forward_events(
                 instructions,
             } = &event.kind
         {
-            let params=serde_json::value::to_raw_value(&json!({"sessionId":event.session_id,"type":"skill.activated","pablo/v1":correlation(&event,first),"skill":skill,"instructions":if capture_content {instructions.as_deref()}else{None},"content_redacted":!capture_content})).map_err(|_|Error::internal_error())?;
+            let params=serde_json::value::to_raw_value(&json!({"sessionId":delivery_session(&event),"type":"skill.activated","pablo/v1":correlation(&event,first),"skill":skill,"instructions":if capture_content {instructions.as_deref()}else{None},"content_redacted":!capture_content})).map_err(|_|Error::internal_error())?;
             delivery
                 .send(wire::AgentNotification::ExtNotification(
                     wire::ExtNotification::new("_pablo/skill", Arc::from(params)),
@@ -467,7 +483,7 @@ async fn forward_events(
                 ),
                 _ => ("context.compaction.started", None, 0),
             };
-            let params=serde_json::value::to_raw_value(&json!({"sessionId":event.session_id,"type":kind,"pablo/v1":details,"summary":summary,"summary_bytes":summary_bytes,"content_redacted":!capture_content})).map_err(|_|Error::internal_error())?;
+            let params=serde_json::value::to_raw_value(&json!({"sessionId":delivery_session(&event),"type":kind,"pablo/v1":details,"summary":summary,"summary_bytes":summary_bytes,"content_redacted":!capture_content})).map_err(|_|Error::internal_error())?;
             delivery
                 .send(wire::AgentNotification::ExtNotification(
                     wire::ExtNotification::new("_pablo/compaction", Arc::from(params)),
@@ -485,7 +501,7 @@ async fn forward_events(
             details["model_route"] =
                 serde_json::to_value(&event.model_route).map_err(|_| Error::internal_error())?;
             let params = serde_json::value::to_raw_value(&json!({
-                "sessionId": event.session_id,
+                "sessionId": delivery_session(&event),
                 "type": if matches!(event.kind, EventKind::ModelStarted { .. }) { "model.started" } else { "model.finished" },
                 "pablo/v1": details
             })).map_err(|_| Error::internal_error())?;
@@ -496,7 +512,8 @@ async fn forward_events(
                 .await?;
         }
         if let Some(update) = project(&event)? {
-            let mut notification = wire::SessionNotification::new(event.session_id.clone(), update);
+            let mut notification =
+                wire::SessionNotification::new(delivery_session(&event).to_owned(), update);
             if extensions.base {
                 let mut details = correlation(&event, first);
                 if extensions.output && event.output_validation.is_some() {
@@ -517,13 +534,33 @@ async fn forward_events(
     Ok(terminal)
 }
 
+fn delivery_session(event: &RunEvent) -> &str {
+    if event.root_seq.is_some()
+        && let Some(agent) = &event.agent
+    {
+        agent.root_session_id()
+    } else {
+        &event.session_id
+    }
+}
+
+fn delivery_call_id(event: &RunEvent, call_id: &str) -> String {
+    if event.root_seq.is_some()
+        && let Some(agent) = &event.agent
+    {
+        format!("{}/{}", agent.agent_id(), call_id)
+    } else {
+        call_id.to_owned()
+    }
+}
+
 fn project(event: &RunEvent) -> Result<Option<wire::SessionUpdate>, Error> {
     Ok(Some(match &event.kind {
         EventKind::TextDelta { text } => wire::SessionUpdate::AgentMessageChunk(
             wire::ContentChunk::new(wire::ContentBlock::Text(wire::TextContent::new(text))),
         ),
         EventKind::ToolStarted { call } => wire::SessionUpdate::ToolCall(
-            wire::ToolCall::new(call.id.clone(), call.name.clone())
+            wire::ToolCall::new(delivery_call_id(event, &call.id), call.name.clone())
                 .kind(if matches!(call.name.as_str(), "fs.write" | "fs.edit") {
                     wire::ToolKind::Edit
                 } else if call.name.starts_with("fs.") {
@@ -536,7 +573,7 @@ fn project(event: &RunEvent) -> Result<Option<wire::SessionUpdate>, Error> {
         ),
         EventKind::ShellStarted { call_id, .. } => {
             wire::SessionUpdate::ToolCallUpdate(wire::ToolCallUpdate::new(
-                call_id.clone(),
+                delivery_call_id(event, call_id),
                 wire::ToolCallUpdateFields::new().status(wire::ToolCallStatus::InProgress),
             ))
         }
@@ -546,7 +583,7 @@ fn project(event: &RunEvent) -> Result<Option<wire::SessionUpdate>, Error> {
             let success = result.status == ToolStatus::Completed
                 && result.shell.as_ref().is_none_or(|s| s.exit_code == Some(0));
             wire::SessionUpdate::ToolCallUpdate(wire::ToolCallUpdate::new(
-                call_id.clone(),
+                delivery_call_id(event, call_id),
                 wire::ToolCallUpdateFields::new()
                     .status(if success {
                         wire::ToolCallStatus::Completed
@@ -671,6 +708,8 @@ mod tests {
 
     fn event(seq: u64, kind: EventKind) -> RunEvent {
         RunEvent {
+            root_seq: None,
+            agent: None,
             model_route: None,
             compaction: None,
             output_validation: None,
@@ -689,6 +728,143 @@ mod tests {
             trace_flags: "01".into(),
             kind,
         }
+    }
+
+    #[tokio::test]
+    async fn native_delivery_preserves_every_original_record_and_waits_for_consumption() {
+        let originals = vec![
+            event(1, EventKind::RunStarted),
+            event(2, EventKind::TextDelta { text: "a".into() }),
+            event(3, EventKind::TextDelta { text: "b".into() }),
+            event(4, EventKind::TextDelta { text: "c".into() }),
+            event(
+                5,
+                EventKind::RunFinished {
+                    outcome: RunOutcome::Cancelled,
+                },
+            ),
+        ];
+        let (tx, rx) = async_channel::bounded(8);
+        for event in &originals {
+            tx.send(event.clone()).await.unwrap();
+        }
+        tx.close();
+        let (sender, receiver) = async_channel::bounded(1);
+        let delivery = delivery::Delivery::Native {
+            sender,
+            execution_cancel: CancellationToken::new(),
+            closed: CancellationToken::new(),
+        };
+        let forwarding = forward_events(rx, &delivery, Extensions::default(), false);
+        tokio::pin!(forwarding);
+        for original in &originals {
+            let update = tokio::select! {
+                result = &mut forwarding => panic!("forwarding finished before consumption: {result:?}"),
+                update = receiver.recv() => update.unwrap(),
+            };
+            assert_eq!(update.event, *original);
+            assert!(matches!(futures::poll!(&mut forwarding), Poll::Pending));
+            assert!(receiver.is_empty());
+            update.consumed.send(()).unwrap();
+        }
+        receiver.close(); // Closing after acknowledging the terminal is successful.
+        assert_eq!(forwarding.await.unwrap().as_ref(), originals.last());
+    }
+
+    #[tokio::test]
+    async fn native_receiver_loss_wakes_idle_or_unacknowledged_forwarding() {
+        for in_flight in [false, true] {
+            let (tx, rx) = async_channel::bounded(8);
+            let (sender, receiver) = async_channel::bounded(1);
+            let delivery = delivery::Delivery::Native {
+                sender,
+                execution_cancel: CancellationToken::new(),
+                closed: CancellationToken::new(),
+            };
+            let forwarding = delivery.forward_native(rx);
+            tokio::pin!(forwarding);
+            let held = if in_flight {
+                tx.send(event(1, EventKind::RunStarted)).await.unwrap();
+                Some(tokio::select! {
+                    result = &mut forwarding => panic!("unexpected result: {result:?}"),
+                    event = receiver.recv() => event.unwrap(),
+                })
+            } else {
+                None
+            };
+            receiver.close();
+            assert!(
+                tokio::time::timeout(Duration::from_secs(1), forwarding)
+                    .await
+                    .unwrap()
+                    .is_err()
+            );
+            drop(held);
+            drop(tx);
+        }
+    }
+
+    #[tokio::test]
+    async fn cancellation_bounds_receipts_but_waits_for_owned_cleanup_events() {
+        let (tx, rx) = async_channel::bounded(8);
+        let (sender, receiver) = async_channel::bounded(1);
+        let cancelled = CancellationToken::new();
+        let delivery = delivery::Delivery::Native {
+            sender,
+            closed: CancellationToken::new(),
+            execution_cancel: cancelled.clone(),
+        };
+        tx.send(event(1, EventKind::RunStarted)).await.unwrap();
+        let forwarding = delivery.forward_native(rx);
+        tokio::pin!(forwarding);
+        let held = tokio::select! {
+            result = &mut forwarding => panic!("unexpected result: {result:?}"),
+            update = receiver.recv() => update.unwrap(),
+        };
+        let started = tokio::time::Instant::now();
+        cancelled.cancel();
+        assert!(
+            tokio::time::timeout(Duration::from_secs(2), forwarding)
+                .await
+                .unwrap()
+                .is_err()
+        );
+        assert!(started.elapsed() >= delivery::CANCEL_ACK_TIMEOUT);
+        drop(held);
+        drop(tx);
+
+        let (tx, rx) = async_channel::bounded(8);
+        let (sender, receiver) = async_channel::bounded(1);
+        let cancelled = CancellationToken::new();
+        cancelled.cancel();
+        let delivery = delivery::Delivery::Native {
+            sender,
+            closed: CancellationToken::new(),
+            execution_cancel: cancelled,
+        };
+        let cleanup = async {
+            tokio::time::sleep(delivery::CANCEL_ACK_TIMEOUT * 2).await;
+            tx.send(event(
+                1,
+                EventKind::RunFinished {
+                    outcome: RunOutcome::Cancelled,
+                },
+            ))
+            .await
+            .unwrap();
+            tx.close();
+        };
+        let consume = async {
+            let update = receiver.recv().await.unwrap();
+            update.consumed.send(()).unwrap();
+        };
+        let (result, (), ()) = tokio::join!(delivery.forward_native(rx), cleanup, consume);
+        assert!(matches!(
+            result.unwrap().unwrap().kind,
+            EventKind::RunFinished {
+                outcome: RunOutcome::Cancelled
+            }
+        ));
     }
 
     #[tokio::test]
@@ -725,14 +901,14 @@ mod tests {
         let (tx, rx) = async_channel::bounded(8);
         let mut stream = EventStream::new(rx);
         for seq in 1..=3 {
-            tx.send(event(
+            let mut record = event(
                 seq,
                 EventKind::TextDelta {
                     text: seq.to_string(),
                 },
-            ))
-            .await
-            .unwrap();
+            );
+            record.root_seq = Some(seq + 10);
+            tx.send(record).await.unwrap();
         }
         stream.next().await.unwrap();
         let next = stream.next();
@@ -744,5 +920,10 @@ mod tests {
             .unwrap();
         assert_eq!((first, event.seq, event.timestamp_unix_micros), (2, 3, 3));
         assert_eq!(event.kind, EventKind::TextDelta { text: "23".into() });
+        assert_eq!(event.root_seq, Some(13));
+        let correlation = correlation(&event, first);
+        assert_eq!(correlation["root_seq"], 13);
+        assert_eq!(correlation["seq_start"], 2);
+        assert_eq!(correlation["seq_end"], 3);
     }
 }

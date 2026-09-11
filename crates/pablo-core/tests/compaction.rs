@@ -117,14 +117,33 @@ async fn threshold_and_overflow_compact_once_and_preserve_task_prefix_and_comple
         let telemetry = SdkTracerProvider::builder()
             .with_simple_exporter(exporter.clone())
             .build();
+        let root = children::AgentRef::root("root".into(), "root-session".into());
+        let ledger = children::ledger::RootLedger::new(&root, spec.limits.clone()).unwrap();
+        let mut after_compaction = None;
+        let mut checked_reduction = false;
         let mut events = Vec::new();
         let result = Runtime::new(telemetry.tracer("test"))
+            .with_root_ledger(ledger.clone(), root.agent_id().into())
+            .unwrap()
             .run_with_tools(
                 &spec,
                 &provider,
                 &ToolRegistry::with_filesystem_reads().unwrap(),
                 &CancellationToken::new(),
                 &mut |e: &RunEvent| {
+                    if matches!(e.kind, EventKind::ModelStarted { .. })
+                        && let Some(after) = after_compaction.take()
+                    {
+                        assert_eq!(ledger.resources().context_bytes, after);
+                        checked_reduction = true;
+                    }
+                    if matches!(e.kind, EventKind::CompactionFinished { .. }) {
+                        after_compaction = e
+                            .compaction
+                            .as_ref()
+                            .and_then(|c| c.after_bytes.as_ref())
+                            .map(|b| b.parse::<usize>().unwrap());
+                    }
                     events.push(e.clone());
                     Ok(())
                 },
@@ -132,6 +151,8 @@ async fn threshold_and_overflow_compact_once_and_preserve_task_prefix_and_comple
             .await
             .unwrap();
         assert!(result.is_completed(), "{mode}: {result:?}");
+        assert!(checked_reduction);
+        assert_eq!(ledger.resources().context_bytes, 0);
         let seen = provider.seen.lock().unwrap();
         let summary = seen.iter().position(|r| r.summary).expect("one summary");
         assert_eq!(seen.iter().filter(|r| r.summary).count(), 1);

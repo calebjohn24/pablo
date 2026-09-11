@@ -1421,11 +1421,11 @@ fn unknown_unsupported_and_schema_versions_are_explicit_and_redacted() {
         "config_unknown_option",
     );
     let e = deployment::resolve(
-        f.document(json!({"profiles":{"unused":{"options":{"children":{"enabled":false}}}}})),
+        f.document(json!({"profiles":{"unused":{"options":{"diagnostics":{"enabled":false}}}}})),
     )
     .unwrap_err();
     assert_eq!(e.code, "config_unsupported_feature");
-    assert_eq!(e.owner, Some("C3.22"));
+    assert_eq!(e.owner, Some("C3.31"));
     error(
         f.document(json!({"options":{"model":{"provider":"open_responses"}}})),
         "config_invalid_value",

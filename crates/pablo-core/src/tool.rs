@@ -19,6 +19,7 @@ pub struct ToolDescriptor {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ToolStatus {
+    AdmissionFailed,
     Completed,
     RecoverableError,
     WorkLimit,
@@ -47,6 +48,9 @@ pub struct ShellResult {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ToolResult {
+    /// Serialized projection of runtime-owned child handles; never admission input.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subagent: Option<Box<Value>>,
     pub status: ToolStatus,
     pub policy_rule: Option<PolicyRule>,
     pub shell: Option<ShellResult>,
@@ -65,6 +69,7 @@ pub struct ToolResult {
 impl ToolResult {
     pub fn status(status: ToolStatus) -> Self {
         Self {
+            subagent: None,
             status,
             policy_rule: None,
             shell: None,
@@ -78,6 +83,7 @@ impl ToolResult {
     }
     pub fn denied(rule: PolicyRule) -> Self {
         Self {
+            subagent: None,
             status: ToolStatus::PolicyDenied,
             policy_rule: Some(rule),
             shell: None,
@@ -354,6 +360,19 @@ impl ToolRegistry {
     pub fn descriptors(&self) -> &[ToolDescriptor] {
         &self.descriptors
     }
+    /// Remove executable capabilities as well as their model-visible entries.
+    /// Skill instructions and owned MCP sessions remain alive for context/cleanup.
+    pub(crate) fn retain_tools(&mut self, names: &std::collections::BTreeSet<String>) {
+        if !names.contains("shell.run") {
+            self.shell = None;
+        }
+        self.filesystem
+            .retain(|tool| names.contains(&tool.descriptor().name));
+        #[cfg(unix)]
+        self.mcp
+            .retain(|tool| names.contains(&tool.descriptor.name));
+        self.descriptors.retain(|tool| names.contains(&tool.name));
+    }
     pub(crate) fn has_filesystem(&self) -> bool {
         !self.filesystem.is_empty()
     }
@@ -363,6 +382,13 @@ impl ToolRegistry {
     pub(crate) fn get(&self, name: &str) -> Option<&dyn Tool> {
         #[cfg(unix)]
         if name == "skill.read" {
+            if !self
+                .descriptors
+                .iter()
+                .any(|descriptor| descriptor.name == name)
+            {
+                return None;
+            }
             return self.skills.as_ref().map(|tool| tool as &dyn Tool);
         }
         if name == "shell.run" {

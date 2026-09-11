@@ -562,6 +562,7 @@
                 "tool_execution",
                 "tool_cleanup",
                 "accounting_bound_violated",
+                "child_admission",
                 "context_overflow",
                 "compaction_failed",
                 "output_validation_failed"

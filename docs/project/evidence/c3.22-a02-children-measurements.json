@@ -1,0 +1,39 @@
+{
+  "checkpoint": "C3.22",
+  "source_sha256": "6d2efb5c5d3e383e09761ad65c02b2f9fd1615ad95bbb7913be30f0dd846a1e8",
+  "binary_sha256": "66936b5bde904a4387a2c44a92f0e5ed28b5bed90990a6c164ad4becc268e89a",
+  "platform": "darwin/arm64",
+  "node": "v24.11.0",
+  "method": {
+    "samples": 30,
+    "warmup": 5,
+    "timing": "Complete CLI or fresh ACP process including startup, configured setup, task and joined shutdown; sequential surfaces/modes, local fixture, no trace.",
+    "comparison": "Same final binary: disabled root makes one model call; enabled root spawns/waits for one child and makes four aggregate model calls and two subagent tool calls. Difference includes extra work, not isolated scheduler overhead."
+  },
+  "stats": {
+    "cli_disabled_ms": {
+      "min": 8.017417000000023,
+      "p50": 8.475124999999991,
+      "p95": 9.610375000000005,
+      "max": 9.694000000000017
+    },
+    "cli_child_ms": {
+      "min": 9.312249999999949,
+      "p50": 9.804500000000019,
+      "p95": 11.06412499999999,
+      "max": 14.0395410000001
+    },
+    "fresh_acp_disabled_ms": {
+      "min": 9.37191699999994,
+      "p50": 10.06045800000004,
+      "p95": 10.657624999999939,
+      "max": 11.264375000000086
+    },
+    "fresh_acp_child_ms": {
+      "min": 11.371375000000171,
+      "p50": 12.233375000000024,
+      "p95": 14.317417000000205,
+      "max": 14.390625
+    }
+  }
+}

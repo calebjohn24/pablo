@@ -6,6 +6,7 @@ use crate::{
     policy::{Policy, PolicySet},
 };
 use std::path::{Component, Path};
+mod child;
 
 /// Per-task content and standard protocol session inputs, outside portable config.
 pub struct RunInput {
@@ -17,6 +18,7 @@ pub struct RunInput {
 /// An immutable task projection. Preparation creates no runtime, trace file,
 /// credential handle or network client. Hosts complete scoped credential and
 /// exporter setup before passing this spec/catalog to the existing runtime.
+#[derive(Clone)]
 pub struct PreparedRun {
     pub(super) config_root: PathBuf,
     pub(super) path_bindings: BTreeMap<String, PathBuf>,
@@ -26,6 +28,7 @@ pub struct PreparedRun {
     trace_path: Option<PathBuf>,
     bindings_fingerprint: String,
     pub(super) mcp_selection: Option<Vec<String>>,
+    child_scope: Option<child::Scope>,
 }
 impl std::fmt::Debug for PreparedRun {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -35,15 +38,36 @@ impl std::fmt::Debug for PreparedRun {
     }
 }
 impl PreparedRun {
+    /// Authority only: deployment activation and joined root ownership are separate.
+    pub fn admits_subagent_tool(&self) -> bool {
+        !self.is_child()
+            && self.policy.decide("tools", "subagent", false).is_ok()
+            && self.deployment.config()["authority"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .all(|layer| {
+                    layer
+                        .get("tool_names")
+                        .and_then(Value::as_array)
+                        .is_none_or(|names| names.iter().any(|name| name == "subagent"))
+                })
+    }
+
+    /// True only for a scope derived through parent child admission.
+    pub fn is_child(&self) -> bool {
+        self.child_scope.is_some()
+    }
     pub fn has_skills(&self) -> bool {
-        self.deployment.options()["skills"]["activate"]
-            .as_array()
-            .is_some_and(|names| !names.is_empty())
+        !self.skill_names().is_empty()
     }
     pub fn needs_async_tools(&self) -> bool {
         self.has_mcp() || self.has_skills()
     }
     pub fn has_mcp(&self) -> bool {
+        if self.mcp_selection.as_ref().is_some_and(Vec::is_empty) {
+            return false;
+        }
         self.deployment.options()["mcp"]["servers"]
             .as_object()
             .is_some_and(|servers| !servers.is_empty())
@@ -58,6 +82,21 @@ impl PreparedRun {
         &mut self,
         requests: &[crate::mcp::ClientServer],
     ) -> Result<(), ConfigError> {
+        if self.child_scope.is_some() {
+            if requests.is_empty() {
+                return Ok(());
+            }
+            let selected = self.deployment.admit_mcp_client(requests)?;
+            if selected.iter().any(|id| {
+                self.mcp_selection
+                    .as_ref()
+                    .is_none_or(|inherited| !inherited.contains(id))
+            }) {
+                return Err(error("config_authority_violation", "/child/mcp_servers"));
+            }
+            self.mcp_selection = Some(selected);
+            return Ok(());
+        }
         self.mcp_selection = if requests.is_empty() {
             None
         } else {
@@ -129,18 +168,21 @@ impl PreparedRun {
             ));
         }
         let settings = self.deployment.mcp()?;
-        if settings
-            .servers
-            .iter()
-            .any(|(id, _)| settings.admit_server(id, &self.policy).is_ok())
-        {
+        if settings.servers.iter().any(|(id, _)| {
+            self.mcp_selection
+                .as_ref()
+                .is_none_or(|names| names.contains(id))
+                && settings.admit_server(id, &self.policy).is_ok()
+        }) {
             return Err(error("config_async_mcp_required", "/options/mcp"));
         }
-        self.builtin_tools()
+        let tools = self.builtin_tools()?;
+        self.check_child_tools(&tools)?;
+        Ok(tools)
     }
     pub(super) fn builtin_tools(&self) -> Result<ToolRegistry, ConfigError> {
         let options = self.deployment.options();
-        ToolRegistry::configured_with_policy_set(
+        let mut tools = ToolRegistry::configured_with_policy_set(
             options["shell"]["enabled"].as_bool().unwrap(),
             options["filesystem"]["enabled"].as_bool().unwrap(),
             options["filesystem"]["write"].as_bool().unwrap(),
@@ -151,7 +193,9 @@ impl PreparedRun {
             super::shell::settings(&options["shell"])?,
             super::shell::ceilings(self.deployment.config())?,
         )
-        .map_err(|_| error("config_invalid_value", "/options/shell"))
+        .map_err(|_| error("config_invalid_value", "/options/shell"))?;
+        self.restrict_tools(&mut tools);
+        Ok(tools)
     }
 }
 
@@ -409,6 +453,7 @@ impl ResolvedDeployment {
                 .map_err(|_| error("config_invalid_value", "/options/trace/max_bytes"))?;
         }
         Ok(PreparedRun {
+            child_scope: None,
             mcp_selection: None,
             config_root,
             path_bindings: roots,

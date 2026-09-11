@@ -1,13 +1,29 @@
 //! One notification in flight, acknowledged by the actual consumer.
 use super::*;
 
+// Cancellation still joins owned work. Only an outstanding consumer receipt gets
+// this shorter deadline, so slow cleanup is not mistaken for stalled delivery.
+pub(super) const CANCEL_ACK_TIMEOUT: Duration = Duration::from_millis(250);
+
 #[allow(dead_code)] // Consumed by the C3.21 internal host; enabled supervision follows at C3.22.
 pub(super) struct TypedUpdate {
     pub notification: wire::AgentNotification,
     pub consumed: tokio::sync::oneshot::Sender<()>,
 }
 
+/// Original runtime record, before ACP projection or text coalescing.
+/// Acknowledgement covers consumption by the root's bounded native stream.
+pub(super) struct NativeUpdate {
+    pub event: RunEvent,
+    pub consumed: tokio::sync::oneshot::Sender<()>,
+}
+
 pub(super) enum Delivery {
+    Native {
+        sender: async_channel::Sender<NativeUpdate>,
+        closed: CancellationToken,
+        execution_cancel: CancellationToken,
+    },
     Typed {
         sender: async_channel::Sender<TypedUpdate>,
         closed: CancellationToken,
@@ -18,8 +34,60 @@ pub(super) enum Delivery {
     },
 }
 impl Delivery {
+    pub(super) async fn forward_native(
+        &self,
+        events: async_channel::Receiver<RunEvent>,
+    ) -> Result<Option<RunEvent>, Error> {
+        let Self::Native {
+            sender,
+            closed,
+            execution_cancel,
+        } = self
+        else {
+            return Err(Error::internal_error());
+        };
+        let mut terminal = None;
+        loop {
+            let event = tokio::select! {
+                event = events.recv() => match event { Ok(event) => event, Err(_) => break },
+                _ = closed.cancelled() => return Err(Error::internal_error()),
+                _ = sender.closed() => return Err(Error::internal_error()),
+            };
+            if matches!(event.kind, EventKind::RunFinished { .. }) {
+                terminal = Some(event.clone());
+            }
+            let (consumed, receipt) = tokio::sync::oneshot::channel();
+            let delivery = tokio::time::timeout(WRITE_TIMEOUT, async {
+                sender
+                    .send(NativeUpdate { event, consumed })
+                    .await
+                    .map_err(|_| Error::internal_error())?;
+                receipt.await.map_err(|_| Error::internal_error())
+            });
+            let cancelled_delivery = async {
+                execution_cancel.cancelled().await;
+                tokio::time::sleep(CANCEL_ACK_TIMEOUT).await;
+            };
+            tokio::select! {
+                biased;
+                result = delivery => result.map_err(|_| Error::internal_error())??,
+                _ = cancelled_delivery => return Err(Error::internal_error()),
+                _ = closed.cancelled() => return Err(Error::internal_error()),
+                _ = sender.closed() => return Err(Error::internal_error()),
+            }
+            // The terminal acknowledgement is the last delivery obligation.
+            // PendingPrompt still awaits worker settlement and owned cleanup.
+            if terminal.is_some() {
+                return Ok(terminal);
+            }
+        }
+        Ok(terminal)
+    }
     pub(super) async fn send(&self, notification: wire::AgentNotification) -> Result<(), Error> {
         match self {
+            Self::Native { .. } => {
+                Err(Error::internal_error().data("native delivery requires original event"))
+            }
             Self::Typed { sender, closed } => {
                 let (consumed, receipt) = tokio::sync::oneshot::channel();
                 let delivery = tokio::time::timeout(WRITE_TIMEOUT, async {

@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T07:39:45.894Z",
+  "updated_at": "2026-09-11T13:23:07.752Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.22",
-  "next_action": "Merge C3.21 and prepare C3.22 one supervised local child. Implement root-owned atomic reservations, authority intersections and joined supervision before enabling spawn. Preserve typed ACP lifecycle, Skill/MCP ownership, compaction detail retention, GLM defaults and unlimited filesystem work. Retain C3.33 F03 investigation and C3.39 mixed performance observations.",
-  "latest_log_entry": "LOG-0105",
+  "next_checkpoint": "C3.23",
+  "next_action": "Merge the exact verified C3.22 PR head, synchronize main and confirm tree parity, then activate C3.23 for two concurrent depth-one children and A03 barriers/isolation/shared-budget races. C3.22 A02 now passes configured operations, root cancellation/deadline/completion, child MCP startup failure, trace failure before setup and exported native/ACP/OTel identity correlation. Preserve root-atomic capacity/accounting, FIFO queue ownership, original native records, root-only results, agent-scoped ACP tool IDs and joined cleanup. Keep GLM defaults, unlimited filesystem work and compaction-independent handles/results. Prior F03 remains C3.33; mixed timing/RSS/size remains C3.39.",
+  "latest_log_entry": "LOG-0125",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -537,9 +537,11 @@
       "depends_on": [
         "C3.21"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0125"
+      ]
     },
     {
       "id": "C3.23",

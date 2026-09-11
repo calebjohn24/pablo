@@ -7,7 +7,7 @@ install a model tool or advertise working delegation. C3.22 admits one active ch
 C3.23 admits two, and C3.24 adds validated handoffs. Persistent agents, descendants,
 external ACP processes, automatic retry, graph scheduling and A2A are outside this
 slice. `options.children.enabled` must be explicit before any child can execute;
-absence means disabled. Unsupported enabling configuration must fail before work.
+absence means disabled. The c3.22 deployment schema admits this boolean for CLI and ACP roots. Prepared children cannot install another supervisor. A root claims one native consumer before execution, reserves MCP capacity before setup, and joins its supervisor and consumer before returning to the host. CLI machine output uses only the root terminal; child text is attributed on stderr. ACP tree notifications target the root session and preserve native child identity in correlation metadata. Projected tree tool-call IDs use an agent-ID prefix to distinguish equal provider IDs; native records keep the original IDs.
 
 One root owns temporary depth-one local ACP children. They use the existing runtime,
 provider fallback, tools, accounting and cancellation path. In-memory dispatch passes
@@ -95,6 +95,37 @@ and attested token/cost upper bounds cannot be independent reads of remaining
 allowance. A multi-resource admission succeeds wholly or changes nothing. Never
 hold its lock during provider, process, filesystem, event sink or ACP work.
 
+Native event counts reserve the root terminal when its ledger is created. Each
+executed agent claims a terminal slot before its run span; model/tool/compaction
+operations reserve start and finish together before opening. Already reserved
+closings remain deliverable after admission closes. Failed delivery attempts stay
+spent; only unused reservation slots are released. Root multiplex delivery order
+is separate from this capacity counter.
+
+Traced trees install immutable root capture/byte policy before execution or child
+registration. Full or redacted JSONL is counted through the writer's borrowed
+projection outside the lock, then event count and byte use are admitted atomically.
+Untraced trees skip serialization and byte admission. Root terminal bytes are
+prepaid at configuration; executed children reserve their own terminal allowance
+before their run span. Settlement replaces that allowance with actual projected
+bytes, including after admission closes. Unused terminal allowances are released;
+consumed bytes remain spent after failed delivery. Operation payloads still must
+fit ordinary trace space. One tree writer remains open through child terminals
+and closes on the native root terminal. Claim the sole root consumer before any
+execution or child registration. It adds optional `root_seq` without changing
+per-agent `seq`; admission reserves the field's maximum encoded width, so charged
+trace bytes conservatively bound the actual writer bytes. Delivery does not charge
+an event twice. The shared sink verifies the source against a bound execution and
+serializes root/child projections outside the admission mutex.
+
+Retained model context uses the existing encoded instructions/history/tool catalog
+measure, including opaque continuation bytes. Roots reserve retained context and
+stream growth atomically; children meter growth within their full admitted context
+reservation. Tool output must fit before becoming retained history. Compaction
+covers its request while retaining prior history, then reduces the reservation
+after accepted replacement. Advisory remaining capacity can guide compaction;
+it never substitutes for atomic admission.
+
 Reserve before external delivery or process start. Settle each reservation once
 against actual usage; release unused capacity only after owned work joins. Call
 counts remain spent for admitted attempts, including fallback and compaction.
@@ -147,9 +178,32 @@ as a successful result automatically.
 Native events carry immutable agent/root/parent IDs plus the source ACP session.
 Each child run span is causally parented by its spawn operation, with stable links
 for explicit handoffs; model/tool spans remain children of the executing agent's
-run. Root multiplexing assigns one monotonic delivery sequence while preserving
-per-agent sequence and original span/timestamps. Filtering is a projection, not a
+run. Root multiplexing assigns one monotonic `root_seq` delivery sequence while preserving
+per-agent `seq` and original span/timestamps. ACP correlation exposes `root_seq` for
+the final native event in a coalesced projection, retaining per-agent sequence ranges. Filtering is a projection, not a
 second lifecycle. Task/context/resource content stays absent from OTel.
+
+Scoped native records and ACP correlation metadata expose an `agent` object:
+`agent_id`, `root_run_id`, `root_session_id`, nullable `parent_agent_id`, `kind`,
+`depth` and executing `session_id`. The root ledger binds a registered agent once
+before its run span starts. Incoming trace metadata and decoded event projections
+cannot register or reparent agents. Unscoped runs omit the object. Metadata-only
+JSONL retains it. Span-start attributes use `pablo.agent.id`, `pablo.root.run.id`,
+`pablo.root.session.id`, `pablo.agent.session.id`, `pablo.agent.kind`,
+`pablo.agent.depth` and, for children, `pablo.parent.agent.id`.
+
+The supervisor selects original native output from the same typed ACP dispatch
+handlers and runtime worker, before wire projection or text coalescing. Every
+native lifecycle record and delta reaches the bounded root update stream; the
+consumer owns its acknowledgement. Losing the receiver wakes forwarding even
+while idle or holding an unacknowledged event. Acknowledging the terminal finishes
+delivery, while the dispatcher still awaits worker settlement and owned cleanup.
+Cancellation signals owned work while keeping native forwarding open for closing
+records. The manager closes root updates after active execution settles. An
+outstanding native delivery/acknowledgement has a 250 ms window once cancellation
+is observed, allowing stalled consumers to release producers promptly. This timer
+applies to delivery, not waiting for cleanup to produce its next event. Lost
+receivers close transport immediately; all paths still join owned work.
 
 Typed dispatch must retain one-prompt sessions, setup errors, update ordering,
 request cancellation, safe fallback and exactly one terminal response after joined

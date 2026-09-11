@@ -10,6 +10,7 @@ use std::{
 
 pub const HELP: &str = "\nOffline deployment inspection:\n  pablo config validate|explain|render --config PATH [--profile NAME]\n    [--config-root PATH] [--bind NAME=PATH ...] [--locked]\n    [--user-config PATH] [--workspace-config PATH]\nPaths are anchored at invocation; config-root defaults to the entry directory.\nBind workspace explicitly, for example --bind workspace=./project.\nInspection reads only config files and declared non-secret environment values.\n";
 
+#[derive(Clone)]
 pub struct Bootstrap {
     invocation: PathBuf,
     pub fixture_endpoint: Option<String>,
@@ -34,7 +35,7 @@ pub struct Secrets {
 }
 impl Secrets {
     pub fn read(prepared: &deployment::PreparedRun, bootstrap: &Bootstrap) -> Result<Self, String> {
-        let route = prepared.deployment().model_route().cloned();
+        let route = prepared.model_route().cloned();
         let profiles = if let Some(route) = &route {
             route
                 .entries()
@@ -42,12 +43,7 @@ impl Secrets {
                 .map(|entry| entry.profile().clone())
                 .collect()
         } else {
-            vec![
-                prepared
-                    .deployment()
-                    .model_profile()
-                    .map_err(|e| e.to_string())?,
-            ]
+            vec![prepared.model_profile().map_err(|e| e.to_string())?]
         };
         let mut providers = Vec::new();
         for (index, profile) in profiles.into_iter().enumerate() {
