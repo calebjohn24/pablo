@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T13:42:03.481Z",
+  "updated_at": "2026-09-11T13:43:49.745Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.24",
-  "next_action": "Merge the exact verified C3.23 PR head, synchronize main and confirm tree parity, then activate C3.24 validated child handoffs. A03 now proves two overlapping child model operations, wait-any/all, independent stop/failure, queued promotion/cancellation, full-capacity root cleanup and root/two-child accounting/resource/trace races. Preserve original native identity, per-agent/root accounting, narrowed authority, joined cleanup and compaction-independent handles/results. Keep GLM defaults and unlimited filesystem work. F03 recurred in the initial full run and remains C3.33 despite final passing tests; mixed performance/RSS remains C3.39.",
-  "latest_log_entry": "LOG-0128",
+  "next_action": "Activate C3.24 on merged 44bd3b4: pass bounded schema-valid completed-child results or workspace-relative artifact references into a later child, prove fan-out and explicit parent fan-in without copying transcripts, reject invalid/oversized/stale/unauthorized references before downstream work, and preserve source/result IDs, validation/accounting and trace links. Use existing filesystem paths/revisions; add no artifact store, persistence, scheduler or retry. Preserve two-child owned concurrency, atomic root budgets, narrowed authority, joined cleanup and GLM/compaction/filesystem defaults. Continue performance checks and PR merges; F03 remains C3.33 and mixed measurements remain C3.39.",
+  "latest_log_entry": "LOG-0129",
   "checkpoints": [
     {
       "id": "C1.0",
