@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T14:26:34.925Z",
+  "updated_at": "2026-09-11T14:29:18.102Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.26",
-  "next_action": "Merge exact verified C3.25 head, synchronize main and confirm tree parity. Prepare C3.26: pin A2A 1.0 and one JSON-RPC-over-HTTP/SSE binding, resolve allowlisted Agent Cards as untrusted remote proxy descriptions and reject invalid/unsupported/redirected authority before task submission. Preserve local child/MCP/Skill/compaction defaults and proofs; F03 remains C3.33 and four-target native/release acceptance remains pending.",
-  "latest_log_entry": "LOG-0134",
+  "next_action": "Activate C3.26 on merged c5ed34b. Pin A2A 1.0 and one JSON-RPC-over-HTTP/SSE binding using authoritative protocol/reference-server sources. Resolve explicitly allowlisted cards as untrusted remote_a2a proxy descriptions with distinct local/remote context/task/card/protocol identities; freeze bounded message/task/artifact/cancel/error/trace-extension mappings and reject unsupported required versions/bindings/extensions before submission. Keep credentials, endpoints and delegated inputs host-controlled, without metadata-driven authority, redirects, listeners or broad discovery. Continue performance and PR merges; preserve E01, GLM defaults, compaction, unlimited filesystem work and remaining release gates.",
+  "latest_log_entry": "LOG-0135",
   "checkpoints": [
     {
       "id": "C1.0",
