@@ -44,6 +44,7 @@ struct State {
     initialized: bool,
     extensions: Extensions,
     session: Option<(wire::SessionId, std::path::PathBuf)>,
+    mcp: Vec<pablo_core::mcp::ClientServer>,
     prompted: bool,
     prompt_active: bool,
     worker: Option<Worker>,
@@ -108,15 +109,12 @@ async fn serve_streams(
     input: impl futures::AsyncRead + Unpin + Send + 'static,
     output: impl futures::AsyncWrite + Unpin + Send + 'static,
 ) -> Result<ExitCode, String> {
-    // M01 can inspect host definitions and reject session requests before either
-    // transport exists. Do not resolve provider credentials for an unusable MCP run.
-    let configured = options.configured()?;
-    let pending_mcp = configured.as_ref().is_some_and(|deployment| {
+    // MCP diagnostics/session selection stay offline; resolve its credentials per task.
+    if let Some(configured) = options.configured()?.filter(|deployment| {
         deployment.options()["mcp"]["servers"]
             .as_object()
-            .is_some_and(|servers| !servers.is_empty())
-    });
-    if !pending_mcp && let Some(configured) = configured {
+            .is_some_and(|servers| servers.is_empty())
+    }) {
         let prepared = configured
             .prepare_run(pablo_core::deployment::RunInput {
                 input: String::new(),
@@ -127,9 +125,9 @@ async fn serve_streams(
         let secrets =
             crate::deployment::Secrets::read(&prepared, options.deployment.as_ref().unwrap())?;
         let provider = secrets.provider(options.deployment.as_ref().unwrap())?;
-        let tools = prepared.tools().map_err(|e| e.to_string())?;
-        pablo_core::runtime::validate_run(prepared.spec(), provider.as_ref(), &tools)
-            .map_err(|_| "config_invalid_value at /run")?;
+        prepared
+            .preflight(provider.as_ref())
+            .map_err(|error| error.to_string())?;
         crate::otel::Telemetry::check_configured(&prepared, secrets.headers.as_ref())?;
     }
     let state = Arc::new(Mutex::new(State::default()));
@@ -271,7 +269,9 @@ async fn serve_streams(
                     capabilities.insert("pablo/compaction-v1".into(), json!(true));
                     capabilities.insert("pablo/output-v1".into(), json!(true));
                     capabilities.insert("pablo/output-repair-v1".into(), json!(true));
-                    let caps = wire::AgentCapabilities::new().meta(capabilities);
+                    let caps = wire::AgentCapabilities::new()
+                        .meta(capabilities)
+                        .mcp_capabilities(wire::McpCapabilities::new().http(true));
                     responder.respond(
                         wire::InitializeResponse::new(
                             agent_client_protocol::schema::ProtocolVersion::V1,
@@ -302,17 +302,24 @@ async fn serve_streams(
                             "finish the current session before creating another",
                         ));
                     }
-                    if !request.mcp_servers.is_empty() {
-                        let admitted = normalize_mcp(&request.mcp_servers).and_then(|servers| {
-                            let host = options.configured().map_err(|_| "MCP host configuration invalid")?
-                                .ok_or("MCP server is not host-configured; unsupported")?;
-                            host.admit_mcp_client(&servers)
-                                .map_err(|_| "MCP server configuration denied by host")
-                        });
-                        return responder.respond_with_error(invalid(match admitted {
-                            Ok(_) => "MCP transport unsupported in ACP until C3.18 host integration passes",
-                            Err(message) => message,
-                        }));
+                    let mcp = match normalize_mcp(&request.mcp_servers) {
+                        Ok(mcp) => mcp,
+                        Err(message) => return responder.respond_with_error(invalid(message)),
+                    };
+                    if !mcp.is_empty() {
+                        let admitted = options
+                            .configured()
+                            .map_err(|_| "MCP host configuration invalid")
+                            .and_then(|host| {
+                                host.ok_or("MCP server is not host-configured; unsupported")
+                            })
+                            .and_then(|host| {
+                                host.admit_mcp_client(&mcp)
+                                    .map_err(|_| "MCP server configuration denied by host")
+                            });
+                        if let Err(message) = admitted {
+                            return responder.respond_with_error(invalid(message));
+                        }
                     }
                     if !request.cwd.is_absolute() {
                         return responder.respond_with_error(invalid("cwd must be absolute"));
@@ -332,6 +339,7 @@ async fn serve_streams(
                     ) {
                         return responder.respond_with_error(Error::invalid_params().data(message));
                     }
+                    state.mcp = mcp;
                     state.session = Some((id.clone(), cwd));
                     state.prompted = false;
                     responder.respond(wire::NewSessionResponse::new(id))
@@ -373,7 +381,7 @@ async fn serve_streams(
                         Ok(input) => input,
                         Err(error) => return responder.respond_with_error(error),
                     };
-                    let (cwd, extensions) = {
+                    let (cwd, extensions, mcp) = {
                         let mut s = state.lock().unwrap();
                         let Some((id, cwd)) = &s.session else {
                             return responder.respond_with_error(invalid("create a session first"));
@@ -388,9 +396,9 @@ async fn serve_streams(
                         }
                         let cwd = cwd.clone();
                         s.prompted = true;
-                        (cwd, s.extensions)
+                        (cwd, s.extensions, s.mcp.clone())
                     };
-                    let prepared = match options.prepare_run(
+                    let mut prepared = match options.prepare_run(
                         Some(input.clone()),
                         Some(cwd.clone()),
                         Some(request.session_id.to_string()),
@@ -401,6 +409,12 @@ async fn serve_streams(
                                 .respond_with_error(Error::invalid_params().data(message));
                         }
                     };
+                    if let Some(prepared) = &mut prepared
+                        && let Err(error) = prepared.select_mcp_client(&mcp)
+                    {
+                        return responder
+                            .respond_with_error(Error::invalid_params().data(error.to_string()));
+                    }
                     let mut spec = match prepared
                         .as_ref()
                         .map(|p| Ok(p.spec().clone()))

@@ -39,5 +39,8 @@ for line in sys.stdin:
         result={'content':[{'type':'text','text':'synthetic result'}],'structuredContent':{'text':42 if mode=='invalid_result' else 'synthetic result'},'isError':mode=='tool_error'}
         if mode=='tool_error':result.pop('structuredContent')
         if mode=='unsupported':result['content']=[{'type':'image','data':'AA==','mimeType':'image/png'}]
+        if mode=='large_result':
+            result['content'][0]['text']='x'*300000
+            result['structuredContent']['text']='x'*300000
     else:raise AssertionError(method)
     emit({'jsonrpc':'2.0','id':request_id,'result':result})

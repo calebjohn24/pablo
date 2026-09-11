@@ -140,13 +140,21 @@ fn run(options: Arc<Options>, tasks: async_channel::Receiver<Task>) -> Result<()
                         });
                     if !reuse {
                         let provider = secrets.provider(bootstrap)?;
-                        let tools = prepared.tools().map_err(|e| e.to_string())?;
-                        pablo_core::runtime::validate_run(
-                            prepared.spec(),
-                            provider.as_ref(),
-                            &tools,
-                        )
-                        .map_err(|_| "config_invalid_value at /run")?;
+                        let tools = if prepared.has_mcp() {
+                            prepared
+                                .preflight(provider.as_ref())
+                                .map_err(|error| error.to_string())?;
+                            ToolRegistry::default()
+                        } else {
+                            let tools = prepared.tools().map_err(|error| error.to_string())?;
+                            pablo_core::runtime::validate_run(
+                                prepared.spec(),
+                                provider.as_ref(),
+                                &tools,
+                            )
+                            .map_err(|_| "config_invalid_value at /run")?;
+                            tools
+                        };
                         crate::otel::Telemetry::check_configured(
                             prepared,
                             secrets.headers.as_ref(),
@@ -167,12 +175,18 @@ fn run(options: Arc<Options>, tasks: async_channel::Receiver<Task>) -> Result<()
                             )),
                         });
                     }
-                    pablo_core::runtime::validate_run(
-                        prepared.spec(),
-                        resources.as_ref().unwrap().provider.as_ref(),
-                        &resources.as_ref().unwrap().tools,
-                    )
-                    .map_err(|_| "config_invalid_value at /run")?;
+                    if prepared.has_mcp() {
+                        prepared
+                            .preflight(resources.as_ref().unwrap().provider.as_ref())
+                            .map_err(|error| error.to_string())?;
+                    } else {
+                        pablo_core::runtime::validate_run(
+                            prepared.spec(),
+                            resources.as_ref().unwrap().provider.as_ref(),
+                            &resources.as_ref().unwrap().tools,
+                        )
+                        .map_err(|_| "config_invalid_value at /run")?;
+                    }
                 } else if resources.is_none() {
                     resources = Some(Resources::new(&options)?);
                 }
@@ -253,11 +267,30 @@ async fn execute(
             .map_err(|_| io::Error::other("ACP consumer closed"))?;
         Ok(())
     };
+    let task_tools =
+        if let Some(prepared) = task.prepared.as_ref().filter(|prepared| prepared.has_mcp()) {
+            let deadline = tokio::time::Instant::now()
+                .checked_add(std::time::Duration::from_millis(
+                    spec.limits.max_run_duration_ms,
+                ))
+                .ok_or("invalid run duration")?;
+            Some(
+                options
+                    .deployment
+                    .as_ref()
+                    .unwrap()
+                    .tools(prepared, deadline, &task.cancel)
+                    .await
+                    .map_err(|error| error.to_string())?,
+            )
+        } else {
+            None
+        };
     match runtime
         .run_with_tools(
             spec,
             resources.provider.as_ref(),
-            &resources.tools,
+            task_tools.as_ref().unwrap_or(&resources.tools),
             &task.cancel,
             &mut sink,
         )

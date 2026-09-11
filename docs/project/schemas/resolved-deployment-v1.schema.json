@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:pablo:resolved-deployment:1:c3.17",
-  "title": "Pablo resolved deployment v1 \u2014 C3.17 contract",
+  "$id": "urn:pablo:resolved-deployment:1:c3.18",
+  "title": "Pablo resolved deployment v1 \u2014 C3.18 contract",
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -10,10 +10,10 @@
       "type": "integer"
     },
     "contract_revision": {
-      "const": "c3.17"
+      "const": "c3.18"
     },
     "config": {
-      "$ref": "urn:pablo:deployment:1:c3.17#/$defs/resolvedConfig"
+      "$ref": "urn:pablo:deployment:1:c3.18#/$defs/resolvedConfig"
     },
     "fingerprint": {
       "type": "string",

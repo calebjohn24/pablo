@@ -130,6 +130,10 @@ Configured OTel never consults ambient SDK resource, sampling, span-limit, batch
 
 The host-only `--fixture-endpoint http://127.0.0.1:PORT/...` option selects the existing synthetic adapter for offline acceptance. It is not a portable deployment field and never reads or forwards the configured provider credential. Configured invocation ignores ambient `PABLO_FIXTURE_ENDPOINT`. Ordinary providers remain restricted to their admitted credential destination.
 
+For MCP host acceptance, repeatable `--fixture-mcp-endpoint SERVER=http://127.0.0.1:PORT/...` overrides an existing configured HTTP server's endpoint. This host-only option requires both `--config` and `--fixture-endpoint`; only literal IPv4/IPv6 loopback HTTP without user information, query or fragment is accepted. It cannot add servers, select stdio servers or widen policy. MCP credentials remain scoped to the selected server and actual endpoint. Ordinary deployment HTTP endpoints require HTTPS.
+
+CLI and ACP start a fresh MCP catalog for each admitted task and join owned connections before task completion. ACP session creation validates exact host definitions without launching servers: an empty client list uses host defaults, while a nonempty list selects an exact subset. Prompt admission revalidates that selection against current host configuration. Reusing the ACP process does not reuse MCP catalogs, sessions or credentials. Active-call cancellation yields the native cancelled outcome; cancellation during catalog startup remains a pre-run startup error. HTTP cancellation/disconnect reports remote completion uncertainty and never replays the invocation.
+
 ## Evolution and migration
 
 Schema version 1 has no implicit migration. Missing, zero, future or string versions reject with `config_schema_version` before profile/import evaluation. The C3.0 proposed example and brief section 20.2 were never supported inputs; translate them explicitly into this envelope instead of accepting undocumented aliases. The G01 corpus includes that rejection and a v1 replacement. No `config migrate` command is selected.

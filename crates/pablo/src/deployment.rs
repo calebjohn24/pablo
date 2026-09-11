@@ -13,6 +13,7 @@ pub const HELP: &str = "\nOffline deployment inspection:\n  pablo config validat
 pub struct Bootstrap {
     invocation: PathBuf,
     pub fixture_endpoint: Option<String>,
+    fixture_mcp_endpoints: BTreeMap<String, String>,
     entry: PathBuf,
     root: PathBuf,
     profile: Option<String>,
@@ -167,6 +168,23 @@ fn absolute(cwd: &Path, path: &Path) -> Result<PathBuf, String> {
 }
 
 impl Bootstrap {
+    pub async fn tools(
+        &self,
+        prepared: &deployment::PreparedRun,
+        deadline: tokio::time::Instant,
+        cancellation: &pablo_core::CancellationToken,
+    ) -> Result<pablo_core::ToolRegistry, String> {
+        prepared
+            .tools_with_mcp_fixture(
+                &deployment::ProcessCredentials,
+                deadline,
+                cancellation,
+                &self.fixture_mcp_endpoints,
+            )
+            .await
+            .map_err(|error| error.to_string())
+    }
+
     /// Remove host bootstrap flags, leaving ordinary task flags untouched.
     pub fn extract(arguments: &mut Vec<OsString>) -> Result<Option<Self>, String> {
         if !arguments.iter().take_while(|arg| *arg != "--").any(|arg| {
@@ -181,6 +199,7 @@ impl Bootstrap {
                         | "--user-config"
                         | "--workspace-config"
                         | "--fixture-endpoint"
+                        | "--fixture-mcp-endpoint"
                 )
             )
         }) {
@@ -195,6 +214,7 @@ impl Bootstrap {
         let mut workspace = None;
         let mut locked = false;
         let mut fixture_endpoint = None;
+        let mut fixture_mcp_endpoints = BTreeMap::new();
         let mut seen = HashSet::new();
         let mut rest = Vec::new();
         let mut args = std::mem::take(arguments).into_iter();
@@ -215,11 +235,13 @@ impl Bootstrap {
                     | "--workspace-config"
                     | "--locked"
                     | "--fixture-endpoint"
+                    | "--fixture-mcp-endpoint"
             ) {
                 rest.push(argument);
                 continue;
             }
-            if name != "--bind" && !seen.insert(name.to_owned()) {
+            if !matches!(name, "--bind" | "--fixture-mcp-endpoint") && !seen.insert(name.to_owned())
+            {
                 return Err(invalid());
             }
             if name == "--locked" {
@@ -236,6 +258,18 @@ impl Bootstrap {
                 "--config-root" => root = Some(absolute(&cwd, Path::new(value))?),
                 "--profile" => profile = Some(value.to_owned()),
                 "--fixture-endpoint" => fixture_endpoint = Some(value.to_owned()),
+                "--fixture-mcp-endpoint" => {
+                    let (id, endpoint) = value.split_once('=').ok_or_else(invalid)?;
+                    if id.is_empty()
+                        || endpoint.is_empty()
+                        || fixture_mcp_endpoints.len() >= 16
+                        || fixture_mcp_endpoints
+                            .insert(id.to_owned(), endpoint.to_owned())
+                            .is_some()
+                    {
+                        return Err(invalid());
+                    }
+                }
                 "--user-config" => user = Some(absolute(&cwd, Path::new(value))?),
                 "--workspace-config" => workspace = Some(absolute(&cwd, Path::new(value))?),
                 "--bind" => {
@@ -254,16 +288,20 @@ impl Bootstrap {
         }
         *arguments = rest;
         let Some(entry) = entry else {
-            return if seen.is_empty() && bindings.is_empty() {
+            return if seen.is_empty() && bindings.is_empty() && fixture_mcp_endpoints.is_empty() {
                 Ok(None)
             } else {
                 Err(invalid())
             };
         };
+        if !fixture_mcp_endpoints.is_empty() && fixture_endpoint.is_none() {
+            return Err(invalid());
+        }
         let root = root.unwrap_or_else(|| entry.parent().unwrap().to_path_buf());
         Ok(Some(Self {
             invocation: cwd,
             fixture_endpoint,
+            fixture_mcp_endpoints,
             entry,
             root,
             profile,
@@ -294,10 +332,16 @@ impl Bootstrap {
                 environment.insert(name.to_owned(), value);
             }
         }
-        loaded
+        let resolved = loaded
             .with_environment(environment)
             .and_then(|loaded| loaded.resolve())
-            .map_err(|e| e.to_string())
+            .map_err(|e| e.to_string())?;
+        if !self.fixture_mcp_endpoints.is_empty() {
+            resolved
+                .validate_mcp_fixture_endpoints(&self.fixture_mcp_endpoints)
+                .map_err(|e| e.to_string())?;
+        }
+        Ok(resolved)
     }
 
     pub fn path_reference(&self, path: &Path) -> Result<serde_json::Value, String> {

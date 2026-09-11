@@ -31,7 +31,9 @@ mod mcp_tests {
             })
             .unwrap();
         let server = &prepared.deployment().mcp().unwrap().servers["remote"];
-        let headers = prepared.mcp_headers("remote", server, &Inputs).unwrap();
+        let headers = prepared
+            .mcp_headers("remote", server, "https://synthetic.example/mcp", &Inputs)
+            .unwrap();
         assert!(headers["x-fixture-token"].is_sensitive());
         let destination = serde_json::json!(["remote", server, "x-fixture-token"]).to_string();
         let credential = prepared
@@ -225,6 +227,7 @@ impl PreparedRun {
         &self,
         id: &str,
         server: &crate::mcp::Server,
+        endpoint: &str,
         inputs: &dyn CredentialInputs,
     ) -> Result<reqwest::header::HeaderMap, ConfigError> {
         let crate::mcp::Server::Http { headers, .. } = server else {
@@ -233,7 +236,7 @@ impl PreparedRun {
         let mut values = reqwest::header::HeaderMap::new();
         let mut bytes = 0usize;
         for (binding, reference) in headers {
-            let destination = serde_json::json!([id, server, binding]).to_string();
+            let destination = serde_json::json!([id, server, binding, endpoint]).to_string();
             let credential = self
                 .resolve_credential(
                     CredentialConsumer::McpHeaders,

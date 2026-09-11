@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T05:49:13.296Z",
+  "updated_at": "2026-09-11T06:27:18.779Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.18",
-  "next_action": "Merge C3.17 and activate C3.18 CLI/ACP MCP host integration and Collector/failure proof. Preserve bounded exact admission, credentials, normalized tools, cancellation and remote uncertainty. Retain the recurring F03 notification-order investigation at C3.33 and all performance follow-ups at C3.39. Keep compaction/repair/GLM defaults and unlimited filesystem work.",
-  "latest_log_entry": "LOG-0096",
+  "next_checkpoint": "C3.19",
+  "next_action": "Merge verified C3.18; then activate C3.19 local Skill discovery.",
+  "latest_log_entry": "LOG-0098",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -485,9 +485,11 @@
       "depends_on": [
         "C3.17"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0098"
+      ]
     },
     {
       "id": "C3.19",
