@@ -363,6 +363,7 @@ mod unix {
         }
         fit_result(
             ToolResult {
+                subagent: None,
                 status,
                 policy_rule: None,
                 shell: Some(capture.finish(exit)),

@@ -3,7 +3,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 struct Fixture {
     cwd: std::path::PathBuf,
-    supervisor: Supervisor,
+    supervisor: Arc<Supervisor>,
     updates: async_channel::Receiver<Update>,
     root_cancel: CancellationToken,
     ledger: RootLedger,
@@ -13,6 +13,9 @@ impl Fixture {
         Self::with_duration(endpoint, 900_000)
     }
     fn with_duration(endpoint: &str, duration: u64) -> Self {
+        Self::with_settings(endpoint, duration, "")
+    }
+    fn with_settings(endpoint: &str, duration: u64, extra: &str) -> Self {
         let cwd = std::env::temp_dir().join(format!("pablo-supervisor-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir(&cwd).unwrap();
         let cwd = cwd.canonicalize().unwrap();
@@ -26,7 +29,7 @@ impl Fixture {
             .replace(
                 "max_tool_calls=1",
                 &format!("max_tool_calls=1\nmax_run_duration_ms={duration}"),
-            ),
+            ) + extra,
         )
         .unwrap();
         let options = Options::parse(
@@ -52,14 +55,14 @@ impl Fixture {
             .unwrap()
             .unwrap();
         let tools = Arc::new(parent.tools().unwrap());
-        let root = AgentRef::root("root-run".into(), "root-session".into());
+        let root = AgentRef::root(uuid::Uuid::new_v4().to_string(), "root-session".into());
         let ledger = RootLedger::new(&root, parent.spec().limits.clone()).unwrap();
         let root_cancel = CancellationToken::new();
         let (supervisor, updates) =
             Supervisor::new(options, root, ledger.clone(), &root_cancel, parent, tools).unwrap();
         Self {
             cwd,
-            supervisor,
+            supervisor: Arc::new(supervisor),
             updates,
             root_cancel,
             ledger,
@@ -416,3 +419,5 @@ async fn root_deadline_settles_active_and_queued_children_without_resetting_the_
     .await
     .unwrap();
 }
+
+mod root_owner;

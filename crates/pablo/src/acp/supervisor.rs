@@ -30,7 +30,9 @@ pub(super) struct Trace {
     pub run_id: String,
     pub trace_id: String,
     pub span_id: String,
+    pub parent_span_id: Option<String>,
 }
+#[derive(serde::Serialize)]
 pub(super) struct WaitResult {
     pub settled: Vec<Snapshot>,
     pub remaining: Vec<AgentRef>,
@@ -59,6 +61,8 @@ struct Registry {
     closed: bool,
 }
 struct Inner {
+    root_claimed: std::sync::atomic::AtomicBool,
+    root_cancel: CancellationToken,
     root: AgentRef,
     parent: PreparedRun,
     parent_tools: Arc<pablo_core::tool::ToolRegistry>,
@@ -97,6 +101,8 @@ impl Supervisor {
         }
         let (updates, receiver) = async_channel::bounded(QUEUE_EVENTS);
         let inner = Arc::new(Inner {
+            root_claimed: std::sync::atomic::AtomicBool::new(false),
+            root_cancel: root_cancel.clone(),
             root,
             parent,
             parent_tools,
@@ -286,9 +292,7 @@ impl Supervisor {
         }
     }
     pub async fn close(&self) -> Result<(), &'static str> {
-        self.inner.registry.lock().unwrap().closed = true;
-        self.inner.cancel.cancel();
-        self.inner.updates.close();
+        pablo_core::children::owner::RootOwner::cancel(self);
         let mut join = self.join.lock().await;
         if let Some(result) = join.result {
             return result;
@@ -336,6 +340,7 @@ impl Inner {
                 run_id: event.run_id,
                 trace_id: event.trace_id,
                 span_id: event.span_id,
+                parent_span_id: event.parent_span_id,
             });
             snapshot.validation = event.output_validation;
             snapshot.repair = event.output_repair;
@@ -537,3 +542,5 @@ fn admission_failed() -> RunOutcome {
 
 #[cfg(test)]
 mod tests;
+
+mod tool;

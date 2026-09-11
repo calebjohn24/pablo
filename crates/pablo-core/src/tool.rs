@@ -48,6 +48,9 @@ pub struct ShellResult {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ToolResult {
+    /// Serialized projection of runtime-owned child handles; never admission input.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subagent: Option<Box<Value>>,
     pub status: ToolStatus,
     pub policy_rule: Option<PolicyRule>,
     pub shell: Option<ShellResult>,
@@ -66,6 +69,7 @@ pub struct ToolResult {
 impl ToolResult {
     pub fn status(status: ToolStatus) -> Self {
         Self {
+            subagent: None,
             status,
             policy_rule: None,
             shell: None,
@@ -79,6 +83,7 @@ impl ToolResult {
     }
     pub fn denied(rule: PolicyRule) -> Self {
         Self {
+            subagent: None,
             status: ToolStatus::PolicyDenied,
             policy_rule: Some(rule),
             shell: None,

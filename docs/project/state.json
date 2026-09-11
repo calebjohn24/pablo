@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T09:51:01.531Z",
+  "updated_at": "2026-09-11T10:26:05.384Z",
   "active_checkpoint": "C3.22",
   "next_checkpoint": null,
-  "next_action": "Continue C3.22 by installing the policy-checked/accounted subagent tool and equivalent host operations around the internal ACP supervisor. Integrate ownership into the root runtime and await close before every root terminal, including normal completion; close ledger admission on root cancellation and roll up child accounting once. Add native/ACP/OTel immutable agent attribution and root multiplex sequence, shared process/MCP permits, root resident-context accounting and atomic cumulative event/trace reservations with terminal space. Preserve FIFO lease promotion, independent child cancellation, native deadline outcomes and handles/results outside compaction. Keep one active child and delegation disabled until A02 and integrated-child performance pass; then review and merge. C3.23 is next only after C3.22 completes; preserve GLM defaults, unlimited filesystem work and C3.33/C3.39 follow-ups.",
-  "latest_log_entry": "LOG-0112",
+  "next_action": "Continue C3.22 by completing shared process/MCP permits, root resident-context accounting and atomic cumulative event/trace reservations with terminal space. Add immutable agent/root/parent fields across native/ACP/OTel records and a single root multiplex sequence; the child trace now proves actual spawn-span parenting but full attribution is still pending. Then wire RootOwner and its bounded update consumer into configured CLI/ACP factories and enable deployment children only after admission is complete. Preserve the ordinary subagent policy/accounting path, prepared parent tool-name ceilings, root terminal join/aggregate accounting, one active FIFO child, and handles/results outside compaction. Run A02 and deployment-enabled integrated-child performance before checkpoint completion and PR merge. C3.23 follows C3.22; preserve GLM defaults, unlimited filesystem work and C3.33/C3.39 follow-ups.",
+  "latest_log_entry": "LOG-0113",
   "checkpoints": [
     {
       "id": "C1.0",

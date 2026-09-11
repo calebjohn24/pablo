@@ -38,6 +38,22 @@ impl std::fmt::Debug for PreparedRun {
     }
 }
 impl PreparedRun {
+    /// Authority only: deployment activation and joined root ownership are separate.
+    pub fn admits_subagent_tool(&self) -> bool {
+        !self.is_child()
+            && self.policy.decide("tools", "subagent", false).is_ok()
+            && self.deployment.config()["authority"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .all(|layer| {
+                    layer
+                        .get("tool_names")
+                        .and_then(Value::as_array)
+                        .is_none_or(|names| names.iter().any(|name| name == "subagent"))
+                })
+    }
+
     /// True only for a scope derived through parent child admission.
     pub fn is_child(&self) -> bool {
         self.child_scope.is_some()

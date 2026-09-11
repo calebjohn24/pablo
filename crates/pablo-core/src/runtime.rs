@@ -53,6 +53,7 @@ struct AccountingScope {
     agent_id: String,
 }
 pub struct Runtime<T> {
+    root_owner: Option<std::sync::Arc<dyn crate::children::owner::RootOwner>>,
     accounting_scope: Option<AccountingScope>,
     deployment: Option<crate::deployment::DeploymentIdentity>,
     tracer: T,
@@ -60,6 +61,8 @@ pub struct Runtime<T> {
 }
 
 struct Execution<'a> {
+    child_tool: Option<&'a dyn crate::Tool>,
+    child_catalog: Option<Vec<crate::tool::ToolDescriptor>>,
     accounting_scope: Option<&'a AccountingScope>,
     attempts: Vec<Attempt<'a>>,
     route_policy: Option<&'a crate::deployment::RoutePolicy>,
@@ -127,6 +130,11 @@ fn attempts<'a>(
     }
 }
 impl Execution<'_> {
+    fn descriptors(&self) -> &[crate::tool::ToolDescriptor] {
+        self.child_catalog
+            .as_deref()
+            .unwrap_or_else(|| self.tools.descriptors())
+    }
     fn stop(&self) -> Option<RunOutcome> {
         // A supervisor may signal joined shutdown when the shared root clock
         // expires. Preserve that deadline in native terminal truth, rather than
@@ -152,6 +160,7 @@ where
 {
     pub fn new(tracer: T) -> Self {
         Self {
+            root_owner: None,
             accounting_scope: None,
             deployment: None,
             tracer,
@@ -166,10 +175,35 @@ where
         ledger: crate::children::ledger::RootLedger,
         agent_id: String,
     ) -> Result<Self, RunError> {
-        if ledger.agent(&agent_id).is_none() {
+        if self.root_owner.is_some() || ledger.agent(&agent_id).is_none() {
             return Err(RunError::InvalidSpec("unknown root accounting agent"));
         }
         self.accounting_scope = Some(AccountingScope { ledger, agent_id });
+        Ok(self)
+    }
+
+    /// Attach one already-admitted temporary root owner. It supplies the policy-
+    /// checked subagent tool and is joined before native root terminal emission.
+    pub fn with_root_owner(
+        mut self,
+        owner: std::sync::Arc<dyn crate::children::owner::RootOwner>,
+    ) -> Result<Self, RunError> {
+        if self.accounting_scope.is_some()
+            || owner.root().depth() != 0
+            || Uuid::parse_str(owner.root().root_run_id()).is_err()
+            || owner.root().root_session_id().is_empty()
+            || owner.root().root_session_id().len() > 128
+            || owner.root().root_session_id().chars().any(char::is_control)
+            || owner.ledger().agent(owner.root().agent_id()).is_none()
+            || owner.descriptor().name != "subagent"
+        {
+            return Err(RunError::InvalidSpec("invalid child root owner"));
+        }
+        self.accounting_scope = Some(AccountingScope {
+            ledger: owner.ledger().clone(),
+            agent_id: owner.root().agent_id().into(),
+        });
+        self.root_owner = Some(owner);
         Ok(self)
     }
 
@@ -210,14 +244,47 @@ where
         cancellation: &CancellationToken,
         sink: &mut dyn EventSink,
     ) -> Result<RunOutcome, RunError> {
+        if self
+            .root_owner
+            .as_ref()
+            .is_some_and(|owner| !owner.claim_root())
+        {
+            return Err(RunError::InvalidSpec("child root is owned by one run"));
+        }
         if !tools.claim() {
+            if let Some(owner) = &self.root_owner {
+                let _ = owner.close().await;
+            }
             return Err(RunError::InvalidSpec("MCP catalog is owned by one run"));
         }
-        let result = self
-            .run_with_tools_inner(spec, provider, tools, cancellation, sink)
-            .await;
-        if result.is_err() && tools.close().await.is_err() {
-            return Err(RunError::InvalidSpec("MCP cleanup failed"));
+        let owned_cancel = self.root_owner.as_ref().map(|_| cancellation.child_token());
+        let task_cancel = owned_cancel.as_ref().unwrap_or(cancellation);
+        let running = self.run_with_tools_inner(spec, provider, tools, task_cancel, sink);
+        tokio::pin!(running);
+        let result = if let Some(owner) = &self.root_owner {
+            tokio::select! {
+                biased;
+                _ = cancellation.cancelled() => { task_cancel.cancel(); owner.cancel(); running.await },
+                _ = owner.cancellation().cancelled() => { task_cancel.cancel(); owner.cancel(); running.await },
+                result = &mut running => result,
+            }
+        } else {
+            running.await
+        };
+        // Preflight and terminal-delivery errors also retain joined root ownership.
+        if result.is_err() {
+            let child_failed = if let Some(owner) = &self.root_owner {
+                owner.close().await.is_err()
+            } else {
+                false
+            };
+            let tools_failed = tools.close().await.is_err();
+            if child_failed {
+                return Err(RunError::InvalidSpec("child cleanup failed"));
+            }
+            if tools_failed {
+                return Err(RunError::InvalidSpec("MCP cleanup failed"));
+            }
         }
         result
     }
@@ -230,6 +297,16 @@ where
         cancellation: &CancellationToken,
         sink: &mut dyn EventSink,
     ) -> Result<RunOutcome, RunError> {
+        if let Some(owner) = &self.root_owner
+            && spec
+                .session_id
+                .as_deref()
+                .is_some_and(|id| id != owner.root().root_session_id())
+        {
+            return Err(RunError::InvalidSpec(
+                "child root session does not match run",
+            ));
+        }
         let compiled = spec
             .output
             .as_ref()
@@ -270,11 +347,18 @@ where
             .accounting_scope
             .as_ref()
             .map_or(deadline, |scope| deadline.min(scope.ledger.deadline()));
-        let run_id = Uuid::new_v4().to_string();
-        let session_id = spec
-            .session_id
-            .clone()
-            .unwrap_or_else(|| Uuid::new_v4().to_string());
+        let run_id = self.root_owner.as_ref().map_or_else(
+            || Uuid::new_v4().to_string(),
+            |owner| owner.root().root_run_id().into(),
+        );
+        let session_id = self.root_owner.as_ref().map_or_else(
+            || {
+                spec.session_id
+                    .clone()
+                    .unwrap_or_else(|| Uuid::new_v4().to_string())
+            },
+            |owner| owner.root().root_session_id().into(),
+        );
         let started = telemetry::now();
         let root = Context::new().with_span(
             self.tracer
@@ -347,7 +431,22 @@ where
             accounting: crate::task::Accounting::default(),
         };
         attempts[0].ledger.initialize(&mut lifecycle.accounting);
+        let child_tool = self
+            .root_owner
+            .as_ref()
+            .filter(|owner| {
+                owner.model_tool_allowed()
+                    && tools.policy().decide("tools", "subagent", false).is_ok()
+            })
+            .map(|owner| owner.as_ref() as &dyn crate::Tool);
+        let child_catalog = child_tool.map(|tool| {
+            let mut catalog = tools.descriptors().to_vec();
+            catalog.push(tool.descriptor());
+            catalog
+        });
         let execution = Execution {
+            child_tool,
+            child_catalog,
             accounting_scope: self.accounting_scope.as_ref(),
             attempts,
             route_policy: provider.route().map(|r| r.resolved.policy()),
@@ -382,7 +481,12 @@ where
             }
             Ok(()) => self.drive(&execution, &mut lifecycle).await,
         };
-        let outcome = if tools.close().await.is_err() {
+        let child_cleanup_failed = if let Some(owner) = &self.root_owner {
+            owner.close().await.is_err()
+        } else {
+            false
+        };
+        let outcome = if tools.close().await.is_err() || child_cleanup_failed {
             failed(FailureCode::ToolCleanup)
         } else {
             outcome
@@ -403,6 +507,9 @@ where
         {
             record.phase = "blocked".into();
             record.outcome(Some(&outcome));
+        }
+        if let Some(owner) = &self.root_owner {
+            lifecycle.accounting = owner.ledger().total();
         }
         let finished = telemetry::now();
         telemetry::outcome(&root, &outcome);
@@ -555,7 +662,7 @@ where
                     allow_tool_calls: !state.repairing
                         && state.remaining_tools != Some(0)
                         && state.remaining_models != Some(0)
-                        && !execution.tools.descriptors().is_empty(),
+                        && !execution.descriptors().is_empty(),
                 };
                 let mut progress = ModelProgress::default();
                 attempts_used += 1;
@@ -932,7 +1039,12 @@ where
         if !lifecycle.can_start_operation() {
             return Err(limit(LimitKind::Events));
         }
-        let Some(tool) = execution.tools.get(&call.name) else {
+        let tool = if call.name == "subagent" {
+            execution.child_tool
+        } else {
+            execution.tools.get(&call.name)
+        };
+        let Some(tool) = tool else {
             return Err(RunOutcome::PolicyDenied {
                 rule: PolicyRule::ToolUnavailable,
             });
@@ -1094,6 +1206,8 @@ where
                 "mcp_tool_error"
             } else if call.name == "skill.read" {
                 "skill_resource_error"
+            } else if call.name == "subagent" {
+                "child_operation_error"
             } else {
                 "filesystem_error"
             };
@@ -1175,7 +1289,7 @@ async fn consume(
         max_context_bytes: spec.limits.max_context_bytes,
         max_tool_input_bytes: spec.limits.max_tool_input_bytes,
         max_output_bytes: input.max_output_bytes,
-        tools: execution.tools.descriptors(),
+        tools: execution.descriptors(),
         allow_tool_calls: input.allow_tool_calls,
         max_output_tokens: input.attempt.max_output_tokens,
         deadline: input.deadline,

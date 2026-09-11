@@ -83,7 +83,7 @@ pub(super) fn context_bytes(
     let mut bytes = serde_json::to_vec(&(
         &execution.spec.instructions,
         history,
-        execution.tools.descriptors(),
+        execution.descriptors(),
     ))
     .expect("serializable request")
     .len();
@@ -100,7 +100,7 @@ pub(super) fn context_bytes(
 pub(super) fn estimate_bytes(execution: &Execution<'_>, raw: usize, messages: usize) -> usize {
     raw.saturating_add(512).saturating_add(
         messages
-            .saturating_add(execution.tools.descriptors().len())
+            .saturating_add(execution.descriptors().len())
             .saturating_mul(64),
     )
 }
@@ -602,6 +602,8 @@ mod tests {
             let root = Context::new().with_span(tracer.start("root"));
             let tools = ToolRegistry::default();
             let execution = Execution {
+                child_tool: None,
+                child_catalog: None,
                 accounting_scope: None,
                 attempts: attempts(&spec, &provider).unwrap(),
                 route_policy: None,
