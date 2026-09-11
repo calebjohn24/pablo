@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_revision": "c3.12a",
+  "contract_revision": "c3.12b",
   "config": {
     "options": {
       "run": {
@@ -95,7 +95,7 @@
         "safety_margin_percent": 10,
         "max_summary_tokens": 1024,
         "max_summary_bytes": 16384,
-        "keep_recent_turns": 1
+        "keep_recent_turns": 0
       }
     },
     "deployment": {
@@ -156,13 +156,13 @@
       }
     ]
   },
-  "fingerprint": "sha256:07bd7a25edbd738a01dd2ff131473de4104a910736c9ed6daf0098f3de208987",
+  "fingerprint": "sha256:1ddf775de32990a2be5db7a225134988ab6d6c68250988d8a4448cf770d0babb",
   "sources": [
     {
       "id": "source-0000",
       "kind": "defaults",
       "locator": "deployment-defaults-v1.json",
-      "digest": "sha256:00e232263628a8010bb5634cc92b9a8176ef04f91b96b65b1610b7c74de2dd5d"
+      "digest": "sha256:28da68d2504cc0e6d66f7b42c52dc7b49615caa12a78bfd34f54df507e6384c4"
     },
     {
       "id": "source-0001",
@@ -847,5 +847,5 @@
       }
     ]
   },
-  "input_fingerprint": "sha256:8afb9782dc4a052e3be6e1b9d2da3f0876dc56a37c2a8b474a1e6fc397fe2be1"
+  "input_fingerprint": "sha256:167119d1c1efaf669ecf4ea1ec8cdbdea4022bf1008f45418c40bdffacf932bc"
 }

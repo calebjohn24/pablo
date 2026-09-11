@@ -1,0 +1,24 @@
+{
+  "provider": "openrouter",
+  "model": "z-ai/glm-5.3-flash",
+  "timestamp": "2026-09-11T01:50:49.530Z",
+  "all_seven_facts_preserved_in_summary_and_final_answer": true,
+  "requested_json_only_format": false,
+  "format_followup": "C3.13/C3.14; final answer added prose outside JSON",
+  "before_bytes": "22623",
+  "after_bytes": "4616",
+  "removed_turns": "1",
+  "accounting": {
+    "model_calls": "3",
+    "tool_calls": "1",
+    "usage": {
+      "input_tokens": "5631",
+      "output_tokens": "1701",
+      "cache_read_input_tokens": "0",
+      "cache_write_input_tokens": "0"
+    },
+    "cost_microusd": "1696",
+    "charged_tokens": null,
+    "charged_cost_microusd": null
+  }
+}

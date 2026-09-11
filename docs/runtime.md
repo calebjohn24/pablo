@@ -104,8 +104,9 @@ native metadata leaves the closed task envelope unchanged. See the
 C3.12a enables one bounded summary pass per task when history approaches a declared
 context capacity or the root byte ceiling. A recognized provider overflow can use
 that same allowance and one recovery request. The summary uses the current model
-and existing budgets, with tools disabled. Original task/instructions and recent
-complete tool turns remain; completed effects are never replayed. Failed compaction
+and existing budgets, with tools disabled. Original task/instructions remain. C3.12b summarizes bulky recent results too,
+retaining raw complete turns only when explicitly requested or necessary for summary
+source capacity; completed effects are never replayed. Failed compaction
 preserves the original history and settles explicitly. See [CP01/CP02](project/contracts/c3-compaction.md)
 for estimation, admission, private continuation and event details.
 
@@ -119,7 +120,7 @@ Capacity defaults to unknown. Direct Rust hosts use `RunSpec.context`, including
 enabled = true
 max_summary_tokens = 1024
 max_summary_bytes = 16384
-keep_recent_turns = 1
+keep_recent_turns = 0
 safety_margin_percent = 10
 ```
 

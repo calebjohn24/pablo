@@ -20,7 +20,7 @@ impl Default for ContextSettings {
             safety_margin_percent: 10,
             max_summary_tokens: 1024,
             max_summary_bytes: 16384,
-            keep_recent_turns: 1,
+            keep_recent_turns: 0,
         }
     }
 }
@@ -29,7 +29,7 @@ impl ContextSettings {
         if !(1..=50).contains(&self.safety_margin_percent)
             || !(16..=65536).contains(&self.max_summary_tokens)
             || !(256..=1048576).contains(&self.max_summary_bytes)
-            || !(1..=32).contains(&self.keep_recent_turns)
+            || !(0..=32).contains(&self.keep_recent_turns)
             || self
                 .window_tokens
                 .is_some_and(|n| !(1..=1_000_000_000).contains(&n))

@@ -1,4 +1,4 @@
-# Basic context compaction — CP01/CP02, c3.12a
+# Basic context compaction — CP01/CP02, c3.12b
 
 This checkpoint implements one task-local summary pass and one overflow recovery.
 It does not add durable sessions, persistent memory, retrieval, an online model
@@ -7,7 +7,7 @@ catalog, tokenizers or a provider-specific encrypted compaction service. See the
 
 ## Configuration and estimation
 
-Deployment schema v1 advances to revision `c3.12a`. `options.context` has:
+Deployment schema v1 advances to revision `c3.12b`. `options.context` has:
 
 | Field | Default | Bounds / meaning |
 | --- | --- | --- |
@@ -15,7 +15,7 @@ Deployment schema v1 advances to revision `c3.12a`. `options.context` has:
 | `safety_margin_percent` | 10 | Integer 1–50; leaves room before declared token capacity and the existing raw context byte ceiling. |
 | `max_summary_tokens` | 1024 | Integer 16–65536, clamped to the selected profile/root output bound. |
 | `max_summary_bytes` | 16384 | Integer 256–1048576, clamped to root output bytes. |
-| `keep_recent_turns` | 1 | Integer 1–32; retain this many complete assistant/tool-result groups. |
+| `keep_recent_turns` | 0 | Integer 0–32; minimum raw recent complete groups to retain. Zero prefers summarizing all completed turns. |
 
 Legacy `options.model.context_window_tokens` and each named model's same field
 accept a positive integer up to 1,000,000,000 or `{unset=true}` (unknown, the default).
@@ -46,17 +46,24 @@ provider attestation or a new hard spending guarantee.
 ## Summary and atomic history replacement
 
 A complete turn is an accepted assistant tool-call item plus all of its settled
-results, including multiple tool calls. Keep the original user task verbatim and
-the newest configured number of complete groups. Summarize all older complete
+results, including multiple tool calls. Keep the original user task verbatim. Prefer summarizing all completed groups,
+including bulky recent results, while retaining any configured minimum raw suffix.
+If the summary source cannot fit, try larger recent suffixes through 32 groups,
+retaining the fewest that fit. Summarize all selected older complete
 groups in one request on the currently selected exact provider/model, including
 its required private continuation. Keep the system/instruction and tool-schema
 prefix unchanged; append a bounded runtime summary request as user-role task data.
-It requests original constraints, decisions, unresolved work, artifact/path/revision
-references and completed effects, and forbids performing new work. Do not promote
+It requests original constraints, decisions with reasons, exact findings/numbers/
+units/dates/identifiers, uncertainty, failed approaches, next steps, artifact/path/
+revision references and completed effects, and forbids performing new work. Dense
+factual sections replace repetition and raw logs; fidelity takes priority over a
+fixed reduction ratio. This implements the user-selected task-relevant summary
+policy, without a raw-output archive or a claim of lossless arbitrary recall. Do not promote
 summary text to system authority. Tools remain present in the stable prefix with
 selection disabled, and any attempted summary tool call fails before an effect.
 
-The summary request excludes retained recent turns to leave room after overflow.
+The summary request includes all selected groups, including newest results when
+none are retained. It excludes retained recent turns to leave room after overflow.
 It must itself fit the known usable capacity and hard byte limit; never drop an
 older group to make an unreviewed partial summary. If it cannot fit, retain history
 and settle explicitly. The original task is also retained outside the summary, so

@@ -81,7 +81,14 @@ impl Provider for Fixture {
 }
 #[tokio::test]
 async fn threshold_and_overflow_compact_once_and_preserve_task_prefix_and_complete_recent_turns() {
-    for mode in ["threshold", "overflow"] {
+    for (mode, recent, window, output_tokens) in [
+        ("threshold", 0, 8000, 2048),
+        ("overflow", 0, 0, 2048),
+        ("threshold", 1, 5000, 128),
+        ("overflow", 1, 0, 128),
+        ("threshold", 0, 5000, 128),
+    ] {
+        let expected_recent = if window == 5000 { 1 } else { recent };
         let cwd = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
         std::fs::create_dir(&cwd).unwrap();
         std::fs::write(cwd.join("evidence.txt"), "e".repeat(6000)).unwrap();
@@ -97,11 +104,12 @@ async fn threshold_and_overflow_compact_once_and_preserve_task_prefix_and_comple
             "fixture/model",
         );
         spec.instructions = "unchanged authority".into();
-        spec.limits.max_output_tokens = 128;
+        spec.limits.max_output_tokens = output_tokens;
         spec.limits.max_model_calls = Some(8);
         spec.context.max_summary_tokens = 128;
+        spec.context.keep_recent_turns = recent;
         spec.context.window_tokens = if mode == "threshold" {
-            Some(5000)
+            Some(window)
         } else {
             None
         };
@@ -140,7 +148,7 @@ async fn threshold_and_overflow_compact_once_and_preserve_task_prefix_and_comple
                 .iter()
                 .filter(|m| matches!(m, Message::Assistant { .. }))
                 .count(),
-            1
+            expected_recent
         );
         assert_eq!(
             following
@@ -148,7 +156,7 @@ async fn threshold_and_overflow_compact_once_and_preserve_task_prefix_and_comple
                 .iter()
                 .filter(|m| matches!(m, Message::Tool { .. }))
                 .count(),
-            1
+            expected_recent
         );
         let finish = events
             .iter()

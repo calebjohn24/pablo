@@ -58,7 +58,7 @@ try{
 provider="${provider}"
 id="${model}"
 credential="key"
-context_window_tokens=${trigger==='threshold'?'5000':'{unset=true}'}
+context_window_tokens=${trigger==='threshold'?'8000':'{unset=true}'}
 ${provider==='open_responses'?'endpoint="https://responses.example.test/v1/responses"\ncapability_profile="open-responses-text-tools-v1"':''}
 [credentials.key]
 consumer="provider.${provider}"
@@ -66,7 +66,7 @@ sources=[{kind="environment",name="UNREAD_COMPACTION_KEY"}]
 [options.context]
 max_summary_tokens=128
 [options.limits]
-max_output_tokens=128
+max_output_tokens=2048
 max_model_calls=8
 [options.shell]
 enabled=false
@@ -97,6 +97,6 @@ path={base="workspace",path="{session_id}.jsonl"}
     }
   });
   const stats=Object.fromEntries(Object.entries(metrics).map(([k,v])=>{const s=v.toSorted((a,b)=>a-b);const p=(n:number)=>s[Math.ceil(n*s.length)-1];return[k,{n:s.length,min:s[0],p50:p(.5),p95:p(.95),p99:p(.99),max:s.at(-1)}];}));
-  const report={schema_version:1,checkpoint:'C3.12a',timestamp:new Date().toISOString(),source_sha256:await sourceFingerprint(root),harness_sha256:createHash('sha256').update(await readFile(fileURLToPath(import.meta.url))).digest('hex'),platform:{os:process.platform,arch:process.arch,kernel:release(),cpu:cpus()[0].model,node:process.version},build:{binary_bytes:(await stat(binary)).size,binary_sha256:createHash('sha256').update(await readFile(binary)).digest('hex')},method:{provider,model,trigger,samples:count,warmup:5,workload:'three actual 6000-byte file reads, one bounded summary, final continuation; overflow adds one HTTP 400',timing:'core/CLI buffered redacted JSONL; fresh processes; ACP fresh sessions in one warm process with negotiated notifications and redacted trace; rotated paths, monotonic host/request clocks, native UTC span timestamps',limits:'loopback synthetic latency only; no live model throughput or summary quality claim; no private reasoning fixture in this performance workload'},stats};
+  const report={schema_version:1,checkpoint:process.env.PABLO_MEASURE_CHECKPOINT??'C3.12b',timestamp:new Date().toISOString(),source_sha256:process.env.PABLO_MEASURE_SOURCE_SHA256??await sourceFingerprint(root),harness_sha256:createHash('sha256').update(await readFile(fileURLToPath(import.meta.url))).digest('hex'),platform:{os:process.platform,arch:process.arch,kernel:release(),cpu:cpus()[0].model,node:process.version},build:{binary_bytes:(await stat(binary)).size,binary_sha256:createHash('sha256').update(await readFile(binary)).digest('hex')},method:{provider,model,trigger,samples:count,warmup:5,workload:'three actual 6000-byte file reads, one bounded summary, final continuation; overflow adds one HTTP 400',timing:'core/CLI buffered redacted JSONL; fresh processes; ACP fresh sessions in one warm process with negotiated notifications and redacted trace; rotated paths, monotonic host/request clocks, native UTC span timestamps',limits:'loopback synthetic latency only; no live model throughput or summary quality claim; no private reasoning fixture in this performance workload'},stats};
   await mkdir(dirname(destination),{recursive:true});await writeFile(destination,JSON.stringify(report,null,2)+'\n',{mode:0o600});console.log(JSON.stringify({file:destination,stats}));
 }finally{await gateway.close();await rm(cwd,{recursive:true,force:true});}
