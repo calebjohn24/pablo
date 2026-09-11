@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T04:06:01.776Z",
+  "updated_at": "2026-09-11T04:08:06.522Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.15",
-  "next_action": "Merge C3.14 and activate C3.15 MCP configuration/policy contracts. Preserve repair/validation/compaction invariants, GLM defaults and unlimited filesystem work. Continue performance and PR merges; retain repeated schema warm-ACP tail and mixed filesystem measurements for C3.39 cause isolation.",
-  "latest_log_entry": "LOG-0089",
+  "next_action": "Activate C3.15 on merged d552105. Freeze MCP configuration/policy contracts, transport lifecycle and credential scope before enabling transports. Preserve structured validation/repair, task-relevant compaction, GLM defaults and unlimited filesystem work. Continue performance and PR merges; investigate repeated schema warm-ACP tails at C3.39.",
+  "latest_log_entry": "LOG-0090",
   "checkpoints": [
     {
       "id": "C1.0",
