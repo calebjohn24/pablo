@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T19:35:28.410Z",
+  "updated_at": "2026-09-11T20:36:00.817Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.29",
-  "next_action": "Start C3.29 on feat/c3-streaming-tui: mark active/in_progress, then implement basic streaming TUI through existing runtime/session entry points, bounded display content and real run-handle cancellation. Freeze TTY/non-TTY selection; PTY/restoration proof remains C3.30. C3.28 PR #31 merged with exact verified tree parity; preserve C3.28 baseline under .pablo/measurements/c3.29-baseline and prior baselines.",
-  "latest_log_entry": "LOG-0149",
+  "next_checkpoint": "C3.30",
+  "next_action": "Merge verified C3.29 T01, then start C3.30 T02 PTY resize/slow output/model-tool-child cancellation and success/cancel/EOF/error restoration. Preserve exact native terminal truth and joined cleanup; retain concurrent Node failure observations for controlled compatibility/native checks and keep saved baselines.",
+  "latest_log_entry": "LOG-0151",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -629,9 +629,11 @@
       "depends_on": [
         "C3.25"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0151"
+      ]
     },
     {
       "id": "C3.30",

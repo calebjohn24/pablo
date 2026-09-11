@@ -13,6 +13,7 @@ pub struct Options {
     explicit: HashSet<String>,
     pub live: bool,
     pub acp: bool,
+    pub interactive: bool,
     pub json: bool,
     pub trace_path: Option<PathBuf>,
     pub env_file: Option<PathBuf>,
@@ -37,26 +38,38 @@ pub struct Options {
     max_cost_microusd: Option<u64>,
 }
 impl Options {
+    pub fn task_input(&self) -> &str {
+        &self.input
+    }
+    pub fn for_task(&self, input: String) -> Self {
+        let mut options = self.clone();
+        options.input = input;
+        options.interactive = false;
+        options
+    }
+
     pub fn parse(command: OsString, args: impl Iterator<Item = OsString>) -> Result<Self, String> {
         let mut arguments: Vec<_> = args.collect();
         let deployment = crate::deployment::Bootstrap::extract(&mut arguments)?;
-        let command = if command == "run" || command == "demo" || command == "acp" {
-            command
-        } else {
-            if command
-                .to_str()
-                .is_none_or(|s| s.is_empty() || s.starts_with('-'))
-            {
-                return Err("unknown command; use --help".into());
-            }
-            arguments.insert(0, command);
-            OsString::from("run")
-        };
+        let command =
+            if command == "run" || command == "demo" || command == "acp" || command == "tui" {
+                command
+            } else {
+                if command
+                    .to_str()
+                    .is_none_or(|s| s.is_empty() || s.starts_with('-'))
+                {
+                    return Err("unknown command; use --help".into());
+                }
+                arguments.insert(0, command);
+                OsString::from("run")
+            };
         let mut options = Self {
             deployment,
             explicit: HashSet::new(),
             live: command != "demo",
             acp: command == "acp",
+            interactive: command == "tui",
             json: false,
             trace_path: None,
             env_file: None,
@@ -237,7 +250,10 @@ impl Options {
         if options.acp && options.workspace.is_some() {
             return Err("ACP uses the session/new cwd as its workspace".into());
         }
-        if options.live && !options.acp && options.input.is_empty() {
+        if options.interactive && options.json {
+            return Err("TUI does not support --json; use pablo run --json".into());
+        }
+        if options.live && !options.acp && !options.interactive && options.input.is_empty() {
             return Err("provide a task: pablo run \"Summarize README.md\"".into());
         }
         if options.capture_content && options.trace_path.is_none() && options.deployment.is_none() {
