@@ -18,6 +18,8 @@ uuid.workspace = true
 reqwest.workspace = true
 aws-lc-rs.workspace = true
 toml.workspace = true
+yaml-rust2.workspace = true
+unicode-normalization.workspace = true
 
 [target.'cfg(unix)'.dependencies]
 rustix.workspace = true

@@ -263,6 +263,7 @@ impl LoadedDeployment {
         };
         // Inspection is bounded independently of the effective config. Avoid an
         // unbounded to_vec of the complete source/provenance envelope.
+        result.skill_roots(None)?;
         canonical::check_inspection_size(&result)?;
         Ok(result)
     }
@@ -1013,7 +1014,13 @@ pub(crate) fn normalize_paths(
             && parts[0] == "path"
             && parts[2] == "sources"
             && parts[4] == "credentials")
-        || (parts.len() >= 4 && parts[1] == "workspace_roots" && parts[3] == "authority");
+        || (parts.len() >= 4
+            && matches!(parts[1], "workspace_roots" | "skill_roots")
+            && parts[3] == "authority")
+        || (parts.len() >= 4
+            && parts[1] == "roots"
+            && parts[2] == "skills"
+            && parts[3] == "options");
     if is_path && value.get("unset").is_none() {
         let base = value["base"].as_str().unwrap();
         let text = value["path"].as_str().unwrap();

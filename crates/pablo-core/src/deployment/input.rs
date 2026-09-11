@@ -74,7 +74,6 @@ fn exceeds_bound(issue: &jsonschema::ValidationError<'_>) -> bool {
 fn unsupported(value: &Value, path: &str) -> Result<(), ConfigError> {
     if let Some(options) = value.get("options").and_then(Value::as_object) {
         for (key, owner) in [
-            ("skills", "C3.19"),
             ("children", "C3.21"),
             ("a2a", "C3.26"),
             ("diagnostics", "C3.31"),
@@ -85,6 +84,7 @@ fn unsupported(value: &Value, path: &str) -> Result<(), ConfigError> {
             }
         }
         for (section, key, owner) in [
+            ("skills", "activate", "C3.20"),
             ("interfaces", "tui", "C3.29"),
             ("interfaces", "acp", "C3.33"),
         ] {

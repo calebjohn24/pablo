@@ -12,13 +12,10 @@ Use section 37.1, not the whole 0.1 release or alpha.1, as the completion bounda
 Use curated Markdown, one structured current-state file, and append-only JSONL work history. A dependency-free Node helper reads and validates those records. This keeps context inspectable in Git and avoids introducing a database or separate service before a runtime exists.
 ### D004 — Vercel is the first live provider
 The user selected Vercel AI Gateway. Use `AI_GATEWAY_API_KEY` and an explicit profile, initially `openai/gpt-4.1-mini`, following the approved cycle plan; D014 records the replacement default. The user supplied the credential in the root `.env`; its contents are private and uninspected by the project helper. The end-user preview in D011 brings a narrow live CLI smoke forward; live ACP acceptance remains C1.4.
-
 ### D005 — Start with two Rust crates
 Create `pablo-core` and the `pablo` executable at C1.1. Keep providers, tools, protocol adapters, and telemetry in owned modules initially. The brief's larger crate map describes ownership, not a scaffolding requirement.
-
 ### D006 — One lifecycle with native telemetry
 Root execution, model calls, tools, ACP updates, JSONL records, and OTel spans originate from one runtime lifecycle. Instrument the first operation; add the network exporter later. ACP is the process protocol. No alternate proprietary loop or process lifecycle is introduced.
-
 ### D007 — Reuse installed development tools
 Reuse installed Rust and Node tools; noninteractive shells may need nvm initialization. `.nvmrc` pins Node 24.20.0, but verify and record each host's actual version rather than assuming it matches. Use Node's built-in modules and test runner for project management; pin dependencies and protocols when introduced.
 
@@ -198,3 +195,6 @@ C3.17 shares normalized MCP sessions across transports. Bound each POST/JSON/SSE
 
 ### D051 — Fresh MCP ownership across host tasks
 C3.18 makes CLI/ACP await per-task MCP admission and joined cleanup. ACP selects exact host definitions offline and revalidates at prompt; cached provider/exporter resources never retain MCP catalogs or authentication. Explicit loopback fixture mappings validate before credentials/launch and scope headers to the actual endpoint. Real Collector proof covers both hosts and all transport formats. See [M04 evidence](evidence/c3.18.md).
+
+### D052 — Discover portable Skill metadata only from explicit roots
+C3.19 pins the Agent Skills format and bounded YAML parsing; qualify names by host root, reject normalized duplicates and report short-name ambiguity. No-follow discovery is metadata-only, with source digests and intersected root ceilings; empty defaults scan nothing. Bodies/resources and activation remain C3.20. See [S01 contract](contracts/c3-skills.md).

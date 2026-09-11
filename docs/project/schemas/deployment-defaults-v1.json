@@ -100,5 +100,8 @@
   "mcp": {
     "servers": {},
     "policies": []
+  },
+  "skills": {
+    "roots": {}
   }
 }

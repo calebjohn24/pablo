@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:pablo:deployment:1:c3.18",
-  "title": "Pablo deployment v1 \u2014 C3.18 contract",
+  "$id": "urn:pablo:deployment:1:c3.19",
+  "title": "Pablo deployment v1 \u2014 C3.19 contract",
   "description": "TOML-to-JSON shape. See c3-deployment-config.md for semantic checks and implementation availability.",
   "type": "object",
   "additionalProperties": false,
@@ -1096,6 +1096,9 @@
         },
         "mcp": {
           "$ref": "#/$defs/Mcp"
+        },
+        "skills": {
+          "$ref": "#/$defs/Skills"
         }
       }
     },
@@ -1292,6 +1295,13 @@
         },
         "mcp": {
           "$ref": "#/$defs/McpPolicy"
+        },
+        "skill_roots": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/Path"
+          }
         }
       },
       "required": [
@@ -1700,6 +1710,9 @@
         },
         "mcp": {
           "$ref": "#/$defs/resolvedMcp"
+        },
+        "skills": {
+          "$ref": "#/$defs/resolvedSkills"
         }
       },
       "required": [
@@ -1714,7 +1727,8 @@
         "policy",
         "context",
         "output",
-        "mcp"
+        "mcp",
+        "skills"
       ]
     },
     "resolvedCredentialSource": {
@@ -1910,6 +1924,13 @@
         },
         "mcp": {
           "$ref": "#/$defs/McpPolicy"
+        },
+        "skill_roots": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/resolvedPath"
+          }
         }
       },
       "required": [
@@ -2966,6 +2987,41 @@
       "required": [
         "servers",
         "policies"
+      ]
+    },
+    "Skills": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "roots": {
+          "type": "object",
+          "maxProperties": 16,
+          "propertyNames": {
+            "pattern": "^[A-Za-z0-9_.-]{1,32}$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/Path"
+          }
+        }
+      }
+    },
+    "resolvedSkills": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "roots": {
+          "type": "object",
+          "maxProperties": 16,
+          "propertyNames": {
+            "pattern": "^[A-Za-z0-9_.-]{1,32}$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/resolvedPath"
+          }
+        }
+      },
+      "required": [
+        "roots"
       ]
     }
   }
