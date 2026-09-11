@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T07:39:45.894Z",
+  "updated_at": "2026-09-11T07:40:58.437Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.22",
-  "next_action": "Merge C3.21 and prepare C3.22 one supervised local child. Implement root-owned atomic reservations, authority intersections and joined supervision before enabling spawn. Preserve typed ACP lifecycle, Skill/MCP ownership, compaction detail retention, GLM defaults and unlimited filesystem work. Retain C3.33 F03 investigation and C3.39 mixed performance observations.",
-  "latest_log_entry": "LOG-0105",
+  "next_action": "Activate C3.22 on merged 5874fef: one supervised temporary child through shared typed ACP, immediate handle, independent context/identity and typed outcomes. Enforce root-owned atomic capacity/accounting and narrowed authority before enabling spawn; join child/process/MCP work before root settlement. Preserve Skill/MCP ownership, compaction details, GLM defaults and unlimited filesystem work. Continue measured merges and retain C3.33/C3.39 follow-ups.",
+  "latest_log_entry": "LOG-0106",
   "checkpoints": [
     {
       "id": "C1.0",
