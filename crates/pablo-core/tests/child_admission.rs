@@ -262,6 +262,8 @@ fn child_mcp_client_selection_cannot_restore_an_excluded_host_server() {
     assert!(child.select_mcp_client(&[selection("two")]).is_err());
     child.select_mcp_client(&[selection("one")]).unwrap();
     assert!(child.has_mcp());
+    assert_eq!(child.mcp_resources().unwrap().mcp_sessions, 1);
+    assert_eq!(child.mcp_resources().unwrap().processes, 0);
 }
 
 #[tokio::test]
@@ -408,6 +410,9 @@ async fn child_mcp_catalogs_are_fresh_narrowed_and_joined_on_definition_change()
         )
         .unwrap();
     assert!(!removed.has_mcp());
+    assert_eq!(removed.mcp_resources().unwrap(), Default::default());
+    assert_eq!(child.mcp_resources().unwrap().mcp_sessions, 1);
+    assert_eq!(child.mcp_resources().unwrap().processes, 1);
     assert!(removed.tools().unwrap().descriptors().is_empty());
     assert!(
         parent

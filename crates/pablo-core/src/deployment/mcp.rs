@@ -97,6 +97,29 @@ impl ResolvedDeployment {
 
 #[cfg(unix)]
 impl PreparedRun {
+    /// Conservative per-task MCP capacity, after selection and server policy.
+    /// Hold the whole reservation until all admitted capability work has joined,
+    /// including failed/omitted optional servers. This method starts no resources.
+    pub fn mcp_resources(
+        &self,
+    ) -> Result<crate::children::ledger::resources::Resources, ConfigError> {
+        let settings = self.deployment().mcp()?;
+        let policy = self.deployment().mcp_policy()?;
+        let mut resources = crate::children::ledger::resources::Resources::default();
+        for (id, server) in &settings.servers {
+            if self
+                .mcp_selection
+                .as_ref()
+                .is_some_and(|selected| !selected.contains(id))
+                || settings.admit_server(id, &policy).is_err()
+            {
+                continue;
+            }
+            resources.mcp_sessions += 1;
+            resources.processes += usize::from(matches!(server, crate::mcp::Server::Stdio { .. }));
+        }
+        Ok(resources)
+    }
     /// Prepare fresh configured MCP and explicitly activated Skill capabilities.
     pub async fn tools_with_capabilities(
         &self,

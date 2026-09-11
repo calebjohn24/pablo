@@ -11,7 +11,9 @@ async fn cancelled_close_caller_does_not_lose_the_owned_worker_join() {
     let entry = cwd.join("entry.toml");
     std::fs::write(
         &entry,
-        include_str!("../../../../../docs/project/fixtures/c3-model-routes/three-providers.toml"),
+        include_str!("../../../../../docs/project/fixtures/c3-model-routes/three-providers.toml")
+            .to_owned()
+            + "\n[options.mcp.servers.lease]\ntransport=\"stdio\"\ncommand=\"/bin/false\"\n",
     )
     .unwrap();
     let options = Options::parse(
@@ -37,18 +39,53 @@ async fn cancelled_close_caller_does_not_lose_the_owned_worker_join() {
     let request: SpawnRequest =
         serde_json::from_value(json!({"input":"held child","capabilities":{"tools":[]}})).unwrap();
     let prepared = parent
-        .prepare_child(&request, &parent.tools().unwrap())
+        .prepare_child(&request, &pablo_core::ToolRegistry::default())
         .unwrap();
     let root = AgentRef::root("root".into(), "session".into());
     let ledger = RootLedger::new(&root, parent.spec().limits.clone()).unwrap();
     let child = root.temporary_child().unwrap();
-    let (dispatcher, _updates) = Dispatcher::new_child(
+    let options = Arc::new(options);
+    let required = Resources {
+        active_children: 1,
+        context_bytes: prepared.spec().limits.max_context_bytes,
+        ..prepared.mcp_resources().unwrap()
+    };
+    assert_eq!(required.processes, 1);
+    assert_eq!(required.mcp_sessions, 1);
+    let mut lease = Arc::new(
+        ledger
+            .admit_child(
+                &child,
+                prepared.spec().limits.clone(),
+                Resources {
+                    active_children: 1,
+                    context_bytes: required.context_bytes,
+                    ..Default::default()
+                },
+            )
+            .unwrap(),
+    );
+    assert!(
+        Dispatcher::bind_child(
+            options.clone(),
+            prepared.clone(),
+            ledger.clone(),
+            &child,
+            CancellationToken::new(),
+            opentelemetry::Context::new(),
+            lease.clone()
+        )
+        .is_err()
+    );
+    Arc::get_mut(&mut lease).unwrap().replace(required).unwrap();
+    let (dispatcher, _updates) = Dispatcher::bind_child(
         options,
         prepared,
         ledger.clone(),
         &child,
         CancellationToken::new(),
         opentelemetry::Context::new(),
+        lease,
     )
     .unwrap();
     let lease = dispatcher
@@ -79,6 +116,8 @@ async fn cancelled_close_caller_does_not_lose_the_owned_worker_join() {
     })
     .await;
     assert_eq!(ledger.resources().active_children, 1);
+    assert_eq!(ledger.resources().processes, 1);
+    assert_eq!(ledger.resources().mcp_sessions, 1);
     drop(second);
     release.send(()).unwrap();
     tokio::time::timeout(Duration::from_secs(5), async {
@@ -102,7 +141,7 @@ async fn cancelled_close_caller_does_not_lose_the_owned_worker_join() {
         "dispatcher retains capacity until close acknowledges the join"
     );
     dispatcher.close().await.unwrap();
-    assert_eq!(ledger.resources().active_children, 0);
+    assert_eq!(ledger.resources(), Resources::default());
     dispatcher.close().await.unwrap();
     std::fs::remove_dir_all(cwd).unwrap();
 }

@@ -72,7 +72,7 @@ impl Dispatcher {
     }
     /// Internal C3.22 execution path. Authority was fixed by prepare_child;
     /// registration and the active slot commit together before any task starts.
-    /// The supervisor still owns aggregate event/process/context admission.
+    /// MCP and context capacity remains held through joined worker cleanup.
     pub fn new_child(
         options: Options,
         prepared: PreparedRun,
@@ -91,7 +91,10 @@ impl Dispatcher {
                 prepared.spec().limits.clone(),
                 Resources {
                     active_children: 1,
-                    ..Resources::default()
+                    context_bytes: prepared.spec().limits.max_context_bytes,
+                    ..prepared
+                        .mcp_resources()
+                        .map_err(|_| "invalid child MCP capacity")?
                 },
             )
             .map_err(|_| "child admission rejected")?;
@@ -115,9 +118,17 @@ impl Dispatcher {
         parent: opentelemetry::Context,
         lease: Arc<ResourceLease>,
     ) -> Result<(Self, async_channel::Receiver<delivery::TypedUpdate>), String> {
+        let required = Resources {
+            active_children: 1,
+            context_bytes: prepared.spec().limits.max_context_bytes,
+            ..prepared
+                .mcp_resources()
+                .map_err(|_| "invalid child MCP capacity")?
+        };
         if !prepared.is_child()
             || options.deployment.is_none()
             || !lease.is_active_child(&ledger, agent.agent_id())
+            || !lease.covers(&ledger, agent.agent_id(), required)
         {
             return Err("invalid child admission".into());
         }

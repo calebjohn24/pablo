@@ -428,6 +428,11 @@ where
             ));
         }
         let mut lifecycle = Lifecycle {
+            cancellation,
+            shared_deadline: self
+                .accounting_scope
+                .as_ref()
+                .map(|scope| scope.ledger.deadline()),
             agent: agent.clone(),
             model_profile: None,
             model_route: None,
@@ -1147,14 +1152,34 @@ where
             started,
             false,
         );
+        // Kept across the actual tool future: tools return only after owned cleanup.
+        let mut _process_lease = None;
         let mut result = if let Err(outcome) = start {
             event_failure = Some(outcome);
             ToolResult::status(ToolStatus::EventSinkFailed)
         } else if let Err(outcome) = execution.accounting_scope.map_or(Ok(()), |scope| {
+            let lease = if call.name == "shell.run" {
+                Some(
+                    scope
+                        .ledger
+                        .reserve_resources(
+                            &scope.agent_id,
+                            crate::children::ledger::resources::Resources {
+                                processes: 1,
+                                ..Default::default()
+                            },
+                        )
+                        .map_err(shared_admission_failure)?,
+                )
+            } else {
+                None
+            };
             scope
                 .ledger
                 .admit_tool(&scope.agent_id)
-                .map_err(shared_admission_failure)
+                .map_err(shared_admission_failure)?;
+            _process_lease = lease;
+            Ok(())
         }) {
             event_failure = Some(outcome);
             ToolResult::status(ToolStatus::AdmissionFailed)
@@ -1673,6 +1698,8 @@ pub fn validate_run(
 }
 
 struct Lifecycle<'a> {
+    cancellation: &'a CancellationToken,
+    shared_deadline: Option<Instant>,
     agent: Option<Box<crate::children::AgentIdentity>>,
     compaction: Option<Box<crate::context::CompactionRecord>>,
     output_validation: Option<Box<crate::output::OutputValidation>>,
@@ -1785,6 +1812,16 @@ impl Lifecycle<'_> {
             SinkError::Capacity => RunOutcome::LimitExceeded {
                 limit: LimitKind::TraceBytes,
             },
+            SinkError::Io(_) if self.cancellation.is_cancelled() => {
+                if self
+                    .shared_deadline
+                    .is_some_and(|deadline| Instant::now() >= deadline)
+                {
+                    RunOutcome::TimedOut
+                } else {
+                    RunOutcome::Cancelled
+                }
+            }
             SinkError::Io(_) => RunOutcome::Failed {
                 code: FailureCode::EventSinkIo,
                 delivery: self.delivery,

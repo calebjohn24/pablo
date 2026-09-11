@@ -205,6 +205,32 @@ impl RootLedger {
     }
 }
 impl ResourceLease {
+    /// Read-only proof of this lease's admitted capacity and ownership.
+    pub fn covers(&self, ledger: &RootLedger, agent_id: &str, required: Resources) -> bool {
+        if !Arc::ptr_eq(&self.ledger.0, &ledger.0) {
+            return false;
+        }
+        let s = self.ledger.0.lock().unwrap();
+        s.resources.entries.get(&self.id).is_some_and(|entry| {
+            let Resources {
+                active_children,
+                pending_children,
+                processes,
+                mcp_sessions,
+                context_bytes,
+                queued_input_bytes,
+                result_bytes,
+            } = required;
+            entry.agent_id == agent_id
+                && entry.resources.active_children >= active_children
+                && entry.resources.pending_children >= pending_children
+                && entry.resources.processes >= processes
+                && entry.resources.mcp_sessions >= mcp_sessions
+                && entry.resources.context_bytes >= context_bytes
+                && entry.resources.queued_input_bytes >= queued_input_bytes
+                && entry.resources.result_bytes >= result_bytes
+        })
+    }
     /// Verify a promoted lease belongs to this root and this exact child.
     pub fn is_active_child(&self, ledger: &RootLedger, agent_id: &str) -> bool {
         if !std::sync::Arc::ptr_eq(&self.ledger.0, &ledger.0) {

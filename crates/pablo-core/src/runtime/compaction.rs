@@ -650,6 +650,8 @@ mod tests {
                 }
             };
             let mut lifecycle = Lifecycle {
+                cancellation: &token,
+                shared_deadline: None,
                 agent: None,
                 model_profile: None,
                 model_route: None,

@@ -404,13 +404,26 @@ impl Inner {
             self.settle(job.child, job.lease, RunOutcome::Cancelled, None, None);
             return;
         }
+        let capabilities = match job.prepared.mcp_resources() {
+            Ok(resources) => resources,
+            Err(_) => {
+                self.settle(
+                    job.child,
+                    job.lease,
+                    admission_failed(),
+                    Some("child MCP capacity invalid"),
+                    None,
+                );
+                return;
+            }
+        };
         if job
             .lease
             .replace(Resources {
                 active_children: 1,
                 context_bytes: job.prepared.spec().limits.max_context_bytes,
                 result_bytes: MAX_RESULT_BYTES,
-                ..Resources::default()
+                ..capabilities
             })
             .is_err()
         {

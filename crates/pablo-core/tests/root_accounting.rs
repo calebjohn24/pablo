@@ -344,3 +344,162 @@ async fn shared_deadline_cancellation_keeps_native_terminal_outcome_timed_out() 
     );
     sdk.shutdown().unwrap();
 }
+
+#[cfg(unix)]
+#[tokio::test]
+async fn shell_process_capacity_denies_before_spawn_and_survives_cancellation_until_join() {
+    use children::ledger::resources::Resources;
+    for exhausted in [true, false] {
+        let sdk = SdkTracerProvider::builder().build();
+        let root = AgentRef::root("root".into(), "session".into());
+        let child = root.temporary_child().unwrap();
+        let spec = RunSpec::new(
+            "shell",
+            std::env::temp_dir().canonicalize().unwrap(),
+            "fixture",
+        );
+        let ledger = RootLedger::new(&root, spec.limits.clone()).unwrap();
+        let _active = ledger
+            .admit_child(
+                &child,
+                spec.limits.clone(),
+                Resources {
+                    active_children: 1,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        let _occupied = exhausted.then(|| {
+            ledger
+                .reserve_resources(
+                    root.agent_id(),
+                    Resources {
+                        processes: children::MAX_PROCESSES,
+                        ..Default::default()
+                    },
+                )
+                .unwrap()
+        });
+        let provider = ScriptedProvider::new(vec![
+            (
+                std::time::Duration::ZERO,
+                Ok(ProviderEvent::ToolCallStart {
+                    id: "shell".into(),
+                    name: "shell.run".into(),
+                }),
+            ),
+            (
+                std::time::Duration::ZERO,
+                Ok(ProviderEvent::ToolCallArgumentsDelta {
+                    id: "shell".into(),
+                    delta: serde_json::json!({"command":"sleep 30", "cwd":"."}).to_string(),
+                }),
+            ),
+            (
+                std::time::Duration::ZERO,
+                Ok(ProviderEvent::Finished {
+                    reason: FinishReason::ToolCalls,
+                    usage: Usage::default(),
+                }),
+            ),
+        ]);
+        let cancellation = CancellationToken::new();
+        let mut spawned = None;
+        let mut terminal = false;
+        let outcome = Runtime::new(telemetry::tracer(&sdk))
+            .with_root_ledger(ledger.clone(), child.agent_id().into())
+            .unwrap()
+            .run_with_tools(
+                &spec,
+                &provider,
+                &ToolRegistry::with_shell().unwrap(),
+                &cancellation,
+                &mut |event: &RunEvent| {
+                    if let EventKind::ShellStarted { process_id, .. } = event.kind {
+                        assert!(!exhausted);
+                        assert_eq!(ledger.resources().processes, 1);
+                        spawned = Some(process_id);
+                        cancellation.cancel();
+                    }
+                    if matches!(event.kind, EventKind::RunFinished { .. }) {
+                        terminal = true;
+                        assert_eq!(
+                            ledger.resources().processes,
+                            if exhausted {
+                                children::MAX_PROCESSES
+                            } else {
+                                0
+                            }
+                        );
+                        if let Some(pid) = spawned {
+                            assert_eq!(
+                                rustix::process::test_kill_process_group(
+                                    rustix::process::Pid::from_raw(pid as i32).unwrap()
+                                ),
+                                Err(rustix::io::Errno::SRCH)
+                            );
+                        }
+                    }
+                    Ok(())
+                },
+            )
+            .await
+            .unwrap();
+        assert!(terminal);
+        assert_eq!(ledger.total().tool_calls, u64::from(!exhausted));
+        if exhausted {
+            assert_eq!(
+                outcome,
+                RunOutcome::Failed {
+                    code: FailureCode::ChildAdmission,
+                    delivery: DeliveryCertainty::NotSent
+                }
+            );
+            assert!(spawned.is_none());
+        } else {
+            assert_eq!(outcome, RunOutcome::Cancelled);
+            assert!(spawned.is_some());
+        }
+        sdk.shutdown().unwrap();
+    }
+}
+
+#[tokio::test]
+async fn cancelled_scoped_delivery_retains_native_cancellation_outcome() {
+    let sdk = SdkTracerProvider::builder().build();
+    let root = AgentRef::root("root".into(), "session".into());
+    let spec = RunSpec::new(
+        "cancel",
+        std::env::temp_dir().canonicalize().unwrap(),
+        "fixture",
+    );
+    let ledger = RootLedger::new(&root, spec.limits.clone()).unwrap();
+    let cancellation = CancellationToken::new();
+    let mut terminal = None;
+    let outcome = Runtime::new(telemetry::tracer(&sdk))
+        .with_root_ledger(ledger, root.agent_id().into())
+        .unwrap()
+        .run_with_tools(
+            &spec,
+            &ScriptedProvider::text(["queued at cancellation"]),
+            &ToolRegistry::default(),
+            &cancellation,
+            &mut |event: &RunEvent| {
+                if matches!(event.kind, EventKind::TextDelta { .. }) {
+                    cancellation.cancel();
+                    return Err(SinkError::Io(std::io::Error::other(
+                        "consumer closed during cancellation",
+                    )));
+                }
+                if let EventKind::RunFinished { outcome } = &event.kind {
+                    terminal = Some(outcome.clone());
+                }
+                Ok(())
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(outcome, RunOutcome::Cancelled);
+    assert_eq!(terminal, Some(outcome));
+    sdk.shutdown().unwrap();
+}
