@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T07:40:58.437Z",
-  "active_checkpoint": null,
-  "next_checkpoint": "C3.22",
-  "next_action": "Activate C3.22 on merged 5874fef: one supervised temporary child through shared typed ACP, immediate handle, independent context/identity and typed outcomes. Enforce root-owned atomic capacity/accounting and narrowed authority before enabling spawn; join child/process/MCP work before root settlement. Preserve Skill/MCP ownership, compaction details, GLM defaults and unlimited filesystem work. Continue measured merges and retain C3.33/C3.39 follow-ups.",
-  "latest_log_entry": "LOG-0106",
+  "updated_at": "2026-09-11T07:47:25.784Z",
+  "active_checkpoint": "C3.22",
+  "next_checkpoint": null,
+  "next_action": "Continue C3.22: root capacity/mutation gate and full child authority intersection; wire shared ledger at runtime model/tool admission; implement one supervised child via typed ACP with immediate handles, inspect/wait/stop, attributed events and joined root shutdown. No delegation is enabled yet. Complete A02/full regressions/performance before PR merge; preserve GLM defaults, unlimited filesystem work and compaction details.",
+  "latest_log_entry": "LOG-0107",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -537,7 +537,7 @@
       "depends_on": [
         "C3.21"
       ],
-      "status": "pending",
+      "status": "in_progress",
       "blockers": [],
       "verification": []
     },

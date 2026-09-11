@@ -286,3 +286,5 @@ mod tests {
         assert_eq!(request.validate_shape(), Err(ContractError::InputBound));
     }
 }
+
+pub mod ledger;
