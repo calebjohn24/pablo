@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T07:21:31.657Z",
+  "updated_at": "2026-09-11T07:22:40.931Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.21",
-  "next_action": "Merge C3.20 and prepare C3.21 child contracts and typed ACP dispatch. Preserve explicit Skill authority/ownership, compaction detail preservation, MCP lifecycle, GLM defaults and unlimited filesystem work.",
-  "latest_log_entry": "LOG-0103",
+  "next_action": "Activate C3.21 child contracts and typed ACP dispatch on merged d43d32e. Preserve Skill selection/root authority, pinned task instructions, fresh per-task capabilities and joined cancellation; retain MCP ownership, GLM defaults, unlimited filesystem work and compaction detail preservation. Continue performance measurements and PR merges; C3.33 notification-order and C3.39 mixed latency/size observations remain open.",
+  "latest_log_entry": "LOG-0104",
   "checkpoints": [
     {
       "id": "C1.0",
