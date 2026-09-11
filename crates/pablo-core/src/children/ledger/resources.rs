@@ -125,6 +125,32 @@ fn validate(
     Ok(next)
 }
 impl RootLedger {
+    /// Advisory context ceiling with other agents' reservations excluded.
+    /// Actual retention still requires an atomic lease reservation/replacement.
+    pub fn context_capacity(&self, agent_id: &str) -> Result<usize, AdmissionError> {
+        let s = self.0.lock().unwrap();
+        let agent = s.agents.get(agent_id).ok_or(AdmissionError::UnknownAgent)?;
+        let own: usize = s
+            .resources
+            .entries
+            .values()
+            .filter(|e| e.agent_id == agent_id)
+            .map(|e| e.resources.context_bytes)
+            .sum();
+        let own_cap = if agent_id == s.root_id {
+            agent.limits.max_context_bytes
+        } else {
+            agent
+                .limits
+                .max_context_bytes
+                .min(crate::children::MAX_CONTEXT_BYTES)
+        };
+        Ok(own_cap.min(
+            s.limits
+                .max_context_bytes
+                .saturating_sub(s.resources.used.context_bytes.saturating_sub(own)),
+        ))
+    }
     pub fn reserve_resources(
         &self,
         agent_id: &str,

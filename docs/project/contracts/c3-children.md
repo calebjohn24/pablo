@@ -95,6 +95,14 @@ and attested token/cost upper bounds cannot be independent reads of remaining
 allowance. A multi-resource admission succeeds wholly or changes nothing. Never
 hold its lock during provider, process, filesystem, event sink or ACP work.
 
+Retained model context uses the existing encoded instructions/history/tool catalog
+measure, including opaque continuation bytes. Roots reserve retained context and
+stream growth atomically; children meter growth within their full admitted context
+reservation. Tool output must fit before becoming retained history. Compaction
+covers its request while retaining prior history, then reduces the reservation
+after accepted replacement. Advisory remaining capacity can guide compaction;
+it never substitutes for atomic admission.
+
 Reserve before external delivery or process start. Settle each reservation once
 against actual usage; release unused capacity only after owned work joins. Call
 counts remain spent for admitted attempts, including fallback and compaction.

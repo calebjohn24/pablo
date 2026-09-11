@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T10:50:15.415Z",
+  "updated_at": "2026-09-11T11:08:00.725Z",
   "active_checkpoint": "C3.22",
   "next_checkpoint": null,
-  "next_action": "Continue C3.22 with root-factory MCP capacity reserved before setup, root resident-context accounting and atomic cumulative event/trace reservations with terminal space. Scoped shell execution now reserves a process permit through joined cleanup; child promotion/direct dispatch reserve selected policy-admitted MCP sessions, stdio processes and full context, and reject underfunded bindings. Add original native child event multiplexing with one root sequence and bounded consumer, then wire configured CLI/ACP RootOwner factories and enable children only after admission is complete. Run full A02 and deployment-enabled child performance before completing C3.22 or merging its PR. Preserve cancellation/native outcome fidelity, one active FIFO child, causal span parenting, joined root settlement/aggregate accounting, handles/results outside compaction, GLM defaults and unlimited filesystem work. C3.23 follows; C3.33 F03 and C3.39 mixed measurements remain.",
-  "latest_log_entry": "LOG-0115",
+  "next_action": "Continue C3.22 with root-factory MCP capacity reserved before capability setup, atomic cumulative event/trace reservations with terminal space, and original native child event multiplexing with one root sequence and a bounded consumer. Root retained context now reserves encoded history/stream growth atomically, compaction covers its request and reduces accepted replacement, and children meter within their existing full-context lease without double charge. Wire configured CLI/ACP RootOwner factories and enable children only after admission is complete; run full A02 and deployment-enabled child performance before completing C3.22 or merging its PR. Preserve one active FIFO child, causal attribution, cancellation/native outcome fidelity, joined root settlement/aggregate accounting, handles/results outside compaction, GLM defaults and unlimited filesystem work. Final Node full run reproduced F03 once (264 passed, one failed); focused 18 passed, but C3.33 remains open. C3.23 follows C3.22; mixed timing/RSS/size remains C3.39.",
+  "latest_log_entry": "LOG-0116",
   "checkpoints": [
     {
       "id": "C1.0",

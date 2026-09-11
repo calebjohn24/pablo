@@ -20,6 +20,7 @@ use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 mod compaction;
+mod resident;
 mod routing;
 use compaction::{TaskState, context_bytes, estimate_bytes};
 
@@ -61,6 +62,7 @@ pub struct Runtime<T> {
 }
 
 struct Execution<'a> {
+    resident: Option<resident::ResidentContext>,
     agent: Option<&'a crate::children::AgentIdentity>,
     child_tool: Option<&'a dyn crate::Tool>,
     child_catalog: Option<Vec<crate::tool::ToolDescriptor>>,
@@ -470,6 +472,13 @@ where
             catalog
         });
         let execution = Execution {
+            resident: self.accounting_scope.as_ref().map(|scope| {
+                resident::ResidentContext::new(
+                    scope,
+                    agent.as_ref().is_some_and(|a| a.depth() == 0),
+                    spec.limits.max_context_bytes,
+                )
+            }),
             agent: agent.as_deref(),
             child_tool,
             child_catalog,
@@ -517,6 +526,10 @@ where
         } else {
             outcome
         };
+        // drive has dropped retained history and every owned child/tool has joined.
+        execution
+            .retain_context(0)
+            .expect("releasing context cannot fail");
         if let Some(record) = &mut lifecycle.output_repair {
             record.finish(outcome.is_completed());
             root.span().set_attribute(KeyValue::new(
@@ -563,6 +576,15 @@ where
     async fn drive(&self, execution: &Execution<'_>, lifecycle: &mut Lifecycle<'_>) -> RunOutcome {
         let spec = execution.spec;
         let mut state = TaskState::new(execution);
+        if execution.resident.is_some()
+            && let Err(outcome) = execution.retain_context(context_bytes(
+                execution,
+                &state.history,
+                &state.continuations,
+            ))
+        {
+            return outcome;
+        }
         #[cfg(unix)]
         if let Some(skills) = execution.tools.activated_skills() {
             let records = skills.records();
@@ -605,11 +627,14 @@ where
                 return outcome;
             }
             let context_bytes = context_bytes(execution, &state.history, &state.continuations);
+            if let Err(outcome) = execution.retain_context(context_bytes) {
+                return outcome;
+            }
             let estimated_bytes = estimate_bytes(execution, context_bytes, state.history.len());
             let tokens = state.calibration[state.selected].estimate(estimated_bytes);
             let attempt = &execution.attempts[state.selected];
-            let near = context_bytes as u64
-                >= spec.context.usable(spec.limits.max_context_bytes as u64)
+            let context_capacity = execution.context_capacity();
+            let near = context_bytes as u64 >= spec.context.usable(context_capacity as u64)
                 || attempt.window_tokens.is_some_and(|cap| {
                     tokens.saturating_add(u64::from(attempt.max_output_tokens))
                         >= spec.context.usable(cap)
@@ -628,7 +653,7 @@ where
                 }
                 continue;
             }
-            if context_bytes > spec.limits.max_context_bytes {
+            if context_bytes > context_capacity {
                 return limit(LimitKind::ContextBytes);
             }
             state.operation += 1; // Each state.operation consumes bounded native event slots.
@@ -684,7 +709,7 @@ where
                     deadline,
                     history: &state.history,
                     continuations: &state.continuations,
-                    remaining_context: spec.limits.max_context_bytes - context_bytes,
+                    remaining_context: context_capacity - context_bytes,
                     allow_tool_calls: !state.repairing
                         && state.remaining_tools != Some(0)
                         && state.remaining_models != Some(0)
@@ -848,7 +873,18 @@ where
                                 text: progress.output,
                                 tool_calls: Vec::new(),
                             });
-                            state.history.push(Message::User { text: feedback });
+                            let message = Message::User { text: feedback };
+                            if execution.resident.is_some()
+                                && let Err(outcome) = execution.grow_context(
+                                    serde_json::to_vec(&message)
+                                        .expect("serializable feedback")
+                                        .len()
+                                        .saturating_add(1),
+                                )
+                            {
+                                return outcome;
+                            }
+                            state.history.push(message);
                             state.repairing = true;
                             continue 'generation;
                         }
@@ -895,11 +931,22 @@ where
                 if let Some(remaining) = &mut state.remaining_tools {
                     *remaining -= 1;
                 }
-                state.history.push(Message::Tool {
+                let message = Message::Tool {
                     call_id: call.id,
                     name: call.name,
                     result,
-                });
+                };
+                if execution.resident.is_some()
+                    && let Err(outcome) = execution.grow_context(
+                        serde_json::to_vec(&message)
+                            .expect("serializable tool result")
+                            .len()
+                            .saturating_add(1),
+                    )
+                {
+                    return outcome;
+                }
+                state.history.push(message);
             }
         }
     }
@@ -1354,6 +1401,16 @@ async fn consume(
     if let Some(outcome) = execution.stop() {
         return Err(outcome);
     }
+    if let Some(resident) = &execution.resident {
+        let bytes = context_bytes(execution, input.history, input.continuations);
+        if input.summary {
+            // Keep old retained history covered while admitting the summary request.
+            resident.cover(bytes)?;
+        } else {
+            resident.set(bytes)?;
+        }
+    }
+    execution.grow_context(128)?; // Assistant message/container framing.
     let mut admitted = lifecycle.accounting.clone();
     input.attempt.ledger.reserve(&mut admitted)?;
     admitted.model_calls = admitted
@@ -1450,6 +1507,7 @@ async fn consume(
                 if value.bytes() > input.remaining_context {
                     return Err(limit(LimitKind::ContextBytes));
                 }
+                execution.grow_context(value.bytes())?;
                 if progress.continuation.replace(value).is_some() {
                     return Err(malformed());
                 }
@@ -1462,6 +1520,10 @@ async fn consume(
             Some(Ok(ProviderEvent::TextDelta(text))) => {
                 if text.len() > input.max_output_bytes.saturating_sub(progress.output.len()) {
                     return Err(limit(LimitKind::OutputBytes));
+                }
+                if execution.resident.is_some() {
+                    let encoded = serde_json::to_vec(&text).expect("serializable text").len();
+                    execution.grow_context(encoded.saturating_sub(2))?;
                 }
                 if !input.summary {
                     lifecycle.emit(
@@ -1507,6 +1569,12 @@ async fn consume(
                 {
                     return Err(limit(LimitKind::ToolCalls));
                 }
+                execution.grow_context(
+                    id.len()
+                        .saturating_add(name.len())
+                        .saturating_mul(6)
+                        .saturating_add(128),
+                )?;
                 ids.insert(id.clone());
                 progress.pending.push(PendingCall {
                     id,
@@ -1526,6 +1594,7 @@ async fn consume(
                 {
                     return Err(limit(LimitKind::ToolInputBytes));
                 }
+                execution.grow_context(delta.len().saturating_mul(6))?;
                 call.arguments.push_str(&delta);
             }
             Some(Ok(ProviderEvent::Finished { reason, usage })) => {

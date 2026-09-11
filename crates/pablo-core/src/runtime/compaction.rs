@@ -130,7 +130,7 @@ fn select_split(execution: &Execution<'_>, state: &TaskState) -> Option<(usize, 
             bytes,
             history.len(),
         ));
-        if bytes <= execution.spec.limits.max_context_bytes
+        if bytes <= execution.context_capacity()
             && selected.window_tokens.is_none_or(|cap| {
                 tokens.saturating_add(u64::from(
                     settings.max_summary_tokens.min(selected.max_output_tokens),
@@ -352,6 +352,7 @@ where
         // No await or effect between the accepted boundary and the replacement.
         state.history = candidate.history;
         state.continuations = candidate.continuations;
+        execution.retain_context(candidate.bytes)?;
         Ok(())
     }
 
@@ -382,7 +383,7 @@ where
             .collect();
         let bytes = context_bytes(execution, &history, &continuations);
         let max_output_tokens = settings.max_summary_tokens.min(selected.max_output_tokens);
-        if bytes > spec.limits.max_context_bytes
+        if bytes > execution.context_capacity()
             || selected.window_tokens.is_some_and(|cap| {
                 state.calibration[state.selected]
                     .estimate(estimate_bytes(execution, bytes, history.len()))
@@ -426,7 +427,7 @@ where
             deadline,
             history: &history,
             continuations: &continuations,
-            remaining_context: spec.limits.max_context_bytes - bytes,
+            remaining_context: execution.context_capacity().saturating_sub(bytes),
             allow_tool_calls: false,
             summary: true,
             max_output_bytes: settings.max_summary_bytes.min(spec.limits.max_output_bytes),
@@ -480,7 +481,7 @@ where
             history.len(),
         ));
         if bytes >= context_bytes(execution, &state.history, &state.continuations)
-            || bytes > spec.limits.max_context_bytes
+            || bytes > execution.context_capacity()
             || selected.window_tokens.is_some_and(|cap| {
                 tokens.saturating_add(u64::from(selected.max_output_tokens)) > settings.usable(cap)
             })
@@ -605,6 +606,7 @@ mod tests {
             let root = Context::new().with_span(tracer.start("root"));
             let tools = ToolRegistry::default();
             let execution = Execution {
+                resident: None,
                 agent: None,
                 child_tool: None,
                 child_catalog: None,

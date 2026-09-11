@@ -503,3 +503,133 @@ async fn cancelled_scoped_delivery_retains_native_cancellation_outcome() {
     assert_eq!(terminal, Some(outcome));
     sdk.shutdown().unwrap();
 }
+
+#[tokio::test]
+async fn root_context_admission_and_stream_growth_share_live_child_capacity() {
+    use children::ledger::resources::Resources;
+    for occupied_at_start in [true, false] {
+        let sdk = SdkTracerProvider::builder().build();
+        let root = AgentRef::root("root".into(), "session".into());
+        let child = root.temporary_child().unwrap();
+        let mut spec = RunSpec::new(
+            if occupied_at_start {
+                "x".repeat(1536)
+            } else {
+                "short".into()
+            },
+            std::env::temp_dir().canonicalize().unwrap(),
+            "fixture",
+        );
+        spec.limits.max_context_bytes = 4096;
+        let ledger = RootLedger::new(&root, spec.limits.clone()).unwrap();
+        let reserve_child = || {
+            ledger
+                .admit_child(
+                    &child,
+                    spec.limits.clone(),
+                    Resources {
+                        active_children: 1,
+                        context_bytes: 3000,
+                        ..Default::default()
+                    },
+                )
+                .unwrap()
+        };
+        let mut child_lease = occupied_at_start.then(reserve_child);
+        let provider = ScriptedProvider::text(["a".repeat(512), "\0".repeat(256)]);
+        let mut deltas = 0;
+        let mut terminal = false;
+        let outcome = Runtime::new(telemetry::tracer(&sdk))
+            .with_root_ledger(ledger.clone(), root.agent_id().into())
+            .unwrap()
+            .run(&spec, &provider, &mut |event: &RunEvent| {
+                if matches!(event.kind, EventKind::TextDelta { .. }) {
+                    deltas += 1;
+                    assert!(!occupied_at_start);
+                    assert!(ledger.resources().context_bytes >= 512);
+                    if child_lease.is_none() {
+                        child_lease = Some(reserve_child());
+                        assert_eq!(ledger.context_capacity(root.agent_id()).unwrap(), 1096);
+                    }
+                }
+                assert!(ledger.resources().context_bytes <= 4096);
+                if matches!(event.kind, EventKind::RunFinished { .. }) {
+                    terminal = true;
+                    assert_eq!(
+                        ledger.resources().context_bytes,
+                        3000,
+                        "only the independent child reservation remains"
+                    );
+                }
+                Ok(())
+            })
+            .await
+            .unwrap();
+        assert_eq!(
+            outcome,
+            RunOutcome::LimitExceeded {
+                limit: LimitKind::ContextBytes
+            }
+        );
+        assert_eq!(deltas, usize::from(!occupied_at_start));
+        assert_eq!(ledger.total().model_calls, u64::from(!occupied_at_start));
+        assert!(terminal);
+        drop(child_lease);
+        assert_eq!(ledger.resources(), Resources::default());
+        sdk.shutdown().unwrap();
+    }
+}
+
+#[tokio::test]
+async fn child_context_growth_stays_inside_its_existing_reservation_without_double_charge() {
+    use children::ledger::resources::Resources;
+    let sdk = SdkTracerProvider::builder().build();
+    let root = AgentRef::root("root".into(), "session".into());
+    let child = root.temporary_child().unwrap();
+    let mut spec = RunSpec::new(
+        "short",
+        std::env::temp_dir().canonicalize().unwrap(),
+        "fixture",
+    );
+    spec.limits.max_context_bytes = 4096;
+    let ledger = RootLedger::new(&root, spec.limits.clone()).unwrap();
+    let lease = ledger
+        .admit_child(
+            &child,
+            spec.limits.clone(),
+            Resources {
+                active_children: 1,
+                context_bytes: 4096,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    let mut deltas = 0;
+    let outcome = Runtime::new(telemetry::tracer(&sdk))
+        .with_root_ledger(ledger.clone(), child.agent_id().into())
+        .unwrap()
+        .run(
+            &spec,
+            &ScriptedProvider::text(["a".repeat(512), "\0".repeat(1024)]),
+            &mut |event: &RunEvent| {
+                assert_eq!(ledger.resources().context_bytes, 4096);
+                if matches!(event.kind, EventKind::TextDelta { .. }) {
+                    deltas += 1;
+                }
+                Ok(())
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        outcome,
+        RunOutcome::LimitExceeded {
+            limit: LimitKind::ContextBytes
+        }
+    );
+    assert_eq!(deltas, 1);
+    assert_eq!(ledger.total().model_calls, 1);
+    drop(lease);
+    assert_eq!(ledger.resources(), Resources::default());
+    sdk.shutdown().unwrap();
+}
