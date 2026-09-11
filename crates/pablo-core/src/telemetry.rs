@@ -60,6 +60,7 @@ pub(crate) fn outcome(context: &Context, outcome: &RunOutcome) {
                     },
                 ));
                 match code {
+                    crate::FailureCode::ChildAdmission => "child_admission",
                     crate::FailureCode::ContextOverflow => "context_overflow",
                     crate::FailureCode::CompactionFailed => "compaction_failed",
                     crate::FailureCode::OutputValidationFailed => "output_validation_failed",

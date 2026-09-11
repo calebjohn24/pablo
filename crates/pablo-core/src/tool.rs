@@ -19,6 +19,7 @@ pub struct ToolDescriptor {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ToolStatus {
+    AdmissionFailed,
     Completed,
     RecoverableError,
     WorkLimit,

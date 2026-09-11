@@ -602,6 +602,7 @@ mod tests {
             let root = Context::new().with_span(tracer.start("root"));
             let tools = ToolRegistry::default();
             let execution = Execution {
+                accounting_scope: None,
                 attempts: attempts(&spec, &provider).unwrap(),
                 route_policy: None,
                 route: None,

@@ -18,6 +18,8 @@ pub enum AdmissionError {
     InvalidCeiling,
     Capacity,
     Unattested,
+    Cancelled,
+    TimedOut,
     Outcome(RunOutcome),
 }
 #[derive(Clone)]
@@ -36,11 +38,15 @@ struct State {
     root_run_id: String,
     root_session_id: String,
     limits: RunLimits,
+    deadline: tokio::time::Instant,
     accounting: Accounting,
     agents: BTreeMap<String, Agent>,
     pending: BTreeMap<u64, PendingModel>,
     next_reservation: u64,
     closed: bool,
+    closed_token: crate::CancellationToken,
+    resources: resources::ResourceState,
+    mutation: Arc<tokio::sync::Mutex<()>>,
 }
 /// One owned admission. Settle after the provider operation is closed/joined.
 /// Abandonment retains uncertain liability rather than inventing a refund.
@@ -75,6 +81,9 @@ impl RootLedger {
         if root.depth() != 0 || root.parent_agent_id().is_some() {
             return Err(AdmissionError::UnknownAgent);
         }
+        let deadline = tokio::time::Instant::now()
+            .checked_add(std::time::Duration::from_millis(limits.max_run_duration_ms))
+            .ok_or(AdmissionError::InvalidCeiling)?;
         let accounting = initial(&limits);
         let agents = [(
             root.agent_id().to_owned(),
@@ -89,11 +98,15 @@ impl RootLedger {
             root_run_id: root.root_run_id().into(),
             root_session_id: root.root_session_id().into(),
             limits,
+            deadline,
             accounting,
             agents,
             pending: BTreeMap::new(),
             next_reservation: 0,
             closed: false,
+            closed_token: crate::CancellationToken::new(),
+            resources: resources::ResourceState::default(),
+            mutation: Arc::new(tokio::sync::Mutex::new(())),
         }))))
     }
     /// Register counters only after supervisor authority/capacity admission.
@@ -214,6 +227,10 @@ impl RootLedger {
         s.agents.get_mut(agent_id).unwrap().accounting.tool_calls = own;
         Ok(())
     }
+    /// One root clock includes subsequent child admission and queue time.
+    pub fn deadline(&self) -> tokio::time::Instant {
+        self.0.lock().unwrap().deadline
+    }
     pub fn total(&self) -> Accounting {
         self.0.lock().unwrap().accounting.clone()
     }
@@ -226,7 +243,9 @@ impl RootLedger {
             .map(|a| a.accounting.clone())
     }
     pub fn close_admission(&self) {
-        self.0.lock().unwrap().closed = true;
+        let mut state = self.0.lock().unwrap();
+        state.closed = true;
+        state.closed_token.cancel();
     }
     fn settle(
         &self,
@@ -270,3 +289,5 @@ impl Drop for ModelReservation {
 
 #[cfg(test)]
 mod tests;
+
+pub mod resources;

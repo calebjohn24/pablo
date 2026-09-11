@@ -48,13 +48,19 @@ impl fmt::Display for RunError {
 impl std::error::Error for RunError {}
 
 /// The caller drives one future; tools complete cleanup before it settles.
+struct AccountingScope {
+    ledger: crate::children::ledger::RootLedger,
+    agent_id: String,
+}
 pub struct Runtime<T> {
+    accounting_scope: Option<AccountingScope>,
     deployment: Option<crate::deployment::DeploymentIdentity>,
     tracer: T,
     parent: Context,
 }
 
 struct Execution<'a> {
+    accounting_scope: Option<&'a AccountingScope>,
     attempts: Vec<Attempt<'a>>,
     route_policy: Option<&'a crate::deployment::RoutePolicy>,
     route: Option<&'a crate::deployment::ResolvedRoute>,
@@ -138,10 +144,25 @@ where
 {
     pub fn new(tracer: T) -> Self {
         Self {
+            accounting_scope: None,
             deployment: None,
             tracer,
             parent: Context::new(),
         }
+    }
+
+    /// Attach the already admitted root accounting scope. This is not child
+    /// authority or capacity admission and does not install a delegation tool.
+    pub fn with_root_ledger(
+        mut self,
+        ledger: crate::children::ledger::RootLedger,
+        agent_id: String,
+    ) -> Result<Self, RunError> {
+        if ledger.agent(&agent_id).is_none() {
+            return Err(RunError::InvalidSpec("unknown root accounting agent"));
+        }
+        self.accounting_scope = Some(AccountingScope { ledger, agent_id });
+        Ok(self)
     }
 
     /// Explicit host context; never reads or installs a thread-local context.
@@ -237,6 +258,10 @@ where
                 "run duration overflows the monotonic clock",
             ))?;
         let deadline = tools.deadline(deadline);
+        let deadline = self
+            .accounting_scope
+            .as_ref()
+            .map_or(deadline, |scope| deadline.min(scope.ledger.deadline()));
         let run_id = Uuid::new_v4().to_string();
         let session_id = spec
             .session_id
@@ -315,6 +340,7 @@ where
         };
         attempts[0].ledger.initialize(&mut lifecycle.accounting);
         let execution = Execution {
+            accounting_scope: self.accounting_scope.as_ref(),
             attempts,
             route_policy: provider.route().map(|r| r.resolved.policy()),
             route: provider.route().map(|r| &r.resolved),
@@ -829,6 +855,15 @@ where
                 result = Err(outcome);
             }
         }
+        if let Some(reservation) = progress.shared_reservation.take() {
+            let not_sent = progress.delivery == Some(DeliveryCertainty::NotSent);
+            if let Err(outcome) =
+                reservation.settle(&progress.usage, progress.cost_microusd, not_sent)
+            {
+                progress.retry_class = None;
+                result = Err(outcome);
+            }
+        }
         if let Some(record) = &mut lifecycle.model_route {
             record.phase = "finished".into();
             record.dispatched = progress.dispatched;
@@ -908,6 +943,32 @@ where
         if let Some(outcome) = execution.stop() {
             return Err(outcome);
         }
+        let tool_deadline = if execution.accounting_scope.is_some() {
+            Instant::now()
+                .checked_add(Duration::from_millis(
+                    execution.spec.limits.max_tool_duration_ms,
+                ))
+                .map_or(execution.deadline, |deadline| {
+                    deadline.min(execution.deadline)
+                })
+        } else {
+            execution.deadline
+        };
+        let _mutation = if matches!(call.name.as_str(), "fs.write" | "fs.edit") {
+            if let Some(scope) = execution.accounting_scope {
+                Some(
+                    scope
+                        .ledger
+                        .lock_mutation(&scope.agent_id, execution.cancellation, tool_deadline)
+                        .await
+                        .map_err(shared_admission_failure)?,
+                )
+            } else {
+                None
+            }
+        } else {
+            None
+        };
         let started = telemetry::now();
         let context = execution.root.with_span(
             self.tracer
@@ -939,6 +1000,14 @@ where
         let mut result = if let Err(outcome) = start {
             event_failure = Some(outcome);
             ToolResult::status(ToolStatus::EventSinkFailed)
+        } else if let Err(outcome) = execution.accounting_scope.map_or(Ok(()), |scope| {
+            scope
+                .ledger
+                .admit_tool(&scope.agent_id)
+                .map_err(shared_admission_failure)
+        }) {
+            event_failure = Some(outcome);
+            ToolResult::status(ToolStatus::AdmissionFailed)
         } else {
             lifecycle.accounting.tool_calls = lifecycle
                 .accounting
@@ -966,7 +1035,7 @@ where
                 ToolContext {
                     workspace: &execution.spec.workspace,
                     filesystem: execution.filesystem.as_ref(),
-                    deadline: execution.deadline,
+                    deadline: tool_deadline,
                     limits: &execution.spec.limits,
                     policy_decisions: &decisions,
                     cancellation: execution.cancellation,
@@ -1046,6 +1115,7 @@ where
 
 #[derive(Default)]
 struct ModelProgress {
+    shared_reservation: Option<crate::children::ledger::ModelReservation>,
     closing_failed: bool,
     delivery: Option<DeliveryCertainty>,
     retry_class: Option<&'static str>,
@@ -1107,12 +1177,27 @@ async fn consume(
     if let Some(outcome) = execution.stop() {
         return Err(outcome);
     }
-    input.attempt.ledger.reserve(&mut lifecycle.accounting)?;
-    lifecycle.accounting.model_calls = lifecycle
-        .accounting
+    let mut admitted = lifecycle.accounting.clone();
+    input.attempt.ledger.reserve(&mut admitted)?;
+    admitted.model_calls = admitted
         .model_calls
         .checked_add(1)
         .ok_or_else(|| limit(LimitKind::ModelCalls))?;
+    if let Some(scope) = execution.accounting_scope {
+        progress.shared_reservation = Some(
+            scope
+                .ledger
+                .reserve_model(
+                    &scope.agent_id,
+                    input
+                        .attempt
+                        .provider
+                        .accounting_bounds(input.attempt.model, input.attempt.max_output_tokens),
+                )
+                .map_err(shared_admission_failure)?,
+        );
+    }
+    lifecycle.accounting = admitted;
     if let Some(record) = &mut lifecycle.output_repair
         && record.status == "pending"
     {
@@ -1298,6 +1383,22 @@ async fn consume(
     }
 }
 
+fn shared_admission_failure(error: crate::children::ledger::AdmissionError) -> RunOutcome {
+    use crate::children::ledger::AdmissionError;
+    match error {
+        AdmissionError::Outcome(outcome) => outcome,
+        AdmissionError::Closed | AdmissionError::Cancelled => RunOutcome::Cancelled,
+        AdmissionError::TimedOut => RunOutcome::TimedOut,
+        AdmissionError::UnknownAgent
+        | AdmissionError::InvalidCeiling
+        | AdmissionError::Capacity
+        | AdmissionError::Unattested => RunOutcome::Failed {
+            code: FailureCode::ChildAdmission,
+            delivery: DeliveryCertainty::NotSent,
+        },
+    }
+}
+
 fn limit(limit: LimitKind) -> RunOutcome {
     RunOutcome::LimitExceeded { limit }
 }
@@ -1313,6 +1414,7 @@ fn malformed() -> RunOutcome {
 fn tool_failure(result: &ToolResult) -> Option<RunOutcome> {
     Some(match result.status {
         ToolStatus::Completed | ToolStatus::RecoverableError => return None,
+        ToolStatus::AdmissionFailed => failed(FailureCode::ChildAdmission),
         ToolStatus::WorkLimit => limit(LimitKind::FilesystemWork),
         ToolStatus::Cancelled => RunOutcome::Cancelled,
         ToolStatus::TimedOut => RunOutcome::TimedOut,
