@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T04:36:12.323Z",
+  "updated_at": "2026-09-11T04:37:48.683Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.16",
-  "next_action": "Merge C3.15, then activate C3.16 stdio MCP tool path with bounded SDK transport, private credentials and joined cleanup; continue matched performance and PR merges.",
-  "latest_log_entry": "LOG-0091",
+  "next_action": "Activate C3.16 on merged 52d9a2a. Implement actual stdio MCP with bounded SDK framing, validated catalogs and results, scoped credentials, process-group ownership and joined cleanup. Preserve existing defaults/compaction/repair, retain timing and notification follow-ups, and continue performance checks and PR merges.",
+  "latest_log_entry": "LOG-0092",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -448,7 +448,8 @@
       "status": "done",
       "blockers": [],
       "verification": [
-        "LOG-0091"
+        "LOG-0091",
+        "LOG-0092"
       ]
     },
     {
