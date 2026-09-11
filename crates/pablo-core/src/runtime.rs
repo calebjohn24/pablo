@@ -573,12 +573,12 @@ where
             parent_id.as_deref(),
             finished,
         );
-        if let Some(reservation) = &mut lifecycle.run_event {
+        let admitted = lifecycle.run_event.as_mut().map_or(Ok(()), |reservation| {
             reservation
-                .consume()
-                .expect("reserved root/agent terminal event");
-        }
-        let delivered = lifecycle.sink.emit(&terminal);
+                .consume_record(&terminal)
+                .map_err(|_| SinkError::Capacity)
+        });
+        let delivered = admitted.and_then(|()| lifecycle.sink.emit(&terminal));
         if delivered.is_err() {
             root.span()
                 .set_attribute(KeyValue::new("pablo.event.delivery_failed", true));
@@ -1832,26 +1832,26 @@ impl Lifecycle<'_> {
         }
         Ok(())
     }
-    fn admit_event(&mut self, kind: &EventKind) -> Result<(), RunOutcome> {
+    fn admit_event(&mut self, event: &RunEvent) -> Result<(), RunOutcome> {
         let Some(scope) = self.event_scope else {
             return Ok(());
         };
-        let result = match kind {
+        let result = match &event.kind {
             EventKind::ModelStarted { .. }
             | EventKind::ToolStarted { .. }
             | EventKind::CompactionStarted => self
                 .operation_events
                 .last_mut()
                 .expect("admitted operation")
-                .consume(),
+                .consume_record(event),
             EventKind::ModelFinished { .. }
             | EventKind::ToolFinished { .. }
             | EventKind::CompactionFinished { .. } => self
                 .operation_events
                 .pop()
                 .expect("admitted operation")
-                .consume(),
-            _ => scope.ledger.admit_event(&scope.agent_id),
+                .consume_record(event),
+            _ => scope.ledger.admit_event_record(&scope.agent_id, event),
         };
         result.map_err(|error| self.event_failure(error))
     }
@@ -1945,8 +1945,8 @@ impl Lifecycle<'_> {
                 limit: LimitKind::Events,
             });
         }
-        self.admit_event(&kind)?;
         let event = self.event(kind, context, parent, time);
+        self.admit_event(&event)?;
         self.sink.emit(&event).map_err(|error| match error {
             SinkError::Capacity => RunOutcome::LimitExceeded {
                 limit: LimitKind::TraceBytes,

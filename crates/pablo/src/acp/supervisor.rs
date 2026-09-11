@@ -99,6 +99,11 @@ impl Supervisor {
         {
             return Err("invalid supervisor owner");
         }
+        if parent.trace_path().is_some() {
+            ledger
+                .configure_trace(&parent.spec().trace)
+                .map_err(|_| "invalid supervisor trace capacity")?;
+        }
         let (updates, receiver) = async_channel::bounded(QUEUE_EVENTS);
         let inner = Arc::new(Inner {
             root_claimed: std::sync::atomic::AtomicBool::new(false),

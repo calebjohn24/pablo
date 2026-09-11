@@ -43,8 +43,9 @@ where
 }
 
 /// Bounded JSONL projection. Content capture is independent of OTel, which
-/// never receives task content. The writer should be dedicated to one run.
+/// never receives task content. Dedicate the writer to one run or supervised tree.
 pub struct JsonlSink<W> {
+    root_run_id: Option<String>,
     writer: W,
     capture_content: bool,
     max_bytes: usize,
@@ -74,6 +75,7 @@ impl<W: Write> JsonlSink<W> {
             return Err(SinkError::Capacity);
         }
         Ok(Self {
+            root_run_id: None,
             writer,
             capture_content: spec.trace.capture_content,
             max_bytes: spec.trace.max_bytes,
@@ -82,6 +84,13 @@ impl<W: Write> JsonlSink<W> {
             closed: false,
             buffer: Vec::with_capacity(4096),
         })
+    }
+
+    /// One writer for a supervised tree; child terminals do not close the file.
+    pub fn for_tree(writer: W, spec: &RunSpec, root_run_id: String) -> Result<Self, SinkError> {
+        let mut sink = Self::new(writer, spec)?;
+        sink.root_run_id = Some(root_run_id);
+        Ok(sink)
     }
 
     pub fn bytes_written(&self) -> usize {
@@ -97,7 +106,11 @@ impl<W: Write + Send> EventSink for JsonlSink<W> {
         if self.closed {
             return Err(io::Error::other("trace is closed").into());
         }
-        let terminal = matches!(event.kind, EventKind::RunFinished { .. });
+        let terminal = matches!(event.kind, EventKind::RunFinished { .. })
+            && self
+                .root_run_id
+                .as_ref()
+                .is_none_or(|root| root == &event.run_id);
         let ceiling = if terminal {
             self.max_bytes
         } else {
@@ -114,11 +127,7 @@ impl<W: Write + Send> EventSink for JsonlSink<W> {
         };
         // Redact through borrowed views before serialization. Never copy task
         // content into a temporary JSON tree, even with content capture enabled.
-        let encoded = if self.capture_content {
-            serde_json::to_writer(&mut buffer, event)
-        } else {
-            serde_json::to_writer(&mut buffer, &RedactedEvent(event))
-        };
+        let encoded = encode(&mut buffer, event, self.capture_content);
         encoded.map_err(|error| {
             if error.io_error_kind() == Some(io::ErrorKind::FileTooLarge) {
                 SinkError::Capacity
@@ -137,6 +146,59 @@ impl<W: Write + Send> EventSink for JsonlSink<W> {
         }
         Ok(())
     }
+}
+
+fn encode<W: Write>(
+    writer: W,
+    event: &RunEvent,
+    capture_content: bool,
+) -> Result<(), serde_json::Error> {
+    if capture_content {
+        serde_json::to_writer(writer, event)
+    } else {
+        serde_json::to_writer(writer, &RedactedEvent(event))
+    }
+}
+
+/// Exact bounded JSONL size, using the writer's borrowed content/redaction projection.
+/// No serialized payload or JSON value tree is allocated.
+pub fn jsonl_size(
+    event: &RunEvent,
+    capture_content: bool,
+    max_bytes: usize,
+) -> Result<usize, SinkError> {
+    struct Counter {
+        used: usize,
+        max: usize,
+    }
+    impl Write for Counter {
+        fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+            self.used = self
+                .used
+                .checked_add(bytes.len())
+                .filter(|n| *n <= self.max)
+                .ok_or(io::ErrorKind::FileTooLarge)?;
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+    if max_bytes == 0 {
+        return Err(SinkError::Capacity);
+    }
+    let mut counter = Counter {
+        used: 1,
+        max: max_bytes,
+    }; // Include the newline.
+    encode(&mut counter, event, capture_content).map_err(|error| {
+        if error.io_error_kind() == Some(io::ErrorKind::FileTooLarge) {
+            SinkError::Capacity
+        } else {
+            SinkError::Io(io::Error::other(error))
+        }
+    })?;
+    Ok(counter.used)
 }
 
 /// Stops oversized serialization in memory, before any of the record is written.

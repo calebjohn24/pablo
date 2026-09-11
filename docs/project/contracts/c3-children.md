@@ -102,6 +102,18 @@ closings remain deliverable after admission closes. Failed delivery attempts sta
 spent; only unused reservation slots are released. Root multiplex delivery order
 is separate from this capacity counter.
 
+Traced trees install immutable root capture/byte policy before execution or child
+registration. Full or redacted JSONL is counted through the writer's borrowed
+projection outside the lock, then event count and byte use are admitted atomically.
+Untraced trees skip serialization and byte admission. Root terminal bytes are
+prepaid at configuration; executed children reserve their own terminal allowance
+before their run span. Settlement replaces that allowance with actual projected
+bytes, including after admission closes. Unused terminal allowances are released;
+consumed bytes remain spent after failed delivery. Operation payloads still must
+fit ordinary trace space. One tree writer remains open through child terminals
+and closes on the native root terminal. The eventual multiplex projection must
+include any added sequence/envelope bytes in admission before delivery.
+
 Retained model context uses the existing encoded instructions/history/tool catalog
 measure, including opaque continuation bytes. Roots reserve retained context and
 stream growth atomically; children meter growth within their full admitted context

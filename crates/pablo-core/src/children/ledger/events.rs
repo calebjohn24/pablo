@@ -1,11 +1,21 @@
 //! Cumulative native event capacity with owned closing slots. Reserved events may
 //! settle after admission closes; failed delivery never refunds a consumed event.
 use super::*;
+use crate::{RunEvent, TraceSettings, events::jsonl_size};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct EventCounts {
     pub used: u64,
     pub reserved: u64,
+}
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct TraceCounts {
+    pub used: usize,
+    pub reserved: usize,
+}
+struct TraceBudget {
+    settings: TraceSettings,
+    counts: TraceCounts,
 }
 #[derive(Default)]
 struct AgentEvents {
@@ -15,12 +25,14 @@ struct AgentEvents {
 struct Entry {
     agent_id: String,
     remaining: u64,
+    terminal_bytes: usize,
 }
 pub(super) struct EventState {
     counts: EventCounts,
     agents: BTreeMap<String, AgentEvents>,
     entries: BTreeMap<u64, Entry>,
     next: u64,
+    trace: Option<TraceBudget>,
 }
 impl EventState {
     pub(super) fn new(root_id: &str) -> Self {
@@ -41,6 +53,7 @@ impl EventState {
             .into(),
             entries: BTreeMap::new(),
             next: 0,
+            trace: None,
         }
     }
 }
@@ -52,6 +65,52 @@ fn exhausted() -> AdmissionError {
     AdmissionError::Outcome(RunOutcome::LimitExceeded {
         limit: LimitKind::Events,
     })
+}
+fn trace_exhausted() -> AdmissionError {
+    AdmissionError::Outcome(RunOutcome::LimitExceeded {
+        limit: LimitKind::TraceBytes,
+    })
+}
+fn terminal_bytes(limits: &RunLimits, settings: &TraceSettings) -> Result<usize, AdmissionError> {
+    // Metadata, optional schema diagnostics, and bounded agent identity. Children
+    // may select a schema even when the root does not. JSON escaping expands 6x.
+    let content = if settings.capture_content {
+        limits
+            .max_output_bytes
+            .checked_mul(6)
+            .ok_or_else(trace_exhausted)?
+    } else {
+        0
+    };
+    (12 * 1024usize)
+        .checked_add(content)
+        .ok_or_else(trace_exhausted)
+}
+fn trace_after(
+    s: &State,
+    bytes: Option<usize>,
+    released: usize,
+) -> Result<Option<TraceCounts>, AdmissionError> {
+    match (&s.events.trace, bytes) {
+        (None, None) => Ok(None),
+        (Some(trace), Some(bytes)) => {
+            let reserved = trace
+                .counts
+                .reserved
+                .checked_sub(released)
+                .ok_or(AdmissionError::InvalidCeiling)?;
+            let used = trace
+                .counts
+                .used
+                .checked_add(bytes)
+                .ok_or_else(trace_exhausted)?;
+            used.checked_add(reserved)
+                .filter(|n| *n <= trace.settings.max_bytes)
+                .ok_or_else(trace_exhausted)?;
+            Ok(Some(TraceCounts { used, reserved }))
+        }
+        _ => Err(AdmissionError::InvalidCeiling),
+    }
 }
 fn check(s: &State, agent_id: &str, count: u64) -> Result<(), AdmissionError> {
     if s.closed {
@@ -82,6 +141,7 @@ fn reserve(
     agent_id: &str,
     count: u64,
     prepaid: bool,
+    terminal: bool,
 ) -> Result<EventReservation, AdmissionError> {
     if count == 0 {
         return Err(AdmissionError::InvalidCeiling);
@@ -89,11 +149,40 @@ fn reserve(
     if !prepaid {
         check(s, agent_id, count)?;
     }
+    let terminal_bytes = if terminal {
+        s.events
+            .trace
+            .as_ref()
+            .map(|trace| terminal_bytes(&s.agents[agent_id].limits, &trace.settings))
+            .transpose()?
+            .unwrap_or(0)
+    } else {
+        0
+    };
+    let trace_reserved = if let Some(trace) = &s.events.trace {
+        let reserved = trace
+            .counts
+            .reserved
+            .checked_add(if prepaid { 0 } else { terminal_bytes })
+            .ok_or_else(trace_exhausted)?;
+        trace
+            .counts
+            .used
+            .checked_add(reserved)
+            .filter(|n| *n <= trace.settings.max_bytes)
+            .ok_or_else(trace_exhausted)?;
+        Some(reserved)
+    } else {
+        None
+    };
     let id = s.events.next.checked_add(1).ok_or_else(exhausted)?;
     let own = s.events.agents.entry(agent_id.into()).or_default();
     if !prepaid {
         own.counts.reserved += count;
         s.events.counts.reserved += count;
+    }
+    if let Some(reserved) = trace_reserved {
+        s.events.trace.as_mut().unwrap().counts.reserved = reserved;
     }
     s.events.next = id;
     s.events.entries.insert(
@@ -101,6 +190,7 @@ fn reserve(
         Entry {
             agent_id: agent_id.into(),
             remaining: count,
+            terminal_bytes,
         },
     );
     Ok(EventReservation {
@@ -109,6 +199,70 @@ fn reserve(
     })
 }
 impl RootLedger {
+    /// Install root-owned trace policy before execution/children. Untraced trees
+    /// leave this unset. Repeating the same immutable policy is harmless.
+    pub fn configure_trace(&self, settings: &TraceSettings) -> Result<(), AdmissionError> {
+        let mut s = self.0.lock().unwrap();
+        if let Some(trace) = &s.events.trace {
+            return if trace.settings.capture_content == settings.capture_content
+                && trace.settings.max_bytes == settings.max_bytes
+            {
+                Ok(())
+            } else {
+                Err(AdmissionError::InvalidCeiling)
+            };
+        }
+        if s.closed
+            || s.agents.len() != 1
+            || s.events.counts.used != 0
+            || s.events.next != 0
+            || s.agents.values().any(|a| a.execution.is_some())
+        {
+            return Err(AdmissionError::InvalidCeiling);
+        }
+        let reserved = terminal_bytes(&s.limits, settings)?;
+        if reserved > settings.max_bytes {
+            return Err(trace_exhausted());
+        }
+        s.events.trace = Some(TraceBudget {
+            settings: settings.clone(),
+            counts: TraceCounts { used: 0, reserved },
+        });
+        Ok(())
+    }
+    pub fn trace_counts(&self) -> Option<TraceCounts> {
+        self.0
+            .lock()
+            .unwrap()
+            .events
+            .trace
+            .as_ref()
+            .map(|t| t.counts)
+    }
+    fn record_bytes(&self, event: &RunEvent) -> Result<Option<usize>, AdmissionError> {
+        let settings = self
+            .0
+            .lock()
+            .unwrap()
+            .events
+            .trace
+            .as_ref()
+            .map(|t| t.settings.clone());
+        // Potentially large serialization happens outside the shared admission lock.
+        settings
+            .map(|settings| {
+                jsonl_size(event, settings.capture_content, settings.max_bytes)
+                    .map_err(|_| trace_exhausted())
+            })
+            .transpose()
+    }
+    pub fn admit_event_record(
+        &self,
+        agent_id: &str,
+        event: &RunEvent,
+    ) -> Result<(), AdmissionError> {
+        self.admit_event_bytes(agent_id, self.record_bytes(event)?)
+    }
     pub fn event_counts(&self) -> EventCounts {
         self.0.lock().unwrap().events.counts
     }
@@ -124,7 +278,7 @@ impl RootLedger {
             return Err(AdmissionError::UnknownAgent);
         }
         let prepaid = agent_id == s.root_id;
-        let reservation = reserve(self, &mut s, agent_id, 1, prepaid)?;
+        let reservation = reserve(self, &mut s, agent_id, 1, prepaid, true)?;
         s.events.agents.get_mut(agent_id).unwrap().terminal_claimed = true;
         Ok(reservation)
     }
@@ -134,11 +288,29 @@ impl RootLedger {
         agent_id: &str,
         count: u64,
     ) -> Result<EventReservation, AdmissionError> {
-        reserve(self, &mut self.0.lock().unwrap(), agent_id, count, false)
+        reserve(
+            self,
+            &mut self.0.lock().unwrap(),
+            agent_id,
+            count,
+            false,
+            false,
+        )
     }
     pub fn admit_event(&self, agent_id: &str) -> Result<(), AdmissionError> {
+        self.admit_event_bytes(agent_id, None)
+    }
+    fn admit_event_bytes(
+        &self,
+        agent_id: &str,
+        bytes: Option<usize>,
+    ) -> Result<(), AdmissionError> {
         let mut s = self.0.lock().unwrap();
         check(&s, agent_id, 1)?;
+        let trace = trace_after(&s, bytes, 0)?;
+        if let Some(counts) = trace {
+            s.events.trace.as_mut().unwrap().counts = counts;
+        }
         s.events.counts.used += 1;
         s.events
             .agents
@@ -150,18 +322,40 @@ impl RootLedger {
     }
 }
 impl EventReservation {
+    pub fn consume_record(&mut self, event: &RunEvent) -> Result<(), AdmissionError> {
+        self.consume_bytes(
+            self.ledger.record_bytes(event)?,
+            matches!(event.kind, crate::EventKind::RunFinished { .. }),
+        )
+    }
     pub fn consume(&mut self) -> Result<(), AdmissionError> {
+        self.consume_bytes(None, true)
+    }
+    fn consume_bytes(
+        &mut self,
+        bytes: Option<usize>,
+        terminal: bool,
+    ) -> Result<(), AdmissionError> {
         let mut s = self.ledger.0.lock().unwrap();
         let entry = s
             .events
             .entries
-            .get_mut(&self.id)
+            .get(&self.id)
             .ok_or(AdmissionError::UnknownAgent)?;
         if entry.remaining == 0 {
             return Err(AdmissionError::UnknownAgent);
         }
+        if entry.terminal_bytes > 0 && !terminal {
+            return Err(AdmissionError::InvalidCeiling);
+        }
+        let trace = trace_after(&s, bytes, entry.terminal_bytes)?;
+        let entry = s.events.entries.get_mut(&self.id).unwrap();
         entry.remaining -= 1;
+        entry.terminal_bytes = 0;
         let agent_id = entry.agent_id.clone();
+        if let Some(counts) = trace {
+            s.events.trace.as_mut().unwrap().counts = counts;
+        }
         s.events.counts.reserved -= 1;
         s.events.counts.used += 1;
         let own = &mut s.events.agents.get_mut(&agent_id).unwrap().counts;
@@ -174,6 +368,9 @@ impl Drop for EventReservation {
     fn drop(&mut self) {
         let mut s = self.ledger.0.lock().unwrap();
         if let Some(entry) = s.events.entries.remove(&self.id) {
+            if let Some(trace) = &mut s.events.trace {
+                trace.counts.reserved -= entry.terminal_bytes;
+            }
             s.events.counts.reserved -= entry.remaining;
             s.events
                 .agents
