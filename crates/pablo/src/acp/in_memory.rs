@@ -270,4 +270,5 @@ impl Drop for Dispatcher {
 }
 
 #[cfg(test)]
+#[path = "in_memory/tests.rs"]
 mod tests;

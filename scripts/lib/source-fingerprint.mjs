@@ -15,7 +15,7 @@ export async function sourceFingerprint(root) {
       else throw new Error(`Unexpected non-file in source tree: ${child}`);
     }
   }
-  for (const path of ['crates', 'examples', 'scripts', 'tests', 'vendor']) await walk(path);
+  for (const path of ['crates', 'examples', 'scripts', 'tests', 'vendor', 'presets']) await walk(path);
   const hash = createHash('sha256');
   for (const path of paths.sort()) { hash.update(path); hash.update('\0'); hash.update(await readFile(join(root, path))); hash.update('\0'); }
   return hash.digest('hex');

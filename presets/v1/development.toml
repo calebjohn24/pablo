@@ -1,0 +1,15 @@
+schema_version = 1
+imports = ["base.toml"]
+
+[deployment]
+locked = true
+allowed_run_overrides = ["input", "limits.max_run_duration_ms"]
+
+[options.filesystem]
+enabled = true
+write = true
+[options.policy.write_roots]
+default = "allow"
+[options.shell.commands]
+default = "allow"
+deny = [{ id = "development.deny_rm", executable = "/bin/rm", args = [], match = "prefix" }]
