@@ -267,6 +267,9 @@ impl Serialize for RedactedEvent<'_> {
                     status: crate::tool::ToolStatus,
                     policy_rule: &'a Option<crate::PolicyRule>,
                     shell: Option<RedactedShell<'a>>,
+                    #[cfg(unix)]
+                    #[serde(skip_serializing_if = "Option::is_none")]
+                    mcp: Option<crate::mcp::tool::RedactedMcpResult>,
                     #[serde(skip_serializing_if = "Option::is_none")]
                     filesystem: Option<crate::filesystem::RedactedFilesystem>,
                     #[serde(skip_serializing_if = "<[_]>::is_empty")]
@@ -281,6 +284,8 @@ impl Serialize for RedactedEvent<'_> {
                         status: result.status,
                         policy_rule: &result.policy_rule,
                         shell: result.shell.as_ref().map(RedactedShell),
+                        #[cfg(unix)]
+                        mcp: result.mcp.as_ref().map(|m| m.redacted()),
                         filesystem: result.filesystem.as_ref().map(|f| f.redacted()),
                         policy_decisions: &result.policy_decisions,
                     },

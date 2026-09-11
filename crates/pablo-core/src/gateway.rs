@@ -142,6 +142,7 @@ impl Provider for GatewayProvider {
             Backend::Responses(p) => return p.stream(request),
         };
         Box::pin(async move {
+            let aliases = tool_aliases(request.tools)?;
             let body = request_body(&request, chat.kind)?;
             // The runtime selects against the absolute deadline and cancellation
             // while opening and polling this stream. Dropping it drops the socket.
@@ -153,6 +154,7 @@ impl Provider for GatewayProvider {
                 available: 0,
                 decoder: SseDecoder::default(),
                 completion: Completion {
+                    aliases,
                     kind: chat.kind,
                     ..Completion::default()
                 },
@@ -172,27 +174,45 @@ impl Provider for GatewayProvider {
     }
 }
 
-fn wire_name(name: &str) -> Result<&'static str, ProviderError> {
+fn wire_name(name: &str) -> Result<std::borrow::Cow<'_, str>, ProviderError> {
     match name {
-        "shell.run" => Ok("shell_run"),
-        "fs.read" => Ok("fs_read"),
-        "fs.list" => Ok("fs_list"),
-        "fs.search" => Ok("fs_search"),
-        "fs.write" => Ok("fs_write"),
-        "fs.edit" => Ok("fs_edit"),
-        _ => Err(not_sent()),
+        "shell.run" => Ok("shell_run".into()),
+        "fs.read" => Ok("fs_read".into()),
+        "fs.list" => Ok("fs_list".into()),
+        "fs.search" => Ok("fs_search".into()),
+        "fs.write" => Ok("fs_write".into()),
+        "fs.edit" => Ok("fs_edit".into()),
+        _ => crate::mcp::provider_alias(name)
+            .map(Into::into)
+            .map_err(|_| not_sent()),
     }
 }
 
-fn native_name(name: &str) -> Option<&'static str> {
+fn tool_aliases(
+    tools: &[crate::tool::ToolDescriptor],
+) -> Result<BTreeMap<String, String>, ProviderError> {
+    if tools.len() > crate::mcp::MAX_TOOLS + 6 {
+        return Err(not_sent());
+    }
+    let mut aliases = BTreeMap::new();
+    for tool in tools {
+        let alias = wire_name(&tool.name)?.into_owned();
+        if aliases.insert(alias, tool.name.clone()).is_some() {
+            return Err(not_sent());
+        }
+    }
+    Ok(aliases)
+}
+
+fn native_name(name: &str, aliases: &BTreeMap<String, String>) -> Option<String> {
     match name {
-        "shell_run" => Some("shell.run"),
-        "fs_read" => Some("fs.read"),
-        "fs_list" => Some("fs.list"),
-        "fs_search" => Some("fs.search"),
-        "fs_write" => Some("fs.write"),
-        "fs_edit" => Some("fs.edit"),
-        _ => None,
+        "shell_run" => Some("shell.run".into()),
+        "fs_read" => Some("fs.read".into()),
+        "fs_list" => Some("fs.list".into()),
+        "fs_search" => Some("fs.search".into()),
+        "fs_write" => Some("fs.write".into()),
+        "fs_edit" => Some("fs.edit".into()),
+        _ => aliases.get(name).cloned(),
     }
 }
 
@@ -325,6 +345,7 @@ struct Call {
 }
 #[derive(Default)]
 struct Completion {
+    aliases: BTreeMap<String, String>,
     kind: GatewayKind,
     cost: Option<u64>,
     pending: VecDeque<ProviderEvent>,
@@ -486,7 +507,7 @@ impl Completion {
                     call.started = true;
                     self.pending.push_back(ProviderEvent::ToolCallStart {
                         id: call.id.clone(),
-                        name: native_name(&call.name).ok_or_else(malformed)?.into(),
+                        name: native_name(&call.name, &self.aliases).ok_or_else(malformed)?,
                     });
                 }
                 self.pending
@@ -587,5 +608,41 @@ mod tests {
         assert!(
             matches!(completion.pending.pop_front(), Some(ProviderEvent::ToolCallArgumentsDelta { delta, .. }) if delta == "{")
         );
+    }
+    #[test]
+    fn mcp_aliases_round_trip_only_through_the_admitted_catalog() {
+        let name = crate::mcp::qualified(&"s".repeat(32), &"t".repeat(128)).unwrap();
+        let descriptor = crate::tool::ToolDescriptor {
+            name: name.clone(),
+            description: "synthetic".into(),
+            input_schema: json!({"type":"object"}),
+        };
+        let aliases = tool_aliases(std::slice::from_ref(&descriptor)).unwrap();
+        let alias = wire_name(&name).unwrap();
+        assert_eq!(alias.len(), 52);
+        assert_eq!(native_name(&alias, &aliases), Some(name.clone()));
+        assert!(native_name(&alias, &BTreeMap::new()).is_none());
+        assert!(tool_aliases(&[descriptor.clone(), descriptor]).is_err());
+        for kind in [GatewayKind::Vercel, GatewayKind::Openrouter] {
+            let mut completion = Completion {
+                kind,
+                aliases: aliases.clone(),
+                ..Default::default()
+            };
+            for (i, part) in [&alias[..20], &alias[20..]].iter().enumerate() {
+                let mut function = json!({"name":part});
+                if i == 1 {
+                    function["arguments"] = "{}".into();
+                }
+                let mut call = json!({"index":0,"function":function});
+                if i == 0 {
+                    call["id"] = "mcp-1".into();
+                }
+                completion.frame(json!({"choices":[{"index":0,"delta":{"tool_calls":[call]},"finish_reason":null}]}).to_string().as_bytes()).unwrap();
+            }
+            assert!(
+                matches!(completion.pending.pop_front(),Some(ProviderEvent::ToolCallStart{name:actual,..}) if actual==name)
+            );
+        }
     }
 }

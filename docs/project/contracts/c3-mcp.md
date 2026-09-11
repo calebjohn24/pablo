@@ -11,8 +11,9 @@ new discovery lifecycle. Tools-only client capabilities exclude roots, sampling,
 elicitation, prompts, resources, durable tasks and subscription/catalog changes.
 M02 enables stdio; M03 enables Streamable HTTP; M04 closes host/ACP and Collector
 acceptance. M01 performs configuration/policy admission only and advertises neither
-transport. The SDK initially enters dev dependencies for pinned wire-type tests;
-transport dependencies become runtime dependencies at their implementation gates.
+transport. M02 promotes the client-only SDK to a runtime dependency. The Rust
+embedding entry point is `PreparedRun::tools_with_mcp`; synchronous `tools()`
+requires the async path for admitted MCP. CLI/ACP integration remains C3.18 (M04).
 
 ## Host configuration and authority
 
@@ -71,7 +72,7 @@ results. Unsupported schemas or duplicate/colliding tools fail catalog admission
 At most one MCP request per server and 16 total outstanding; 64 progress messages
 per operation, 1024 progress-message bytes and 8192 aggregate progress bytes.
 Progress never extends the operation/root deadline. Bound each JSON-RPC frame to
-2 MiB, request/result payload to 1 MiB, stderr capture to 65536 bytes and session ID
+2 MiB, request/result payload to 1 MiB, stderr metadata counting to 65536 bytes and session ID
 /cursor to 256/1024 bytes. Bound all queues before reading more peer data. Runtime
 context, tool-result, event and trace allowances can narrow these limits further.
 
@@ -79,7 +80,9 @@ Results preserve ordered text blocks and optional structured JSON, with explicit
 `isError`. JSON-RPC errors are protocol failures; `isError=true` is a recoverable
 tool failure. Image/audio/resource content and task-required execution are rejected
 explicitly, never flattened or silently discarded. JSON schema output failure is
-a typed invalid-result error; it is not final-model-answer repair.
+a typed invalid-result error; it is not final-model-answer repair. Structured
+content must be an object. Success requires declared structured output; a tool
+error may omit the success payload, but supplied structured content still validates.
 
 ## Transport ownership
 
@@ -87,12 +90,24 @@ Use the official SDK for initialization, messages and request correlation. The
 pinned SDK's default async reader uses unbounded `read_until`, and its codec default
 has no finite maximum. Supply a bounded transport/codec adapter before receiving
 untrusted bytes; do not fork the protocol state machine. Review service pending
-requests, progress timeouts and transport close paths at M02/M03.
+requests, progress timeouts and transport close paths at M02/M03. M02 sends one
+typed request directly, bypassing the SDK's catalog cache and automatic multi-round
+tool helper. It admits no server requests and never replays a tool invocation.
 
 Stdio: one process group per owned server, cleared environment, bounded stderr and
 stdout framing. Cancellation notifies the peer where possible, then closes, kills
 and joins the process group/pipes under a 2-second cleanup allowance. Dropping a
-service alone is not evidence that descendants or pipe readers have joined.
+service alone is not evidence that descendants or pipe readers have joined. Stderr
+text is drained and discarded with fixed buffers; only a saturated byte counter is
+retained. Cancellation interrupts transport reads/writes before joining the SDK
+service, child and stderr task. The notification shares the original cleanup
+deadline. Callers must drive cancellation/close to completion; Drop is a fallback,
+not a joined-cleanup guarantee.
+
+Each admitted MCP registry is single-use and rejects concurrent/repeated runs.
+Startup is charged to the root deadline. Required startup failure closes all prior
+servers; optional failures record fixed omission codes, and cleanup failure is
+always fatal. An unused prepared catalog must be explicitly closed by its host.
 
 HTTP: JSON and SSE responses, negotiated protocol/session headers, optional GET
 and DELETE per the pinned transport specification. Disable redirects and automatic

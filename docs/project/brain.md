@@ -23,27 +23,21 @@ Create `pablo-core` and the `pablo` executable at C1.1. Keep providers, tools, p
 Root execution, model calls, tools, ACP updates, JSONL records, and OTel spans originate from one runtime lifecycle. Instrument the first operation; add the network exporter later. ACP is the process protocol. No alternate proprietary loop or process lifecycle is introduced.
 
 ### D007 — Reuse installed development tools
-
 Reuse installed Rust and Node tools; noninteractive shells may need nvm initialization. `.nvmrc` pins Node 24.20.0, but verify and record each host's actual version rather than assuming it matches. Use Node's built-in modules and test runner for project management; pin dependencies and protocols when introduced.
 
 ### D008 — Inject the tracer and stream into a host-owned sink
-
 The core accepts an OTel tracer and inline event sink, with no global installation or detached worker. The CLI owns its SDK. This gives the ACP adapter one existing lifecycle to drive. Sink calls must return promptly; asynchronous transport backpressure belongs to C1.3. Checkpoint-versioned contracts expose only implemented behavior. The `c1.2` contracts add sequential tool turns and explicit cancellation through this same lifecycle. See [runtime contracts](../runtime.md).
 
 ### D009 — Pin the native telemetry mapping from the first run
-
 Rust 1.98.1, OTel API 0.32.0, SDK 0.32.1, and all introduced dependencies are pinned. The GenAI mapping retains the brief's immutable revision `fee465db333bdd6a7d2faa320edab5cf3101a4f4` in the separate GenAI conventions repository. Native events reuse SDK identities and exact lifecycle timestamps; JSONL content capture is independent of metadata-only OTel spans. See [the mapping](../runtime.md#otel-mapping).
 
 ### D010 — Shell is an explicit capability with owned cleanup
-
 `ToolRegistry::with_shell()` enables the single built-in tool; empty catalogs grant none. Shell uses a contained canonical cwd, cleared environment plus `PABLO_TASK_` additions, bounded results, and a new process group. Cancellation awaits group kill, leader reaping, pipe draining, and group disappearance. The two-second cleanup allowance follows the execution deadline. No global subreaper is installed; hosts provide containment and orphan reaping. Details and the observed macOS zombie-group case are in [the shell contract](../shell.md).
 
 ### D011 — Bring a small end-user preview forward
-
 The user asked to test real tasks immediately after C1.2. Add C1.2a before ACP: a one-task `pablo run` CLI and reusable Vercel adapter through the existing runtime, with a small live synthetic-evidence smoke. The user explicitly selected direct HTTP; use a general Rust HTTP client, with no Vercel SDK. The existing `.env` key name `VERCEL_AI_GATEWAY` is supported as an alias for `AI_GATEWAY_API_KEY`. This changes the checkpoint order without claiming C1.3 or C1.4 complete. Keep ACP, durable chat, and the remaining live acceptance separate.
 
 ### D012 — Pin stable ACP v1 and preserve native outcome truth
-
 C1.3 uses the official Rust and TypeScript SDKs with exact releases/schema fingerprints in [the ACP lock](../acp-lock.json). C1.3 initially admitted one session and one prompt per process (D019 extends process reuse), negotiates `pablo/v1` metadata, and advertises only implemented capabilities. Standard stop reasons control the ACP turn; metadata preserves the immutable native outcome if a late cancellation arrives during final output draining. This meets cancellation semantics without rewriting trace history. See [the ACP contract](../acp.md); release-stable extension naming and broader session support remain deferred.
 
 ### D013 — Bound ACP traffic around the official SDK
@@ -198,3 +192,6 @@ C3.14 permits opt-in repair of one invalid final answer in its original history.
 
 ### D048 — Admit exact host MCP definitions before enabling transports
 C3.15 pins official rmcp 3.3.0 and protocol 2025-11-25. Closed server records replace as units; private credential references and exact policy intersect immutable host ceilings before use. ACP can select only matching host definitions. Bounded framing must wrap the SDK because its default reader is unbounded; transports and runtime credential scope remain M02/M03. See [M01–M04](contracts/c3-mcp.md).
+
+### D049 — Own each MCP catalog for one admitted run
+C3.16 enables stdio through the async Rust embedding factory, with bounded SDK framing, scoped environment, schema/result validation and single-use registries. Startup shares the root deadline; required failure and run settlement join prior processes/pipes before terminal delivery. Direct typed requests avoid SDK replay/cache behavior; MCP context decorates the existing logical tool span. CLI/ACP and Collector proof remain C3.18. See [M02 evidence](evidence/c3.16.md) and [contract](contracts/c3-mcp.md).

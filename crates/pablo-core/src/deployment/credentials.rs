@@ -13,6 +13,7 @@ pub enum CredentialConsumer {
     OpenRouter,
     OpenResponses,
     OtelHeaders,
+    McpEnvironment,
 }
 impl CredentialConsumer {
     pub(crate) fn name(self) -> &'static str {
@@ -21,6 +22,7 @@ impl CredentialConsumer {
             Self::OpenRouter => "provider.openrouter",
             Self::OpenResponses => "provider.open_responses",
             Self::OtelHeaders => "otel.headers",
+            Self::McpEnvironment => "mcp.env",
         }
     }
 }
@@ -88,6 +90,9 @@ impl PreparedRun {
         let options = self.deployment().options();
         let model = self.deployment().selected_model();
         let (reference, destination) = match consumer {
+            CredentialConsumer::McpEnvironment => {
+                return Err(error("config_credential_scope", "/credentials"));
+            }
             CredentialConsumer::Vercel
             | CredentialConsumer::OpenRouter
             | CredentialConsumer::OpenResponses => {
@@ -119,6 +124,38 @@ impl PreparedRun {
         )?
         .ok_or_else(|| error("config_credential_missing", "/model_route"))
     }
+    pub(super) fn mcp_environment(
+        &self,
+        id: &str,
+        server: &crate::mcp::Server,
+        inputs: &dyn CredentialInputs,
+    ) -> Result<BTreeMap<String, String>, ConfigError> {
+        let crate::mcp::Server::Stdio { env, .. } = server else {
+            return Err(error("config_credential_scope", "/credentials"));
+        };
+        let mut values = BTreeMap::new();
+        let mut bytes = 0usize;
+        for (binding, reference) in env {
+            let destination = serde_json::json!([id, server, binding]).to_string();
+            let credential = self
+                .resolve_credential(
+                    CredentialConsumer::McpEnvironment,
+                    &Value::String(reference.clone()),
+                    &destination,
+                    inputs,
+                )?
+                .ok_or_else(|| error("config_credential_missing", "/credentials"))?;
+            let value = credential.expose_for(CredentialConsumer::McpEnvironment, &destination)?;
+            bytes = bytes
+                .saturating_add(binding.len())
+                .saturating_add(value.len());
+            if bytes > 65536 {
+                return Err(error("config_credential_invalid", "/credentials"));
+            }
+            values.insert(binding.clone(), value.to_owned());
+        }
+        Ok(values)
+    }
     fn resolve_credential(
         &self,
         consumer: CredentialConsumer,
@@ -143,7 +180,9 @@ impl PreparedRun {
                 != match consumer {
                     CredentialConsumer::Vercel => crate::gateway::VERCEL_ENDPOINT,
                     CredentialConsumer::OpenRouter => crate::gateway::OPENROUTER_ENDPOINT,
-                    CredentialConsumer::OtelHeaders => unreachable!(),
+                    CredentialConsumer::OtelHeaders | CredentialConsumer::McpEnvironment => {
+                        unreachable!()
+                    }
                     CredentialConsumer::OpenResponses => unreachable!(),
                 }
         {

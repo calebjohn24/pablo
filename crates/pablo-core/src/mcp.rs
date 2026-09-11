@@ -1,4 +1,11 @@
-//! Host-owned MCP admission. No processes, network, credentials or transport capabilities.
+//! Host-owned MCP admission and bounded transport components.
+#[cfg(unix)]
+pub mod stdio;
+#[cfg(unix)]
+pub(crate) mod tool;
+#[cfg(unix)]
+pub use tool::McpResult;
+mod transport;
 use crate::{
     PolicyRule,
     policy::{DefaultDecision, Policy as ToolPolicy, PolicySet, Rules},
@@ -397,7 +404,7 @@ pub fn qualified(server: &str, tool: &str) -> Result<String, &'static str> {
     }
     Ok(format!("mcp/{server}/{tool}"))
 }
-fn split_identity(s: &str) -> Option<(&str, &str)> {
+pub(crate) fn split_identity(s: &str) -> Option<(&str, &str)> {
     let mut parts = s.split('/');
     if parts.next() != Some("mcp") {
         return None;
@@ -405,6 +412,17 @@ fn split_identity(s: &str) -> Option<(&str, &str)> {
     let server = parts.next()?;
     let tool = parts.next()?;
     (parts.next().is_none() && name(server, 32) && name(tool, 128)).then_some((server, tool))
+}
+pub fn provider_alias(identity: &str) -> Result<String, &'static str> {
+    split_identity(identity).ok_or("mcp_tool_identity")?;
+    let hash = aws_lc_rs::digest::digest(&aws_lc_rs::digest::SHA256, identity.as_bytes());
+    Ok(format!(
+        "mcp_{}",
+        hash.as_ref()[..24]
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect::<String>()
+    ))
 }
 #[derive(Default)]
 pub struct Identities {
@@ -422,14 +440,7 @@ impl Identities {
         if self.by_id.len() >= MAX_TOOLS {
             return Err("mcp_catalog_bound");
         }
-        let hash = aws_lc_rs::digest::digest(&aws_lc_rs::digest::SHA256, id.as_bytes());
-        let alias = format!(
-            "mcp_{}",
-            hash.as_ref()[..24]
-                .iter()
-                .map(|b| format!("{b:02x}"))
-                .collect::<String>()
-        );
+        let alias = provider_alias(&id)?;
         if self.by_id.contains_key(&id)
             || self.by_alias.contains_key(&alias)
             || reserved.contains(&alias)

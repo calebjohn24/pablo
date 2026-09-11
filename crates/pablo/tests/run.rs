@@ -414,7 +414,7 @@ fn ctrl_c_waits_for_shell_cleanup_and_reports_cancelled() {
         request(&mut stream);
         serve(
             stream,
-            &tool_reply("echo $$ > child.pid; exec sleep 30"),
+            &tool_reply("echo $$ > child.pid.tmp; mv child.pid.tmp child.pid; exec sleep 30"),
             "200 OK",
             "text/event-stream",
         );

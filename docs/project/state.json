@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T04:36:12.323Z",
+  "updated_at": "2026-09-11T05:26:29.876Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.16",
-  "next_action": "Merge C3.15, then activate C3.16 stdio MCP tool path with bounded SDK transport, private credentials and joined cleanup; continue matched performance and PR merges.",
-  "latest_log_entry": "LOG-0091",
+  "next_checkpoint": "C3.17",
+  "next_action": "Merge C3.16 and activate C3.17 Streamable HTTP. Reuse exact host admission, bounded catalogs/aliases and credential scope; prove JSON/SSE, session lifecycle, cancellation and no replay. Preserve compaction/repair/defaults and performance follow-ups; CLI/ACP integration remains C3.18.",
+  "latest_log_entry": "LOG-0094",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -448,7 +448,8 @@
       "status": "done",
       "blockers": [],
       "verification": [
-        "LOG-0091"
+        "LOG-0091",
+        "LOG-0092"
       ]
     },
     {
@@ -458,9 +459,11 @@
       "depends_on": [
         "C3.15"
       ],
-      "status": "pending",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0094"
+      ]
     },
     {
       "id": "C3.17",

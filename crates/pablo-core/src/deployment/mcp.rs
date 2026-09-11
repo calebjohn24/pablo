@@ -65,3 +65,128 @@ impl ResolvedDeployment {
             .map_err(|_| error("config_authority_violation", "/options/mcp"))
     }
 }
+
+#[cfg(unix)]
+impl PreparedRun {
+    /// Start a fresh per-run stdio catalog using only admitted host configuration.
+    /// The runtime joins it before its terminal event; callers abandoning a prepared catalog must call close().
+    pub async fn tools_with_mcp(
+        &self,
+        inputs: &dyn CredentialInputs,
+        deadline: tokio::time::Instant,
+        cancellation: &tokio_util::sync::CancellationToken,
+    ) -> Result<crate::ToolRegistry, ConfigError> {
+        use crate::mcp::{Server, stdio::StdioSession};
+        let deadline = deadline.min(
+            tokio::time::Instant::now()
+                .checked_add(std::time::Duration::from_millis(
+                    self.spec().limits.max_run_duration_ms,
+                ))
+                .ok_or_else(|| {
+                    error(
+                        "config_invalid_value",
+                        "/options/limits/max_run_duration_ms",
+                    )
+                })?,
+        );
+        let settings = self.deployment().mcp()?;
+        let policy = self.deployment().mcp_policy()?;
+        let mut tools = self.builtin_tools()?;
+        tools.constrain_deadline(deadline);
+        let mut catalog_bytes = 0usize;
+        let mut catalog_tools = 0usize;
+        for (id, server) in &settings.servers {
+            if settings.admit_server(id, &policy).is_err() {
+                tools.omit_mcp(id, "policy_denied");
+                continue;
+            }
+            let started = async {
+                let Server::Stdio { cwd, .. } = server else {
+                    return Err(error("config_unsupported_feature", "/options/mcp"));
+                };
+                let root = match cwd["base"].as_str().unwrap() {
+                    "workspace" => &self.spec().workspace,
+                    "config" => &self.config_root,
+                    "binding" => self
+                        .path_bindings
+                        .get(cwd["name"].as_str().unwrap())
+                        .ok_or_else(|| error("config_path_unavailable", "/options/mcp"))?,
+                    _ => return Err(error("config_path_unavailable", "/options/mcp")),
+                };
+                let canonical_root = root
+                    .canonicalize()
+                    .map_err(|_| error("config_path_unavailable", "/options/mcp"))?;
+                let cwd = root
+                    .join(cwd["path"].as_str().unwrap())
+                    .canonicalize()
+                    .map_err(|_| error("config_path_unavailable", "/options/mcp"))?;
+                if !cwd.is_dir() || !cwd.starts_with(canonical_root) {
+                    return Err(error("config_path_unavailable", "/options/mcp"));
+                }
+                let env = self.mcp_environment(id, server, inputs)?;
+                let mut session = StdioSession::start(server, &cwd, env, deadline, cancellation)
+                    .await
+                    .map_err(|failure| {
+                        error(
+                            if failure == crate::mcp::stdio::Error::Cleanup {
+                                "config_mcp_cleanup"
+                            } else {
+                                "config_mcp_startup"
+                            },
+                            "/options/mcp",
+                        )
+                    })?;
+                catalog_bytes = catalog_bytes.saturating_add(session.catalog_bytes());
+                catalog_tools = catalog_tools.saturating_add(session.tools().len());
+                if catalog_bytes > crate::mcp::MAX_RESULT_BYTES
+                    || catalog_tools > crate::mcp::MAX_TOOLS
+                {
+                    session
+                        .close()
+                        .await
+                        .map_err(|_| error("config_mcp_cleanup", "/options/mcp"))?;
+                    return Err(error("config_mcp_catalog_bound", "/options/mcp"));
+                }
+                let admitted = session
+                    .tools()
+                    .iter()
+                    .filter_map(|tool| {
+                        self.deployment()
+                            .admit_mcp_tool(id, &tool.name)
+                            .ok()
+                            .map(|decisions| (tool.name.clone(), decisions))
+                    })
+                    .collect();
+                tools
+                    .attach_mcp(id, session, admitted)
+                    .await
+                    .map_err(|failure| {
+                        error(
+                            if failure == crate::mcp::stdio::Error::Cleanup {
+                                "config_mcp_cleanup"
+                            } else {
+                                "config_mcp_catalog"
+                            },
+                            "/options/mcp",
+                        )
+                    })
+            }
+            .await;
+            if let Err(error) = started {
+                if error.code == "config_mcp_cleanup"
+                    || server.required()
+                    || cancellation.is_cancelled()
+                    || tokio::time::Instant::now() >= deadline
+                {
+                    tools
+                        .close()
+                        .await
+                        .map_err(|_| super::error("config_mcp_cleanup", "/options/mcp"))?;
+                    return Err(error);
+                }
+                tools.omit_mcp(id, error.code);
+            }
+        }
+        Ok(tools)
+    }
+}
