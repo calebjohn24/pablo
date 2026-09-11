@@ -37,11 +37,11 @@ pub(super) struct WaitResult {
     pub settled: Vec<Snapshot>,
     pub remaining: Vec<AgentRef>,
 }
-/// Delivery stays typed and bounded; acknowledgement belongs to the root consumer.
-/// This routing identity does not yet replace native event/span attribution.
+/// Original native records stay bounded; acknowledgement belongs to the root consumer.
+/// The routing handle supplements the immutable identity already carried by the event.
 pub(super) struct Update {
     pub agent: AgentRef,
-    pub update: delivery::TypedUpdate,
+    pub update: delivery::NativeUpdate,
 }
 struct Child {
     snapshot: Mutex<Snapshot>,
@@ -468,7 +468,8 @@ impl Inner {
         );
         let mut terminal = None;
         let mut error = None;
-        let outcome = if let Ok((dispatcher, updates)) = bound {
+        let outcome = if let Ok((dispatcher, _typed_updates)) = bound {
+            let (dispatcher, updates) = dispatcher.native_output();
             let session = dispatcher
                 .initialize(wire::InitializeRequest::new(
                     agent_client_protocol::schema::ProtocolVersion::V1,
@@ -501,7 +502,7 @@ impl Inner {
                             error = Some("root update receiver closed");
                             job.child.cancel.cancel(); let _ = dispatcher.close().await; let _ = prompt.await; break;
                         },
-                        result = &mut prompt => { if result.is_err() { error = Some("child ACP delivery failed"); } break; },
+                        result = &mut prompt => { if result.is_err() { error = Some("child event delivery failed"); } break; },
                         update = updates.recv() => {
                             if let Ok(update) = update {
                                 let agent = job.child.snapshot.lock().unwrap().agent.clone();

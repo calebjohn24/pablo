@@ -145,6 +145,16 @@ impl Dispatcher {
         });
         Ok((dispatcher, updates))
     }
+    /// Same admitted typed ACP handlers/worker, with original native output for
+    /// the supervising host. No reconstruction from lossy wire notifications.
+    pub fn native_output(mut self) -> (Self, async_channel::Receiver<delivery::NativeUpdate>) {
+        let (sender, receiver) = async_channel::bounded(1);
+        self.delivery = delivery::Delivery::Native {
+            sender,
+            closed: self.cancellation.clone(),
+        };
+        (self, receiver)
+    }
     pub fn initialize(
         &self,
         request: wire::InitializeRequest,

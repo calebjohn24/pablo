@@ -187,6 +187,13 @@ JSONL retains it. Span-start attributes use `pablo.agent.id`, `pablo.root.run.id
 `pablo.root.session.id`, `pablo.agent.session.id`, `pablo.agent.kind`,
 `pablo.agent.depth` and, for children, `pablo.parent.agent.id`.
 
+The supervisor selects original native output from the same typed ACP dispatch
+handlers and runtime worker, before wire projection or text coalescing. Every
+native lifecycle record and delta reaches the bounded root update stream; the
+consumer owns its acknowledgement. Losing the receiver wakes forwarding even
+while idle or holding an unacknowledged event. Acknowledging the terminal finishes
+delivery, while the dispatcher still awaits worker settlement and owned cleanup.
+
 Typed dispatch must retain one-prompt sessions, setup errors, update ordering,
 request cancellation, safe fallback and exactly one terminal response after joined
 work. A bounded typed update receiver acknowledges consumption before another

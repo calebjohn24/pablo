@@ -430,6 +430,9 @@ async fn forward_events(
     extensions: Extensions,
     capture_content: bool,
 ) -> Result<Option<RunEvent>, Error> {
+    if matches!(delivery, delivery::Delivery::Native { .. }) {
+        return delivery.forward_native(rx).await;
+    }
     let mut events = EventStream::new(rx);
     let mut terminal = None;
     while let Some((event, first)) = events.next().await {
@@ -696,6 +699,78 @@ mod tests {
             parent_span_id: None,
             trace_flags: "01".into(),
             kind,
+        }
+    }
+
+    #[tokio::test]
+    async fn native_delivery_preserves_every_original_record_and_waits_for_consumption() {
+        let originals = vec![
+            event(1, EventKind::RunStarted),
+            event(2, EventKind::TextDelta { text: "a".into() }),
+            event(3, EventKind::TextDelta { text: "b".into() }),
+            event(4, EventKind::TextDelta { text: "c".into() }),
+            event(
+                5,
+                EventKind::RunFinished {
+                    outcome: RunOutcome::Cancelled,
+                },
+            ),
+        ];
+        let (tx, rx) = async_channel::bounded(8);
+        for event in &originals {
+            tx.send(event.clone()).await.unwrap();
+        }
+        tx.close();
+        let (sender, receiver) = async_channel::bounded(1);
+        let delivery = delivery::Delivery::Native {
+            sender,
+            closed: CancellationToken::new(),
+        };
+        let forwarding = forward_events(rx, &delivery, Extensions::default(), false);
+        tokio::pin!(forwarding);
+        for original in &originals {
+            let update = tokio::select! {
+                result = &mut forwarding => panic!("forwarding finished before consumption: {result:?}"),
+                update = receiver.recv() => update.unwrap(),
+            };
+            assert_eq!(update.event, *original);
+            assert!(matches!(futures::poll!(&mut forwarding), Poll::Pending));
+            assert!(receiver.is_empty());
+            update.consumed.send(()).unwrap();
+        }
+        receiver.close(); // Closing after acknowledging the terminal is successful.
+        assert_eq!(forwarding.await.unwrap().as_ref(), originals.last());
+    }
+
+    #[tokio::test]
+    async fn native_receiver_loss_wakes_idle_or_unacknowledged_forwarding() {
+        for in_flight in [false, true] {
+            let (tx, rx) = async_channel::bounded(8);
+            let (sender, receiver) = async_channel::bounded(1);
+            let delivery = delivery::Delivery::Native {
+                sender,
+                closed: CancellationToken::new(),
+            };
+            let forwarding = delivery.forward_native(rx);
+            tokio::pin!(forwarding);
+            let held = if in_flight {
+                tx.send(event(1, EventKind::RunStarted)).await.unwrap();
+                Some(tokio::select! {
+                    result = &mut forwarding => panic!("unexpected result: {result:?}"),
+                    event = receiver.recv() => event.unwrap(),
+                })
+            } else {
+                None
+            };
+            receiver.close();
+            assert!(
+                tokio::time::timeout(Duration::from_secs(1), forwarding)
+                    .await
+                    .unwrap()
+                    .is_err()
+            );
+            drop(held);
+            drop(tx);
         }
     }
 

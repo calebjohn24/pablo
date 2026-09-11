@@ -349,7 +349,7 @@ async fn subagent_actions_project_owned_state_and_reject_foreign_or_injected_aut
     fixture.supervisor.close().await.unwrap();
 }
 
-async fn assert_closed(stream: &mut tokio::net::TcpStream) {
+pub(super) async fn assert_closed(stream: &mut tokio::net::TcpStream) {
     let mut byte = [0; 1];
     match stream.read(&mut byte).await {
         Ok(0) => {}

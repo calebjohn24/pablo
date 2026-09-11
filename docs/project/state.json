@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T11:57:46.950Z",
+  "updated_at": "2026-09-11T12:09:40.578Z",
   "active_checkpoint": "C3.22",
   "next_checkpoint": null,
-  "next_action": "Continue C3.22 with original native child multiplexing using one root delivery sequence and a bounded consumer; include any added sequence/envelope bytes in shared admission before delivery. Root trace policy now atomically admits projected JSONL bytes with event counts and protects root/child terminals; untraced trees skip serialization. Reserve root-factory MCP capacity before capability setup, then wire configured CLI/ACP RootOwner factories and enable children only after admission is complete. Run full A02 and deployment-enabled child performance before completing C3.22 or merging. Preserve FIFO one-active-child execution, shared context/accounting, causal identity, cancellation/native outcome fidelity, joined root settlement and handles/results outside compaction. C3.23 follows C3.22; GLM defaults and unlimited filesystem work remain. Prior F03 remains C3.33 despite current Node pass; mixed timing/RSS/size remains C3.39.",
-  "latest_log_entry": "LOG-0119",
+  "next_action": "Continue C3.22 by merging root and original child native records under one root delivery sequence and bounded consumer while preserving per-agent seq/timestamps/identity. Supervisor now selects native output before ACP projection/coalescing, with acknowledgement, receiver-loss cancellation and joined settlement. Native records already spend shared event/trace admission: do not charge them twice; include any added sequence/envelope bytes before delivery. Reserve root-factory MCP capacity before setup, wire configured CLI/ACP RootOwner factories, then run full A02 and child-enabled performance before completing C3.22 or merging. Preserve one active FIFO child, shared context/accounting, truthful cancellation/outcomes, joined root cleanup and handles/results outside compaction. C3.23 follows; GLM defaults and unlimited filesystem work remain. Prior F03 remains C3.33 despite current Node pass; mixed timing/size remains C3.39.",
+  "latest_log_entry": "LOG-0120",
   "checkpoints": [
     {
       "id": "C1.0",

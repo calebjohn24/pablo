@@ -265,8 +265,7 @@ async fn stalled_ack_root_cancel_and_dropped_close_caller_cannot_abandon_childre
         drop(close);
         fixture.supervisor.close().await.unwrap();
         drop(held);
-        let mut byte = [0; 1];
-        assert_eq!(stream.read(&mut byte).await.unwrap(), 0);
+        root_owner::assert_closed(&mut stream).await;
         assert_eq!(
             fixture
                 .supervisor
@@ -370,8 +369,7 @@ async fn lost_receiver_joins_active_work_and_context_denial_never_dispatches() {
                 .all(|s| s.outcome == Some(RunOutcome::Cancelled))
         );
         fixture.supervisor.close().await.unwrap();
-        let mut byte = [0; 1];
-        assert_eq!(stream.read(&mut byte).await.unwrap(), 0);
+        root_owner::assert_closed(&mut stream).await;
         assert!(!fixture.root_cancel.is_cancelled());
         assert_eq!(fixture.ledger.resources().active_children, 0);
         assert_eq!(fixture.ledger.resources().pending_children, 0);
@@ -410,8 +408,7 @@ async fn root_deadline_settles_active_and_queued_children_without_resetting_the_
         assert_eq!(first.outcome, Some(RunOutcome::TimedOut));
         assert_eq!(second.outcome, Some(RunOutcome::TimedOut));
         fixture.supervisor.close().await.unwrap();
-        let mut byte = [0; 1];
-        assert_eq!(stream.read(&mut byte).await.unwrap(), 0);
+        root_owner::assert_closed(&mut stream).await;
         assert_eq!(fixture.ledger.total().model_calls, 1);
         assert_eq!(fixture.ledger.resources().active_children, 0);
         assert!(!fixture.root_cancel.is_cancelled());
@@ -421,3 +418,80 @@ async fn root_deadline_settles_active_and_queued_children_without_resetting_the_
 }
 
 mod root_owner;
+
+#[tokio::test]
+async fn supervised_native_stream_keeps_lifecycle_deltas_identity_and_causal_parent() {
+    use opentelemetry::trace::{TraceContextExt, Tracer};
+    tokio::time::timeout(Duration::from_secs(10), async {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let fixture = Fixture::new(&format!("http://{}", listener.local_addr().unwrap()));
+        let sdk = opentelemetry_sdk::trace::SdkTracerProvider::builder().build();
+        let parent = opentelemetry::Context::current_with_span(pablo_core::telemetry::tracer(&sdk).start("execute_tool subagent"));
+        let parent_trace = parent.span().span_context().trace_id().to_string();
+        let parent_span = parent.span().span_context().span_id().to_string();
+        let request_spec = serde_json::from_value(json!({"input":"native selected task","capabilities":{"model_route":["secondary"],"tools":[]}})).unwrap();
+        let child = fixture.supervisor.spawn(&request_spec, parent.clone()).unwrap();
+        let drain = tokio::spawn({
+            let updates = fixture.updates.clone();
+            let id = child.agent_id().to_owned();
+            async move {
+                let mut events = Vec::new();
+                while let Ok(update) = updates.recv().await {
+                    assert_eq!(update.agent.agent_id(), id);
+                    let terminal = matches!(update.update.event.kind, EventKind::RunFinished { .. });
+                    events.push(update.update.event);
+                    update.update.consumed.send(()).unwrap();
+                    if terminal { break; }
+                }
+                events
+            }
+        });
+        let (mut stream, _) = listener.accept().await.unwrap();
+        let body = request(&mut stream).await;
+        assert!(body.to_string().contains("native selected task"));
+        assert!(!body.to_string().contains("parent private transcript"));
+        let mut body = String::new();
+        for text in ["first", "second", "third"] {
+            body.push_str(&format!("data: {}\n\n", json!({"choices":[{"index":0,"delta":{"content":text},"finish_reason":null}]})));
+        }
+        body.push_str("data: {\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n");
+        stream.write_all(format!("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len()).as_bytes()).await.unwrap();
+        let wait = fixture.supervisor.wait(&[child.agent_id().into()], WaitMode::All, 5000).await.unwrap();
+        assert!(wait.remaining.is_empty());
+        assert!(wait.settled[0].outcome.as_ref().unwrap().is_completed());
+        let events = drain.await.unwrap();
+        assert_eq!(events.len(), 7);
+        assert!(matches!(events[0].kind, EventKind::RunStarted));
+        assert!(matches!(events[1].kind, EventKind::ModelStarted { .. }));
+        assert!(matches!(events[5].kind, EventKind::ModelFinished { .. }));
+        assert!(matches!(events[6].kind, EventKind::RunFinished { .. }));
+        for (event, text) in events[2..5].iter().zip(["first", "second", "third"]) {
+            assert!(matches!(&event.kind, EventKind::TextDelta { text: actual } if actual == text));
+        }
+        let snapshot = &wait.settled[0];
+        assert!(snapshot.error.is_none());
+        for (index, event) in events.iter().enumerate() {
+            assert_eq!(event.seq, index as u64 + 1);
+            assert_eq!(event.trace_id, parent_trace);
+            assert_eq!(event.run_id, snapshot.trace.as_ref().unwrap().run_id);
+            let agent = event.agent.as_ref().unwrap();
+            assert_eq!(agent.agent_id(), child.agent_id());
+            assert_eq!(agent.root_run_id(), fixture.supervisor.inner.root.root_run_id());
+            assert_eq!(agent.session_id(), event.session_id);
+            assert_eq!(agent.parent_agent_id(), Some(fixture.supervisor.inner.root.agent_id()));
+            if index < 6 { assert!(event.accounting.is_none()); }
+        }
+        assert_eq!(events[6].accounting.as_deref(), Some(&snapshot.accounting));
+        assert!(events[1].model_route.is_some());
+        assert!(events[5].model_route.is_some());
+        assert_eq!(events[0].parent_span_id.as_deref(), Some(parent_span.as_str()));
+        assert_eq!(events[6].span_id, events[0].span_id);
+        assert_eq!(events[1].parent_span_id.as_deref(), Some(events[0].span_id.as_str()));
+        assert_eq!(events[5].span_id, events[1].span_id);
+        assert!(events.windows(2).all(|pair| pair[0].timestamp_unix_micros <= pair[1].timestamp_unix_micros));
+        assert_eq!(fixture.ledger.event_counts().used, events.len() as u64);
+        fixture.supervisor.close().await.unwrap();
+        parent.span().end();
+        sdk.shutdown().unwrap();
+    }).await.unwrap();
+}
