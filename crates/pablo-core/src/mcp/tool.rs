@@ -10,6 +10,8 @@ use tokio::sync::Mutex;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct McpResult {
+    #[serde(default)]
+    pub remote_completion_uncertain: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub content: Option<ResultContent>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -17,6 +19,7 @@ pub struct McpResult {
 }
 #[derive(Serialize)]
 pub(crate) struct RedactedMcpResult {
+    remote_completion_uncertain: bool,
     error: Option<Error>,
     text_blocks: usize,
     text_bytes: usize,
@@ -26,6 +29,7 @@ pub(crate) struct RedactedMcpResult {
 impl McpResult {
     pub(crate) fn redacted(&self) -> RedactedMcpResult {
         RedactedMcpResult {
+            remote_completion_uncertain: self.remote_completion_uncertain,
             error: self.error,
             text_blocks: self.content.as_ref().map_or(0, |c| c.text.len()),
             text_bytes: self.content.as_ref().map_or(0, |c| {
@@ -74,19 +78,25 @@ impl Tool for McpTool {
             context.context.span().set_attributes([
                 KeyValue::new("mcp.method.name", "tools/call"),
                 KeyValue::new("mcp.protocol.version", PROTOCOL_VERSION),
-                KeyValue::new("network.transport", "pipe"),
                 KeyValue::new("pablo.mcp.server", self.server.clone()),
             ]);
-            let result = tokio::select! {
+            let (result, remote_completion_uncertain) = tokio::select! {
                 biased;
-                _ = context.cancellation.cancelled() => Err(Error::Cancelled),
-                _ = tokio::time::sleep_until(context.deadline) => Err(Error::TimedOut),
+                _ = context.cancellation.cancelled() => (Err(Error::Cancelled), false),
+                _ = tokio::time::sleep_until(context.deadline) => (Err(Error::TimedOut), false),
                 session = self.session.lock() => {
                     let mut session = session;
-                    context.context.span().set_attribute(KeyValue::new("pablo.mcp.process.id",i64::from(session.process_id())));
-                    session.call_with_context(&self.name,arguments,context.deadline,context.cancellation,&context.context).await
+                    session.decorate(&context.context);
+                    let result = session.call_with_context(&self.name,arguments,context.deadline,context.cancellation,&context.context).await;
+                    (result, session.remote_completion_uncertain())
                 }
             };
+            if remote_completion_uncertain {
+                context
+                    .context
+                    .span()
+                    .set_attribute(KeyValue::new("pablo.mcp.remote_completion_uncertain", true));
+            }
             let (status, content, error) = match result {
                 Ok(content) => (
                     if content.is_error {
@@ -113,7 +123,11 @@ impl Tool for McpTool {
             };
             let mut result = ToolResult::status(status);
             result.policy_decisions = self.decisions.clone();
-            result.mcp = Some(Box::new(McpResult { content, error }));
+            result.mcp = Some(Box::new(McpResult {
+                content,
+                error,
+                remote_completion_uncertain,
+            }));
             if !crate::filesystem::fits(&result, context.limits.max_tool_output_bytes) {
                 result.status = ToolStatus::OutputLimit;
                 result.mcp = None;

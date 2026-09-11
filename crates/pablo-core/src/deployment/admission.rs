@@ -332,11 +332,6 @@ impl ResolvedDeployment {
                 }
                 continue;
             }
-            if matches!(server, crate::mcp::Server::Http { .. }) {
-                let mut unavailable = error("config_unsupported_feature", "/options/mcp");
-                unavailable.owner = Some("C3.17");
-                return Err(unavailable);
-            }
         }
         #[cfg(unix)]
         if options["filesystem"]["enabled"] == true {

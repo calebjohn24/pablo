@@ -34,14 +34,14 @@ impl Bounds {
     pub(super) fn failed(&self) -> bool {
         self.failure.load(Ordering::Acquire) != 0
     }
-    fn fail(&self) {
+    pub(super) fn fail(&self) {
         self.failure.store(1, Ordering::Release);
     }
-    fn reset(&self) {
+    pub(super) fn reset(&self) {
         self.messages.store(0, Ordering::Release);
         self.progress_bytes.store(0, Ordering::Release);
     }
-    fn admit(&self, value: &serde_json::Value, bytes: usize) -> bool {
+    pub(super) fn admit(&self, value: &serde_json::Value, bytes: usize) -> bool {
         if self.messages.fetch_add(1, Ordering::AcqRel) >= 65 {
             return false;
         }

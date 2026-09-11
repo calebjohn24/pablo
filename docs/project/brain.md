@@ -195,3 +195,6 @@ C3.15 pins official rmcp 3.3.0 and protocol 2025-11-25. Closed server records re
 
 ### D049 — Own each MCP catalog for one admitted run
 C3.16 enables stdio through the async Rust embedding factory, with bounded SDK framing, scoped environment, schema/result validation and single-use registries. Startup shares the root deadline; required failure and run settlement join prior processes/pipes before terminal delivery. Direct typed requests avoid SDK replay/cache behavior; MCP context decorates the existing logical tool span. CLI/ACP and Collector proof remain C3.18. See [M02 evidence](evidence/c3.16.md) and [contract](contracts/c3-mcp.md).
+
+### D050 — HTTP disconnect is not remote cancellation
+C3.17 shares normalized MCP sessions across transports. Bound each POST/JSON/SSE exchange, retain exact endpoint/header scope and never follow redirects or replay invocations. Direct bounded cancellation bypasses a stalled SDK sender; local join and session DELETE cannot prove remote rollback, so results/metadata preserve uncertain completion. GET streams/resumption are outside this tool-only cut. See [M03 evidence](evidence/c3.17.md) and [contract](contracts/c3-mcp.md).
