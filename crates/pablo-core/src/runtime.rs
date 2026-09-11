@@ -128,7 +128,15 @@ fn attempts<'a>(
 }
 impl Execution<'_> {
     fn stop(&self) -> Option<RunOutcome> {
-        if self.cancellation.is_cancelled() {
+        // A supervisor may signal joined shutdown when the shared root clock
+        // expires. Preserve that deadline in native terminal truth, rather than
+        // reclassifying the outcome later at the child protocol boundary.
+        if self
+            .accounting_scope
+            .is_some_and(|scope| Instant::now() >= scope.ledger.deadline())
+        {
+            Some(RunOutcome::TimedOut)
+        } else if self.cancellation.is_cancelled() {
             Some(RunOutcome::Cancelled)
         } else if Instant::now() >= self.deadline {
             Some(RunOutcome::TimedOut)
@@ -1209,7 +1217,7 @@ async fn consume(
     progress.delivery = Some(DeliveryCertainty::MayHaveBeenSent);
     let opened = tokio::select! {
         biased;
-        _ = execution.cancellation.cancelled() => return Err(RunOutcome::Cancelled),
+        _ = execution.cancellation.cancelled() => return Err(execution.stop().expect("cancelled execution")),
         _ = sleep_until(input.deadline) => return Err(attempt_timeout(execution, progress)),
         result = input.attempt.provider.stream(request) => result,
     };
@@ -1229,7 +1237,7 @@ async fn consume(
         }
         let next = tokio::select! {
             biased;
-            _ = execution.cancellation.cancelled() => return Err(RunOutcome::Cancelled),
+            _ = execution.cancellation.cancelled() => return Err(execution.stop().expect("cancelled execution")),
             _ = sleep_until(input.deadline) => return Err(attempt_timeout(execution, progress)),
             result = stream.next() => result,
         };

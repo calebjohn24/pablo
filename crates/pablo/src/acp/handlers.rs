@@ -169,6 +169,7 @@ pub(super) fn cancel(state: &Mutex<State>, request: wire::CancelNotification) ->
 }
 
 pub(super) struct PendingPrompt {
+    terminal: Option<Arc<Mutex<Option<RunEvent>>>>,
     state: Arc<Mutex<State>>,
     rx: async_channel::Receiver<RunEvent>,
     outcome: tokio::sync::oneshot::Receiver<Result<RunOutcome, String>>,
@@ -287,6 +288,7 @@ pub(super) fn start_prompt(
         |(_, _, root, _)| root.child_token(),
     );
     let (completed, outcome) = tokio::sync::oneshot::channel();
+    let terminal = admitted.as_ref().map(|_| Arc::new(Mutex::new(None)));
     {
         let mut s = state.lock().unwrap();
         if s.closed || cancellation.is_cancelled() {
@@ -305,6 +307,7 @@ pub(super) fn start_prompt(
             }
         }
         let task = Task {
+            terminal: terminal.clone(),
             accounting: admitted.map(|(_, scope, _, _)| scope),
             prepared,
             spec,
@@ -322,6 +325,7 @@ pub(super) fn start_prompt(
     }
 
     Ok(PendingPrompt {
+        terminal,
         state,
         rx,
         outcome,
@@ -331,11 +335,23 @@ pub(super) fn start_prompt(
     })
 }
 
+pub(super) struct Completion {
+    pub outcome: Result<RunOutcome, String>,
+    pub terminal: Option<RunEvent>,
+}
 impl PendingPrompt {
     pub(super) async fn finish(
         self,
         delivery: &delivery::Delivery,
         request_cancel: impl std::future::Future<Output = ()>,
+    ) -> Result<wire::PromptResponse, Error> {
+        self.finish_observed(delivery, request_cancel, None).await
+    }
+    pub(super) async fn finish_observed(
+        self,
+        delivery: &delivery::Delivery,
+        request_cancel: impl std::future::Future<Output = ()>,
+        receipt: Option<tokio::sync::oneshot::Sender<Completion>>,
     ) -> Result<wire::PromptResponse, Error> {
         let forwarding = forward_events(self.rx, delivery, self.extensions, self.capture_content);
         tokio::pin!(forwarding);
@@ -359,6 +375,16 @@ impl PendingPrompt {
             s.prompt_active = false;
             s.events = None;
             s.cancellation = None;
+        }
+        if let Some(receipt) = receipt {
+            let _ = receipt.send(Completion {
+                outcome: outcome.clone(),
+                terminal: self
+                    .terminal
+                    .as_ref()
+                    .and_then(|event| event.lock().unwrap().take())
+                    .or_else(|| terminal.as_ref().ok().and_then(Clone::clone)),
+            });
         }
         prompt_response(
             outcome,

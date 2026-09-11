@@ -238,3 +238,62 @@ fn tool_admission_races_and_foreign_or_widened_registration_fail_closed() {
         Err(AdmissionError::UnknownAgent)
     ));
 }
+
+#[test]
+fn promoted_capacity_is_bound_to_one_root_and_reductions_work_after_close() {
+    use resources::Resources;
+    let root = AgentRef::root("run".into(), "session".into());
+    let child = root.temporary_child().unwrap();
+    let ledger = RootLedger::new(&root, RunLimits::default()).unwrap();
+    let foreign = RootLedger::new(&root, RunLimits::default()).unwrap();
+    let mut lease = ledger
+        .admit_child(
+            &child,
+            RunLimits::default(),
+            Resources {
+                pending_children: 1,
+                queued_input_bytes: 100,
+                result_bytes: 100,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    assert!(!lease.is_active_child(&ledger, child.agent_id()));
+    lease
+        .replace(Resources {
+            active_children: 1,
+            context_bytes: 100,
+            result_bytes: 100,
+            ..Default::default()
+        })
+        .unwrap();
+    assert!(lease.is_active_child(&ledger, child.agent_id()));
+    assert!(!lease.is_active_child(&foreign, child.agent_id()));
+    assert!(!lease.is_active_child(&ledger, root.agent_id()));
+    ledger.close_admission();
+    let before = ledger.resources();
+    assert!(
+        lease
+            .reduce(Resources {
+                result_bytes: 101,
+                ..Default::default()
+            })
+            .is_err()
+    );
+    assert_eq!(ledger.resources(), before);
+    lease
+        .reduce(Resources {
+            result_bytes: 100,
+            ..Default::default()
+        })
+        .unwrap();
+    assert_eq!(
+        ledger.resources(),
+        Resources {
+            result_bytes: 100,
+            ..Default::default()
+        }
+    );
+    drop(lease);
+    assert_eq!(ledger.resources(), Resources::default());
+}

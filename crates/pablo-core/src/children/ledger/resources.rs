@@ -205,6 +205,57 @@ impl RootLedger {
     }
 }
 impl ResourceLease {
+    /// Verify a promoted lease belongs to this root and this exact child.
+    pub fn is_active_child(&self, ledger: &RootLedger, agent_id: &str) -> bool {
+        if !std::sync::Arc::ptr_eq(&self.ledger.0, &ledger.0) {
+            return false;
+        }
+        let s = self.ledger.0.lock().unwrap();
+        s.resources.entries.get(&self.id).is_some_and(|entry| {
+            entry.agent_id == agent_id
+                && entry.resources.active_children == 1
+                && entry.resources.pending_children == 0
+        })
+    }
+    /// Release joined execution capacity while retaining a bounded result.
+    /// Pure reductions remain legal after root admission closes.
+    pub fn reduce(&mut self, requested: Resources) -> Result<(), AdmissionError> {
+        let mut s = self.ledger.0.lock().unwrap();
+        let before = s
+            .resources
+            .entries
+            .get(&self.id)
+            .expect("owned capacity lease")
+            .resources;
+        let Resources {
+            active_children,
+            pending_children,
+            processes,
+            mcp_sessions,
+            context_bytes,
+            queued_input_bytes,
+            result_bytes,
+        } = before;
+        if requested.active_children > active_children
+            || requested.pending_children > pending_children
+            || requested.processes > processes
+            || requested.mcp_sessions > mcp_sessions
+            || requested.context_bytes > context_bytes
+            || requested.queued_input_bytes > queued_input_bytes
+            || requested.result_bytes > result_bytes
+        {
+            return Err(AdmissionError::Capacity);
+        }
+        s.resources.used = s
+            .resources
+            .used
+            .subtract(before)
+            .checked_add(requested)
+            .unwrap();
+        s.resources.entries.get_mut(&self.id).unwrap().resources = requested;
+        Ok(())
+    }
+
     /// A queued-to-active transition never releases queue capacity before active
     /// admission succeeds. Context/result growth uses the same transaction.
     pub fn replace(&mut self, requested: Resources) -> Result<(), AdmissionError> {

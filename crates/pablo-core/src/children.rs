@@ -69,6 +69,50 @@ impl AgentRef {
             session_id: None,
         })
     }
+    pub fn state(&self) -> AgentState {
+        self.state
+    }
+    /// Lifecycle changes preserve ownership and bind one ACP session exactly once.
+    pub fn transition(
+        &mut self,
+        next: AgentState,
+        session: Option<String>,
+    ) -> Result<(), ContractError> {
+        use AgentState::*;
+        let valid = self.kind == AgentKind::LocalAcpTemporary
+            && matches!(
+                (self.state, next),
+                (Queued, Starting | Stopping | Settled)
+                    | (Starting, Running | Stopping | Settled)
+                    | (Running, Stopping | Settled)
+                    | (Stopping, Settled)
+            );
+        if !valid
+            || (next == Running) != session.is_some()
+            || session.as_ref().is_some_and(|s| s.is_empty())
+            || (session.is_some() && self.session_id.is_some())
+        {
+            return Err(ContractError::Lifecycle);
+        }
+        if let Some(session) = session {
+            self.session_id = Some(session);
+        }
+        self.state = next;
+        Ok(())
+    }
+    /// A session admitted concurrently with stop still belongs to this child.
+    /// Binding its identity must never restart stopping work.
+    pub fn bind_session(&mut self, session: String) -> Result<(), ContractError> {
+        if self.state == AgentState::Stopping && self.kind == AgentKind::LocalAcpTemporary {
+            if session.is_empty() || self.session_id.is_some() {
+                return Err(ContractError::Lifecycle);
+            }
+            self.session_id = Some(session);
+            Ok(())
+        } else {
+            self.transition(AgentState::Running, Some(session))
+        }
+    }
     pub fn agent_id(&self) -> &str {
         &self.agent_id
     }
@@ -87,6 +131,7 @@ impl AgentRef {
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ContractError {
+    Lifecycle,
     Depth,
     InputBound,
     InvalidSelection,
@@ -272,6 +317,53 @@ mod tests {
             timeout_ms: 1,
         };
         assert_eq!(duplicate.validate_shape(), Err(ContractError::WaitBound));
+    }
+    #[test]
+    fn child_lifecycle_binds_session_once_and_settlement_is_terminal() {
+        let mut root = AgentRef::root("run".into(), "root-session".into());
+        assert_eq!(
+            root.transition(AgentState::Settled, None),
+            Err(ContractError::Lifecycle)
+        );
+        let mut child = root.temporary_child().unwrap();
+        let original = child.clone();
+        assert_eq!(
+            child.transition(AgentState::Running, Some("session".into())),
+            Err(ContractError::Lifecycle)
+        );
+        child.transition(AgentState::Starting, None).unwrap();
+        assert_eq!(
+            child.transition(AgentState::Running, None),
+            Err(ContractError::Lifecycle)
+        );
+        child
+            .transition(AgentState::Running, Some("child-session".into()))
+            .unwrap();
+        assert_eq!(
+            child.transition(AgentState::Running, Some("replacement".into())),
+            Err(ContractError::Lifecycle)
+        );
+        child.transition(AgentState::Stopping, None).unwrap();
+        child.transition(AgentState::Settled, None).unwrap();
+        assert_eq!(
+            child.transition(AgentState::Starting, None),
+            Err(ContractError::Lifecycle)
+        );
+        assert_eq!(child.agent_id(), original.agent_id());
+        assert_eq!(child.parent_agent_id(), original.parent_agent_id());
+        assert_eq!(child.root_run_id(), original.root_run_id());
+        assert_eq!(child.session_id.as_deref(), Some("child-session"));
+        let mut stopping = root.temporary_child().unwrap();
+        stopping.transition(AgentState::Starting, None).unwrap();
+        stopping.transition(AgentState::Stopping, None).unwrap();
+        stopping
+            .bind_session("admitted-during-stop".into())
+            .unwrap();
+        assert_eq!(stopping.state(), AgentState::Stopping);
+        assert_eq!(
+            stopping.bind_session("replacement".into()),
+            Err(ContractError::Lifecycle)
+        );
     }
     #[test]
     fn selected_context_counts_toward_one_child_bound_and_empty_capabilities_stay_empty() {

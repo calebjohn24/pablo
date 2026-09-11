@@ -13,6 +13,7 @@ use tokio::sync::oneshot;
 
 pub(super) struct Task {
     pub accounting: Option<AccountingScope>,
+    pub terminal: Option<Arc<std::sync::Mutex<Option<RunEvent>>>>,
     pub prepared: Option<pablo_core::deployment::PreparedRun>,
     pub spec: RunSpec,
     pub parent: opentelemetry::Context,
@@ -283,6 +284,11 @@ async fn execute(
     }
     let mut slow_reported = false;
     let mut sink = |event: &RunEvent| -> Result<(), SinkError> {
+        if matches!(event.kind, EventKind::RunFinished { .. })
+            && let Some(terminal) = &task.terminal
+        {
+            *terminal.lock().unwrap() = Some(event.clone());
+        }
         if let Some(trace) = trace.as_mut() {
             trace.emit(event)?;
         }

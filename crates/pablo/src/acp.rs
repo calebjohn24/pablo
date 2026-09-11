@@ -24,6 +24,8 @@ mod handlers;
 // C3.21 prepares this internal path; child execution is enabled at C3.22.
 #[allow(dead_code)]
 mod in_memory;
+#[allow(dead_code)] // Enabled after complete C3.22 admission and root integration.
+mod supervisor;
 mod worker;
 use worker::{Task, Worker};
 

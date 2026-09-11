@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T09:25:59.779Z",
+  "updated_at": "2026-09-11T09:51:01.531Z",
   "active_checkpoint": "C3.22",
   "next_checkpoint": null,
-  "next_action": "Continue C3.22 with the root supervisor around the bound typed ACP dispatcher: immediate handles, inspect/wait/stop, queue promotion and terminal joining. Queued promotion must reuse admitted registration/lease. Attach process/MCP/context capacity, atomic event/trace reservations, immutable agent attribution, multiplexed root updates and aggregate terminal accounting. Keep ownership/handles outside compacted history and await close before root settlement. Delegation remains disabled until A02 and actual child performance pass; then review and merge. Preserve GLM defaults, unlimited filesystem work, compaction details and C3.33/C3.39 follow-ups.",
-  "latest_log_entry": "LOG-0111",
+  "next_action": "Continue C3.22 by installing the policy-checked/accounted subagent tool and equivalent host operations around the internal ACP supervisor. Integrate ownership into the root runtime and await close before every root terminal, including normal completion; close ledger admission on root cancellation and roll up child accounting once. Add native/ACP/OTel immutable agent attribution and root multiplex sequence, shared process/MCP permits, root resident-context accounting and atomic cumulative event/trace reservations with terminal space. Preserve FIFO lease promotion, independent child cancellation, native deadline outcomes and handles/results outside compaction. Keep one active child and delegation disabled until A02 and integrated-child performance pass; then review and merge. C3.23 is next only after C3.22 completes; preserve GLM defaults, unlimited filesystem work and C3.33/C3.39 follow-ups.",
+  "latest_log_entry": "LOG-0112",
   "checkpoints": [
     {
       "id": "C1.0",

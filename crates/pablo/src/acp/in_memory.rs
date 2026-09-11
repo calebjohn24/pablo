@@ -51,13 +51,15 @@ impl Dispatcher {
         }
     }
 
-    pub fn new(options: Options) -> (Self, async_channel::Receiver<delivery::TypedUpdate>) {
+    pub fn new(
+        options: impl Into<Arc<Options>>,
+    ) -> (Self, async_channel::Receiver<delivery::TypedUpdate>) {
         let (tx, rx) = async_channel::bounded(1);
         let cancellation = CancellationToken::new();
         (
             Self {
                 state: Arc::new(Mutex::new(State::default())),
-                options: Arc::new(options),
+                options: options.into(),
                 cancellation: cancellation.clone(),
                 closing: tokio::sync::Mutex::new(CloseState::default()),
                 delivery: delivery::Delivery::Typed {
@@ -93,6 +95,32 @@ impl Dispatcher {
                 },
             )
             .map_err(|_| "child admission rejected")?;
+        Self::bind_child(
+            Arc::new(options),
+            prepared,
+            ledger,
+            agent,
+            root_cancellation,
+            parent,
+            Arc::new(lease),
+        )
+    }
+    /// Bind an already admitted/promoted child without registering it twice.
+    pub fn bind_child(
+        options: Arc<Options>,
+        prepared: PreparedRun,
+        ledger: RootLedger,
+        agent: &AgentRef,
+        root_cancellation: CancellationToken,
+        parent: opentelemetry::Context,
+        lease: Arc<ResourceLease>,
+    ) -> Result<(Self, async_channel::Receiver<delivery::TypedUpdate>), String> {
+        if !prepared.is_child()
+            || options.deployment.is_none()
+            || !lease.is_active_child(&ledger, agent.agent_id())
+        {
+            return Err("invalid child admission".into());
+        }
         let (dispatcher, updates) = Self::new(options);
         dispatcher.state.lock().unwrap().admitted_child = Some(AdmittedChild {
             prepared,
@@ -102,7 +130,7 @@ impl Dispatcher {
             },
             root_cancellation,
             parent,
-            lease: Some(Arc::new(lease)),
+            lease: Some(lease),
         });
         Ok((dispatcher, updates))
     }
@@ -136,6 +164,22 @@ impl Dispatcher {
             request,
         )?
         .finish(&self.delivery, request_cancel.cancelled())
+        .await
+    }
+    pub async fn prompt_observed(
+        &self,
+        request: wire::PromptRequest,
+        request_cancel: &CancellationToken,
+        receipt: tokio::sync::oneshot::Sender<handlers::Completion>,
+    ) -> Result<wire::PromptResponse, Error> {
+        self.ensure_open()?;
+        handlers::start_prompt(
+            self.state.clone(),
+            self.options.clone(),
+            &self.cancellation,
+            request,
+        )?
+        .finish_observed(&self.delivery, request_cancel.cancelled(), Some(receipt))
         .await
     }
     pub async fn close(&self) -> Result<(), String> {

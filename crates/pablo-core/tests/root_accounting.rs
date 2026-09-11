@@ -246,3 +246,48 @@ async fn cancellation_while_waiting_for_root_mutation_gate_does_not_write_or_spe
     sdk.shutdown().unwrap();
     std::fs::remove_dir_all(cwd).unwrap();
 }
+
+#[tokio::test]
+async fn shared_deadline_cancellation_keeps_native_terminal_outcome_timed_out() {
+    let sdk = SdkTracerProvider::builder().build();
+    let root = AgentRef::root("root".into(), "session".into());
+    let child = root.temporary_child().unwrap();
+    let mut spec = RunSpec::new(
+        "deadline",
+        std::env::temp_dir().canonicalize().unwrap(),
+        "fixture",
+    );
+    spec.limits.max_run_duration_ms = 20;
+    let ledger = RootLedger::new(&root, spec.limits.clone()).unwrap();
+    ledger.register_child(&child, spec.limits.clone()).unwrap();
+    let runtime = Runtime::new(telemetry::tracer(&sdk))
+        .with_root_ledger(ledger.clone(), child.agent_id().into())
+        .unwrap();
+    let provider = ScriptedProvider::new(vec![(
+        std::time::Duration::from_secs(30),
+        Ok(ProviderEvent::TextDelta("too late".into())),
+    )]);
+    let cancel = CancellationToken::new();
+    let mut events = Vec::new();
+    let mut sink = |event: &RunEvent| {
+        events.push(event.clone());
+        Ok(())
+    };
+    let tools = ToolRegistry::default();
+    let run = runtime.run_with_tools(&spec, &provider, &tools, &cancel, &mut sink);
+    let shutdown = async {
+        tokio::time::sleep_until(ledger.deadline()).await;
+        cancel.cancel();
+    };
+    let (result, ()) = tokio::join!(run, shutdown);
+    let outcome = result.unwrap();
+    assert_eq!(outcome, RunOutcome::TimedOut);
+    assert!(
+        matches!(&events.last().unwrap().kind,EventKind::RunFinished{outcome:native,..} if *native==outcome)
+    );
+    assert_eq!(
+        events.last().unwrap().accounting.as_deref(),
+        Some(&ledger.agent(child.agent_id()).unwrap())
+    );
+    sdk.shutdown().unwrap();
+}
