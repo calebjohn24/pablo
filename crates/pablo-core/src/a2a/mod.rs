@@ -5,6 +5,7 @@ mod proxy;
 mod settings;
 pub mod sse;
 pub mod trace;
+pub mod transport;
 pub mod wire;
 pub use fetch::{CardClient, FetchError};
 pub use proxy::{IdentityError, MAX_REMOTE_ID_BYTES, RemoteIdentity, RemoteProxy, ResolveError};

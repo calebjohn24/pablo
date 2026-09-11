@@ -155,3 +155,34 @@ retry fields trigger no reconnect. Truncated data at EOF rejects. This is framin
 and assembly implementation, not evidence of supervised remote task execution:
 scoped production HTTP requests, idle/wall/cleanup timers, native proxy events,
 remote usage reporting and host/model admission remain C3.27 work.
+
+## C3.27 task transport increment
+
+`a2a::transport::TaskClient` now performs a single explicit SendMessage or
+SendStreamingMessage exchange against a validated card endpoint. It disables
+redirects, proxies and automatic retries, scopes sensitive Bearer headers to that
+exact endpoint, and checks selected input/output modes before submission. The
+explicit loopback fixture constructor cannot receive a credential. A request
+contains only selected Parts, output modes and optional negotiated trace context.
+
+The client clamps wall time to the caller deadline/900 seconds, bounds response
+headers wait and progress idle to ten seconds, and charges returned raw chunks
+before parsing. Sink delivery is awaited under the task deadline/cancellation.
+Terminal protocol updates end the response without waiting indefinitely for EOF.
+Delivery is reported as not sent, may have been sent or response received; none
+of these receipts prove remote side effects were rolled back.
+
+On interruption/failure with a known nonterminal remote task, the client joins one
+CancelTask exchange within the earlier of the host cleanup deadline and two
+seconds. The separate receipt reports the returned task state, numeric rejection
+or unconfirmed cleanup. It never overwrites the local cancellation/deadline result
+or asserts that remote work actually stopped. No resubmission follows a disconnect.
+A wire-valid ID survives an assembled-result bound rejection for cleanup, while
+rejected content stays outside accepted result state. Required input/auth remains
+a distinct result and triggers best-effort cleanup of its nonterminal remote task.
+
+Independent SDK tests cover immediate/terminal/streamed results, cancellation after
+assignment, task deadline cleanup, and no request for pre-cancelled or unsupported
+input. Synthetic credential tests verify sensitive headers and exact scope. Full
+supervisor queue/native-event integration, host/model delegation, separately
+labelled remote usage, R02 completion and adverse R03 proof remain pending.

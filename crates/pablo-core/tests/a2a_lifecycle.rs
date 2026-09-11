@@ -206,3 +206,25 @@ fn malformed_content_and_protocol_errors_poison_lifecycle() {
     );
     assert!(l.finish().is_err());
 }
+
+#[test]
+fn valid_task_identity_survives_retained_result_rejection_for_cleanup() {
+    let mut value = fixture("task_result");
+    value["task"]["artifacts"][0]["parts"][0]["text"] = "".into();
+    let remaining = pablo_core::a2a::wire::MAX_RESPONSE_BYTES - envelope(value.clone()).len();
+    value["task"]["artifacts"][0]["parts"][0]["text"] = "x".repeat(remaining).into();
+    let bytes = envelope(value);
+    assert!(pablo_core::a2a::wire::decode(&bytes, "rpc", Mode::Send, false).is_ok());
+    let mut lifecycle = Lifecycle::default();
+    assert_eq!(
+        lifecycle.ingest(&bytes, "rpc", Mode::Send, false),
+        Err(Error::Bound)
+    );
+    assert_eq!(lifecycle.observed().task_id.as_deref(), Some("remote-task"));
+    assert_eq!(
+        lifecycle.observed().context_id.as_deref(),
+        Some("remote-context")
+    );
+    assert!(lifecycle.result().remote.task_id.is_none());
+    assert!(lifecycle.finish().is_err());
+}

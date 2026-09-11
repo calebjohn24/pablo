@@ -1,7 +1,7 @@
 """Pinned SDK JSONRPC/SSE dispatcher with deterministic synthetic handlers."""
 from importlib.metadata import version
 from pathlib import Path
-import json, socket, os
+import json, socket, os, asyncio
 from google.protobuf.json_format import ParseDict, MessageToDict
 from a2a.types import a2a_pb2 as p
 from a2a.server.routes import create_jsonrpc_routes
@@ -35,6 +35,10 @@ class Handler:
         return reply
     async def on_message_send_stream(self,params,context):
         text=selected(params);record("SendStreamingMessage")
+        if text=="hold":
+            yield value("stream_status","statusUpdate",p.TaskStatusUpdateEvent)
+            await asyncio.sleep(20)
+            return
         if text=="assembly":
             yield value("stream_status","statusUpdate",p.TaskStatusUpdateEvent)
             for event in assembly["events"]: yield ParseDict(event,p.TaskArtifactUpdateEvent())

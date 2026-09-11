@@ -57,11 +57,15 @@ pub enum Update {
 #[derive(Default)]
 pub struct Lifecycle {
     result: ResultData,
+    observed: RemoteIdentity,
     open_artifacts: BTreeSet<String>,
     budget: wire::StreamBudget,
     failed: bool,
 }
 impl Lifecycle {
+    pub fn observed(&self) -> &RemoteIdentity {
+        &self.observed
+    }
     pub fn result(&self) -> &ResultData {
         &self.result
     }
@@ -123,6 +127,7 @@ impl Lifecycle {
         if let Some(task) = task {
             next.remote.task_id.get_or_insert_with(|| task.into());
         }
+        self.observed = next.remote.clone();
         let update = match reply {
             Reply::Message(message) => {
                 // Message is the immediate-result alternative, not a task update.

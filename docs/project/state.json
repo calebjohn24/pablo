@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-11T16:31:59.764Z",
+  "updated_at": "2026-09-11T18:40:57.535Z",
   "active_checkpoint": "C3.27",
   "next_checkpoint": null,
-  "next_action": "Continue C3.27: integrate bounded lifecycle/SSE assembly with scoped HTTP task transport, real wall/idle/cleanup timers, supervisor queue/native events, host/model delegation and separate remote usage. Preserve remote IDs for cancellation on result rejection. R02 execution and final performance/merge remain pending; keep saved C3.26 and C3.25 baselines.",
-  "latest_log_entry": "LOG-0143",
+  "next_action": "Continue C3.27 R02: integrate TaskClient and bounded lifecycle/SSE with the root supervisor queue/resource ledger, card retrieval on the owned proxy identity, bounded native event delivery/redaction, host/model delegation and separately labelled remote usage. Standalone SDK transport/cancel/deadline proof passes; full supervised R02, final performance and PR merge remain pending. Preserve saved C3.26/C3.25 baselines and both timing orders.",
+  "latest_log_entry": "LOG-0144",
   "checkpoints": [
     {
       "id": "C1.0",
