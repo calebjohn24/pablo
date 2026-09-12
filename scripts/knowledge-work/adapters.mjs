@@ -1,11 +1,11 @@
 import { resolve } from 'node:path';
 export const models = {pablo:'z-ai/glm-5.3-flash', 'pablo-astra':'openai/gpt-6-astra', pi:'z-ai/glm-5.3-flash', ori:'z-ai/glm-5.3-flash', codex:'gpt-6-astra', claude:'claude-fable-5-1'};
-export function command(name, {root, workspace, prompt, timeout, paths={}}) {
+export function command(name, {root, workspace, prompt, timeout, paths={}, reasoning, piThinking}) {
   const baseName = name==='pablo-astra'?'pablo':name;
   const bin = paths[name] ?? process.env[`PABLO_KNOWLEDGE_${baseName.toUpperCase()}_BINARY`] ?? ({pablo:resolve(root,'target/release/pablo'),pi:resolve(root,'.pablo/knowledge-tools/node_modules/.bin/pi'),ori:resolve(root,'.pablo/knowledge-tools/bin/ori'),codex:'codex',claude:'claude'})[baseName];
-  const pi = ['-p','--mode','json','--no-session','--no-extensions','--no-skills','--no-prompt-templates','--no-themes','--no-context-files','--no-approve','--tools','read,bash,edit,write,grep,find,ls','--thinking','off'];
+  const pi = ['-p','--mode','json','--no-session','--no-extensions','--no-skills','--no-prompt-templates','--no-themes','--no-context-files','--no-approve','--tools','read,bash,edit,write,grep,find,ls','--thinking',piThinking??'off'];
   switch(baseName) {
-    case 'pablo': return [bin,'run',prompt,'--json','--workspace',workspace,'--allow-write','--provider','openrouter','--model',models[name],'--env-file',resolve(root,'.env'),'--timeout',String(timeout),'--trace',resolve(workspace,'../pablo-trace.jsonl')];
+    case 'pablo': return [bin,'run',prompt,'--json','--workspace',workspace,'--allow-write','--provider','openrouter','--model',models[name],'--env-file',resolve(root,'.env'),...(reasoning?['--reasoning-effort',reasoning]:[]),'--timeout',String(timeout),'--trace',resolve(workspace,'../pablo-trace.jsonl')];
     case 'codex': return [bin,'exec','--ignore-user-config','--ephemeral','--skip-git-repo-check','--sandbox','workspace-write','-c','approval_policy="never"','-c','model_reasoning_effort="medium"','-c','web_search="disabled"','-c','features.multi_agent=false','-c','features.memories=false','-c','project_doc_max_bytes=0','--model',models.codex,'--json',prompt];
     case 'claude': return [bin,'-p','--safe-mode','--no-session-persistence','--strict-mcp-config','--disable-slash-commands','--tools','Read,Write,Edit,Bash,Glob,Grep','--allowedTools','Read,Write,Edit,Bash,Glob,Grep','--permission-mode','dontAsk','--model',models.claude,'--effort','high','--output-format','stream-json','--include-partial-messages','--verbose',prompt];
     case 'pi': return [bin,...pi,'--provider','openrouter','--model',models.pi,prompt];

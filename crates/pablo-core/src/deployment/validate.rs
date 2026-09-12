@@ -289,6 +289,17 @@ pub(crate) fn config(config: &Value, request: &ResolveRequest) -> Result<(), Con
         .unwrap()
         .parse()
         .map_err(|_| error("config_invalid_value", "/config/options/model/provider"))?;
+    let mut reasoning_profile = if provider == crate::gateway::GatewayKind::OpenResponses {
+        crate::gateway::ModelProfile::responses(super::admission::responses_profile(model)?)
+    } else {
+        crate::gateway::ModelProfile::resolve(provider, model["id"].as_str())
+            .map_err(|_| error("config_invalid_value", "/options/model/id"))?
+    };
+    super::routes::reasoning_profile(
+        &mut reasoning_profile,
+        model,
+        options["limits"]["max_output_tokens"].as_u64().unwrap() as u32,
+    )?;
     if provider == crate::gateway::GatewayKind::OpenResponses {
         super::admission::responses_profile(model)?;
         if options["limits"]["max_output_tokens"]

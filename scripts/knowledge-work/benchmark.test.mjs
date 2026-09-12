@@ -111,3 +111,24 @@ test('headline accuracy weights individual facts and incomplete costs stay unkno
   assert.equal(s.reported_cost_usd,null);assert.equal(s.reported_cost_known_subtotal_usd,.2);assert.equal(s.estimated_cost_usd,null);
   assert.equal(aggregate([row([true],{estimated_cost_usd:.3}),row([true],{estimated_cost_usd:.4})]).pi.estimated_cost_usd,.7);
 });
+// Reasoning comparisons use explicit labels and the same native harness adapter.
+test('latency profiles preserve default intent and whitelist content-free model diagnostics', async()=>{
+ const {latencyProfiles,traceDiagnostics}=await import('./latency.mjs');
+ const profiles=latencyProfiles(['pablo','pablo-astra','pi']);
+ assert.deepEqual(profiles.map(p=>p.id),['pablo-provider_default','pablo-low','pablo-astra-provider_default','pablo-astra-low','pi-low']);
+ assert.equal(profiles.at(-1).piThinking,'low');
+ assert.throws(()=>latencyProfiles(['claude']));
+ const out=traceDiagnostics([{type:'model.started',span_id:'1',timestamp_unix_micros:100,model:'future/model'},{type:'model.finished',span_id:'1',timestamp_unix_micros:200,status:'completed',usage:{output_tokens:3},diagnostics:{requested_reasoning:'low',reasoning_tokens:2,first_data_us:20,private_reasoning:'secret'},text:'secret'}]);
+ assert.equal(out[0].elapsed_us,100);assert.equal(out[0].diagnostics.reasoning_tokens,2);assert(!JSON.stringify(out).includes('secret'));
+});
+
+test('latency promotion gates reject missing pairs, regressions and unknown costs', async()=>{
+ const {compare}=await import('./analyze-latency.mjs');
+ const rows=[];
+ for(const seed of [41,42,43])for(let repeat=0;repeat<3;repeat++)for(const task of tasks(seed))for(const harness of ['base','low'])rows.push({harness,task:task.id,seed,repeat,status:'completed',resources:{wall_ms:harness==='base'?100:70},events:{reported_cost_usd:1},correctness:{checks:task.questions.map(q=>({id:q.id,value:true})),factualScore:1}});
+ assert.equal(compare(rows,'base','low').numeric_gates_pass,true);assert.equal(compare(rows,'base','low').promote,false,'human detail review remains required');
+ assert.equal(compare(rows.slice(1),'base','low').numeric_gates_pass,false);
+ const duplicate=structuredClone(rows);duplicate[3]=structuredClone(duplicate[1]);assert.equal(compare(duplicate,'base','low').gates.matched_attempts,false);
+ const error=structuredClone(rows);error[1].correctness.checks[0].value=false;assert.equal(compare(error,'base','low').gates.task_families,false);
+ const unknown=structuredClone(rows);unknown[1].events.reported_cost_usd=null;assert.equal(compare(unknown,'base','low').gates.cost,false);
+});

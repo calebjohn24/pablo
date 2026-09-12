@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-12T22:08:19.307Z",
-  "active_checkpoint": null,
-  "next_checkpoint": "C3.34",
-  "next_action": "Chart label update complete. Release packaging remains pending and held.",
-  "latest_log_entry": "LOG-0173",
+  "updated_at": "2026-09-12T22:52:40.844Z",
+  "active_checkpoint": "C3.33c",
+  "next_checkpoint": null,
+  "next_action": "Finish the running 270-attempt reasoning matrix, review details and promotion gates, publish evidence/graphic and draft PR; release packaging remains held.",
+  "latest_log_entry": "LOG-0174",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -718,12 +718,24 @@
       ]
     },
     {
+      "id": "C3.33c",
+      "title": "General reasoning controls and latency",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c333c-general-reasoning-controls-and-latency",
+      "depends_on": [
+        "C3.33b"
+      ],
+      "status": "in_progress",
+      "blockers": [],
+      "verification": []
+    },
+    {
       "id": "C3.34",
       "title": "Release archives and installation",
       "spec": "docs/project/cycles/003-extensibility-and-release.md#c334-release-archives-and-installation",
       "depends_on": [
         "C3.33",
-        "C3.33a"
+        "C3.33a",
+        "C3.33c"
       ],
       "status": "pending",
       "blockers": [],

@@ -1,5 +1,6 @@
 //! Pinned Open Responses HTTP/SSE adapter. No server state or global task cache.
 use super::{malformed, native_name, not_sent, transport, wire_name};
+use crate::provider::diagnostics::{CallDiagnostics, Phase};
 use crate::{
     DeliveryCertainty, FailureCode, FinishReason, Message, Provider, Usage,
     provider::{
@@ -159,6 +160,13 @@ impl OpenResponsesProvider {
     }
 }
 impl Provider for OpenResponsesProvider {
+    fn validate_reasoning(
+        &self,
+        reasoning: crate::ReasoningConfig,
+        max_output_tokens: u32,
+    ) -> Result<(), &'static str> {
+        reasoning.validate_gateway(super::GatewayKind::OpenResponses, None, max_output_tokens)
+    }
     fn accepts_history(
         &self,
         model: &str,
@@ -207,7 +215,14 @@ impl Provider for OpenResponsesProvider {
             let body = request_body(&request, &self.profile)?;
             let mut completion = Completion::new(&request, &self.profile);
             completion.aliases = aliases;
-            let reader = self.transport.open(body, request.deadline).await?;
+            let diagnostics = request.context.get::<CallDiagnostics>().cloned();
+            if let Some(d) = &diagnostics {
+                d.mark(Phase::Preparation);
+            }
+            let reader = self
+                .transport
+                .open(body, request.deadline, diagnostics)
+                .await?;
             let state = ResponseStream {
                 reader,
                 bytes: [0; 4096],
@@ -315,10 +330,22 @@ fn request_body(
         "description":tool.description,"parameters":tool.input_schema,"strict":false}))
         })
         .collect::<Result<Vec<_>, ProviderError>>()?;
-    let body = serde_json::to_vec(&json!({"model":request.model,"instructions":request.instructions,"input":input,
+    request
+        .reasoning
+        .validate_gateway(
+            super::GatewayKind::OpenResponses,
+            None,
+            request.max_output_tokens,
+        )
+        .map_err(|_| not_sent())?;
+    let mut body = json!({"model":request.model,"instructions":request.instructions,"input":input,
         "tools":tools,"tool_choice":if request.allow_tool_calls {"auto"} else {"none"},"parallel_tool_calls":false,
         "stream":true,"store":false,"background":false,"truncation":"disabled","include":["reasoning.encrypted_content"],
-        "max_output_tokens":request.max_output_tokens})).map_err(|_| not_sent())?;
+        "max_output_tokens":request.max_output_tokens});
+    if let Some(reasoning) = request.reasoning.wire() {
+        body["reasoning"] = reasoning;
+    }
+    let body = serde_json::to_vec(&body).map_err(|_| not_sent())?;
     if body.len() > transport::MAX_REQUEST || body.len() > request.max_context_bytes {
         return Err(not_sent());
     }
@@ -381,6 +408,7 @@ struct Item {
     final_value: Option<Value>,
 }
 struct Completion {
+    diagnostics: Option<CallDiagnostics>,
     aliases: std::collections::BTreeMap<String, String>,
     scope: ContinuationScope,
     max_state: usize,
@@ -404,6 +432,7 @@ struct Completion {
 impl Completion {
     fn new(request: &ModelRequest<'_>, profile: &OpenResponsesProfile) -> Self {
         Self {
+            diagnostics: request.context.get::<CallDiagnostics>().cloned(),
             aliases: Default::default(),
             scope: ContinuationScope {
                 provider: "open_responses",
@@ -548,6 +577,19 @@ impl Completion {
                     }
                 }
                 let usage = usage(&response["usage"])?;
+                if let Some(d) = &self.diagnostics {
+                    d.reasoning_tokens(
+                        response
+                            .pointer("/usage/output_tokens_details/reasoning_tokens")
+                            .and_then(Value::as_u64),
+                    );
+                    if let Some(effort) = response
+                        .pointer("/reasoning/effort")
+                        .and_then(Value::as_str)
+                    {
+                        d.reported_effort(effort);
+                    }
+                }
                 let reason = if incomplete {
                     FinishReason::Length
                 } else if self.calls > 0 {

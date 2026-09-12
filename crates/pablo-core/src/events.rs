@@ -307,12 +307,16 @@ impl Serialize for RedactedEvent<'_> {
                 finish_reason,
                 usage,
                 output_bytes,
+                diagnostics,
             } => {
                 map.serialize_entry("type", "model.finished")?;
                 map.serialize_entry("status", status)?;
                 map.serialize_entry("finish_reason", finish_reason)?;
                 map.serialize_entry("usage", usage)?;
                 map.serialize_entry("output_bytes", output_bytes)?;
+                if let Some(diagnostics) = diagnostics {
+                    map.serialize_entry("diagnostics", diagnostics)?;
+                }
             }
             EventKind::ToolStarted { call } => {
                 #[derive(Serialize)]

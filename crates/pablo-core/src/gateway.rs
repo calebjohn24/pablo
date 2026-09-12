@@ -1,4 +1,5 @@
 //! Direct Vercel/OpenRouter chat-completions adapters. Credentials stay adapter-owned.
+use crate::provider::diagnostics::{CallDiagnostics, Phase};
 use std::{collections::BTreeMap, collections::VecDeque, pin::Pin};
 
 use futures_util::{future::BoxFuture, stream};
@@ -30,6 +31,7 @@ const MAX_CALLS: u64 = 128;
 /// No Debug implementation: the credential is never a diagnostic value.
 pub struct GatewayProvider {
     backend: Backend,
+    reasoning_capabilities: Option<crate::ReasoningCapabilities>,
 }
 enum Backend {
     Chat(ChatProvider),
@@ -60,6 +62,7 @@ impl GatewayProvider {
             text: "Reply OK.".into(),
         }];
         let request = ModelRequest {
+            reasoning: crate::ReasoningConfig::default(),
             model,
             input: "Reply OK.",
             instructions: "Reply briefly.",
@@ -100,6 +103,7 @@ impl GatewayProvider {
             );
         }
         Ok(Self {
+            reasoning_capabilities: None,
             backend: Backend::Chat(ChatProvider {
                 kind,
                 transport: transport::Transport::new(kind.endpoint(), key, false).map_err(|e| {
@@ -122,6 +126,7 @@ impl GatewayProvider {
             return Err("Open Responses requires a configured fixture profile");
         }
         Ok(Self {
+            reasoning_capabilities: None,
             backend: Backend::Chat(ChatProvider {
                 kind,
                 transport: transport::Transport::new(endpoint, "pablo-local-fixture", true)?,
@@ -129,32 +134,53 @@ impl GatewayProvider {
         })
     }
     pub fn configured(profile: &ModelProfile, key: &str) -> Result<Self, &'static str> {
-        if let Some(responses) = &profile.open_responses {
-            Ok(Self {
+        let mut provider = if let Some(responses) = &profile.open_responses {
+            Self {
                 backend: Backend::Responses(OpenResponsesProvider::new(responses.clone(), key)?),
-            })
+                reasoning_capabilities: None,
+            }
         } else {
-            Self::selected(profile.provider, key)
-        }
+            Self::selected(profile.provider, key)?
+        };
+        provider.reasoning_capabilities = profile.reasoning_capabilities.clone();
+        Ok(provider)
     }
     pub fn configured_fixture(
         profile: &ModelProfile,
         endpoint: &str,
     ) -> Result<Self, &'static str> {
-        if let Some(responses) = &profile.open_responses {
-            Ok(Self {
+        let mut provider = if let Some(responses) = &profile.open_responses {
+            Self {
                 backend: Backend::Responses(OpenResponsesProvider::local_fixture(
                     responses.clone(),
                     endpoint,
                 )?),
-            })
+                reasoning_capabilities: None,
+            }
         } else {
-            Self::local_fixture_for(profile.provider, endpoint)
-        }
+            Self::local_fixture_for(profile.provider, endpoint)?
+        };
+        provider.reasoning_capabilities = profile.reasoning_capabilities.clone();
+        Ok(provider)
     }
 }
 
 impl Provider for GatewayProvider {
+    fn validate_reasoning(
+        &self,
+        reasoning: crate::ReasoningConfig,
+        max_output_tokens: u32,
+    ) -> Result<(), &'static str> {
+        let kind = match &self.backend {
+            Backend::Chat(p) => p.kind,
+            Backend::Responses(_) => GatewayKind::OpenResponses,
+        };
+        reasoning.validate_gateway(
+            kind,
+            self.reasoning_capabilities.as_ref(),
+            max_output_tokens,
+        )
+    }
     fn accepts_history(
         &self,
         model: &str,
@@ -189,6 +215,12 @@ impl Provider for GatewayProvider {
         &'a self,
         request: ModelRequest<'a>,
     ) -> BoxFuture<'a, Result<ProviderStream<'a>, ProviderError>> {
+        if self
+            .validate_reasoning(request.reasoning, request.max_output_tokens)
+            .is_err()
+        {
+            return Box::pin(async { Err(not_sent()) });
+        }
         let chat = match &self.backend {
             Backend::Chat(p) => p,
             Backend::Responses(p) => return p.stream(request),
@@ -198,7 +230,14 @@ impl Provider for GatewayProvider {
             let body = request_body(&request, chat.kind)?;
             // The runtime selects against the absolute deadline and cancellation
             // while opening and polling this stream. Dropping it drops the socket.
-            let reader = chat.transport.open(body, request.deadline).await?;
+            let diagnostics = request.context.get::<CallDiagnostics>().cloned();
+            if let Some(d) = &diagnostics {
+                d.mark(Phase::Preparation);
+            }
+            let reader = chat
+                .transport
+                .open(body, request.deadline, diagnostics.clone())
+                .await?;
             let state = ResponseStream {
                 reader,
                 bytes: [0; 4096],
@@ -208,6 +247,7 @@ impl Provider for GatewayProvider {
                 completion: Completion {
                     aliases,
                     kind: chat.kind,
+                    diagnostics,
                     ..Completion::default()
                 },
                 stopped: false,
@@ -308,6 +348,13 @@ fn request_body(request: &ModelRequest<'_>, kind: GatewayKind) -> Result<Vec<u8>
     }
     let mut body = json!({"model":request.model, "messages":messages,
         "stream":true, "max_tokens":request.max_output_tokens});
+    request
+        .reasoning
+        .validate_gateway(kind, None, request.max_output_tokens)
+        .map_err(|_| not_sent())?;
+    if let Some(reasoning) = request.reasoning.wire() {
+        body["reasoning"] = reasoning;
+    }
     if kind == GatewayKind::Vercel {
         body["stream_options"] = json!({"include_usage":true});
     }
@@ -400,6 +447,7 @@ struct Call {
 }
 #[derive(Default)]
 struct Completion {
+    diagnostics: Option<CallDiagnostics>,
     aliases: BTreeMap<String, String>,
     kind: GatewayKind,
     cost: Option<u64>,
@@ -455,6 +503,23 @@ impl Completion {
                     cache_write_input_tokens: None,
                 };
             }
+        }
+        if let Some(usage) = accounting {
+            let tokens = counter(usage.pointer("/completion_tokens_details/reasoning_tokens"))?;
+            if tokens
+                .zip(self.usage.output_tokens)
+                .is_some_and(|(r, o)| r > o)
+            {
+                return Err(malformed());
+            }
+            if let Some(d) = &self.diagnostics {
+                d.reasoning_tokens(tokens);
+            }
+        }
+        if let Some(d) = &self.diagnostics
+            && let Some(effort) = value.pointer("/reasoning/effort").and_then(Value::as_str)
+        {
+            d.reported_effort(effort);
         }
         let choices = value
             .get("choices")

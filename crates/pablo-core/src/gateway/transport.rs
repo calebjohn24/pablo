@@ -1,5 +1,6 @@
 //! Shared private HTTP/SSE mechanics; provider-specific mapping stays in the adapter.
 use super::malformed;
+use crate::provider::diagnostics::{CallDiagnostics, Phase};
 use crate::{DeliveryCertainty, FailureCode, provider::ProviderError};
 use futures_util::TryStreamExt;
 use reqwest::{Client, Url, header};
@@ -112,7 +113,11 @@ impl Transport {
         &self,
         body: Vec<u8>,
         deadline: tokio::time::Instant,
+        diagnostics: Option<CallDiagnostics>,
     ) -> Result<Pin<Box<dyn AsyncRead + Send>>, ProviderError> {
+        if let Some(d) = &diagnostics {
+            d.mark(Phase::Dispatch);
+        }
         let mut response =
             self.request(body, deadline)
                 .send()
@@ -126,6 +131,10 @@ impl Transport {
                         DeliveryCertainty::MayHaveBeenSent
                     },
                 })?;
+        if let Some(d) = &diagnostics {
+            d.mark(Phase::Headers);
+            d.http(response.version());
+        }
         if !response.status().is_success() {
             let status = response.status().as_u16();
             let mut code = FailureCode::ProviderRejected;
@@ -178,6 +187,14 @@ impl Transport {
         let reader = StreamReader::new(
             response
                 .bytes_stream()
+                .map_ok(move |chunk| {
+                    if !chunk.is_empty()
+                        && let Some(d) = &diagnostics
+                    {
+                        d.mark(Phase::FirstData);
+                    }
+                    chunk
+                })
                 .map_err(|_| io::Error::other("gateway stream failed")),
         );
         Ok(Box::pin(reader))

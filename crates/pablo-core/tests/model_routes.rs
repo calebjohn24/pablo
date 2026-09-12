@@ -126,10 +126,23 @@ fn invalid_route_graphs_requirements_and_profiles_reject_without_partial_selecti
 #[test]
 fn inherited_subsequences_cannot_reorder_replace_repeat_or_append_destinations() {
     let f = Fixture::new();
-    let resolved = f.resolve(preset()).unwrap();
+    let original = f.resolve(preset()).unwrap();
+    let mut configured = preset();
+    configured["options"]["models"]["secondary"]["model_options"]["reasoning"] = "low".into();
+    configured["options"]["models"]["third"]["model_options"] = json!({"reasoning":"high"});
+    let resolved = f.resolve(configured).unwrap();
+    assert_ne!(resolved.fingerprint(), original.fingerprint());
     let route = resolved.model_route().unwrap();
     let child = route.subsequence(&["secondary", "third"]).unwrap();
     assert_eq!(child.entries(), &route.entries()[1..]);
+    assert_eq!(
+        child.entries()[0].profile().reasoning,
+        pablo_core::ReasoningConfig::Effort(pablo_core::ReasoningEffort::Low)
+    );
+    assert_eq!(
+        child.entries()[1].profile().reasoning,
+        pablo_core::ReasoningConfig::Effort(pablo_core::ReasoningEffort::High)
+    );
     assert_eq!(child.policy().max_attempts, 2);
     for names in [
         vec![],

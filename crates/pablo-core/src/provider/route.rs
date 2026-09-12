@@ -23,6 +23,7 @@ impl ProviderRoute {
                 return Err("route adapter provider identity mismatch");
             }
             provider.validate_model(&entry.profile().model, entry.max_output_tokens())?;
+            provider.validate_reasoning(entry.profile().reasoning, entry.max_output_tokens())?;
         }
         Ok(Self {
             resolved,

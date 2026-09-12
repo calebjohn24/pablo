@@ -227,6 +227,13 @@ impl ResolvedDeployment {
                 .map_err(|_| error("config_invalid_value", "/options/model/id"))?
         };
         profile.context_window_tokens = model["context_window_tokens"].as_u64();
+        super::routes::reasoning_profile(
+            &mut profile,
+            model,
+            self.options()["limits"]["max_output_tokens"]
+                .as_u64()
+                .unwrap() as u32,
+        )?;
         Ok(profile)
     }
     pub fn prepare_run(&self, input: RunInput) -> Result<PreparedRun, ConfigError> {
@@ -378,6 +385,7 @@ impl ResolvedDeployment {
         spec.context = serde_json::from_value(options["context"].clone())
             .map_err(|_| error("config_invalid_value", "/options/context"))?;
         spec.context.window_tokens = self.model_profile()?.context_window_tokens;
+        spec.reasoning = self.model_profile()?.reasoning;
         if let Some(schema) = options["output"]["schema"].as_str() {
             spec.output = Some(crate::output::OutputSettings {
                 repair: serde_json::from_value(options["output"]["repair"].clone())

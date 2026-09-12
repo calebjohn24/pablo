@@ -91,3 +91,32 @@ Failures and unavailable clients stay in the correctness denominator; their fast
 [WorkArena](https://github.com/ServiceNow/WorkArena) targets browser-based ServiceNow knowledge work and requires its browser/application environment. It is useful for a later shared-browser track, but would add tool/environment differences to this first terminal comparison. [OfficeBench](https://github.com/zlwang-cs/OfficeBench) studies cross-application office work and is another candidate once all clients have the same application tools. This suite is original synthetic material, not a reproduction of either benchmark, and its scores must not be labeled WorkArena/OfficeBench scores.
 
 [Ori Harness](https://openrouter.ai/docs/guides/ori/harness) wraps an existing agent; the default entry here is **Ori + Pi**, separate from direct Pi. [Pi CLI](https://pi.dev/docs/latest/usage) and [JSON events](https://pi.dev/docs/latest/json) describe its headless interface. [Codex noninteractive mode](https://learn.chatgpt.com/docs/non-interactive-mode) describes exec, isolation flags and JSONL events; [models](https://learn.chatgpt.com/docs/models) documents Astra. [Anthropic model IDs](https://platform.claude.com/docs/en/models/overview) specifies `claude-fable-5-1`. CLI flags were also checked against the installed clients.
+## Reasoning and transport follow-up
+
+The model-independent controls and diagnostics are described in the [reasoning contract](../../docs/project/contracts/c3-reasoning-latency.md). The historical six-harness pilot stays separate from this repeated comparison.
+
+Build and finish test suites first, then run the serial matrix:
+
+```sh
+cargo build --release --locked -p pablo --bin pablo
+node scripts/knowledge-work/run.mjs --latency-matrix \
+  --harnesses pablo,pablo-astra,pi --seeds 41,42,43 --repeats 3 \
+  --reuse-pablo-openrouter --live --output .pablo/measurements/latency-reasoning
+```
+
+This schedules 270 attempts. Pablo GLM and Astra each run with `provider_default` and `low`; Pi GLM uses `--thinking low`. Configuration order rotates for every task and repetition. Failure rows remain, and the runner refuses to overwrite results. The native models, prompts, tools and output allowances are unchanged. Reasoning is an explicit profile option, not a model-name heuristic. Requested effort does not attest the backend's actual effort.
+
+Pablo rows retain bounded model diagnostics plus tool, model, runtime-other and process-other durations. Model phase offsets are monotonic; tool/root interval subtraction uses native event timestamps and assumes these nondelegating tasks run serially. First body data can be a heartbeat or private reasoning frame. Header and first-data waits include provider processing and are not pure network measurements. Unknown reasoning tokens, costs and phases stay unknown.
+
+The analysis reports factual accuracy independently of strict legacy scorer passes. A candidate default requires matched attempts, at least 20% lower p50, no worse p95, factual accuracy overall/per family, completion or cost, then report-detail review. The script never auto-promotes defaults:
+
+```sh
+node scripts/knowledge-work/analyze-latency.mjs \
+  .pablo/measurements/latency-reasoning/report.json \
+  docs/project/evidence/c3.33c-latency-measurements.json
+.pablo/knowledge-plot-venv/bin/python scripts/knowledge-work/plot-latency.py \
+  docs/project/evidence/c3.33c-latency-measurements.json \
+  docs/project/evidence/c3.33c-latency
+```
+
+The separate transport experiment uses two prebuilt binaries at `.pablo/latency/pablo-h1` and `pablo-h2`; build the latter with `cargo build --release --locked -p pablo --bin pablo --features reqwest/http2` and copy it before rebuilding the ordinary default. `node scripts/knowledge-work/transport.mjs --live` retains 24 alternating single-call observations. Its small sample does not establish a reliable tail-latency improvement. The shipped HTTP feature set remains unchanged.

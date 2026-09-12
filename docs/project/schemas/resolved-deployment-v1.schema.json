@@ -238,6 +238,12 @@
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 1000000000
+                  },
+                  "reasoning": {
+                    "$ref": "urn:pablo:deployment:1:c3.26#/$defs/reasoning"
+                  },
+                  "reasoning_capabilities": {
+                    "$ref": "urn:pablo:deployment:1:c3.26#/$defs/reasoningCapabilities"
                   }
                 },
                 "required": [
