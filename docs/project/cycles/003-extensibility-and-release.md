@@ -471,9 +471,22 @@ Acceptance:
 - Give each project-owned ACP extension an established project-controlled name/URI, schema/version, capability, bounds, privacy class and generic-peer fallback. Test C2 clients or a documented negotiated migration; do not silently reuse a wire version for incompatible data.
 - Include unknown-field/variant, malformed-frame, cancellation, slow-consumer and bounded-input property/fuzz coverage for introduced parsers. Confirm optional adapters and unused native transports add no listener or eager startup work.
 
-## C3.34: Release archives and installation
+## C3.33a: TUI rendering and transcript fixes
 
 Prerequisites: C3.33.
+
+User-requested follow-up after the compatibility stopping point: fix flicker, make tool calls and prior task history visible, and render Markdown.
+
+Acceptance:
+
+- Update only changed terminal rows; idle screens produce no repeated output and streaming avoids whole-screen clears.
+- Retain bounded, scrollable visible history across tasks, including persistent tool start/completion entries. Prior display history does not change independent task execution.
+- Render headings, emphasis, lists, quotes, links and fenced/inline code with bounded layout and neutralized untrusted terminal controls.
+- Verify real PTY history navigation, streaming, idle output, Markdown, cancellation, resize, backpressure and terminal restoration; rebuild the release binary and compare relevant TUI performance.
+
+## C3.34: Release archives and installation
+
+Prerequisites: C3.33, C3.33a.
 
 Build installable release candidates for macOS arm64/x86_64 and Linux x86_64/arm64, with a small explicit-destination installation path.
 

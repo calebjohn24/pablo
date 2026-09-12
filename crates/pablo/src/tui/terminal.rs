@@ -1,4 +1,4 @@
-use super::{Shared, available, view};
+use super::{Shared, available, markdown, view};
 use crate::{CancellationToken, TaskErrorCode, config::Options};
 use rustix::termios::{self, OptionalActions, Termios};
 use std::{
@@ -40,7 +40,7 @@ impl Terminal {
             restored: std::cell::Cell::new(false),
         };
         termios::tcsetattr(&file, OptionalActions::Now, &raw)?;
-        file.write_all(b"\x1b[?1049h\x1b[?25l\x1b[?2004h")?;
+        file.write_all(b"\x1b[?1049h\x1b[?25l\x1b[?2004h\x1b[?1000h\x1b[?1006h\x1b[H\x1b[2J")?;
         Ok(terminal)
     }
     async fn read(&self, bytes: &mut [u8]) -> io::Result<usize> {
@@ -72,7 +72,7 @@ impl Terminal {
     async fn restore(&self) {
         let _ = tokio::time::timeout(
             Duration::from_millis(250),
-            self.write(b"\x1b[?2004l\x1b[?25h\x1b[?1049l"),
+            self.write(b"\x1b[?2026l\x1b[0m\x1b[?1000l\x1b[?1006l\x1b[?2004l\x1b[?25h\x1b[?1049l"),
         )
         .await;
         if termios::tcsetattr(&self.io, OptionalActions::Now, &self.saved).is_ok() {
@@ -86,7 +86,9 @@ impl Drop for Terminal {
             return;
         }
         let _ = termios::tcsetattr(&self.io, OptionalActions::Now, &self.saved);
-        let _ = self.io.write_all(b"\x1b[?2004l\x1b[?25h\x1b[?1049l");
+        let _ = self
+            .io
+            .write_all(b"\x1b[?2026l\x1b[0m\x1b[?1000l\x1b[?1006l\x1b[?2004l\x1b[?25h\x1b[?1049l");
     }
 }
 #[derive(Default)]
@@ -96,6 +98,9 @@ struct Editor {
     escape: Vec<u8>,
     utf8: Vec<u8>,
     paste: bool,
+    scroll: usize,
+    transcript_lines: usize,
+    revision: u64,
 }
 enum Action {
     Submit(String),
@@ -104,6 +109,7 @@ enum Action {
 }
 impl Editor {
     fn key(&mut self, byte: u8) -> Option<Action> {
+        self.revision = self.revision.wrapping_add(1);
         if byte == 3 && !self.paste {
             self.escape.clear();
             self.utf8.clear();
@@ -117,6 +123,12 @@ impl Editor {
             }
             if self.escape.len() > 2 && (0x40..=0x7e).contains(&byte) {
                 match self.escape.as_slice() {
+                    b"\x1b[5~" => self.scroll = self.scroll.saturating_add(12),
+                    b"\x1b[6~" => self.scroll = self.scroll.saturating_sub(12),
+                    b"\x1b[A" => self.scroll = self.scroll.saturating_add(1),
+                    b"\x1b[B" => self.scroll = self.scroll.saturating_sub(1),
+                    b"\x1b[1;5H" | b"\x1b[1;5~" => self.scroll = usize::MAX,
+                    b"\x1b[1;5F" | b"\x1b[4;5~" => self.scroll = 0,
                     b"\x1b[D" => {
                         if self.cursor > 0 {
                             self.cursor -= 1;
@@ -140,6 +152,12 @@ impl Editor {
                     }
                     b"\x1b[200~" => self.paste = true,
                     b"\x1b[201~" => self.paste = false,
+                    value if value.starts_with(b"\x1b[<64;") => {
+                        self.scroll = self.scroll.saturating_add(3)
+                    }
+                    value if value.starts_with(b"\x1b[<65;") => {
+                        self.scroll = self.scroll.saturating_sub(3)
+                    }
                     _ => {}
                 }
                 self.escape.clear();
@@ -196,15 +214,26 @@ impl Editor {
         None
     }
 }
-fn frame(view: &view::View, editor: &Editor, width: usize, height: usize, busy: bool) -> String {
+fn clip(text: &str, width: usize) -> String {
+    let mut used = 0;
+    text.chars()
+        .take_while(|&c| {
+            used += markdown::columns(c);
+            used <= width
+        })
+        .collect()
+}
+fn frame(
+    view: &view::View,
+    editor: &mut Editor,
+    width: usize,
+    height: usize,
+    busy: bool,
+) -> Vec<String> {
     if width < 20 || height < 8 {
-        return format!(
-            "\x1b[H\x1b[2J{}",
-            "Resize terminal to continue"
-                .chars()
-                .take(width)
-                .collect::<String>()
-        );
+        let mut lines = vec![clip("Resize terminal to continue", width)];
+        lines.resize(height, String::new());
+        return lines;
     }
     let mut lines = vec![
         format!("pablo | {} | {}", view.status, view.model),
@@ -222,73 +251,77 @@ fn frame(view: &view::View, editor: &Editor, width: usize, height: usize, busy: 
             status
         ));
     }
-    if view.activity.len() > 3 {
-        lines.push(format!("{} other owned agents", view.activity.len() - 3));
-    }
+    // Reserve transcript space even on short terminals.
+    lines.truncate(height.saturating_sub(5));
     lines.push(if view.trimmed {
-        "[older display text discarded]".into()
+        "[oldest display text discarded]".into()
     } else {
         String::new()
     });
-    let room = height.saturating_sub(lines.len() + 3);
-    let mut transcript = std::collections::VecDeque::new();
-    let mut line = String::new();
-    let mut columns = 0;
-    for c in view.transcript.chars() {
-        let cost = if c.is_ascii() { 1 } else { 2 };
-        if c == '\n' || columns + cost > width {
-            transcript.push_back(std::mem::take(&mut line));
-            columns = 0;
-            if transcript.len() > room {
-                transcript.pop_front();
-            }
-        }
-        if c != '\n' {
-            line.push(c);
-            columns += cost;
-        }
+    for line in &mut lines {
+        *line = clip(line, width);
     }
-    if !line.is_empty() {
-        transcript.push_back(line);
-        if transcript.len() > room {
-            transcript.pop_front();
-        }
+    let room = height.saturating_sub(lines.len() + 2);
+    let transcript = markdown::render(&view.transcript, width);
+    if editor.scroll > 0 {
+        editor.scroll = editor
+            .scroll
+            .saturating_add(transcript.len().saturating_sub(editor.transcript_lines));
     }
-    lines.extend(transcript);
-    lines.push(if busy {
-        "Ctrl-C: cancel and join | Ctrl-D: cancel and exit".into()
+    editor.transcript_lines = transcript.len();
+    editor.scroll = editor.scroll.min(transcript.len().saturating_sub(room));
+    let end = transcript.len().saturating_sub(editor.scroll);
+    let start = end.saturating_sub(room);
+    lines.extend_from_slice(&transcript[start..end]);
+    lines.resize(height - 2, String::new());
+    let controls = if busy {
+        "Ctrl-C: cancel and join | Ctrl-D: cancel and exit"
     } else {
-        "Enter: new independent task | Ctrl-D: exit".into()
-    });
-    // The visible cursor marker is data, so wide Unicode cannot forge terminal coordinates.
-    lines.push(format!(
+        "Enter: new independent task | Ctrl-D: exit"
+    };
+    lines.push(clip(
+        &format!("{controls} | PgUp/PgDn: history | Ctrl-End: latest"),
+        width,
+    ));
+    let prompt = format!(
         "> {}▏{}",
         view::label(
             &editor.text[editor.text[..editor.cursor]
                 .char_indices()
                 .rev()
                 .nth(width.saturating_sub(6) / 2)
-                .map(|(index, _)| index)
+                .map(|(i, _)| i)
                 .unwrap_or(0)..editor.cursor]
         ),
         view::label(&editor.text[editor.cursor..])
-    ));
-    let mut out = String::from("\x1b[H\x1b[2J");
-    for (index, line) in lines.into_iter().take(height).enumerate() {
-        if index != 0 {
-            out.push_str("\r\n");
-        }
-        let mut columns = 0;
-        for c in line.chars() {
-            let cost = if c.is_ascii() { 1 } else { 2 };
-            if columns + cost > width {
-                break;
+    );
+    lines.push(clip(&prompt, width));
+    lines
+}
+#[derive(Default)]
+struct Screen {
+    rows: Vec<String>,
+    width: usize,
+}
+impl Screen {
+    fn paint(&mut self, rows: Vec<String>, width: usize) -> String {
+        let resized = self.width != width || self.rows.len() != rows.len();
+        let mut output = String::new();
+        for (index, row) in rows.iter().enumerate() {
+            if resized || self.rows.get(index) != Some(row) {
+                if output.is_empty() {
+                    output.push_str("\x1b[?2026h");
+                }
+                output.push_str(&format!("\x1b[{};1H\x1b[0m{}\x1b[0m\x1b[K", index + 1, row));
             }
-            out.push(c);
-            columns += cost;
         }
+        if !output.is_empty() {
+            output.push_str("\x1b[?2026l");
+        }
+        self.rows = rows;
+        self.width = width;
+        output
     }
-    out
 }
 pub async fn serve(options: Options) -> Result<ExitCode, String> {
     if !available() {
@@ -311,6 +344,8 @@ pub async fn serve(options: Options) -> Result<ExitCode, String> {
     let editor = Arc::new(Mutex::new(Editor::default()));
     let busy = Arc::new(std::sync::atomic::AtomicBool::new(false));
     let renderer = async {
+        let mut screen = Screen::default();
+        let mut rendered = None;
         loop {
             let size = termios::tcgetwinsize(&terminal.io).ok();
             let width = size
@@ -323,16 +358,24 @@ pub async fn serve(options: Options) -> Result<ExitCode, String> {
                 .map(|s| usize::from(s.ws_row))
                 .unwrap_or(24)
                 .clamp(1, 80);
-            let text = frame(
-                &view.lock().unwrap(),
-                &editor.lock().unwrap(),
-                width,
-                height,
-                busy.load(std::sync::atomic::Ordering::Relaxed),
-            );
-            tokio::time::timeout(Duration::from_millis(500), terminal.write(text.as_bytes()))
-                .await
-                .map_err(|_| io::Error::from(io::ErrorKind::TimedOut))??;
+            let text = {
+                let display = view.lock().unwrap();
+                let mut editor = editor.lock().unwrap();
+                let busy = busy.load(std::sync::atomic::Ordering::Relaxed);
+                let key = (display.revision, editor.revision, width, height, busy);
+                if rendered == Some(key) {
+                    String::new()
+                } else {
+                    let rows = frame(&display, &mut editor, width, height, busy);
+                    rendered = Some(key);
+                    screen.paint(rows, width)
+                }
+            };
+            if !text.is_empty() {
+                tokio::time::timeout(Duration::from_millis(500), terminal.write(text.as_bytes()))
+                    .await
+                    .map_err(|_| io::Error::from(io::ErrorKind::TimedOut))??;
+            }
             tokio::time::sleep(Duration::from_millis(50)).await;
         }
         #[allow(unreachable_code)]
@@ -365,7 +408,7 @@ pub async fn serve(options: Options) -> Result<ExitCode, String> {
                 }
                 result = async { match job.as_mut() { Some(job) => job.await, None => pending().await } } => {
                     job = None; busy.store(false,std::sync::atomic::Ordering::Relaxed);
-                    match result { Ok(code) => { last = code;let mut display=view.lock().unwrap();if !display.terminal_seen { display.status="Run ended; terminal event unavailable".into(); } }, Err(error) => { let mut view=view.lock().unwrap();view.status="Setup failed".into();view.push(&error);last=ExitCode::from(2); } }
+                    match result { Ok(code) => { last = code;let mut display=view.lock().unwrap();if !display.terminal_seen { display.status="Run ended; terminal event unavailable".into();display.invalidate(); } }, Err(error) => { let mut view=view.lock().unwrap();view.status="Setup failed".into();view.push(&error);last=ExitCode::from(2); } }
                     None
                 }
                 read = terminal.read(&mut buffer), if !exiting => {
@@ -375,7 +418,13 @@ pub async fn serve(options: Options) -> Result<ExitCode, String> {
                         Ok(count) => {
                             let mut action = None;
                             for &byte in &buffer[..count] {
-                                let next = if job.is_some() { match byte { 3 => Some(Action::Cancel), 4 => Some(Action::Quit), _ => None } } else { editor.lock().unwrap().key(byte) };
+                                let next = if job.is_some() {
+                                    match byte { 3 => Some(Action::Cancel), 4 => Some(Action::Quit), _ => {
+                                        let mut editor = editor.lock().unwrap();
+                                        if byte == 0x1b || !editor.escape.is_empty() { editor.key(byte); }
+                                        None
+                                    }}
+                                } else { editor.lock().unwrap().key(byte) };
                                 if let Some(next)=next { action=Some(next);break; }
                             }
                             action
@@ -387,6 +436,13 @@ pub async fn serve(options: Options) -> Result<ExitCode, String> {
         match action {
             Some(Action::Submit(input)) if job.is_none() && !exiting => {
                 view.lock().unwrap().reset(&input);
+                {
+                    let mut editor = editor.lock().unwrap();
+                    editor.scroll = 0;
+                    editor.transcript_lines = 0;
+                    editor.paste = false;
+                    editor.escape.clear();
+                }
                 cancel = CancellationToken::new();
                 let token = cancel.clone();
                 let display = view.clone();
@@ -398,8 +454,16 @@ pub async fn serve(options: Options) -> Result<ExitCode, String> {
                 }));
             }
             Some(Action::Cancel) if job.is_some() => {
+                {
+                    let mut editor = editor.lock().unwrap();
+                    editor.escape.clear();
+                    editor.utf8.clear();
+                    editor.paste = false;
+                }
                 cancel.cancel();
-                view.lock().unwrap().status = "Cancelling; joining owned work".into();
+                let mut display = view.lock().unwrap();
+                display.status = "Cancelling; joining owned work".into();
+                display.invalidate();
             }
             Some(Action::Cancel) => {
                 last = ExitCode::from(130);
@@ -451,6 +515,28 @@ mod tests {
         assert!(editor.text.is_empty());
     }
     #[test]
+    fn history_remains_anchored_while_new_output_streams_and_only_changed_rows_paint() {
+        let mut view = view::View::default();
+        view.reset("first");
+        for i in 0..50 {
+            view.push(&format!("line {i}\n"));
+        }
+        let mut editor = Editor::default();
+        frame(&view, &mut editor, 60, 16, true);
+        for byte in b"\x1b[5~" {
+            editor.key(*byte);
+        }
+        let before = frame(&view, &mut editor, 60, 16, true);
+        view.push("new output\nmore output\n");
+        assert_eq!(before, frame(&view, &mut editor, 60, 16, true));
+        let mut screen = Screen::default();
+        screen.paint(vec!["one".into(), "two".into()], 60);
+        let update = screen.paint(vec!["one".into(), "short".into()], 60);
+        assert!(!update.contains("\x1b[1;1H") && update.contains("\x1b[2;1H"));
+        assert!(!update.contains("\x1b[2J"));
+    }
+
+    #[test]
     fn input_and_rendering_remain_bounded() {
         let mut editor = Editor::default();
         for _ in 0..INPUT_BYTES + 100 {
@@ -459,10 +545,13 @@ mod tests {
         assert_eq!(editor.text.len(), INPUT_BYTES);
         let mut view = view::View::default();
         view.push(&"界\x1b[2J".repeat(20000));
-        let frame = frame(&view, &editor, 80, 24, false);
+        let rows = frame(&view, &mut editor, 80, 24, false);
+        let mut screen = Screen::default();
+        let frame = screen.paint(rows.clone(), 80);
+        assert!(screen.paint(rows, 80).is_empty());
         assert!(frame.len() < 12_000);
         assert!(frame.matches("\r\n").count() < 24);
-        assert_eq!(frame.matches('\x1b').count(), 2);
-        assert!(super::frame(&view, &editor, 5, 2, false).len() < 20);
+        assert!(!frame.contains("\x1b[2J"));
+        assert!(super::frame(&view, &mut editor, 5, 2, false).len() == 2);
     }
 }

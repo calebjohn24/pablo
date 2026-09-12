@@ -15,6 +15,8 @@ pub struct View {
     pub skills: Vec<String>,
     pub trimmed: bool,
     pub terminal_seen: bool,
+    pub revision: u64,
+    assistant_active: bool,
     observed: Option<pablo_core::task::Accounting>,
 }
 fn visible(c: char) -> char {
@@ -42,16 +44,29 @@ pub fn label(text: &str) -> String {
 }
 impl View {
     pub fn reset(&mut self, input: &str) {
+        let transcript = std::mem::take(&mut self.transcript);
+        let trimmed = self.trimmed;
+        let revision = self.revision.wrapping_add(1);
         *self = Self {
+            transcript,
+            trimmed,
+            revision,
             status: "Preparing".into(),
             policy: "Static policy; no approvals".into(),
             ..Self::default()
         };
+        if !self.transcript.is_empty() {
+            self.push("\n\n---\n");
+        }
         self.push("You: ");
         self.push(input);
         self.push("\n\n");
     }
+    pub fn invalidate(&mut self) {
+        self.revision = self.revision.wrapping_add(1);
+    }
     pub fn push(&mut self, text: &str) {
+        self.invalidate();
         for c in text.chars().map(visible) {
             self.transcript.push(c);
             if self.transcript.len() > TRANSCRIPT_BYTES + 4096 {
@@ -72,6 +87,7 @@ impl View {
         self.trimmed = true;
     }
     pub fn event(&mut self, event: &RunEvent) {
+        self.invalidate();
         let root = event.agent.as_ref().is_none_or(|agent| agent.depth() == 0);
         let id = label(
             event
@@ -147,15 +163,36 @@ impl View {
                 self.active(&id, "Model streaming");
             }
             EventKind::TextDelta { text } => {
+                if root && !self.assistant_active {
+                    self.push("Assistant:\n");
+                    self.assistant_active = true;
+                }
                 if !root {
                     self.push("[child] ");
                 }
                 self.push(text);
             }
             EventKind::ToolStarted { call } => {
-                self.active(&id, &format!("Tool {}", label(&call.name)))
+                self.active(&id, &format!("Tool {}", label(&call.name)));
+                self.push(&format!(
+                    "\n\nTool: `{}` [{}] — running\n",
+                    label(&call.name),
+                    label(&call.id)
+                ));
+                self.assistant_active = false;
             }
-            EventKind::ToolFinished { name, result, .. } => {
+            EventKind::ToolFinished {
+                call_id,
+                name,
+                result,
+            } => {
+                self.push(&format!(
+                    "Tool: `{}` [{}] — {:?}\n\n",
+                    label(name),
+                    label(call_id),
+                    result.status
+                ));
+                self.assistant_active = false;
                 self.active(&id, "Running");
                 self.policy = label(&format!(
                     "Static policy | {} {:?}",
@@ -194,6 +231,8 @@ impl View {
                 if root {
                     self.terminal_seen = true;
                     self.status = label(outcome.label());
+                    self.push(&format!("\n\n[{}]\n", outcome.label()));
+                    self.assistant_active = false;
                     if let pablo_core::RunOutcome::PolicyDenied { rule } = outcome {
                         self.policy = label(&format!("Policy denied: {rule:?}"));
                     }
@@ -241,13 +280,14 @@ mod tests {
         assert!(label(&"界".repeat(500)).len() <= LABEL_BYTES);
     }
     #[test]
-    fn a_fresh_task_resets_all_display_state() {
+    fn a_fresh_task_preserves_history_but_resets_execution_display() {
         let mut view = View::default();
         view.push("old output");
         view.active("old", "working");
         view.skills.push("old skill".into());
         view.reset("next task");
-        assert!(!view.transcript.contains("old"));
+        assert!(view.transcript.contains("old output"));
+        assert!(view.transcript.contains("You: next task"));
         assert!(view.activity.is_empty());
         assert!(view.skills.is_empty());
         assert_eq!(view.status, "Preparing");

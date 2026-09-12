@@ -1,4 +1,6 @@
 //! Reference terminal client; every task uses the same run function as the CLI.
+#[cfg(unix)]
+mod markdown;
 mod view;
 use std::{
     io::IsTerminal,

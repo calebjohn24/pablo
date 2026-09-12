@@ -31,7 +31,7 @@ multiple tasks; reusing a constant legacy trace filename fails safely.
 ## Controls and bounded display
 
 Enter submits the current nonempty task. Left/right, Home/End, Backspace and Delete
-edit UTF-8 input at character boundaries. Bracketed paste retains newlines without
+edit UTF-8 input at character boundaries. Page Up/Down, up/down arrows and the mouse wheel scroll retained history, including during a run. Ctrl-Home jumps to the oldest retained text; Ctrl-End returns to the live tail. Bracketed paste retains newlines without
 submitting them; Enter after paste submits. The insertion point uses a visible
 marker rather than terminal cursor coordinates derived from untrusted text.
 
@@ -42,6 +42,8 @@ joins and exits. An external SIGTERM joins the active run and exits with 143.
 Input EOF exits after joining any active task. The last task's exit status survives
 normal exit (0 success, 1 failed/limited/denied/timed out, 130 cancelled); pre-admission
 setup failures use 2. A display failure uses 1 and input failure uses 2.
+
+The view retains earlier prompts and answers in the current terminal session, including persistent tool start/completion entries with names, call IDs and status. Per-task metadata resets on submission while visible history remains. Basic Markdown renders headings, emphasis, lists, quotes, links and inline/fenced code. Wrapping counts visible columns rather than ANSI formatting bytes.
 
 The view shows streamed narration with explicit terminal outcome, provider/model,
 current tool and owned-agent activity, activated Skill names, observed local
@@ -58,7 +60,7 @@ same bounded activity display, including work that never started.
 | Metadata labels | 256 bytes each |
 | Activity entries / Skill labels | 17 / 16 |
 | Render viewport | At most 240 columns and 80 rows |
-| Refresh / input polling | At most 20 frames/s / nonblocking 5 ms input polling |
+| Refresh / input polling | At most 20 changed frames/s; no idle writes / nonblocking 5 ms input polling |
 | Frame output / restoration attempt | 500 ms / 250 ms |
 
 Only trusted renderer literals emit terminal control sequences. Untrusted C0/C1
@@ -122,3 +124,11 @@ flags are masked. This is native macOS arm64 proof; each remaining platform gate
 must run its native PTY cases and record OS-specific behavior. Full grapheme-width
 layout and restoration after SIGKILL or terminal destruction remain outside the
 contract.
+
+## C3.33a rendering fix
+
+The terminal is cleared once on entry. Subsequent paints update only changed rows, bracketed by synchronized-output markers where supported. Row erasure removes stale suffixes without exposing an empty whole screen. Unchanged display revisions skip Markdown/layout work and emit no terminal bytes. Mouse, synchronized-output and style modes are reset during restoration and the drop fallback.
+
+Display history remains capped at 64 KiB, with an explicit oldest-text-discarded marker. Scrolled history stays anchored as new output arrives; submission returns to the current tail. Each task still receives independent runtime context. The Markdown renderer emits only its own fixed SGR codes after native text controls are neutralized.
+
+`tests/fixtures/tui/display.py` inspects actual PTY screen cells and styles, verifies persistent completed tools and earlier tasks, scrolling during a model run, mouse navigation, exactly one full clear, zero idle bytes, fresh runtime context and restoration. The slow-consumer fixture continuously changes visible content so its pressure comes from real updates.

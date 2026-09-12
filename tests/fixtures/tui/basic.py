@@ -1,3 +1,4 @@
+from screen import Screen
 """T01 composer and native streaming smoke in a real local Unix PTY."""
 import os,sys,pty,fcntl,termios,struct,subprocess,select,time,json,threading,http.server,tempfile
 binary=os.path.abspath(sys.argv[1])
@@ -29,18 +30,19 @@ try:
     with tempfile.TemporaryDirectory(prefix='pablo-tui-basic-') as cwd:
         wrapper="import subprocess,sys; code=subprocess.call(sys.argv[1:]); print('\\nFIXTURE_EXIT='+str(code),flush=True); sys.stdin.readline(); print('FIXTURE_READY',flush=True); sys.stdin.readline(); sys.exit(code)"
         child=subprocess.Popen([sys.executable,'-c',wrapper,binary]+([] if automatic else ['tui','--no-shell','--no-filesystem']),stdin=slave,stdout=slave,stderr=slave,cwd=cwd,env={'TERM':'xterm-256color','PABLO_FIXTURE_ENDPOINT':f'http://127.0.0.1:{server.server_port}'},preexec_fn=control)
-        output=bytearray()
+        output=bytearray(); display=Screen()
         def wait_for(predicate):
             end=time.monotonic()+8
             while not predicate():
                 assert child.poll() is None,bytes(output[-2000:])
                 assert time.monotonic()<end,bytes(output[-2000:])
-                if select.select([master],[],[],0.05)[0]:output.extend(os.read(master,65536))
+                if select.select([master],[],[],0.05)[0]:
+                    data=os.read(master,65536);output.extend(data);display.feed(data)
                 assert len(output)<1024*1024
         wait_for(lambda:b'Enter: new independent task' in output)
         started=time.monotonic();os.write(master,b'firt\x1b[Ds\r')
-        def screen():return bytes(output).split(b'\x1b[H\x1b[2J')[-1]
-        wait_for(lambda:len(requests)==1 and b'completed' in screen() and b'ready-from-provider' in screen() and b'You: first' in screen())
+        def screen():return display.text()
+        wait_for(lambda:len(requests)==1 and b'pablo | completed' in screen() and b'ready-from-provider' in screen() and b'You: first' in screen())
         samples.append((time.monotonic()-started)*1000)
         assert b'\x1b]52;' not in output
         assert requests[0]['messages'][-1]['content']=='first'
@@ -48,7 +50,7 @@ try:
         assert b'Static policy' in output and b'Calls 1 / tools 0' in output
         for index in range(1,count):
             output.clear();started=time.monotonic();os.write(master,f'task-{index}\r'.encode())
-            wait_for(lambda:len(requests)==index+1 and b'completed' in screen() and f'You: task-{index}'.encode() in screen())
+            wait_for(lambda:len(requests)==index+1 and b'pablo | completed' in screen() and f'You: task-{index}'.encode() in screen())
             samples.append((time.monotonic()-started)*1000)
             assert 'ready-from-provider' not in json.dumps(requests[-1])
             assert requests[-1]['messages'][-1]['content']==f'task-{index}'

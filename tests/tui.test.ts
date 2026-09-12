@@ -6,7 +6,7 @@ import {existsSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {join} from 'node:path';
 import {cleanEnv} from './fixtures/telemetry.ts';
-const exec=promisify(execFile),root=fileURLToPath(new URL('../',import.meta.url)),binary=join(root,'target/debug/pablo');
+const exec=promisify(execFile),root=fileURLToPath(new URL('../',import.meta.url)),binary=process.env.PABLO_TUI_BINARY??join(root,'target/debug/pablo');
 test('T01 redirected no-argument help and explicit TUI rejection preserve ordinary output',async()=>{
  const help=await exec(binary,[],{env:cleanEnv()});assert(help.stdout.includes('Usage:'));assert(!help.stdout.includes('\x1b'));
  await assert.rejects(exec(binary,['tui'],{env:cleanEnv()}),(error:any)=>error.code===2&&!error.stdout.includes('\x1b')&&error.stderr.includes('terminal'));
@@ -34,3 +34,8 @@ for (const scenario of ['success', 'model_cancel', 'model_eof', 'input_eof', 'to
   assert.equal(receipt.exitCode, ['success', 'resize'].includes(scenario) ? 0 : scenario === 'sigterm' ? 143 : ['provider_error', 'slow_output'].includes(scenario) ? 1 : 130);
  });
 }
+
+test('TUI changed-row rendering retains scrollable tools/history and styles Markdown in a real PTY', {timeout:20000,skip:process.platform==='win32'||!existsSync(python)}, async()=>{
+ const {stdout}=await exec(python,[join(root,'tests/fixtures/tui/display.py'),binary],{env:cleanEnv(),timeout:15000});
+ assert.deepEqual(JSON.parse(stdout),{idleBytes:0,fullScreenClears:1,toolsPersist:true,historyPersists:true,markdownStyled:true,scrollDuringRun:true,mouseScroll:true,freshTaskContext:true,terminalRestored:true});
+});
