@@ -142,3 +142,7 @@ Equivalent npm commands are `npm run project:status`, `npm run project:context`,
 Read [AGENTS.md](AGENTS.md) for the one-checkpoint-per-session workflow and the project-record format. Use [the brain](docs/project/brain.md) for accepted decisions and [the backlog](docs/project/backlog.md) for deferred work.
 
 Local credentials belong in the ignored root `.env`. Project helper commands do not load that file. The `run` command privately reads the Vercel credential; `demo` stays offline.
+
+### Knowledge-work benchmark
+
+Compare Pablo (GLM or Astra), Codex, Claude Code, Ori + Pi, and Pi on seeded noncoding document tasks with factual/citation scoring, latency, process-tree memory and CPU measurements. Run `npm run bench:knowledge` to inspect the matrix without model calls. See [the benchmark guide](scripts/knowledge-work/README.md) for credentials, live runs, metrics and limitations.

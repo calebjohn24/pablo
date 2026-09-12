@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-12T20:42:54.032Z",
+  "updated_at": "2026-09-12T21:40:10.760Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.34",
-  "next_action": "C3.33a TUI fixes merged in PR #37; rebuilt release is ready for user testing. Stop here. C3.34 packaging and later native release gates remain pending until new user direction.",
-  "latest_log_entry": "LOG-0167",
+  "next_action": "C3.33b implementation and available-client pilot complete; review benchmark change. Ori/Pi task comparison remains unmeasured pending native OpenRouter authentication. Repeat with multiple seeds/repetitions before ranking. C3.34 packaging remains pending and held; preserve user stash and earlier baselines.",
+  "latest_log_entry": "LOG-0170",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -700,6 +700,19 @@
       "blockers": [],
       "verification": [
         "LOG-0166"
+      ]
+    },
+    {
+      "id": "C3.33b",
+      "title": "Knowledge-work benchmark",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c333b-knowledge-work-benchmark",
+      "depends_on": [
+        "C3.33a"
+      ],
+      "status": "done",
+      "blockers": [],
+      "verification": [
+        "LOG-0170"
       ]
     },
     {

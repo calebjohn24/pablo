@@ -484,6 +484,19 @@ Acceptance:
 - Render headings, emphasis, lists, quotes, links and fenced/inline code with bounded layout and neutralized untrusted terminal controls.
 - Verify real PTY history navigation, streaming, idle output, Markdown, cancellation, resize, backpressure and terminal restoration; rebuild the release binary and compare relevant TUI performance.
 
+## C3.33b: Knowledge-work benchmark
+
+Prerequisites: C3.33a.
+
+User-requested follow-up, independent of release packaging. Build a reproducible local-source knowledge-work comparison for Pablo, Codex, Claude Code, Ori and Pi. The user also requested a Pablo + Astra profile to compare alongside Pablo + GLM.
+
+Acceptance:
+
+- Seeded synthetic document, reconciliation, policy, decision and planning tasks have deterministic factual/citation scoring with answer keys outside agent workspaces. Document what subjective quality is not scored.
+- A serial headless runner records exact commands/models/versions, task fingerprints, correctness, wall time, process-tree sampled memory, CPU time/utilization and explicit missing metrics. Failures/timeouts remain in aggregates; retained runs do not overlap builds/tests.
+- Verify scorer negative controls, process monitoring and cleanup, adapter event normalization and report generation offline. Run a bounded live pilot where authentication/model access exists, recording unavailable competitors explicitly without substituting models or fabricating results.
+- Document reproducible commands, benchmark limitations and existing benchmark alternatives. Preserve C3.34 and later release gates as pending.
+
 ## C3.34: Release archives and installation
 
 Prerequisites: C3.33, C3.33a.
