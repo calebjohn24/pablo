@@ -1,0 +1,110 @@
+{
+  "checkpoint": "C3.33a",
+  "scope": "Sequential PTY controls after build/check handles terminated; 30 retained samples after five warm-ups per binary.",
+  "baseline": {
+    "checkpoint": "C3.33a",
+    "timestamp": "2026-09-12T20:36:10.245Z",
+    "source_sha256": "e2dbc4e20574068376677f633b01874b2ce451646cd8145957885dcd93494b84",
+    "binary_sha256": "8db796bc7a77b040bf2d87da428e23d92a327ec4078f3caea2cdabaf960ee942",
+    "platform": "darwin/arm64",
+    "method": {
+      "samples": 30,
+      "warmup": 5,
+      "workload": "PTY input to completed screen for one immediate local HTTP/SSE model response per fresh native task; same terminal process. Renderer capped at 20 frames/s; nonblocking input polls at 5 ms. Process/fixture startup excluded. Includes screen-delivery observation, not isolated runtime or live-model latency.",
+      "cleanup": "Final real run-token cancellation and terminal-mode restoration verified; terminal owner and HTTP fixture joined."
+    },
+    "stats": {
+      "submit_to_completed_screen_ms": {
+        "min": 50.45141698792577,
+        "p50": 51.33016686886549,
+        "p95": 52.50912508927286,
+        "max": 52.70695802755654
+      }
+    },
+    "samples_ms": [
+      51.32216704078019,
+      51.39945796690881,
+      52.33383388258517,
+      51.153166918084025,
+      51.37970903888345,
+      51.99712491594255,
+      51.41083407215774,
+      51.18754203431308,
+      51.279583014547825,
+      52.70695802755654,
+      50.573499873280525,
+      51.141500007361174,
+      51.054583163931966,
+      51.6008751001209,
+      50.89679197408259,
+      52.16670804657042,
+      51.702666096389294,
+      52.50912508927286,
+      51.88658297993243,
+      51.52933322824538,
+      51.21037480421364,
+      51.135333022102714,
+      51.33016686886549,
+      50.54933298379183,
+      51.2552079744637,
+      50.45141698792577,
+      51.42862512730062,
+      52.2275420371443,
+      51.50587507523596,
+      50.88195810094476
+    ]
+  },
+  "current": {
+    "checkpoint": "C3.33a",
+    "timestamp": "2026-09-12T20:36:38.874Z",
+    "source_sha256": "8127669633b6277fd99b61f9ef8dc9081291eccf8e30fd5c9b94c6d4a641c2ce",
+    "binary_sha256": "39669a6c4e38421a5180ad2a55278a94d95a09a440a758adfc96c3365e1126d0",
+    "platform": "darwin/arm64",
+    "method": {
+      "samples": 30,
+      "warmup": 5,
+      "workload": "PTY input to completed screen for one immediate local HTTP/SSE model response per fresh native task; same terminal process. Renderer capped at 20 frames/s; nonblocking input polls at 5 ms. Process/fixture startup excluded. Includes screen-delivery observation, not isolated runtime or live-model latency.",
+      "cleanup": "Final real run-token cancellation and terminal-mode restoration verified; terminal owner and HTTP fixture joined."
+    },
+    "stats": {
+      "submit_to_completed_screen_ms": {
+        "min": 50.28541712090373,
+        "p50": 51.33350007236004,
+        "p95": 52.04820889048278,
+        "max": 52.05691698938608
+      }
+    },
+    "samples_ms": [
+      51.45237501710653,
+      51.15649988874793,
+      52.04820889048278,
+      51.474208012223244,
+      50.769624998793006,
+      51.61979212425649,
+      51.090999972075224,
+      51.487000193446875,
+      51.13283405080438,
+      51.33350007236004,
+      50.61645898967981,
+      51.582666812464595,
+      51.856000209227204,
+      51.03062489069998,
+      50.28541712090373,
+      51.25608295202255,
+      50.64125009812415,
+      52.007334074005485,
+      51.70350009575486,
+      51.179416943341494,
+      51.389832980930805,
+      51.96833307854831,
+      51.487167133018374,
+      51.94283300079405,
+      51.95420794188976,
+      50.783874932676554,
+      51.184416050091386,
+      51.220000023022294,
+      52.05691698938608,
+      50.82512507215142
+    ]
+  }
+}

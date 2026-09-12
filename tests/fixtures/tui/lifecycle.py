@@ -1,3 +1,4 @@
+from screen import Screen
 """T02 real-PTY lifecycle cases with synthetic providers and native trace assertions."""
 import fcntl
 import http.server
@@ -57,7 +58,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
             else:
                 text = 'stream-visible\x1b]52;c;INERT\x07\x1b[31m\u009b2J\u202e\n'
                 if CASE == 'slow_output':
-                    text += 'bounded-render-data\n' * 5000
+                    # A stalled consumer must face changing frames, not idle redraws.
+                    for index in range(200):
+                        self.wfile.write(wire({'content': f'bounded-render-{index:04d}\n' * 80}))
+                        self.wfile.flush()
+                        if RELEASE.wait(0.03): break
                 self.wfile.write(wire({'content': text}))
                 self.wfile.flush()
                 if CASE in ('model_cancel', 'model_eof', 'resize', 'slow_output', 'sigterm', 'input_eof'):
@@ -112,10 +117,12 @@ try:
             (cwd / 'entry.toml').write_text(config)
         owner = subprocess.Popen([sys.executable, '-c', wrapper, *args], stdin=slave, stdout=slave, stderr=slave, cwd=cwd, env={'TERM': 'xterm-256color', 'PABLO_FIXTURE_ENDPOINT': f'http://127.0.0.1:{server.server_port}'}, preexec_fn=session_owner)
         output = bytearray()
+        display = Screen()
 
         def drain(timeout=0.05):
             if select.select([master], [], [], timeout)[0]:
-                output.extend(os.read(master, 65536))
+                data = os.read(master, 65536)
+                output.extend(data); display.feed(data)
             assert len(output) < 4 * 1024 * 1024, 'fixture output bound'
 
         def wait_for(predicate, timeout=8):
@@ -126,7 +133,7 @@ try:
                 drain()
 
         def screen():
-            return bytes(output).split(b'\x1b[H\x1b[2J')[-1]
+            return display.text()
 
         def events():
             if not trace.exists():
@@ -178,8 +185,10 @@ try:
         elif CASE == 'resize':
             wait_for(lambda: b'stream-visible' in screen())
             fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH', 5, 30, 0, 0))
+            display.resize(5,30)
             wait_for(lambda: b'Resize terminal to continue' in screen())
             fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH', 40, 140, 0, 0))
+            display.resize(40,140)
             wait_for(lambda: b'Ctrl-C: cancel and join' in screen() and b'stream-visible' in screen())
             RELEASE.set()
         elif CASE == 'slow_output':

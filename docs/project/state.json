@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-12T20:12:58.840Z",
+  "updated_at": "2026-09-12T20:38:25.279Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.34",
-  "next_action": "Stopped at the user-requested Compatibility/protocol verification checkpoint: C3.33 PR #36 merged with verified tree parity. C3.34 packaging is ready but must remain pending until new user direction; do not continue the prior goal into native release gates.",
-  "latest_log_entry": "LOG-0165",
+  "next_action": "Merge the verified C3.33a TUI follow-up and stop; release rebuilt for user testing. C3.34 packaging remains pending until new user direction.",
+  "latest_log_entry": "LOG-0166",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -690,11 +690,25 @@
       ]
     },
     {
+      "id": "C3.33a",
+      "title": "TUI rendering and transcript fixes",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c333a-tui-rendering-and-transcript-fixes",
+      "depends_on": [
+        "C3.33"
+      ],
+      "status": "done",
+      "blockers": [],
+      "verification": [
+        "LOG-0166"
+      ]
+    },
+    {
       "id": "C3.34",
       "title": "Release archives and installation",
       "spec": "docs/project/cycles/003-extensibility-and-release.md#c334-release-archives-and-installation",
       "depends_on": [
-        "C3.33"
+        "C3.33",
+        "C3.33a"
       ],
       "status": "pending",
       "blockers": [],
