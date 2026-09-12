@@ -1,3 +1,4 @@
+import { assertExtension } from './fixtures/acp-extension-schema.ts';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { execFile } from 'node:child_process';
@@ -11,7 +12,7 @@ import { responsesEvents, responsesWire } from './fixtures/open-responses.ts';
 import { Ajv2020 } from 'ajv/dist/2020.js';
 import { withPablo, taskOf } from '../examples/acp-client.ts';
 const ajv = new Ajv2020({strict:false});
-const validateMeta = ajv.compile<any>(JSON.parse(await readFile(new URL('../docs/pablo-acp-v1.schema.json',import.meta.url),'utf8')));
+const validateMeta = ajv.compile<any>(JSON.parse(await readFile(new URL('../docs/pablo-acp-v2.schema.json',import.meta.url),'utf8')));
 const exec = promisify(execFile);
 const binary = fileURLToPath(new URL('../target/debug/pablo', import.meta.url));
 const base = (await readFile(new URL('../docs/project/fixtures/c3-model-routes/three-providers.toml', import.meta.url), 'utf8')).replace('max_model_calls=2', 'max_model_calls=4');
@@ -47,7 +48,7 @@ for (const later of [false, true]) test(`F02 CLI and fresh ACP routes ${later ? 
     assert.equal(events.filter(e => e.type === 'run.finished').length, 1); assert.deepEqual(events.at(-1).accounting, task.accounting);
     if (later) assert.deepEqual(requests[1].messages, requests[2].messages);
     await withPablo({ binary, args, env: cleanEnv() }, async cx => {
-      await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v1': true, 'pablo/task-v1': true } } });
+      await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v2': true, 'pablo/task-v2': true } } });
       for (let i = 0; i < 2; i++) {
         const { sessionId } = await cx.request('session/new', { cwd, mcpServers: [] });
         const next = taskOf(await cx.request('session/prompt', { sessionId, prompt: [{ type: 'text', text: 'read file' }] }));
@@ -81,11 +82,11 @@ for (const privateOrigin of [true, false]) test(`F02 ${privateOrigin ? 'private 
     assert.equal(terminal.model_route.phase,'blocked'); assert.equal(terminal.model_route.entry_index,1);
     assert.equal(terminal.model_route.failure_code,'continuation_incompatible'); assert.equal(terminal.model_route.dispatched,false);
     const attempts: unknown[]=[];
-    await withPablo({binary,args:['--config',entry,'--bind',`workspace=${cwd}`,'--fixture-endpoint',gateway.url],env:cleanEnv(),onModelAttempt:n=>{attempts.push(n);}},async cx=>{
-      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true,'pablo/task-v1':true,'pablo/model-route-v1':true}}});
+    await withPablo({binary,args:['--config',entry,'--bind',`workspace=${cwd}`,'--fixture-endpoint',gateway.url],env:cleanEnv(),onModelAttempt:n=>{assertExtension(n);attempts.push(n);}},async cx=>{
+      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true,'pablo/task-v2':true,'pablo/model-route-v1':true}}});
       const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});
       await assert.rejects(cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'read'}]}),(e:any)=>{
-        const details=e.data['pablo/v1']; assert.deepEqual(details.task.outcome,task.outcome); assert.deepEqual(details.model_route,terminal.model_route); return true;
+        const details=e.data['pablo/v2']; assert.deepEqual(details.task.outcome,task.outcome); assert.deepEqual(details.model_route,terminal.model_route); return true;
       });
     });
     assert.equal(requests.length,4); assert.equal(attempts.length,4);
@@ -142,23 +143,23 @@ for (const scenario of scenarios) test(`F03 CLI and negotiated ACP ${scenario.na
     if (scenario.mode === 'calls') { assert.equal(events.at(-1).model_route.phase,'blocked'); assert.equal(events.at(-1).model_route.entry,scenario.entries[1]); }
     for (const negotiated of [true,false]) {
       const attempts: any[] = []; const updates: any[] = [];
-      await withPablo({binary,args,env:cleanEnv(),onModelAttempt:n=>{attempts.push(n);},onUpdate:n=>{updates.push(n);}}, async cx=>{
-        const init = await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true,'pablo/task-v1':true,'pablo/model-route-v1':negotiated}}});
+      await withPablo({binary,args,env:cleanEnv(),onModelAttempt:n=>{assertExtension(n);attempts.push(n);},onUpdate:n=>{updates.push(n);}}, async cx=>{
+        const init = await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true,'pablo/task-v2':true,'pablo/model-route-v1':negotiated}}});
         assert.equal(init.agentCapabilities?._meta?.['pablo/model-route-v1'],true);
         const {sessionId} = await cx.request('session/new',{cwd,mcpServers:[]});
         let details: any;
-        try { details=(await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'test route'}]}))._meta?.['pablo/v1']; }
-        catch(e:any) { details=e.data?.['pablo/v1']; assert(details, String(e)); }
+        try { details=(await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'test route'}]}))._meta?.['pablo/v2']; }
+        catch(e:any) { details=e.data?.['pablo/v2']; assert(details, String(e)); }
         assert(validateMeta(details),ajv.errorsText(validateMeta.errors));
         assert.deepEqual(details.task.outcome,task.outcome); assert.deepEqual(details.task.accounting,task.accounting);
         assert.equal(attempts.length, negotiated ? 2*scenario.count : 0);
         if (negotiated) {
           assert.deepEqual(details.model_route,events.at(-1).model_route);
           const closed=attempts.filter(n=>n.type==='model.finished');
-          assert.deepEqual(closed.map(n=>n['pablo/v1'].model_route),finishes.map(e=>e.model_route));
-          assert.equal(new Set(closed.map(n=>n['pablo/v1'].span_id)).size,scenario.count);
+          assert.deepEqual(closed.map(n=>n['pablo/v2'].model_route),finishes.map(e=>e.model_route));
+          assert.equal(new Set(closed.map(n=>n['pablo/v2'].span_id)).size,scenario.count);
           assert(attempts.every(n=>n.sessionId===sessionId));
-          for(const n of attempts) assert(validateMeta(n['pablo/v1']),ajv.errorsText(validateMeta.errors));
+          for(const n of attempts) assert(validateMeta(n['pablo/v2']),ajv.errorsText(validateMeta.errors));
         } else assert.equal(details.model_route,undefined);
         assert(updates.every(n=>!['agent_thought_chunk','tool_call'].includes(n.update.sessionUpdate)), 'model routing is not projected as tools or thoughts');
       });
@@ -176,8 +177,8 @@ test('F03 later missing credentials reject CLI and ACP before run admission', {t
     const result=await exec(binary,['run','unadmitted',...args,'--json'],{env,cwd}).catch((e:any)=>{assert.equal(e.code,2); return e;});
     assert.match(result.stderr,/config_credential_missing/); assert(!result.stdout.includes(env.ROUTE_ROUTER_KEY));
     const diagnostics: string[]=[]; const notifications: unknown[]=[];
-    await assert.rejects(withPablo({binary,args,env,onDiagnostic:s=>{diagnostics.push(s);},onModelAttempt:n=>{notifications.push(n);}},async cx=>{
-      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true,'pablo/task-v1':true,'pablo/model-route-v1':true}}});
+    await assert.rejects(withPablo({binary,args,env,onDiagnostic:s=>{diagnostics.push(s);},onModelAttempt:n=>{assertExtension(n);notifications.push(n);}},async cx=>{
+      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true,'pablo/task-v2':true,'pablo/model-route-v1':true}}});
       assert.fail('credentials must fail before ACP startup');
     }), /ACP connection closed/);
     assert.match(diagnostics.join(''),/config_credential_missing/);

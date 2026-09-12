@@ -113,12 +113,12 @@ public/private history without copying it into diagnostics. Native numeric count
 in new metadata use decimal strings. A summary model span is a child of the
 compaction span, in the same root trace and accounting ledger. Its text deltas never
 appear as ordinary assistant output. The terminal carries only bounded compaction
-metadata; the closed task envelope stays `c2.3`.
+metadata; the closed task envelope stays `c3.33`.
 
 Live core events may carry summary text at compaction finish. JSONL exposes it only
 with `capture_content=true`; otherwise it contains a null summary and byte count.
 OTel is always metadata-only, including summary length but no summary content.
-ACP peers opt into `pablo/compaction-v1` plus `pablo/v1`; `_pablo/compaction`
+ACP peers opt into `pablo/compaction-v1` plus `pablo/v2`; `_pablo/v1/compaction`
 notifications carry session/type/correlation and metadata, plus summary only when
 content capture is explicitly enabled. They share physical-write backpressure and
 shutdown with existing notifications. Other clients keep existing shapes. No raw
@@ -141,3 +141,5 @@ adapters, byte reduction, preserved prefix/task/recent pairs/private state, one
 summary/recovery, shared budgets, failure atomicity, privacy/session isolation and
 metadata/OTel correlation. Measure ordinary overhead and actual compaction/recovery
 workloads, recording context reduction separately from runtime latency.
+
+C3.33 migration: current native/task revisions are `c3.33`. Frozen C2 ACP remains a separate v1 projection for unconfigured tasks; configured C3 requires v2 or generic ACP. See [ACP negotiation](../../acp.md).

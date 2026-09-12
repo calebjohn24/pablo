@@ -2,7 +2,7 @@
 
 The implementation runs a bounded, sequential model/tool loop through two crates. `pablo-core` owns contracts, provider normalization, lifecycle transitions, event delivery, and OTel instrumentation. `pablo` owns the standalone SDK and terminal commands. C1.2a added the direct HTTP gateway adapter and live `run` command through this same lifecycle; `demo` remains offline. See [the gateway contract](gateway.md). C1.5 added opt-in [network telemetry export](telemetry.md).
 
-The native contract revision is `c2.4`, not a frozen 0.1 API. It includes [bounded filesystem reads and revision-checked mutations](filesystem.md), the `c2.3` task envelope, static policy and accounting implemented in [cycle C2](project/cycles/002-single-agent-completion.md).
+The native contract revision is `c3.33`, not a frozen 0.1 API. It includes [bounded filesystem reads and revision-checked mutations](filesystem.md), the `c3.33` task envelope, static policy and accounting implemented in [cycle C2](project/cycles/002-single-agent-completion.md).
 
 ## Embedding
 
@@ -89,7 +89,7 @@ Optional `--max-total-tokens` and `--max-cost-microusd` are u64 ceilings shared 
 
 C3.9 extends the provider boundary with a private, non-serializable `Continuation` carrier. The runtime associates accepted complete output items with their assistant history position, passes them back on subsequent model calls and counts their serialized bytes against context without charging the public projection again. Each task owns its continuation; failed/cancelled partial responses cannot seed another task. Gateways reject incompatible private continuation instead of dropping it. Provider preflight validates explicit model/profile compatibility before effects.
 
-Open Responses `model.started` and `model.finished` events additionally expose safe `model_profile` metadata: protocol, immutable upstream revision, configured capability profile, endpoint, requested model and nullable resolved model. OTel model spans record `pablo.provider.protocol`, `pablo.provider.revision`, `pablo.provider.capability_profile` and `gen_ai.response.model`. Opaque reasoning and summaries never enter public events, Debug, JSONL, ACP or OTel, including content-capture mode. Native revision `c2.4` and task accounting `c2.3` remain separate from deployment revision `c3.9`; `unsupported_provider_content` extends the closed failure vocabulary.
+Open Responses `model.started` and `model.finished` events additionally expose safe `model_profile` metadata: protocol, immutable upstream revision, configured capability profile, endpoint, requested model and nullable resolved model. OTel model spans record `pablo.provider.protocol`, `pablo.provider.revision`, `pablo.provider.capability_profile` and `gen_ai.response.model`. Opaque reasoning and summaries never enter public events, Debug, JSONL, ACP or OTel, including content-capture mode. Native revision `c3.33` and task accounting `c3.33` remain separate from deployment revision `c3.9`; `unsupported_provider_content` extends the closed failure vocabulary.
 
 
 Routed C3.12 runs add bounded `model_route` metadata to model start/finish and run
@@ -138,12 +138,12 @@ The admitted Draft 2020-12 subset supports local references; external retrieval,
 cycles and unsupported assertions reject before dispatch. `format` is annotation-only.
 
 Validation applies to the final answer after tool use and compaction. Streamed text
-is provisional. Schema-enabled task envelopes use `c3.13` and an
+is provisional. Schema-enabled task envelopes use `c3.33` and an
 `output_validation` record with `unvalidated`, `valid` or `invalid` status and a
 schema digest. Parse the original output string only after `valid`. Invalid JSON,
 schema violations or validation bounds produce `output_validation_failed`, with
 bounded diagnostics and no repair call. Root cancellation and provider errors keep
-their existing outcomes. Text-only task envelopes remain `c2.3`.
+their existing outcomes. Text-only task envelopes remain `c3.33`.
 
 See [J01](project/contracts/c3-output-validation.md) for the supported keywords,
 work/cache/input bounds, override rules and content-safe telemetry contract.
@@ -163,6 +163,6 @@ remain in force. Insufficient allowance stops before delivery. A second invalid
 answer is a typed validation failure; only a validated correction becomes completed
 terminal output. Treat streamed candidates as provisional.
 
-Enabled repair uses task revision `c3.14` and bounded `output_repair` metadata with
+Enabled repair uses task revision `c3.33` and bounded `output_repair` metadata with
 attempt/validation counts, phase and feedback size. See [J02](project/contracts/c3-output-repair.md)
 for exact status transitions, failure mappings and compatibility.

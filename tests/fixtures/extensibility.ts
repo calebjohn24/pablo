@@ -146,7 +146,7 @@ ${otel}
   return {cwd,args,env,setCancel:(callback:()=>Promise<void>)=>{onCancel=callback;},source:()=>source,counts:()=>({rootCalls,childCalls,summaries}),
     async run(binary=join(root,'target/debug/pablo')){
       return withPablo({binary,args,env},async cx=>{
-        await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true,'pablo/task-v1':true,'pablo/skills-v1':true,'pablo/compaction-v1':true}}});
+        await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true,'pablo/task-v2':true,'pablo/skills-v1':true,'pablo/compaction-v1':true}}});
         const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});
         onCancel=()=>cx.notify('session/cancel',{sessionId});
         return taskOf(await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'PRIVATE_E01_ROOT: combine evidence, preserve workspace scope.'}]}));

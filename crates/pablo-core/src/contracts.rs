@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 /// Checkpoint-local contract revision; not the full 0.1 protocol contract.
-pub const SCHEMA_VERSION: &str = "c2.4";
+pub const SCHEMA_VERSION: &str = "c3.33";
 
 /// Model-visible configuration never contains provider or exporter credentials.
 #[derive(Clone, Debug, Serialize, Deserialize)]

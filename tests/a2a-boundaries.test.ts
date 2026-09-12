@@ -60,7 +60,7 @@ for(const surface of ['cli','acp','cli_cancel','acp_cancel'])for(const scenario 
       try {task=JSON.parse((await pending).stdout);}catch(error){if(!rootCancel||(error as any).code!==130)throw error;task=JSON.parse((error as any).stdout);}
     }
     else await withPablo({binary,args,env:cleanEnv()},async cx=>{
-      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true,'pablo/task-v1':true}}});const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});const pending=cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'PRIVATE_ROOT_CONTEXT'}]});if(rootCancel){await cancellable;await cx.notify('session/cancel',{sessionId});}task=taskOf(await pending);
+      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true,'pablo/task-v2':true}}});const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});const pending=cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'PRIVATE_ROOT_CONTEXT'}]});if(rootCancel){await cancellable;await cx.notify('session/cancel',{sessionId});}task=taskOf(await pending);
     });
     assert(performance.now()-started<7000,'bounded task and joined cleanup');assert.equal(task.outcome.status,rootCancel?'cancelled':'completed');
     if(rootCancel){

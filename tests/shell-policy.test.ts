@@ -60,7 +60,7 @@ test('Q01 configured CLI and ACP enforce command modes, quoting, immutable ceili
    const cli=JSON.parse(stdout).outcome;
    let acp;
    await withPablo({binary,args,env:cleanEnv()},async cx=>{
-    await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true}}});
+    await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true}}});
     const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});
     acp=outcomeOf(await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'private-task'}]}));
    });

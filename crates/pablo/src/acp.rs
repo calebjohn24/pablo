@@ -34,7 +34,8 @@ pub(crate) mod supervisor;
 mod worker;
 use worker::{Task, Worker};
 
-const EXTENSION: &str = "pablo/v1";
+const EXTENSION: &str = "pablo/v2";
+const LEGACY_EXTENSION: &str = "pablo/v1";
 const FRAME_BYTES: usize = 32 * 1024 * 1024;
 const INPUT_BYTES: usize = 64 * 1024 * 1024;
 const INPUT_MESSAGES: usize = 128;
@@ -44,6 +45,7 @@ const WRITE_TIMEOUT: Duration = Duration::from_secs(30);
 #[derive(Clone, Copy, Default)]
 struct Extensions {
     base: bool,
+    legacy: bool,
     task: bool,
     route: bool,
     compaction: bool,
@@ -77,6 +79,28 @@ fn invalid(message: &'static str) -> Error {
 }
 fn meta(value: Value) -> wire::Meta {
     [(EXTENSION.to_owned(), value)].into_iter().collect()
+}
+impl Extensions {
+    fn key(self) -> &'static str {
+        if self.legacy {
+            LEGACY_EXTENSION
+        } else {
+            EXTENSION
+        }
+    }
+    fn metadata(self, value: Value) -> wire::Meta {
+        wire::Meta::from_iter([(self.key().to_owned(), value)])
+    }
+    fn correlation(self, event: &RunEvent, first: u64) -> Value {
+        let mut value = correlation(event, first);
+        if self.legacy {
+            value["schema_version"] = json!("c2.4");
+            for key in ["root_seq", "agent", "deployment", "model_profile"] {
+                value.as_object_mut().unwrap().remove(key);
+            }
+        }
+        value
+    }
 }
 fn correlation(event: &RunEvent, first: u64) -> Value {
     let mut value = json!({"schema_version":event.schema_version,"run_id":event.run_id,
@@ -208,9 +232,9 @@ async fn serve_streams(
                             message.method,
                             Some(
                                 "session/update"
-                                    | "_pablo/model_attempt"
-                                    | "_pablo/compaction"
-                                    | "_pablo/skill"
+                                    | "_pablo/v1/model_attempt"
+                                    | "_pablo/v1/compaction"
+                                    | "_pablo/v1/skill"
                             )
                         )
                     });
@@ -457,10 +481,10 @@ async fn forward_events(
                 instructions,
             } = &event.kind
         {
-            let params=serde_json::value::to_raw_value(&json!({"sessionId":delivery_session(&event),"type":"skill.activated","pablo/v1":correlation(&event,first),"skill":skill,"instructions":if capture_content {instructions.as_deref()}else{None},"content_redacted":!capture_content})).map_err(|_|Error::internal_error())?;
+            let params=serde_json::value::to_raw_value(&json!({"sessionId":delivery_session(&event),"type":"skill.activated","pablo/v2":correlation(&event,first),"skill":skill,"instructions":if capture_content {instructions.as_deref()}else{None},"content_redacted":!capture_content})).map_err(|_|Error::internal_error())?;
             delivery
                 .send(wire::AgentNotification::ExtNotification(
-                    wire::ExtNotification::new("_pablo/skill", Arc::from(params)),
+                    wire::ExtNotification::new("_pablo/v1/skill", Arc::from(params)),
                 ))
                 .await?;
         }
@@ -488,10 +512,10 @@ async fn forward_events(
                 ),
                 _ => ("context.compaction.started", None, 0),
             };
-            let params=serde_json::value::to_raw_value(&json!({"sessionId":delivery_session(&event),"type":kind,"pablo/v1":details,"summary":summary,"summary_bytes":summary_bytes,"content_redacted":!capture_content})).map_err(|_|Error::internal_error())?;
+            let params=serde_json::value::to_raw_value(&json!({"sessionId":delivery_session(&event),"type":kind,"pablo/v2":details,"summary":summary,"summary_bytes":summary_bytes,"content_redacted":!capture_content})).map_err(|_|Error::internal_error())?;
             delivery
                 .send(wire::AgentNotification::ExtNotification(
-                    wire::ExtNotification::new("_pablo/compaction", Arc::from(params)),
+                    wire::ExtNotification::new("_pablo/v1/compaction", Arc::from(params)),
                 ))
                 .await?;
         }
@@ -508,11 +532,11 @@ async fn forward_events(
             let params = serde_json::value::to_raw_value(&json!({
                 "sessionId": delivery_session(&event),
                 "type": if matches!(event.kind, EventKind::ModelStarted { .. }) { "model.started" } else { "model.finished" },
-                "pablo/v1": details
+                "pablo/v2": details
             })).map_err(|_| Error::internal_error())?;
             delivery
                 .send(wire::AgentNotification::ExtNotification(
-                    wire::ExtNotification::new("_pablo/model_attempt", Arc::from(params)),
+                    wire::ExtNotification::new("_pablo/v1/model_attempt", Arc::from(params)),
                 ))
                 .await?;
         }
@@ -520,7 +544,7 @@ async fn forward_events(
             let mut notification =
                 wire::SessionNotification::new(delivery_session(&event).to_owned(), update);
             if extensions.base {
-                let mut details = correlation(&event, first);
+                let mut details = extensions.correlation(&event, first);
                 if extensions.output && event.output_validation.is_some() {
                     details["output_validation"] = serde_json::to_value(&event.output_validation)
                         .map_err(|_| Error::internal_error())?;
@@ -529,7 +553,7 @@ async fn forward_events(
                     details["output_repair"] = serde_json::to_value(&event.output_repair)
                         .map_err(|_| Error::internal_error())?;
                 }
-                notification.meta = Some(meta(details));
+                notification.meta = Some(extensions.metadata(details));
             }
             delivery
                 .send(wire::AgentNotification::SessionNotification(notification))
@@ -646,7 +670,28 @@ fn prompt_response(
     })?;
     let terminal =
         terminal.ok_or_else(|| Error::internal_error().data("terminal event unavailable"))?;
-    let mut details = correlation(&terminal, terminal.seq);
+    if extensions.legacy
+        && let RunOutcome::Failed { .. } = &outcome
+    {
+        let value = serde_json::to_value(&outcome).map_err(|_| Error::internal_error())?;
+        if !matches!(
+            value["code"].as_str(),
+            Some(
+                "provider_rejected"
+                    | "provider_transport"
+                    | "malformed_stream"
+                    | "event_sink_io"
+                    | "invalid_tool_arguments"
+                    | "tool_execution"
+                    | "tool_cleanup"
+                    | "accounting_bound_violated"
+            )
+        ) {
+            return Err(Error::internal_error()
+                .data("outcome requires pablo/v2 metadata; migrate the client capability"));
+        }
+    }
+    let mut details = extensions.correlation(&terminal, terminal.seq);
     if extensions.route && terminal.model_route.is_some() {
         details["model_route"] =
             serde_json::to_value(&terminal.model_route).map_err(|_| Error::internal_error())?;
@@ -660,13 +705,12 @@ fn prompt_response(
             pablo_core::TaskResult::from_terminal(&terminal).ok_or_else(Error::internal_error)?;
         if !extensions.repair {
             task.output_repair = None;
-            if task.output_validation.is_some() {
-                task.schema_version = "c3.13".into();
-            }
         }
         if !extensions.output {
             task.output_validation = None;
-            task.schema_version = pablo_core::task::TASK_SCHEMA_VERSION.into();
+        }
+        if extensions.legacy {
+            task.schema_version = "c2.3".into();
         }
         details["task"] = serde_json::to_value(task).map_err(|_| Error::internal_error())?;
     } else {
@@ -690,7 +734,7 @@ fn prompt_response(
             } => wire::StopReason::MaxTurnRequests,
             _ => {
                 return Err(Error::internal_error().data(if extensions.base {
-                    json!({"pablo/v1":details})
+                    json!({extensions.key():details})
                 } else {
                     json!({"status":outcome.label()})
                 }));
@@ -699,7 +743,7 @@ fn prompt_response(
     };
     let mut response = wire::PromptResponse::new(reason);
     if extensions.base {
-        response.meta = Some(meta(details));
+        response.meta = Some(extensions.metadata(details));
     }
     Ok(response)
 }
@@ -762,6 +806,46 @@ mod tests {
             trace_flags: "01".into(),
             kind,
         }
+    }
+
+    #[test]
+    fn k01_new_failure_variants_never_leak_into_frozen_c2_metadata() {
+        let outcome = RunOutcome::Failed {
+            code: pablo_core::FailureCode::OutputValidationFailed,
+            delivery: pablo_core::DeliveryCertainty::ResponseReceived,
+        };
+        let mut terminal = event(
+            1,
+            EventKind::RunFinished {
+                outcome: outcome.clone(),
+            },
+        );
+        terminal.schema_version = pablo_core::SCHEMA_VERSION.into();
+        let legacy = Extensions {
+            base: true,
+            legacy: true,
+            ..Extensions::default()
+        };
+        let error = prompt_response(Ok(outcome.clone()), Some(terminal.clone()), legacy, false)
+            .unwrap_err();
+        assert_eq!(
+            error.data,
+            Some(json!(
+                "outcome requires pablo/v2 metadata; migrate the client capability"
+            ))
+        );
+        let modern = Extensions {
+            base: true,
+            ..Extensions::default()
+        };
+        let error = prompt_response(Ok(outcome), Some(terminal), modern, false).unwrap_err();
+        let data = error.data.unwrap();
+        assert_eq!(
+            data[EXTENSION]["outcome"]["code"],
+            "output_validation_failed"
+        );
+        assert_eq!(data[EXTENSION]["schema_version"], "c3.33");
+        assert!(data.get(LEGACY_EXTENSION).is_none());
     }
 
     #[tokio::test]

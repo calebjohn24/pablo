@@ -76,11 +76,11 @@ max_tool_calls=1
   for(const workload of workloads) {
     current=workload;const promptMs:number[]=[];const toolMs:number[]=[];let start=0;let toolElapsed=0;
     await withPablo({binary,args:options,env:{...cleanEnv(),PABLO_FIXTURE_ENDPOINT:gateway.url+(provider==='open_responses'?'/v1/responses':'/v1/chat/completions')},onUpdate:n=>{
-      const meta=n._meta?.['pablo/v1'] as any;
+      const meta=n._meta?.['pablo/v2'] as any;
       if(n.update.sessionUpdate==='tool_call') start=meta.timestamp_unix_micros;
       if(n.update.sessionUpdate==='tool_call_update' && n.update.status==='completed') toolElapsed=(meta.timestamp_unix_micros-start)/1000;
     }},async cx=>{
-      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true,'pablo/task-v1':true}}});
+      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true,'pablo/task-v2':true}}});
       for(let sample=0;sample<35;sample++) {
         const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});requests=0;toolElapsed=0;
         const began=performance.now();const task=taskOf(await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'Measure fixed filesystem evidence.'}]}));const elapsed=performance.now()-began;

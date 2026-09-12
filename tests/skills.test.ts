@@ -1,3 +1,4 @@
+import { assertExtension } from './fixtures/acp-extension-schema.ts';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {execFile} from 'node:child_process';
@@ -62,8 +63,8 @@ test('S02 CLI and ACP activate explicitly and consume an ordinary selected resou
     await rm(join(cwd,'skills/read/evidence.txt'));
     await writeFile(entry,config.replace('[options.skills.roots]','[options.skills]\nactivate=["host/read"]\n[options.skills.roots]'));
     const activations:any[]=[];
-    await withPablo({binary,args:args.slice(0,-2),env,onSkill:n=>{activations.push(n);}},async cx=>{
-      const init=await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true,'pablo/skills-v1':true}}});assert.equal(init.agentCapabilities?._meta?.['pablo/skills-v1'],true);
+    await withPablo({binary,args:args.slice(0,-2),env,onSkill:n=>{assertExtension(n);activations.push(n);}},async cx=>{
+      const init=await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true,'pablo/skills-v1':true}}});assert.equal(init.agentCapabilities?._meta?.['pablo/skills-v1'],true);
       const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});assert.equal(outcomeOf(await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'Read selected evidence'}]})).status,'completed');
       assert.equal(activations.length,1);assert.equal(activations[0].skill.qualified_name,'host/read');assert.equal(activations[0].instructions,null);
       const trace=await readFile(join(cwd,`${sessionId}.jsonl`),'utf8');assert(trace.includes('skill.activated'));assert(!trace.includes('PRIVATE_SKILL_BODY'));assert(!trace.includes('ACTUAL_SELECTED_EVIDENCE'));
@@ -104,8 +105,8 @@ test('S02 ACP reloads instructions per session and suppresses unnegotiated activ
     await mkdir(join(cwd,'skills/read'),{recursive:true});const skill=join(cwd,'skills/read/SKILL.md');const bodyPrefix='---\nname: read\ndescription: Fresh instructions.\n---\n';await writeFile(skill,bodyPrefix+expected);
     const entry=join(cwd,'entry.toml');const config='schema_version=1\n[credentials.gateway]\nconsumer="provider.vercel"\nsources=[{kind="environment",name="UNREAD_KEY"}]\n[options.shell]\nenabled=false\n[options.filesystem]\nenabled=false\n[options.skills]\nactivate=["host/read"]\n[options.skills.roots]\nhost={base="workspace",path="skills"}\n';await writeFile(entry,config);
     const args=['--config',entry,'--bind',`workspace=${cwd}`,'--fixture-endpoint',gateway.url];const env=cleanEnv();
-    await withPablo({binary,args,env,onSkill:n=>{activations.push(n);}},async cx=>{
-      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true}}});
+    await withPablo({binary,args,env,onSkill:n=>{assertExtension(n);activations.push(n);}},async cx=>{
+      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true}}});
       for(let i=0;i<2;i++){
         if(i===1){expected='SECOND_PRIVATE_BODY';await writeFile(skill,bodyPrefix+expected);}
         const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});assert.equal(outcomeOf(await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'Use current instructions'}]})).status,'completed');

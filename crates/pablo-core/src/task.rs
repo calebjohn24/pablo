@@ -1,7 +1,7 @@
 //! One machine-readable task projection, derived from native terminal truth.
 use crate::{EventKind, RunEvent, RunOutcome, Usage};
 use serde::{Deserialize, Serialize};
-pub const TASK_SCHEMA_VERSION: &str = "c2.3";
+pub const TASK_SCHEMA_VERSION: &str = "c3.33";
 
 /// Arithmetic stays u64; the new wire accounting object uses decimal strings
 /// so an ordinary JavaScript JSON parser cannot round counters or currency.
@@ -240,14 +240,7 @@ impl TaskResult {
         };
         Some(Self {
             output_repair: event.output_repair.clone(),
-            schema_version: if event.output_repair.is_some() {
-                "c3.14"
-            } else if event.output_validation.is_some() {
-                "c3.13"
-            } else {
-                TASK_SCHEMA_VERSION
-            }
-            .into(),
+            schema_version: TASK_SCHEMA_VERSION.into(),
             run_id: Some(event.run_id.clone()),
             session_id: Some(event.session_id.clone()),
             trace_id: Some(event.trace_id.clone()),

@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "revision": "c3.33",
+  "scope": "Implemented subsets only; passing a listed gate does not assert complete upstream protocol conformance.",
+  "operations": [
+    {
+      "protocol": "configuration",
+      "version": "schema_version=1; c3.26",
+      "supported": "Layered TOML resolution, canonical identity, deployment admission",
+      "rejected": "Unknown keys, widening inherited authority, runtime compatibility knobs",
+      "identity_or_contract": "docs/project/contracts/c3-deployment-config.md",
+      "gates": [
+        "node --test --test-concurrency=1 tests/deployment.test.ts",
+        "python3 docs/project/fixtures/c3-deployment/audit.py"
+      ]
+    },
+    {
+      "protocol": "ACP",
+      "version": "wire 1; pablo/v2; frozen C2 pablo/v1",
+      "supported": "initialize, session/new, session/prompt, session/cancel; text and resource links; negotiated extensions",
+      "rejected": "Session persistence, modes, authentication, client filesystem/terminal callbacks, client MCP definitions not admitted by host configuration",
+      "identity_or_contract": "docs/acp-lock.json",
+      "gates": [
+        "node --test --test-concurrency=1 tests/acp.test.ts tests/compatibility.test.ts"
+      ]
+    },
+    {
+      "protocol": "MCP",
+      "version": "2025-11-25; rmcp 3.3.0",
+      "supported": "Client initialize, tools/list, tools/call, cancellation; stdio and Streamable HTTP",
+      "rejected": "MCP server/listener, resources, prompts, sampling, elicitation",
+      "identity_or_contract": "docs/project/contracts/c3-mcp.md",
+      "gates": [
+        "node --test --test-concurrency=1 tests/mcp.test.ts"
+      ]
+    },
+    {
+      "protocol": "A2A",
+      "version": "1.0; SDK 1.0.2",
+      "supported": "JSON-RPC SendMessage, SendStreamingMessage, CancelTask; bounded SSE and card admission",
+      "rejected": "Get/list/resume, tenants, authenticated extended cards, inbound server",
+      "identity_or_contract": "tests/fixtures/a2a/lock.json",
+      "gates": [
+        "node --test --test-concurrency=1 tests/a2a-supervisor.test.ts tests/a2a-boundaries.test.ts"
+      ]
+    },
+    {
+      "protocol": "Open Responses",
+      "version": "2026-04-24; open-responses-text-tools-v1",
+      "supported": "HTTP POST and SSE text, function tools, full local history, phases, opaque reasoning",
+      "rejected": "Multimodal, hosted tools, WebSocket, background mode, remote compaction",
+      "identity_or_contract": "docs/project/fixtures/c3-open-responses/upstream-pin.json",
+      "gates": [
+        "node --test --test-concurrency=1 tests/open-responses.test.ts",
+        "node docs/project/fixtures/c3-open-responses/audit.mjs"
+      ]
+    },
+    {
+      "protocol": "Skills",
+      "version": "69ef37e9424c0a7ea9dd2293b559e43ec8176379",
+      "supported": "Explicit root discovery, bounded frontmatter, metadata catalog, explicit activation, admitted resource reads",
+      "rejected": "Implicit global roots, automatic instruction trust, shell authority escalation",
+      "identity_or_contract": "docs/project/contracts/c3-skills.md",
+      "gates": [
+        "node --test --test-concurrency=1 tests/skills.test.ts"
+      ]
+    },
+    {
+      "protocol": "JSON Schema",
+      "version": "Draft 2020-12 subset; jsonschema 0.53.0",
+      "supported": "Offline bounded validation; boolean/type/enum/const, numeric/string bounds, object/array applicators, combinators, acyclic local refs",
+      "rejected": "Network refs, regex, uniqueItems/contains, unevaluated/dynamic vocabulary, format assertions",
+      "identity_or_contract": "docs/project/contracts/c3-output-validation.md",
+      "gates": [
+        "node --test --test-concurrency=1 tests/output-validation.test.ts tests/output-repair.test.ts"
+      ]
+    }
+  ],
+  "native_contract": {
+    "events": "c3.33",
+    "tasks": "c3.33",
+    "migration": "Native consumers must explicitly accept c3.33 before consuming C3 fields and variants. Frozen C2 ACP projects c2.4 event correlation and c2.3 tasks under separate v1 negotiation."
+  },
+  "execution": "Runtime gates use serial Node test files. Broader concurrent stress is measured separately and is not implied by these functional conformance gates."
+}

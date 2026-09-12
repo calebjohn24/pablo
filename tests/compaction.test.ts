@@ -1,3 +1,4 @@
+import { assertExtension } from './fixtures/acp-extension-schema.ts';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {execFile} from 'node:child_process';
@@ -13,7 +14,7 @@ import {withPablo,taskOf} from '../examples/acp-client.ts';
 const exec=promisify(execFile);
 const binary=fileURLToPath(new URL('../target/debug/pablo',import.meta.url));
 const ajv=new Ajv2020({strict:false});
-const validateMeta=ajv.compile<any>(JSON.parse(await readFile(new URL('../docs/pablo-acp-v1.schema.json',import.meta.url),'utf8')));
+const validateMeta=ajv.compile<any>(JSON.parse(await readFile(new URL('../docs/pablo-acp-v2.schema.json',import.meta.url),'utf8')));
 const textOf=(m:any)=>typeof m.content==='string'?m.content:(m.content??[]).map((p:any)=>p.text??'').join('');
 const chat=(delta:object,reason:string)=>`data: ${JSON.stringify({choices:[{index:0,delta,finish_reason:reason}]})}\n\ndata: [DONE]\n\n`;
 const summary='Goal: inspect evidence.txt in three steps. Preserve workspace scope. Keep its artifact revision and continue unresolved work; completed reads must not be replayed.';
@@ -74,18 +75,18 @@ for(const retain of [0,1])for(const provider of ['vercel','openrouter','open_res
     const events=native.trim().split('\n').map(s=>JSON.parse(s));const finished=events.filter(e=>e.type==='context.compaction.finished');assert.equal(finished.length,1);assert.equal(finished[0].summary,null);
     const record=finished[0].compaction;assert.equal(record.trigger,trigger);assert.equal(record.status,'completed');assert(BigInt(record.after_bytes)<BigInt(record.before_bytes));if(retain===0)assert(Number(record.after_bytes)/Number(record.before_bytes)<0.3);assert.equal(events.filter(e=>e.type==='assistant.text.delta').length,1);
     await writeFile(entry,config(true));const notifications:any[]=[];const answers:string[]=[];
-    await withPablo({binary,args,env:cleanEnv(),onCompaction:n=>{notifications.push(n);},onUpdate:n=>{if(n.update.sessionUpdate==='agent_message_chunk'&&n.update.content.type==='text')answers.push(n.update.content.text);}},async cx=>{
-      const init=await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true,'pablo/task-v1':true,'pablo/compaction-v1':true,'pablo/output-v1':structured}}});assert.equal(init.agentCapabilities?._meta?.['pablo/compaction-v1'],true);
+    await withPablo({binary,args,env:cleanEnv(),onCompaction:n=>{assertExtension(n);notifications.push(n);},onUpdate:n=>{if(n.update.sessionUpdate==='agent_message_chunk'&&n.update.content.type==='text')answers.push(n.update.content.text);}},async cx=>{
+      const init=await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true,'pablo/task-v2':true,'pablo/compaction-v1':true,'pablo/output-v1':structured}}});assert.equal(init.agentCapabilities?._meta?.['pablo/compaction-v1'],true);
       for(let i=0;i<2;i++){
         const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});const response=await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:`ACP ${i}: inspect evidence in three steps`}]});
         const task=taskOf(response);assert.deepEqual(task.outcome,cli.outcome);assert.deepEqual(task.accounting,cli.accounting);
         const captured=await readFile(join(cwd,`acp-${sessionId}.jsonl`),'utf8');assert(captured.includes(handoff));assert(!captured.includes('PRIVATE_'));
-        const details:any=response._meta?.['pablo/v1'];assert(validateMeta(details),ajv.errorsText(validateMeta.errors));assert.equal(details.compaction.status,'completed');
+        const details:any=response._meta?.['pablo/v2'];assert(validateMeta(details),ajv.errorsText(validateMeta.errors));assert.equal(details.compaction.status,'completed');
         const local=notifications.filter(n=>n.sessionId===sessionId);assert.equal(local.length,2);assert.equal(local[1].summary,handoff+(effectful?` Artifact: ${runs.get(`ACP ${i}: inspect evidence in three steps`)!.artifact} was created once.`:''));
-        for(const n of local)assert(validateMeta(n['pablo/v1']),ajv.errorsText(validateMeta.errors));
+        for(const n of local)assert(validateMeta(n['pablo/v2']),ajv.errorsText(validateMeta.errors));
       }
     });
-    assert.equal(new Set(notifications.map(n=>n['pablo/v1'].compaction.id)).size,2);assert(!JSON.stringify(notifications).includes('PRIVATE_'));assert.deepEqual(answers,[finalText,finalText]);
+    assert.equal(new Set(notifications.map(n=>n['pablo/v2'].compaction.id)).size,2);assert(!JSON.stringify(notifications).includes('PRIVATE_'));assert.deepEqual(answers,[finalText,finalText]);
     if(effectful)for(const state of runs.values())assert.equal(await readFile(join(cwd,state.artifact),'utf8'),'written-once');
     assert.equal(runs.size,3);assert([...runs.values()].every(s=>s.reads===3&&s.summaries===1&&s.after));
   }finally{await gateway.close();await rm(cwd,{recursive:true,force:true});}
@@ -166,10 +167,10 @@ enabled=false
     if(scenario.mode==='no_history')assert.equal(compacted[0].compaction.reason,'no_history');
     const notifications:any[]=[];
     for(const negotiated of [true,false]) {
-    await withPablo({binary,args,env:cleanEnv(),onCompaction:n=>{notifications.push(n);}},async cx=>{
-      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true,'pablo/task-v1':true,'pablo/compaction-v1':negotiated}}});
+    await withPablo({binary,args,env:cleanEnv(),onCompaction:n=>{assertExtension(n);notifications.push(n);}},async cx=>{
+      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true,'pablo/task-v2':true,'pablo/compaction-v1':negotiated}}});
       const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});let details:any;
-      try{details=(await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:`ACP ${negotiated} failure fixture`}]}))._meta?.['pablo/v1'];}catch(e:any){details=e.data?.['pablo/v1'];assert(details,String(e));}
+      try{details=(await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:`ACP ${negotiated} failure fixture`}]}))._meta?.['pablo/v2'];}catch(e:any){details=e.data?.['pablo/v2'];assert(details,String(e));}
       assert(validateMeta(details),ajv.errorsText(validateMeta.errors));assert.deepEqual(details.task.outcome,task.outcome);assert.deepEqual(details.task.accounting,task.accounting);if(!negotiated)assert.equal(details.compaction,undefined);
     });
     }

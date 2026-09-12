@@ -114,14 +114,14 @@ test('ACP refreshes exporter settings and privately rotated headers without chan
     await writeFile(token,'authorization=first-private-key');await writeFile(file,preset(receiver.url+'/first'));
     const args=['--config',file,'--bind',`workspace=${cwd}`,'--fixture-endpoint',gateway.url+'/v1/chat/completions'];
     await withPablo({binary,args,env:cleanEnv(),onDiagnostic:s=>{diagnostics+=s;}},async cx=>{
-      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true}}});
+      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true}}});
       for(let i=0;i<3;i++) {
         if(i===1)await writeFile(file,preset(receiver.url+'/second').replace('configured-service','second-service'));
         if(i===2)await writeFile(token,'authorization=second-private-key');
         const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});
         const response=await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'synthetic task'}]});
         assert.equal(outcomeOf(response).status,'completed');
-        identities.push((response._meta!['pablo/v1'] as any).deployment.fingerprint);
+        identities.push((response._meta!['pablo/v2'] as any).deployment.fingerprint);
       }
     });
     assert.equal(diagnostics,'pablo: ACP connection closed; owned work settled\n');assert.notEqual(identities[0],identities[1]);assert.equal(identities[1],identities[2]);

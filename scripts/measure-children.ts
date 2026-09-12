@@ -48,7 +48,7 @@ try{
     for(let i=0;i<35;i++){
       const start=performance.now();
       const result=surface==='cli'?JSON.parse((await exec(binary,['run','small root',...args,'--json'],{env:cleanEnv(),timeout:10000})).stdout):await withPablo({binary,args,env:cleanEnv()},async cx=>{
-        await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true,'pablo/task-v1':true}}});
+        await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true,'pablo/task-v2':true}}});
         const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});
         return taskOf(await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'small root'}]}));
       });

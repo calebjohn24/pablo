@@ -50,7 +50,7 @@ try {
   for(let i=0;i<35;i++){
     const started=performance.now();
     await withPablo({binary,args,env:cleanEnv()},async cx=>{
-      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true,'pablo/task-v1':true}}});
+      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true,'pablo/task-v2':true}}});
       const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});
       const result=taskOf(await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'explicit remote work'}]}));
       assert.equal(result.outcome.status,'completed');assert.equal(result.accounting.model_calls,'3');assert.equal(result.accounting.tool_calls,'2');

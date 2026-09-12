@@ -72,10 +72,10 @@ export async function exercise(env: NodeJS.ProcessEnv, options: { parent?: strin
         if (options.cancel && update.sessionUpdate === 'tool_call') await cx.notify('session/cancel', { sessionId });
       },
     }, async cx => {
-      await cx.request('initialize', { protocolVersion: 1, clientCapabilities: options.extended === false ? {} : { _meta: { 'pablo/v1': true } } });
+      await cx.request('initialize', { protocolVersion: 1, clientCapabilities: options.extended === false ? {} : { _meta: { 'pablo/v2': true } } });
       const { sessionId } = await cx.request('session/new', { cwd, mcpServers: [] });
       const response = await cx.request('session/prompt', { sessionId, prompt: [{ type: 'text', text: content }],
-        _meta: { 'pablo/v1': { traceparent: options.parent ?? traceparent, tracestate: options.state ?? traceState, baggage: 'secret=synthetic-baggage' } },
+        _meta: { 'pablo/v2': { traceparent: options.parent ?? traceparent, tracestate: options.state ?? traceState, baggage: 'secret=synthetic-baggage' } },
       });
       if (options.extended !== false) {
         terminal = outcomeOf(response); assert.equal(terminal.status, options.cancel ? 'cancelled' : 'completed');

@@ -5,7 +5,7 @@
 Use official `rmcp = 3.3.0`, exact release commit
 `3e636cab26c013eca5131103c03d20237f12c4df` (tag `rmcp-v3.3.0`). Pin
 `2025-11-25` explicitly in initialize; reject a different negotiated version.
-The pinned release's `ProtocolVersion::LATEST` is that version. Do not infer the
+The configured protocol is explicit even if the SDK supports newer versions. Do not infer the
 release behavior from the moving upstream main README or automatically select a
 new discovery lifecycle. Tools-only client capabilities exclude roots, sampling,
 elicitation, prompts, resources, durable tasks and subscription/catalog changes.

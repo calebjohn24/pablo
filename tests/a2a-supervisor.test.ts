@@ -59,9 +59,9 @@ test('R02 configured CLI and ACP model delegation shares native ownership and ke
         const cli=JSON.parse((await exec(binary,['run','root private task',...args,'--json'],{env:cleanEnv(),timeout:8000})).stdout);assert.equal(cli.outcome.output,'remote result verified');assert.equal(cli.accounting.model_calls,'3');assert.equal(cli.accounting.tool_calls,'2');await verify(cli.session_id);
         const updates:any[]=[];
         await withPablo({binary,args,env:cleanEnv(),onUpdate:update=>{updates.push(update);}},async cx=>{
-            await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true,'pablo/task-v1':true}}});const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});
+            await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true,'pablo/task-v2':true}}});const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});
             const result=taskOf(await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'root private task'}]}));assert.equal(result.outcome.status,'completed');assert.equal(result.accounting.model_calls,'3');const agent=await verify(sessionId);
-            const remote=updates.filter(u=>u._meta?.['pablo/v1']?.agent?.agent_id===agent);assert(remote.some(u=>u.update.sessionUpdate==='tool_call'));assert(remote.some(u=>u.update.rawOutput?.remote_a2a?.remote_reported_usage?.totalTokens==='20'));assert(remote.some(u=>u.update.status==='completed'));assert(remote.every(u=>u.sessionId===sessionId));
+            const remote=updates.filter(u=>u._meta?.['pablo/v2']?.agent?.agent_id===agent);assert(remote.some(u=>u.update.sessionUpdate==='tool_call'));assert(remote.some(u=>u.update.rawOutput?.remote_a2a?.remote_reported_usage?.totalTokens==='20'));assert(remote.some(u=>u.update.status==='completed'));assert(remote.every(u=>u.sessionId===sessionId));
         });
     } finally {
         try {if(gateway)await gateway.close();} finally {if(peer.exitCode===null)peer.kill('SIGTERM');const timer=setTimeout(()=>peer.kill('SIGKILL'),3000);try {await exited;} finally {clearTimeout(timer);await rm(cwd,{recursive:true,force:true});}}

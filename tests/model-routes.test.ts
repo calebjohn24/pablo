@@ -60,7 +60,7 @@ test('F01 executable explains ordered routes offline and single-entry CLI ACP ma
     const legacy = JSON.parse((await exec(binary, ['run', 'read file', '--provider', 'openrouter', '--workspace', cwd, '--no-shell', '--max-model-calls', '2', '--max-tool-calls', '1', '--json'], { env: { ...cleanEnv(), PABLO_FIXTURE_ENDPOINT: gateway.url } })).stdout);
     assert.deepEqual(legacy.outcome, cli.outcome); assert.deepEqual(legacy.accounting, cli.accounting); assert.deepEqual(requests.slice(0, 2), requests.slice(2, 4));
     await withPablo({ binary, args: configured, env }, async cx => {
-      await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v1': true, 'pablo/task-v1': true } } });
+      await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v2': true, 'pablo/task-v2': true } } });
       for (let i = 0; i < 2; i++) {
         const { sessionId } = await cx.request('session/new', { cwd, mcpServers: [] });
         const task = taskOf(await cx.request('session/prompt', { sessionId, prompt: [{ type: 'text', text: 'read file' }] }));

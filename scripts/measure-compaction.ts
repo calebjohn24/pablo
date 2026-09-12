@@ -44,7 +44,7 @@ const reset=()=>{steps=0;summaries=0;calls=0;overflow=false;overflowAt=summaryAt
 const verify=()=>{assert.equal(steps,3);assert.equal(summaries,1);assert.equal(calls,trigger==='threshold'?5:6);};
 const inspect=(events:any[],path:string)=>{
   const start=events.find(e=>e.type==='context.compaction.started'),end=events.find(e=>e.type==='context.compaction.finished');
-  assert(start&&end);const meta=end.compaction??end['pablo/v1'].compaction;assert.equal(meta.status,'completed');assert.equal(meta.trigger,trigger);
+  assert(start&&end);const meta=end.compaction??end['pablo/v2'].compaction;assert.equal(meta.status,'completed');assert.equal(meta.trigger,trigger);
   const before=Number(meta.before_bytes),after=Number(meta.after_bytes);assert(after<before);
   record(`${path}_before_bytes`,before);record(`${path}_after_bytes`,after);record(`${path}_reduction_percent`,100*(before-after)/before);
   if(path!=='acp')record(`${path}_compaction_ms`,(end.timestamp_unix_micros-start.timestamp_unix_micros)/1000);
@@ -77,7 +77,7 @@ path={base="workspace",path="{session_id}.jsonl"}
   // One warm ACP process, fresh task/session each time; rotate paths per sample.
   let notifications:any[]=[],compactionStarted=0,compactionEnded=0;
   await withPablo({binary,args,env,onCompaction:n=>{const e=n as any;notifications.push(e);if(e.type==='context.compaction.started')compactionStarted=performance.now();else compactionEnded=performance.now();}},async cx=>{
-    await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true,'pablo/task-v1':true,'pablo/compaction-v1':true}}});
+    await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true,'pablo/task-v2':true,'pablo/compaction-v1':true}}});
     for(let sample=0;sample<count+5;sample++){
       recording=sample>=5;
       for(let i=0;i<3;i++){

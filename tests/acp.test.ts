@@ -17,7 +17,7 @@ const binary = fileURLToPath(new URL('../target/debug/pablo', import.meta.url));
 const sdkSchema = JSON.parse(await readFile(new URL('../node_modules/@agentclientprotocol/sdk/schema/schema.json', import.meta.url), 'utf8'));
 const ajv = new Ajv2020({ strict: false, validateFormats: false });
 ajv.addSchema(sdkSchema, 'acp');
-const extensionCheck = ajv.compile(JSON.parse(await readFile(new URL('../docs/pablo-acp-v1.schema.json', import.meta.url), 'utf8')));
+const extensionCheck = ajv.compile(JSON.parse(await readFile(new URL('../docs/pablo-acp-v2.schema.json', import.meta.url), 'utf8')));
 function validateExtension(value: unknown) { assert.ok(extensionCheck(value), ajv.errorsText(extensionCheck.errors)); }
 const validate = (name: string, value: unknown) => {
   const check = ajv.compile({ $ref: `acp#/$defs/${name}` });
@@ -61,7 +61,7 @@ async function fixture(t: TestContext, handler: (body: any, res: ServerResponse,
   return { cwd, env, requests, connections };
 }
 async function setup(cx: ClientContext, cwd: string, extended = true) {
-  const init = await cx.request('initialize', { protocolVersion: 1, clientCapabilities: extended ? { _meta: { 'pablo/v1': true } } : {} });
+  const init = await cx.request('initialize', { protocolVersion: 1, clientCapabilities: extended ? { _meta: { 'pablo/v2': true } } : {} });
   validate('InitializeResponse', init);
   assert.equal(init.protocolVersion, 1);
   assert.equal(init.agentCapabilities?.loadSession, false);
@@ -107,7 +107,7 @@ test('official TypeScript client runs model/shell/model; ordered v1 updates matc
     const response = await prompt(cx, sessionId);
     assert.equal(updates.at(-1)?.update.sessionUpdate, 'agent_message_chunk');
     validate('PromptResponse', response);
-    validateExtension(response._meta?.['pablo/v1']);
+    validateExtension(response._meta?.['pablo/v2']);
     return response;
   });
   assert.equal(response.stopReason, 'end_turn');
@@ -116,14 +116,14 @@ test('official TypeScript client runs model/shell/model; ordered v1 updates matc
   assert.deepEqual(updates.flatMap(({ update }) => update.sessionUpdate === 'tool_call' || update.sessionUpdate === 'tool_call_update' ? [update.status ?? 'pending'] : []), ['pending', 'in_progress', 'completed']);
   const records = await trace(path); let last = 0;
   for (const n of updates) {
-    const metadata = n._meta?.['pablo/v1'] as any;
+    const metadata = n._meta?.['pablo/v2'] as any;
     validateExtension(metadata);
     assert.ok(metadata.seq_start > last); assert.ok(metadata.seq_end >= metadata.seq_start); last = metadata.seq_end;
     const native = records.find(e => e.seq === metadata.seq_end);
     for (const key of ['run_id', 'session_id', 'trace_id', 'span_id', 'trace_flags']) assert.equal(metadata[key], native[key]);
   }
   assert.equal(records.at(-1).outcome.status, 'completed');
-  assert.equal((response._meta?.['pablo/v1'] as any).trace_id, records.at(-1).trace_id);
+  assert.equal((response._meta?.['pablo/v2'] as any).trace_id, records.at(-1).trace_id);
   const messages = raw.trim().split('\n').map(line => JSON.parse(line));
   assert.ok(messages.every(m => m.jsonrpc === '2.0'));
   assert.equal(messages.at(-1).result.stopReason, 'end_turn');
@@ -183,8 +183,8 @@ test('provider errors and deadlines preserve typed terminal failure without fals
         const id = await setup(cx, f.cwd);
         await assert.rejects(prompt(cx, id), (error: any) => {
           assert.equal(error.code, -32603);
-          validateExtension(error.data['pablo/v1']);
-          assert.equal(error.data['pablo/v1'].outcome.status, scenario === 'deadline' ? 'timed_out' : 'failed');
+          validateExtension(error.data['pablo/v2']);
+          assert.equal(error.data['pablo/v2'].outcome.status, scenario === 'deadline' ? 'timed_out' : 'failed');
           return true;
         });
       });
@@ -215,7 +215,7 @@ test('gateway rejection bodies and streamed errors stay private across ACP and n
       await assert.rejects(prompt(cx, id), (error: any) => {
         assert(error instanceof RequestError);
         assert.equal(error.code, -32603);
-        const meta = (error.data as any)['pablo/v1'];
+        const meta = (error.data as any)['pablo/v2'];
         validateExtension(meta);
         assert.deepEqual(meta.outcome, {
           status: 'failed', code: scenario === 'eof' ? 'malformed_stream' : 'provider_rejected',
@@ -288,7 +288,7 @@ class RawPeer {
     return result;
   }
   async setup(cwd: string) {
-    await this.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v1': true } } });
+    await this.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v2': true } } });
     return (await this.request('session/new', { cwd, mcpServers: [] })).sessionId;
   }
   prompt(sessionId: string) { return this.request('session/prompt', { sessionId, prompt: [{ type: 'text', text: 'Synthetic fixture' }] }); }
@@ -611,7 +611,7 @@ test('sequential independent sessions reuse HTTP setup and recover after cancell
       const traceId = String(index + 1).repeat(32);
       const response = await cx.request('session/prompt', { sessionId,
         prompt: [{ type: 'text', text: cancelling ? 'cancel task' : `read task ${index}` }],
-        _meta: { 'pablo/v1': { traceparent: `00-${traceId}-123456789abcdef0-01` } },
+        _meta: { 'pablo/v2': { traceparent: `00-${traceId}-123456789abcdef0-01` } },
       });
       assert.equal(response.stopReason, cancelling ? 'cancelled' : 'end_turn');
       const outcome = outcomeOf(response);
@@ -630,7 +630,7 @@ test('sequential independent sessions reuse HTTP setup and recover after cancell
       assert(!native.includes('first-evidence') && !native.includes('second-evidence'));
       const current = updates.filter(n => n.sessionId === sessionId);
       assert(current.length >= 3);
-      assert(current.every((n, i) => i === 0 || (n._meta!['pablo/v1'] as any).seq_start > (current[i - 1]._meta!['pablo/v1'] as any).seq_end));
+      assert(current.every((n, i) => i === 0 || (n._meta!['pablo/v2'] as any).seq_start > (current[i - 1]._meta!['pablo/v2'] as any).seq_end));
     }
   });
   assert.equal(new Set(ids).size, 3);
@@ -664,7 +664,7 @@ test('filesystem reads use the real gateway mapping and ACP/native lifecycle wit
   assert(!(await readFile(path, 'utf8')).includes('filesystem-marker'));
   const toolUpdate = updates.find(n => n.update.sessionUpdate === 'tool_call')!;
   assert.equal((toolUpdate.update as any).title, 'fs.read'); assert.equal((toolUpdate.update as any).kind, 'read');
-  for (const n of updates) { const m = n._meta?.['pablo/v1'] as any; validateExtension(m); assert.equal(m.span_id, records.find(e => e.seq === m.seq_end).span_id); }
+  for (const n of updates) { const m = n._meta?.['pablo/v2'] as any; validateExtension(m); assert.equal(m.span_id, records.find(e => e.seq === m.seq_end).span_id); }
 });
 
 test('filesystem policy denial carries its rule and performs no second model request', { timeout: 15000 }, async t => {
@@ -760,11 +760,11 @@ test('negotiated task envelopes preserve exact accounting across independent ACP
     await sse(res, frame({content: 'line\n"🙂" {"ok":true}'}) + frame({}, 'stop') + 'data: {"choices":[],"usage":{"prompt_tokens":9007199254740993,"completion_tokens":2}}\n\ndata: [DONE]\n\n');
   });
   await withPablo({env:f.env, args:['--trace', join(f.cwd, '{session_id}.jsonl'), '--capture-content']}, async cx => {
-    const init = await cx.request('initialize', {protocolVersion:1, clientCapabilities:{_meta:{'pablo/v1':true,'pablo/task-v1':true}}});
-    assert.equal(init.agentCapabilities?._meta?.['pablo/task-v1'], true);
+    const init = await cx.request('initialize', {protocolVersion:1, clientCapabilities:{_meta:{'pablo/v2':true,'pablo/task-v2':true}}});
+    assert.equal(init.agentCapabilities?._meta?.['pablo/task-v2'], true);
     for (let i=0;i<2;i++) {
       const {sessionId} = await cx.request('session/new', {cwd:f.cwd,mcpServers:[]});
-      const response = await prompt(cx, sessionId); const meta = response._meta?.['pablo/v1'] as any;
+      const response = await prompt(cx, sessionId); const meta = response._meta?.['pablo/v2'] as any;
       validateExtension(meta); assert.equal(meta.outcome, undefined);
       const task = taskOf(response); assert.equal(task.accounting.model_calls, '1');
       assert.equal(task.accounting.usage.input_tokens, '9007199254740993');
@@ -804,10 +804,10 @@ test('task envelope fits maximum escaping-heavy output without duplicating legac
   const output='\0'.repeat(4*1024*1024);
   const f=await fixture(t,async(_body,res)=>{res.writeHead(200,{'content-type':'text/event-stream'});res.end(frame({content:output})+end());});
   await withPablo({env:f.env,args:['--no-shell','--no-filesystem']},async cx=>{
-    await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true,'pablo/task-v1':true}}});
+    await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true,'pablo/task-v2':true}}});
     const {sessionId}=await cx.request('session/new',{cwd:f.cwd,mcpServers:[]});const response=await prompt(cx,sessionId);const task=taskOf(response);
-    assert(task.outcome.status==='completed');assert.equal(task.outcome.output,output);validateExtension(response._meta?.['pablo/v1']);
-    assert(Buffer.byteLength(JSON.stringify(response))<32*1024*1024);assert.equal((response._meta?.['pablo/v1'] as any).outcome,undefined);
+    assert(task.outcome.status==='completed');assert.equal(task.outcome.output,output);validateExtension(response._meta?.['pablo/v2']);
+    assert(Buffer.byteLength(JSON.stringify(response))<32*1024*1024);assert.equal((response._meta?.['pablo/v2'] as any).outcome,undefined);
   });
 });
 
