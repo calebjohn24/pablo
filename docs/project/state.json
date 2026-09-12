@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-12T22:07:03.546Z",
+  "updated_at": "2026-09-12T22:08:19.307Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.34",
-  "next_action": "Graphic refinement complete; C3.34 packaging remains pending and held. Existing measurements and user stash preserved.",
-  "latest_log_entry": "LOG-0172",
+  "next_action": "Chart label update complete. Release packaging remains pending and held.",
+  "latest_log_entry": "LOG-0173",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -713,7 +713,8 @@
       "blockers": [],
       "verification": [
         "LOG-0171",
-        "LOG-0172"
+        "LOG-0172",
+        "LOG-0173"
       ]
     },
     {

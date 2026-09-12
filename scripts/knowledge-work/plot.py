@@ -46,9 +46,10 @@ def render(source, destination):
     starts = [4.00, 6.22, 8.44, 10.66, 12.88, 15.10]
     ax.text(.65, 6.83, 'Harness / model', color=ink, fontsize=13, weight='bold')
     for x, (title, subtitle, _, _, _) in zip(starts, columns):
-        ax.text(x, 6.83, title, color=ink, fontsize=13, weight='bold')
-        ax.text(x, 6.51, subtitle, color=muted, fontsize=10)
-    ax.plot([.65, 17.35], [6.28, 6.28], color=rule, lw=1)
+        ax.text(x, 6.96, title, color=ink, fontsize=13, weight='bold')
+        ax.text(x, 6.65, 'Higher is better' if title.startswith('Accuracy') else 'Lower is better', color=muted, fontsize=10)
+        ax.text(x, 6.38, subtitle, color=muted, fontsize=10)
+    ax.plot([.65, 17.35], [6.18, 6.18], color=rule, lw=1)
     row_step = .76
     for i, (h, rows) in enumerate(groups.items()):
         y = 5.88-i*row_step
