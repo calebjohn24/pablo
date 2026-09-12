@@ -12,7 +12,7 @@ import {responsesEvents,responsesWire} from './fixtures/open-responses.ts';
 import {withPablo,structuredOf,taskOf} from '../examples/acp-client.ts';
 const exec=promisify(execFile),binary=fileURLToPath(new URL('../target/debug/pablo',import.meta.url));
 const schema={$schema:'https://json-schema.org/draft/2020-12/schema',$defs:{positive:{type:'integer',minimum:1}},type:'object',properties:{answer:{$ref:'#/$defs/positive'},email:{type:'string',format:'email'}},required:['answer'],additionalProperties:false};
-const ajv=new Ajv2020({strict:false});const checkTask=ajv.compile<any>(JSON.parse(await readFile(new URL('../docs/pablo-task.schema.json',import.meta.url),'utf8')));const checkMeta=ajv.compile<any>(JSON.parse(await readFile(new URL('../docs/pablo-acp-v1.schema.json',import.meta.url),'utf8')));
+const ajv=new Ajv2020({strict:false});const checkTask=ajv.compile<any>(JSON.parse(await readFile(new URL('../docs/pablo-task.schema.json',import.meta.url),'utf8')));const checkMeta=ajv.compile<any>(JSON.parse(await readFile(new URL('../docs/pablo-acp-v2.schema.json',import.meta.url),'utf8')));
 const textOf=(m:any)=>typeof m.content==='string'?m.content:(m.content??[]).map((v:any)=>v.text??'').join('');
 const cases=[{name:'valid',text:'{"answer":7,"email":"not an email"}',status:'valid',code:null},{name:'malformed',text:'preface {"answer":7}',status:'invalid',code:'output_validation_failed'},{name:'violation',text:'{"answer":0}',status:'invalid',code:'output_validation_failed'},{name:'work',text:'{"answer":7}',status:'invalid',code:'output_validation_failed'},{name:'output_bytes',text:'{"answer":123456789}',status:'unvalidated',code:null}];
 for(const provider of ['vercel','openrouter','open_responses'])for(const c of cases)test(`J01 ${provider} ${c.name}: local CLI/ACP validation and capability fallback`,{timeout:15000},async()=>{
@@ -45,7 +45,7 @@ enabled=false
 enabled=false
 `);
   const args=['--config',entry,'--bind',`workspace=${cwd}`,'--fixture-endpoint',gateway.url],env=cleanEnv();const trace=join(cwd,'trace.jsonl');
-  const cli=await exec(binary,['run','Return the answer',...args,'--json','--trace',trace],{env}).catch((e:any)=>{assert.equal(e.code,1);return e;});const task=JSON.parse(cli.stdout);assert(checkTask(task),ajv.errorsText(checkTask.errors));assert.equal(task.schema_version,'c3.13');assert.equal(task.output_validation.status,c.status);assert.equal(task.outcome.code??null,provider==='open_responses'&&c.name==='output_bytes'?'malformed_stream':c.code);assert.equal(task.accounting.model_calls,'1');
+  const cli=await exec(binary,['run','Return the answer',...args,'--json','--trace',trace],{env}).catch((e:any)=>{assert.equal(e.code,1);return e;});const task=JSON.parse(cli.stdout);assert(checkTask(task),ajv.errorsText(checkTask.errors));assert.equal(task.schema_version,'c3.33');assert.equal(task.output_validation.status,c.status);assert.equal(task.outcome.code??null,provider==='open_responses'&&c.name==='output_bytes'?'malformed_stream':c.code);assert.equal(task.accounting.model_calls,'1');
   if(c.name==='output_bytes'&&provider!=='open_responses')assert.equal(task.outcome.limit,'output_bytes');
   if(c.name==='valid')assert.deepEqual(JSON.parse(task.outcome.output),{answer:7,email:'not an email'});
   if(c.name==='violation')assert.equal(task.output_validation.diagnostics[0].instance_path,'/answer');
@@ -54,17 +54,17 @@ enabled=false
   for(const mode of ['output','legacy','generic']) {
    const updates:any[]=[];
    await withPablo({binary,args,env,onUpdate:n=>{updates.push(n);}},async cx=>{
-    const caps=mode==='generic'?{}:{'pablo/v1':true,'pablo/task-v1':true,'pablo/output-v1':mode==='output'};
+    const caps=mode==='generic'?{}:{'pablo/v2':true,'pablo/task-v2':true,'pablo/output-v1':mode==='output'};
     const init=await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:caps}});assert.equal(init.agentCapabilities?._meta?.['pablo/output-v1'],true);
     const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});let response:any,details:any;
-    try{response=await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'Return the answer'}]});details=response._meta?.['pablo/v1'];}catch(e:any){assert.notEqual(c.status,'valid');details=e.data?.['pablo/v1'];}
+    try{response=await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'Return the answer'}]});details=response._meta?.['pablo/v2'];}catch(e:any){assert.notEqual(c.status,'valid');details=e.data?.['pablo/v2'];}
     if(mode==='generic'){assert.equal(details,undefined);return;}
     assert(checkMeta(details),ajv.errorsText(checkMeta.errors));assert.deepEqual(details.task.outcome,task.outcome);
     if(mode==='output'){
-     assert.equal(details.task.output_validation.status,c.status);assert.equal(details.task.schema_version,'c3.13');
+     assert.equal(details.task.output_validation.status,c.status);assert.equal(details.task.schema_version,'c3.33');
      if(c.status==='valid'){assert.deepEqual(structuredOf(response),{answer:7,email:'not an email'});assert.equal(taskOf(response).output_validation?.status,'valid');}
-    }else{assert.equal(details.task.output_validation,undefined);assert.equal(details.task.schema_version,'c2.3');}
-    for(const u of updates.filter(n=>n.update.sessionUpdate==='agent_message_chunk'))assert.equal(u._meta?.['pablo/v1']?.output_validation?.status,mode==='output'?'unvalidated':undefined);
+    }else{assert.equal(details.task.output_validation,undefined);assert.equal(details.task.schema_version,'c3.33');}
+    for(const u of updates.filter(n=>n.update.sessionUpdate==='agent_message_chunk'))assert.equal(u._meta?.['pablo/v2']?.output_validation?.status,mode==='output'?'unvalidated':undefined);
    });
   }
   assert.equal(requests,4,'validation never requests repair or fallback');

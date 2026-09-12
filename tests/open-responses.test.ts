@@ -18,7 +18,7 @@ const measure = fileURLToPath(new URL('../target/debug/examples/measure', import
 const fixture = JSON.parse(await readFile(new URL('../docs/project/fixtures/c3-open-responses/roundtrip.json', import.meta.url), 'utf8'));
 const model = 'fixture-text-tools-v1';
 const endpoint = 'https://responses.example.test/v1/responses';
-const metadataCheck = new Ajv2020({ strict: false }).compile(JSON.parse(await readFile(new URL('../docs/pablo-acp-v1.schema.json', import.meta.url), 'utf8')));
+const metadataCheck = new Ajv2020({ strict: false }).compile(JSON.parse(await readFile(new URL('../docs/pablo-acp-v2.schema.json', import.meta.url), 'utf8')));
 const wire = (events: any[], done = true) => events.map(e => `event: ${e.type}\ndata: ${JSON.stringify(e)}\n\n`).join('') + (done ? 'data: [DONE]\n\n' : '');
 async function waitUntil(check: () => boolean) { const start = performance.now(); while (!check()) { assert(performance.now() - start < 5000, 'condition timed out'); await delay(10); } }
 const preset = (capture: boolean, collector: string) => `schema_version=1
@@ -101,11 +101,11 @@ test('OR02 core CLI and reused ACP read real files across two tool rounds and pr
       assert.equal(core.outcome.output, expectedAnswer); assert(core.first_text_ms >= 0 && core.first_text_ms < core.run_ms);
       const before = connections.size;
       await withPablo({ binary, args, env, onSpawn: child => child.stdout.on('data', chunk => raw += chunk), onDiagnostic: text => diagnostics += text }, async cx => {
-        await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v1': true, 'pablo/task-v1': true } } });
+        await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v2': true, 'pablo/task-v2': true } } });
         for (let i = 0; i < 2; i++) {
           const { sessionId } = await cx.request('session/new', { cwd, mcpServers: [] });
           const result = await cx.request('session/prompt', { sessionId, prompt: [{ type: 'text', text: `acp-${capture}-${i}` }] });
-          assert(metadataCheck(result._meta?.['pablo/v1']), JSON.stringify(metadataCheck.errors));
+          assert(metadataCheck(result._meta?.['pablo/v2']), JSON.stringify(metadataCheck.errors));
           tasks.push(taskOf(result));
         }
       });
@@ -196,10 +196,10 @@ test('OR02 malformed unsupported oversized and interrupted responses fail throug
       assert.equal(cli.outcome.code, item.code ?? 'malformed_stream');
       assert.equal(cli.outcome.delivery, 'response_received'); assert.equal(cli.accounting.model_calls, '1'); assert.equal(cli.accounting.tool_calls, '0');
       await withPablo({ binary, args, env }, async cx => {
-        await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v1': true, 'pablo/task-v1': true } } });
+        await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v2': true, 'pablo/task-v2': true } } });
         const { sessionId } = await cx.request('session/new', { cwd, mcpServers: [] });
         await assert.rejects(cx.request('session/prompt', { sessionId, prompt: [{ type: 'text', text: 'must not execute tools' }] }), error => {
-          const task = (error as any).data['pablo/v1'].task; assert.deepEqual(task.outcome, cli.outcome); assert.deepEqual(task.accounting, cli.accounting);
+          const task = (error as any).data['pablo/v2'].task; assert.deepEqual(task.outcome, cli.outcome); assert.deepEqual(task.accounting, cli.accounting);
           assert(!JSON.stringify(error).includes('private-server-error')); return true;
         });
       });
@@ -247,7 +247,7 @@ test('OR02 cancellation closes the stream and discards only the current task con
     await withPablo({ binary, args, env, onUpdate: async ({ sessionId, update }, cx) => {
       if (!cancelled && update.sessionUpdate === 'agent_message_chunk') { cancelled = true; await cx.notify('session/cancel', { sessionId }); }
     } }, async cx => {
-      await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v1': true, 'pablo/task-v1': true } } });
+      await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v2': true, 'pablo/task-v2': true } } });
       const { sessionId } = await cx.request('session/new', { cwd, mcpServers: [] });
       const task = taskOf(await cx.request('session/prompt', { sessionId, prompt: [{ type: 'text', text: 'cancel ACP' }] }));
       assert.equal(task.outcome.status, 'cancelled'); assert.deepEqual(task.accounting, cli.accounting); await waitUntil(() => closed === 2);
@@ -333,7 +333,7 @@ test('OR02 terminal usage remains exact and incomplete function arguments never 
       if (incomplete) assert.deepEqual(task.outcome, { status: 'limit_exceeded', limit: 'output_tokens' });
       else { assert.equal(task.outcome.status, 'completed'); assert.equal(task.outcome.output, 'Alpha βeta 🌱'); assert.equal(task.outcome.finish_reason, 'stop'); }
       await withPablo({ binary, args, env }, async cx => {
-        await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v1': true, 'pablo/task-v1': true } } });
+        await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v2': true, 'pablo/task-v2': true } } });
         const { sessionId } = await cx.request('session/new', { cwd, mcpServers: [] });
         const result = await cx.request('session/prompt', { sessionId, prompt: [{ type: 'text', text: kind }] });
         assert.equal(result.stopReason, incomplete ? 'max_tokens' : 'end_turn');
@@ -364,7 +364,7 @@ test('OR02 cancellation before the first tool closes delivery with unknown usage
     await withPablo({ binary, args, env, onUpdate: async ({ sessionId, update }, cx) => {
       if (!cancelled && update.sessionUpdate === 'agent_message_chunk') { cancelled = true; await cx.notify('session/cancel', { sessionId }); }
     } }, async cx => {
-      await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v1': true, 'pablo/task-v1': true } } });
+      await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v2': true, 'pablo/task-v2': true } } });
       const { sessionId } = await cx.request('session/new', { cwd, mcpServers: [] });
       const result = taskOf(await cx.request('session/prompt', { sessionId, prompt: [{ type: 'text', text: 'cancel first call' }] }));
       assert.deepEqual(result.outcome, cli.outcome); assert.deepEqual(result.accounting, cli.accounting);

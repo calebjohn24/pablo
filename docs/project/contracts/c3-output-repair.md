@@ -63,9 +63,9 @@ is duplicated. OTel exposes repair phase/counts only, with a model-span repair m
 and validation-attempt count. Existing content-capture rules continue to govern
 model text; repair diagnostics/feedback do not enter metadata-only telemetry.
 
-Repair-enabled CLI tasks use `c3.14`. ACP negotiates `pablo/output-repair-v1`, requiring
-`pablo/v1`, `pablo/task-v1` and `pablo/output-v1`. Output-only peers retain `c3.13`
-validation; old task peers retain `c2.3`; generic ACP keeps standard behavior.
+Repair-enabled CLI tasks use `c3.33`. ACP negotiates `pablo/output-repair-v1`, requiring
+`pablo/v2`, `pablo/task-v2` and `pablo/output-v1`. Output-only peers retain `c3.33`
+validation; current task-only peers retain `c3.33`; generic ACP keeps standard behavior.
 Negotiation controls metadata, not whether configured local repair executes.
 
 ## Acceptance
@@ -77,3 +77,5 @@ Cover cancellation/deadline, model/token/cost/output/context/event/trace exhaust
 provider failures and forbidden tool calls without hidden fallback/compaction.
 Check native/OTel privacy, CLI/ACP projections, pinned defaults/overrides and matched
 ordinary/schema-only/repair performance before merging.
+
+C3.33 migration: current native/task revisions are `c3.33`. Frozen C2 ACP remains a separate v1 projection for unconfigured tasks; configured C3 requires v2 or generic ACP. See [ACP negotiation](../../acp.md).

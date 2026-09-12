@@ -49,7 +49,7 @@ async fn validated_results_are_terminal_only_with_content_safe_spans_and_redacte
                 .all(|e| e.output_validation.as_ref().unwrap().status == "unvalidated")
         );
         let task = TaskResult::from_terminal(terminal).unwrap();
-        assert_eq!(task.schema_version, "c3.13");
+        assert_eq!(task.schema_version, "c3.33");
         assert_eq!(task.accounting.unwrap().model_calls, 1);
         let bytes = trace.into_inner();
         let native: serde_json::Value = serde_json::from_slice(

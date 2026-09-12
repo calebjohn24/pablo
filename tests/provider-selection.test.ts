@@ -45,7 +45,7 @@ test('P01 default and explicit Vercel selection share real CLI/ACP round trips a
    const result=await exec(binary,['run','Read evidence',...args,'--workspace',cwd,'--json'],{env,timeout:5000});
    assert.equal(JSON.parse(result.stdout).outcome.output,'selected-evidence');
    await withPablo({binary,args,env},async cx=>{
-    await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true}}});
+    await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true}}});
     const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});
     const outcome=outcomeOf(await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'Read evidence'}]}));
     assert(outcome.status==='completed');assert.equal(outcome.output,'selected-evidence');

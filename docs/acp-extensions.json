@@ -1,0 +1,184 @@
+{
+  "schema_version": 1,
+  "revision": "c3.33",
+  "extensions": [
+    {
+      "name": "pablo/v1",
+      "uri": "https://github.com/calebjohn24/pablo/blob/main/docs/acp.md#pablov1",
+      "schema": "docs/pablo-acp-v1.schema.json",
+      "capability": "pablo/v1",
+      "requires": [],
+      "bounds": {
+        "frame_bytes": 33554432,
+        "connection_input_bytes": 67108864,
+        "connection_input_messages": 128,
+        "pending_events": 8,
+        "write_timeout_seconds": 30
+      },
+      "privacy": "C2 correlation identifiers and terminal task content; no credentials",
+      "generic_peer_fallback": "Standard ACP updates, stop reasons and safe errors",
+      "methods": []
+    },
+    {
+      "name": "pablo/task-v1",
+      "uri": "https://github.com/calebjohn24/pablo/blob/main/docs/acp.md#pablotask-v1",
+      "schema": "docs/project/fixtures/c3-compatibility/c2-task.schema.json",
+      "capability": "pablo/task-v1",
+      "requires": [
+        "pablo/v1"
+      ],
+      "bounds": {
+        "frame_bytes": 33554432,
+        "connection_input_bytes": 67108864,
+        "connection_input_messages": 128,
+        "pending_events": 8,
+        "write_timeout_seconds": 30
+      },
+      "privacy": "C2 task output and exact accounting",
+      "generic_peer_fallback": "Standard ACP terminal response",
+      "methods": []
+    },
+    {
+      "name": "pablo/v2",
+      "uri": "https://github.com/calebjohn24/pablo/blob/main/docs/acp.md#pablov2",
+      "schema": "docs/pablo-acp-v2.schema.json",
+      "capability": "pablo/v2",
+      "requires": [],
+      "bounds": {
+        "frame_bytes": 33554432,
+        "connection_input_bytes": 67108864,
+        "connection_input_messages": 128,
+        "pending_events": 8,
+        "write_timeout_seconds": 30
+      },
+      "privacy": "Correlation and deployment identities, terminal task content; no credentials",
+      "generic_peer_fallback": "Standard ACP updates, stop reasons and safe errors",
+      "methods": []
+    },
+    {
+      "name": "pablo/task-v2",
+      "uri": "https://github.com/calebjohn24/pablo/blob/main/docs/acp.md#pablotask-v2",
+      "schema": "docs/pablo-task.schema.json",
+      "capability": "pablo/task-v2",
+      "requires": [
+        "pablo/v2"
+      ],
+      "bounds": {
+        "frame_bytes": 33554432,
+        "connection_input_bytes": 67108864,
+        "connection_input_messages": 128,
+        "pending_events": 8,
+        "write_timeout_seconds": 30
+      },
+      "privacy": "Task output and exact accounting; c3.33",
+      "generic_peer_fallback": "Standard ACP terminal response",
+      "methods": []
+    },
+    {
+      "name": "pablo/model-route-v1",
+      "uri": "https://github.com/calebjohn24/pablo/blob/main/docs/acp.md#pablomodel-route-v1",
+      "schema": "docs/pablo-acp-v2.schema.json#/$defs/model_route",
+      "capability": "pablo/model-route-v1",
+      "requires": [
+        "pablo/v2"
+      ],
+      "bounds": {
+        "frame_bytes": 33554432,
+        "connection_input_bytes": 67108864,
+        "connection_input_messages": 128,
+        "pending_events": 8,
+        "write_timeout_seconds": 30
+      },
+      "privacy": "Route identifiers and bounded attempt status, no credential values",
+      "generic_peer_fallback": "Normal model text and terminal outcome",
+      "methods": [
+        "_pablo/v1/model_attempt"
+      ],
+      "notification_schema": "docs/pablo-acp-notifications-v1.schema.json#/$defs/model_attempt"
+    },
+    {
+      "name": "pablo/compaction-v1",
+      "uri": "https://github.com/calebjohn24/pablo/blob/main/docs/acp.md#pablocompaction-v1",
+      "schema": "docs/pablo-acp-v2.schema.json#/$defs/compaction",
+      "capability": "pablo/compaction-v1",
+      "requires": [
+        "pablo/v2"
+      ],
+      "bounds": {
+        "frame_bytes": 33554432,
+        "connection_input_bytes": 67108864,
+        "connection_input_messages": 128,
+        "pending_events": 8,
+        "write_timeout_seconds": 30
+      },
+      "privacy": "Compaction accounting; summary content only with explicit capture-content",
+      "generic_peer_fallback": "No custom compaction notifications; normal task result",
+      "methods": [
+        "_pablo/v1/compaction"
+      ],
+      "notification_schema": "docs/pablo-acp-notifications-v1.schema.json#/$defs/compaction_notification"
+    },
+    {
+      "name": "pablo/skills-v1",
+      "uri": "https://github.com/calebjohn24/pablo/blob/main/docs/acp.md#pabloskills-v1",
+      "schema": "docs/pablo-acp-notifications-v1.schema.json#/$defs/skill",
+      "capability": "pablo/skills-v1",
+      "requires": [
+        "pablo/v2"
+      ],
+      "bounds": {
+        "frame_bytes": 33554432,
+        "connection_input_bytes": 67108864,
+        "connection_input_messages": 128,
+        "pending_events": 8,
+        "write_timeout_seconds": 30
+      },
+      "privacy": "Skill identifiers and digests; instruction content only with explicit capture-content",
+      "generic_peer_fallback": "No custom activation notifications; standard tool updates",
+      "methods": [
+        "_pablo/v1/skill"
+      ]
+    },
+    {
+      "name": "pablo/output-v1",
+      "uri": "https://github.com/calebjohn24/pablo/blob/main/docs/acp.md#pablooutput-v1",
+      "schema": "docs/pablo-task.schema.json#/$defs/output_validation",
+      "capability": "pablo/output-v1",
+      "requires": [
+        "pablo/v2",
+        "pablo/task-v2"
+      ],
+      "bounds": {
+        "frame_bytes": 33554432,
+        "connection_input_bytes": 67108864,
+        "connection_input_messages": 128,
+        "pending_events": 8,
+        "write_timeout_seconds": 30
+      },
+      "privacy": "Schema digest and bounded diagnostic paths; no rejected output content",
+      "generic_peer_fallback": "Standard ACP outcome without validation metadata",
+      "methods": []
+    },
+    {
+      "name": "pablo/output-repair-v1",
+      "uri": "https://github.com/calebjohn24/pablo/blob/main/docs/acp.md#pablooutput-repair-v1",
+      "schema": "docs/pablo-task.schema.json#/$defs/output_repair",
+      "capability": "pablo/output-repair-v1",
+      "requires": [
+        "pablo/v2",
+        "pablo/task-v2",
+        "pablo/output-v1"
+      ],
+      "bounds": {
+        "frame_bytes": 33554432,
+        "connection_input_bytes": 67108864,
+        "connection_input_messages": 128,
+        "pending_events": 8,
+        "write_timeout_seconds": 30
+      },
+      "privacy": "Repair status and counters; no repair feedback content",
+      "generic_peer_fallback": "Standard ACP outcome without repair metadata",
+      "methods": []
+    }
+  ]
+}

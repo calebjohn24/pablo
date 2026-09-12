@@ -12,3 +12,7 @@
 /coverage/
 *.tsbuildinfo
 .DS_Store
+
+# Python fixture/audit bytecode.
+__pycache__/
+*.pyc

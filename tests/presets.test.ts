@@ -207,7 +207,7 @@ for (const preset of ['base', 'production', 'development']) {
           let task: any;
           if (host === 'acp') {
             await withPablo({ binary, args: flags, env }, async cx => {
-              await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v1': true, 'pablo/task-v1': true, 'pablo/output-v1': true, 'pablo/output-repair-v1': true } } });
+              await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v2': true, 'pablo/task-v2': true, 'pablo/output-v1': true, 'pablo/output-repair-v1': true } } });
               const { sessionId } = await cx.request('session/new', { cwd, mcpServers: [] });
               task = taskOf(await cx.request('session/prompt', { sessionId, prompt: [{ type: 'text', text: input }] }));
             });

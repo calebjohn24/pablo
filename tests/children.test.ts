@@ -75,7 +75,7 @@ test('A02 configured CLI and ACP supervise a child with tools and one attributed
     await verify(cli.session_id);
     const updates: any[] = [];
     await withPablo({binary,args,env:cleanEnv(),onUpdate:n => { updates.push(n); }}, async cx => {
-      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true,'pablo/task-v1':true}}});
+      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true,'pablo/task-v2':true}}});
       const {sessionId} = await cx.request('session/new',{cwd,mcpServers:[]});
       const result = taskOf(await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'root private task'}]}));
       assert.equal(result.outcome.status, 'completed');
@@ -87,16 +87,16 @@ test('A02 configured CLI and ACP supervise a child with tools and one attributed
       const starts = updates.filter(n => n.update.sessionUpdate === 'tool_call');
       assert.equal(new Set(starts.map(n => n.update.toolCallId)).size, 4);
       for (const n of starts) {
-        assert(n.update.toolCallId.startsWith(n._meta['pablo/v1'].agent.agent_id + '/'));
+        assert(n.update.toolCallId.startsWith(n._meta['pablo/v2'].agent.agent_id + '/'));
         assert(updates.some(done => done.update.sessionUpdate === 'tool_call_update' && done.update.toolCallId === n.update.toolCallId));
       }
       assert(updates.every(n => n.sessionId === sessionId));
-      assert(updates.some(n => n._meta?.['pablo/v1']?.agent?.agent_id === child[0].agent.agent_id));
+      assert(updates.some(n => n._meta?.['pablo/v2']?.agent?.agent_id === child[0].agent.agent_id));
     });
     const spans = exports.flatMap(otlpSpans);
     assert(spans.length > 0);
     for (const update of updates) {
-      const identity=update._meta['pablo/v1'];
+      const identity=update._meta['pablo/v2'];
       assert(native.some(e=>e.run_id===identity.run_id && e.seq===identity.seq_end && e.root_seq===identity.root_seq && e.span_id===identity.span_id));
       assert(spans.some(span=>span.trace_id===identity.trace_id && span.span_id===identity.span_id));
     }
@@ -174,14 +174,14 @@ for (const mode of ['cancel','deadline','complete'] as const) test(`A02 configur
     await writeFile(entry,base.replace('max_tool_calls=10',`max_tool_calls=10\nmax_run_duration_ms=${mode==='deadline'?700:10000}`)+'\n[options.children]\nenabled=true\n[options.trace]\npath={base="workspace",path="trace-{session_id}.jsonl"}\n');
     let sent=false;
     await withPablo({binary,args:['--config',entry,'--bind',`workspace=${cwd}`,'--fixture-endpoint',gateway.url],env:cleanEnv(),onUpdate:async(n,cx)=>{
-      if(mode==='cancel'&&!sent&&(n._meta?.['pablo/v1'] as any)?.agent?.depth===1&&n.update.sessionUpdate==='agent_message_chunk'){
+      if(mode==='cancel'&&!sent&&(n._meta?.['pablo/v2'] as any)?.agent?.depth===1&&n.update.sessionUpdate==='agent_message_chunk'){
         sent=true;await cx.notify('session/cancel',{sessionId:n.sessionId});
       }
     }},async cx=>{
-      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true,'pablo/task-v1':true}}});
+      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true,'pablo/task-v2':true}}});
       const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});
       const result=await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'exercise root completion'}]})
-        .then(taskOf).catch((error:any)=>{assert.equal(mode,'deadline');assert.equal(error.code,-32603);return error.data['pablo/v1'].task;});
+        .then(taskOf).catch((error:any)=>{assert.equal(mode,'deadline');assert.equal(error.code,-32603);return error.data['pablo/v2'].task;});
       assert.equal(result.outcome.status,mode==='cancel'?'cancelled':mode==='deadline'?'timed_out':'completed');
       assert(closed);
       const events=(await readFile(join(cwd,`trace-${sessionId}.jsonl`),'utf8')).trim().split('\n').map(s=>JSON.parse(s));

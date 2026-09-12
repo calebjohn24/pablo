@@ -50,7 +50,7 @@ test('M04 denied tools stay out of host catalogs and ACP selection is revalidate
     await rm(join(cwd,'pid'));
     const two=denied+'\n[options.mcp.servers.unselected]\ntransport="stdio"\ncommand="/bin/sh"\nargs=["-c","/usr/bin/touch unselected-started"]\n';await writeFile(entry,two);
     await withPablo({binary,args,env},async cx=>{
-      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true}}});
+      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true}}});
       const definition={name:'local',command:python,args:[fixture],env:[]};
       await assert.rejects(cx.request('session/new',{cwd,mcpServers:[{...definition,name:'unconfigured'}]}));
       await assert.rejects(cx.request('session/new',{cwd,mcpServers:[{...definition,args:[]}]}));
@@ -113,7 +113,7 @@ test('M04 built CLI and reused ACP consume fresh stdio catalogs and actual resul
     assert.equal(cli.stdout.trim(),'fresh evidence 0');
     const pids:number[]=[Number(await readFile(join(paths[0],'pid'),'utf8'))];
     await withPablo({binary,args,env},async cx=>{
-      const init=await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true}}});
+      const init=await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true}}});
       assert.equal(init.agentCapabilities?.mcpCapabilities?.http,true);
       assert(!init.agentCapabilities?.mcpCapabilities?.sse);
       for(let i=1;i<3;i++){
@@ -149,10 +149,10 @@ test('M04 malformed catalogs, bounded progress and tool/protocol errors retain t
       let result;try{result=await exec(binary,['run','test','--json',...args],{cwd:workspace,env,timeout:10000});}catch(error:any){result=error;}
       if(startup)assert.match(result.stderr,/config_mcp_startup/);else assert.equal(JSON.parse(result.stdout).outcome.status,success?'completed':'failed');
       await withPablo({binary,args,env},async cx=>{
-        await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true}}});const {sessionId}=await cx.request('session/new',{cwd:workspace,mcpServers:[]});
+        await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true}}});const {sessionId}=await cx.request('session/new',{cwd:workspace,mcpServers:[]});
         const prompt=cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'test'}]});
         if(startup)await assert.rejects(prompt,(error:any)=>JSON.stringify(error).includes('config_mcp_startup'));
-        else {let outcome;try{outcome=outcomeOf(await prompt);}catch(error:any){outcome=error.data?.['pablo/v1']?.outcome;assert(outcome);}assert.equal(outcome.status,success?'completed':'failed');}
+        else {let outcome;try{outcome=outcomeOf(await prompt);}catch(error:any){outcome=error.data?.['pablo/v2']?.outcome;assert(outcome);}assert.equal(outcome.status,success?'completed':'failed');}
       });
       assert.equal(calls-before,startup?0:success?4:2,mode);
       const pid=Number(await readFile(join(workspace,'pid'),'utf8'));assert.throws(()=>process.kill(-pid,0),(error:any)=>error.code==='ESRCH');
@@ -205,7 +205,7 @@ headers={x-fixture-token="mcp"}
     await writeFile(join(cwd,'mcp.token'),'synthetic-http-token-0');await writeFile(join(cwd,'expected-token'),'synthetic-http-token-0');
     const cli=await exec(binary,['run','Read evidence',...args],{cwd,env,timeout:10000});assert.equal(cli.stdout.trim(),expected);
     await withPablo({binary,args,env},async cx=>{
-      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true}}});
+      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true}}});
       for(let i=1;i<3;i++){
         expected=`HTTP evidence ${i}`;await writeFile(join(cwd,'evidence.txt'),expected);
         await writeFile(join(cwd,'mcp.token'),`synthetic-http-token-${i}`);await writeFile(join(cwd,'expected-token'),`synthetic-http-token-${i}`);
@@ -250,7 +250,7 @@ ${mode==='denied'?'[[options.mcp.policies]]\n[options.mcp.policies.servers]\ndef
       if(mode==='required')await assert.rejects(exec(binary,['run','test',...args],{cwd,env:cleanEnv(),timeout:5000}),(error:any)=>error.code===2&&error.stderr.includes('config_mcp_startup'));
       else assert.equal((await exec(binary,['run','test',...args],{cwd,env:cleanEnv(),timeout:5000})).stdout.trim(),'No external tool admitted.');
       await withPablo({binary,args,env:cleanEnv()},async cx=>{
-        await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true}}});
+        await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true}}});
         const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});
         const prompt=cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'test'}]});
         if(mode==='required')await assert.rejects(prompt,(error:any)=>JSON.stringify(error).includes('config_mcp_startup'));
@@ -279,7 +279,7 @@ test('M04 cancellation joins an active MCP process through CLI and ACP', {skip:!
     try{const pid=await waitCall(cliDir);cli.kill('SIGINT');const [code]=await exited;assert.equal(code,130);assert.equal(JSON.parse(stdout).outcome.status,'cancelled');assert.throws(()=>process.kill(-pid,0),(error:any)=>error.code==='ESRCH');}
     finally{if(cli.exitCode===null&&cli.signalCode===null){cli.kill('SIGKILL');await exited;}}
     await withPablo({binary,args,env},async cx=>{
-      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true}}});
+      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true}}});
       const {sessionId}=await cx.request('session/new',{cwd:acpDir,mcpServers:[]});
       const prompt=cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'test'}]});
       const pid=await waitCall(acpDir);await cx.notify('session/cancel',{sessionId});assert.equal(outcomeOf(await prompt).status,'cancelled');assert.throws(()=>process.kill(-pid,0),(error:any)=>error.code==='ESRCH');
@@ -305,7 +305,7 @@ test('M04 MCP work closes on ACP stdin EOF and bounded output backpressure/disco
       const reply=async(id:number)=>{for(let i=0;i<1000&&!responses.has(id);i++){assert.equal(child.exitCode,null);await delay(10);}assert(responses.has(id));return responses.get(id);};
       let pid:number|undefined;
       try{
-        send(1,'initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true}}});assert((await reply(1)).result);
+        send(1,'initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true}}});assert((await reply(1)).result);
         send(2,'session/new',{cwd:workspace,mcpServers:[]});const sessionId=(await reply(2)).result.sessionId;
         if(scenario!=='stdin-eof')child.stdout.pause();
         send(3,'session/prompt',{sessionId,prompt:[{type:'text',text:'test'}]});
@@ -339,8 +339,8 @@ for(const mode of ['disconnect','call_hang'])test(`M04 HTTP ${mode} preserves re
     finally{if(cli.exitCode===null&&cli.signalCode===null){cli.kill('SIGKILL');await cliExit;}}
     const updates:any[]=[];
     await withPablo({binary,args,env,onUpdate:n=>{updates.push(n);}},async cx=>{
-      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true}}});const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});
-      const prompt=cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'test'}]}).then(value=>outcomeOf(value),(error:any)=>{const outcome=error.data?.['pablo/v1']?.outcome;assert(outcome);return outcome;});
+      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true}}});const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});
+      const prompt=cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'test'}]}).then(value=>outcomeOf(value),(error:any)=>{const outcome=error.data?.['pablo/v2']?.outcome;assert(outcome);return outcome;});
       await waitCalls(2);if(mode==='call_hang')await cx.notify('session/cancel',{sessionId});assert.equal((await prompt).status,mode==='call_hang'?'cancelled':'failed');
     });
     assert(updates.some(n=>n.update.rawOutput?.mcp?.remote_completion_uncertain===true));

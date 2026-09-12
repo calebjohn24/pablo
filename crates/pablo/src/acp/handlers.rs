@@ -15,20 +15,52 @@ pub(super) fn initialize(
     }
     // ACP negotiation returns our supported version. A client that
     // cannot speak v1 must disconnect; draft v2 is never selected.
-    state.initialized = true;
-    state.extensions.base = request
+    let modern = request
         .client_capabilities
         .meta
         .as_ref()
         .and_then(|m| m.get(EXTENSION))
         == Some(&json!(true));
-    state.extensions.task = state.extensions.base
+    let legacy = request
+        .client_capabilities
+        .meta
+        .as_ref()
+        .and_then(|m| m.get(LEGACY_EXTENSION))
+        == Some(&json!(true));
+    if legacy
+        && !modern
         && request
             .client_capabilities
             .meta
             .as_ref()
-            .and_then(|m| m.get("pablo/task-v1"))
-            == Some(&json!(true));
+            .is_some_and(|meta| {
+                [
+                    "pablo/task-v2",
+                    "pablo/model-route-v1",
+                    "pablo/compaction-v1",
+                    "pablo/output-v1",
+                    "pablo/skills-v1",
+                    "pablo/output-repair-v1",
+                ]
+                .iter()
+                .any(|key| meta.get(*key) == Some(&json!(true)))
+            })
+    {
+        return Err(invalid(
+            "C3 extensions require pablo/v2; migrate the metadata capability",
+        ));
+    }
+    state.initialized = true;
+    state.extensions.base = modern || legacy;
+    state.extensions.legacy = legacy && !modern;
+    state.extensions.task = state.extensions.base
+        && request.client_capabilities.meta.as_ref().and_then(|m| {
+            m.get(if state.extensions.legacy {
+                "pablo/task-v1"
+            } else {
+                "pablo/task-v2"
+            })
+        }) == Some(&json!(true));
     state.extensions.route = state.extensions.base
         && request
             .client_capabilities
@@ -66,7 +98,9 @@ pub(super) fn initialize(
             .and_then(|m| m.get("pablo/output-repair-v1"))
             == Some(&json!(true));
     let mut capabilities = meta(json!(true));
+    capabilities.insert(LEGACY_EXTENSION.into(), json!(true));
     capabilities.insert("pablo/task-v1".into(), json!(true));
+    capabilities.insert("pablo/task-v2".into(), json!(true));
     capabilities.insert("pablo/model-route-v1".into(), json!(true));
     capabilities.insert("pablo/compaction-v1".into(), json!(true));
     capabilities.insert("pablo/skills-v1".into(), json!(true));
@@ -96,6 +130,13 @@ pub(super) fn new_session(
     }
     if !state.initialized {
         return Err(invalid("initialize first"));
+    }
+    if state.extensions.legacy
+        && (options.deployment.is_some() || options.output_schema_path.is_some())
+    {
+        return Err(invalid(
+            "configured C3 runs require pablo/v2 or standard ACP without project metadata",
+        ));
     }
     if state.admitted_child.is_some() && state.session.is_some() {
         return Err(invalid("one session per temporary child"));
@@ -252,7 +293,7 @@ pub(super) fn start_prompt(
     spec.workspace = cwd;
     spec.input = input;
     spec.session_id = Some(request.session_id.to_string());
-    let incoming = request.meta.as_ref().and_then(|m| m.get(EXTENSION));
+    let incoming = request.meta.as_ref().and_then(|m| m.get(extensions.key()));
     let parent = if let Some((_, _, _, parent)) = &admitted {
         parent.clone()
     } else if let Some(prepared) = prepared.as_ref().filter(|_| extensions.base) {

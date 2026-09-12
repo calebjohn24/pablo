@@ -80,9 +80,9 @@ root output-byte, cancellation/deadline and provider failures preserve their typ
 and retain unvalidated status. No invalid final text is returned as a completed
 result. No repair/fallback is triggered by local validation failure.
 
-Schema-enabled CLI JSON uses task revision `c3.13` with `output_validation`;
-ordinary tasks retain `c2.3`. ACP peers negotiate `pablo/output-v1` together with
-`pablo/v1` and `pablo/task-v1` for the extended terminal task and provisional-text
+Schema-enabled CLI JSON uses task revision `c3.33` with `output_validation`;
+ordinary tasks retain `c3.33`. ACP peers negotiate `pablo/output-v1` together with
+`pablo/v2` and `pablo/task-v2` for the extended terminal task and provisional-text
 correlation. Other peers retain standard text chunks and safe error/stop behavior;
 legacy task peers get the prior envelope. New native terminal metadata reports
 validation status; OTel exposes only digest/status/count/work, not diagnostics or
@@ -99,3 +99,5 @@ J01 covers raw/file/configured schemas, local definitions/references, cache reus
 unsupported/cyclic/external schemas, malformed/violating/oversized final answers,
 path-safe diagnostics, cancellation, tool/compaction continuation, all adapters,
 CLI/ACP capability fallback and matched ordinary/structured performance.
+
+C3.33 migration: current native/task revisions are `c3.33`. Frozen C2 ACP remains a separate v1 projection for unconfigured tasks; configured C3 requires v2 or generic ACP. See [ACP negotiation](../../acp.md).

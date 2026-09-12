@@ -27,8 +27,14 @@
     "sha256": "caf62ff962ada396878372ced11efb2c6764e59d90919a38583c319948931a42"
   },
   "extension": {
-    "name": "pablo/v1",
-    "revision": "c1.3",
-    "schema": "docs/pablo-acp-v1.schema.json"
+    "name": "pablo/v2",
+    "revision": "c3.33",
+    "schema": "docs/pablo-acp-v2.schema.json",
+    "registry": "docs/acp-extensions.json",
+    "legacy": {
+      "name": "pablo/v1",
+      "schema": "docs/pablo-acp-v1.schema.json",
+      "source_revision": "ba8b0ff62b3ccc40c8a6ae704b4450ead12040b3"
+    }
   }
 }

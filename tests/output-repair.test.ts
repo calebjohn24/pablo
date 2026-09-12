@@ -10,7 +10,7 @@ import {responsesEvents,responsesWire} from './fixtures/open-responses.ts';
 import {withPablo,structuredOf} from '../examples/acp-client.ts';
 const exec=promisify(execFile),binary=fileURLToPath(new URL('../target/debug/pablo',import.meta.url));
 const schema={type:'object',properties:{answer:{type:'integer',minimum:1}},required:['answer'],additionalProperties:false};
-const ajv=new Ajv2020({strict:false}),checkTask=ajv.compile<any>(JSON.parse(await readFile(new URL('../docs/pablo-task.schema.json',import.meta.url),'utf8'))),checkMeta=ajv.compile<any>(JSON.parse(await readFile(new URL('../docs/pablo-acp-v1.schema.json',import.meta.url),'utf8')));
+const ajv=new Ajv2020({strict:false}),checkTask=ajv.compile<any>(JSON.parse(await readFile(new URL('../docs/pablo-task.schema.json',import.meta.url),'utf8'))),checkMeta=ajv.compile<any>(JSON.parse(await readFile(new URL('../docs/pablo-acp-v2.schema.json',import.meta.url),'utf8')));
 const textOf=(m:any)=>typeof m?.content==='string'?m.content:(m?.content??[]).map((v:any)=>v.text??'').join('');
 for(const provider of ['vercel','openrouter','open_responses'])for(const mode of ['valid','invalid','first_valid','disabled','tool_history','provider_failure'])test(`J02 ${provider} ${mode}: one repair, same conversation and negotiated result`,{timeout:15000},async()=>{
  const cwd=await realpath(await mkdtemp(join(tmpdir(),'pablo-repair-')));const requests:any[]=[];let first:any;let firstFinal:any;
@@ -73,20 +73,20 @@ enabled=${mode==='tool_history'}
   const cli=await exec(binary,['run','Return the answer',...args,'--json','--trace',trace],{env}).catch((e:any)=>{assert.equal(e.code,1,e.stderr);return e;});const task=JSON.parse(cli.stdout);assert(checkTask(task),ajv.errorsText(checkTask.errors));
   const success=['valid','first_valid','tool_history'].includes(mode);assert.equal(task.outcome.status,success?'completed':'failed');
   const calls=mode==='tool_history'?3:['first_valid','disabled'].includes(mode)?1:2;assert.equal(task.accounting.model_calls,String(calls));assert.equal(task.accounting.tool_calls,mode==='tool_history'?'1':'0');
-  if(mode==='disabled'){assert.equal(task.schema_version,'c3.13');assert.equal(task.output_repair,undefined);}else{
-   assert.equal(task.schema_version,'c3.14');assert.equal(task.output_repair.status,mode==='first_valid'?'not_needed':success?'succeeded':'failed');assert.equal(task.output_repair.attempts,mode==='first_valid'?0:1);
+  if(mode==='disabled'){assert.equal(task.schema_version,'c3.33');assert.equal(task.output_repair,undefined);}else{
+   assert.equal(task.schema_version,'c3.33');assert.equal(task.output_repair.status,mode==='first_valid'?'not_needed':success?'succeeded':'failed');assert.equal(task.output_repair.attempts,mode==='first_valid'?0:1);
   }
   assert.equal(task.output_validation.status,mode==='provider_failure'?'unvalidated':success?'valid':'invalid');
   if(success)assert.equal(task.outcome.output,'{"answer":7}');
   const native=(await readFile(trace,'utf8')).trim().split('\n').map(s=>JSON.parse(s));assert.deepEqual(native.at(-1).output_repair,task.output_repair);assert(!JSON.stringify(native).includes('Correct the previous'));
   for(const cap of ['repair','output','legacy','generic']){
    await withPablo({binary,args,env},async cx=>{
-    const caps=cap==='generic'?{}:{'pablo/v1':true,'pablo/task-v1':true,'pablo/output-v1':cap!=='legacy','pablo/output-repair-v1':cap==='repair'};
+    const caps=cap==='generic'?{}:{'pablo/v2':true,'pablo/task-v2':true,'pablo/output-v1':cap!=='legacy','pablo/output-repair-v1':cap==='repair'};
     const init=await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:caps}});assert.equal(init.agentCapabilities?._meta?.['pablo/output-repair-v1'],true);
     const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});let response:any,meta:any;
-    try{response=await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'Return the answer'}]});meta=response._meta?.['pablo/v1'];}catch(e:any){assert(!success);meta=e.data?.['pablo/v1'];}
+    try{response=await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'Return the answer'}]});meta=response._meta?.['pablo/v2'];}catch(e:any){assert(!success);meta=e.data?.['pablo/v2'];}
     if(cap==='generic'){assert.equal(meta,undefined);return;}assert(checkMeta(meta),ajv.errorsText(checkMeta.errors));assert.deepEqual(meta.task.outcome,task.outcome);
-    assert.equal(meta.task.schema_version,cap==='legacy'?'c2.3':cap==='output'||mode==='disabled'?'c3.13':'c3.14');
+    assert.equal(meta.task.schema_version,'c3.33');
     assert.deepEqual(meta.task.output_repair,cap==='repair'?task.output_repair:undefined);
     if(success&&cap!=='legacy')assert.deepEqual(structuredOf(response),{answer:7});
    });

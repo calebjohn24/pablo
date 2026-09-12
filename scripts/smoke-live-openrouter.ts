@@ -79,8 +79,8 @@ path={base="workspace",path="trace.jsonl"}
     if(update.sessionUpdate==='agent_message_chunk'&&update.content.type==='text')streamed+=update.content.text;
     if(update.sessionUpdate==='tool_call_update'&&update.status==='completed')toolResults.push(update.rawOutput);
    }},async cx=>{
-    const init=await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true,'pablo/task-v1':true}},clientInfo:{name:'pablo-live-acceptance',version:'c3.7'}});
-    assert.equal(init.agentCapabilities?._meta?.['pablo/task-v1'],true);
+    const init=await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true,'pablo/task-v2':true}},clientInfo:{name:'pablo-live-acceptance',version:'c3.7'}});
+    assert.equal(init.agentCapabilities?._meta?.['pablo/task-v2'],true);
     const {sessionId}=await cx.request('session/new',{cwd:workspace!,mcpServers:[]});
     const response=await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:taskText}]});
     assert.equal(response.stopReason,'end_turn');task=taskOf(response);
@@ -117,7 +117,7 @@ path={base="workspace",path="trace.jsonl"}
   console.log(JSON.stringify(summary));
  }
 }catch(error){
- const e=error as any;const native=e?.data?.['pablo/v1']?.task?.outcome;const code=safeCodes.has(e?.safe_code)?e.safe_code:safeCodes.has(native?.code)?native.code:undefined;
+ const e=error as any;const native=e?.data?.['pablo/v2']?.task?.outcome;const code=safeCodes.has(e?.safe_code)?e.safe_code:safeCodes.has(native?.code)?native.code:undefined;
  const summary={checkpoint:'C3.7',result:'failed',surface,stage,code,completed_surfaces:results.map(r=>r.surface)};
  await mkdir(runRoot,{recursive:true,mode:0o700});await writeFile(join(runRoot,'failure.json'),JSON.stringify(summary,null,2)+'\n',{mode:0o600});
  console.error(JSON.stringify(summary));process.exitCode=1;

@@ -70,7 +70,7 @@ for(const mode of ['stop','fail','cancel'] as const)test(mode==='cancel'?'A03 ro
   try{
     const entry=join(cwd,'entry.toml');await writeFile(entry,base+'\n[options.children]\nenabled=true\n[options.trace]\npath={base="workspace",path="trace-{session_id}.jsonl"}\n');
     await withPablo({binary,args:['--config',entry,'--bind',`workspace=${cwd}`,'--fixture-endpoint',gateway.url],env:cleanEnv()},async cx=>{
-      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true,'pablo/task-v1':true}}});
+      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true,'pablo/task-v2':true}}});
       const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});
       cancelRoot=()=>cx.notify('session/cancel',{sessionId});
       const task=taskOf(await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'exercise siblings'}]}));

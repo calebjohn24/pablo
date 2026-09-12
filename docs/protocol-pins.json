@@ -1,0 +1,547 @@
+{
+  "schema_version": 1,
+  "revision": "c3.33",
+  "protocols": {
+    "configuration": {
+      "ownership": "pablo",
+      "revision": "schema1/c3.26",
+      "schemas": "docs/project/schemas",
+      "fixtures": "docs/project/fixtures/c3-deployment"
+    },
+    "ACP": {
+      "upstream_pin": "docs/acp-lock.json",
+      "frozen_C2_revision": "ba8b0ff62b3ccc40c8a6ae704b4450ead12040b3",
+      "schemas": "docs/pablo-acp-v2.schema.json"
+    },
+    "MCP": {
+      "upstream_repository": "https://github.com/modelcontextprotocol/rust-sdk",
+      "upstream_revision": "3e636cab26c013eca5131103c03d20237f12c4df",
+      "schema_source": "crates/rmcp/tests/test_message_schema/{client,server}_json_rpc_message_schema.json",
+      "protocol_version": "2025-11-25",
+      "fixtures": "tests/fixtures/mcp"
+    },
+    "A2A": {
+      "upstream_pin": "tests/fixtures/a2a/lock.json",
+      "specification": "docs/project/fixtures/c3-compatibility/upstream/a2a-specification.md",
+      "proto": "docs/project/fixtures/c3-compatibility/upstream/a2a.proto"
+    },
+    "Open Responses": {
+      "upstream_pin": "docs/project/fixtures/c3-open-responses/upstream-pin.json"
+    },
+    "Skills": {
+      "upstream_repository": "https://github.com/agentskills/agentskills",
+      "upstream_revision": "69ef37e9424c0a7ea9dd2293b559e43ec8176379",
+      "specification_source": "docs/specification.mdx",
+      "validator_source": "skills-ref/src/skills_ref/validator.py",
+      "fixtures": "docs/project/fixtures/c3-compatibility/upstream/skills-validator-tests.py"
+    },
+    "JSON Schema": {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "distribution": "jsonschema-specifications==2025.9.1",
+      "schema_source": "jsonschema_specifications/schemas/draft202012",
+      "local_schema": "docs/project/fixtures/c3-compatibility/upstream/json-schema/metaschema.json",
+      "profile_contract": "docs/project/contracts/c3-output-validation.md"
+    }
+  },
+  "rust_sdks": [
+    {
+      "name": "agent-client-protocol",
+      "version": "2.1.0",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "checksum": "6395d81d91fd2ee93f48ea31cfc511356e75b9061ca0389cefd0308507cc11ba"
+    },
+    {
+      "name": "agent-client-protocol-schema",
+      "version": "1.7.0",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "checksum": "ca98360c7bb8cc97d7acd49e2a8a851c3f7bee6b2f0535036d8ab86b5fcd223d"
+    },
+    {
+      "name": "jsonschema",
+      "version": "0.53.0",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "checksum": "ca2ea2207f8ccb34b6d4d041fe9deb08fff3cbc43750012caa2c3d1e860188e4"
+    },
+    {
+      "name": "rmcp",
+      "version": "3.3.0",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "checksum": "b88db56b8ae316560e9e868b6b978ea940f27cb883323fc90e07435e44158f5c"
+    },
+    {
+      "name": "toml",
+      "version": "0.8.23",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "checksum": "dc1beb996b9d83529a9e75c17a1686767d148d70663143c7854d8b4a09ced362"
+    },
+    {
+      "name": "unicode-normalization",
+      "version": "0.1.25",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "checksum": "5fd4f6878c9cb28d874b009da9e8d183b5abc80117c40bbd187a1fde336be6e8"
+    },
+    {
+      "name": "yaml-rust2",
+      "version": "0.11.0",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "checksum": "631a50d867fafb7093e709d75aaee9e0e0d5deb934021fcea25ac2fe09edc51e"
+    }
+  ],
+  "node_sdks": {
+    "@agentclientprotocol/sdk": {
+      "version": "1.4.0",
+      "integrity": "sha512-/eufudw+aFY1LKLolT6yFE6UMmYRl7fMJ/DEONSIyR6wI3slHWITBsANRGqXEY8FRzqUxwh7QEaGiZHcJPVThg=="
+    },
+    "ajv": {
+      "version": "8.20.0",
+      "integrity": "sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA=="
+    }
+  },
+  "python_peers": [
+    {
+      "interpreter": ".pablo/mcp-fixture-venv/bin/python",
+      "packages": {
+        "jsonschema": {
+          "source_files": 37,
+          "source_sha256": "15a4026083518f070c7a198940d305a12ea6949a7694df2f386eb501cb21f5d1",
+          "version": "4.26.0"
+        },
+        "jsonschema-specifications": {
+          "source_files": 24,
+          "source_sha256": "1d6fe7788dd7b28a607e8c7129e02d08748d5b358402d7da9a75b91e17b4cc21",
+          "version": "2025.9.1"
+        },
+        "mcp": {
+          "source_files": 123,
+          "source_sha256": "fd35689ca447a491e949f93126109481968f1d4859ff7af9c5bd98d253241a86",
+          "version": "2.2.0"
+        },
+        "mcp-types": {
+          "source_files": 8,
+          "source_sha256": "85875dbb12a4d3e8efa84e5cc84646d1746198a24bbe34e73b439f00e9118bfd",
+          "version": "2.2.0"
+        }
+      }
+    },
+    {
+      "interpreter": ".pablo/a2a-fixture-venv/bin/python",
+      "packages": {
+        "a2a-sdk": {
+          "source_files": 111,
+          "source_sha256": "a168f7b0a6aa1308a452a85537e77b60c8443eb02d0dcbc1ccf4d4821ebd5270",
+          "version": "1.0.2"
+        }
+      }
+    }
+  ],
+  "files": {
+    "docs/acp-extensions.json": {
+      "bytes": 6537,
+      "sha256": "038ef005e31765742159c4827fc7292f797ef925b89b656f3f7c33bd1aea9aeb"
+    },
+    "docs/acp-lock.json": {
+      "bytes": 1592,
+      "sha256": "270ceb5748095374d948d1af4c525848597b3abe5d5d58a5b0600a7c9a8163f1"
+    },
+    "docs/pablo-acp-notifications-v1.schema.json": {
+      "bytes": 33627,
+      "sha256": "00ad63d2b78a9acea03b56f6927fc3b0e2369afd776e087152e73104fc638637"
+    },
+    "docs/pablo-acp-v1.schema.json": {
+      "bytes": 13424,
+      "sha256": "550c9a6e9a520c3a6f7701a4cdd9c5efafc155b7954b468144275f6b61f2cf88"
+    },
+    "docs/pablo-acp-v2.schema.json": {
+      "bytes": 29471,
+      "sha256": "e6f7dbcfb9afe9dfd26b1751ba8189832874fc80ca91a823b41c3a9508c82977"
+    },
+    "docs/pablo-task.schema.json": {
+      "bytes": 16032,
+      "sha256": "7e9334a302895d0d33c7177b8d79e000a0bb03d81485f46c5cb366b1fb44daa3"
+    },
+    "docs/project/fixtures/c3-compatibility/README.md": {
+      "bytes": 2456,
+      "sha256": "fa92d2dac7f05fc425359bc7c271d75ac8f8a1c700fb8b9dc45453a533454af2"
+    },
+    "docs/project/fixtures/c3-compatibility/c2-acp-client.ts": {
+      "bytes": 9707,
+      "sha256": "851eddbcab8214b6385b0eda67387371612855f6d5f50785d84d375878657bd0"
+    },
+    "docs/project/fixtures/c3-compatibility/c2-acp.schema.json": {
+      "bytes": 13424,
+      "sha256": "550c9a6e9a520c3a6f7701a4cdd9c5efafc155b7954b468144275f6b61f2cf88"
+    },
+    "docs/project/fixtures/c3-compatibility/c2-task.schema.json": {
+      "bytes": 9436,
+      "sha256": "0ecd7d6950d4d7e541c8bfd5d42446e50f623df8866f1a5b74c063e2799c57a6"
+    },
+    "docs/project/fixtures/c3-compatibility/upstream/a2a-LICENSE": {
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    "docs/project/fixtures/c3-compatibility/upstream/a2a-specification.md": {
+      "bytes": 152715,
+      "sha256": "087c6f6272ec08a7fcd90eb16843bf97e25e0dcd155afa5779033d23d5ac377d"
+    },
+    "docs/project/fixtures/c3-compatibility/upstream/a2a.proto": {
+      "bytes": 34461,
+      "sha256": "4b74c0baa923ae0acb55474e548f1d6e5d3f83b80d757b65f8bf3e99a3c2257f"
+    },
+    "docs/project/fixtures/c3-compatibility/upstream/json-schema/COPYING": {
+      "bytes": 1057,
+      "sha256": "42dcd63495f87b4eb7c7757afa379bb55a53f94afd7a5f657d9adf57236e515c"
+    },
+    "docs/project/fixtures/c3-compatibility/upstream/json-schema/metaschema.json": {
+      "bytes": 2452,
+      "sha256": "41da76f5afb7ce062d248f762463a92f7ca47e4e0f905b224ba6afeef91ded0f"
+    },
+    "docs/project/fixtures/c3-compatibility/upstream/json-schema/vocabularies/applicator": {
+      "bytes": 1659,
+      "sha256": "c4a6e4147b91fef7fea6dc058cb1bf93402f7414b76578a8b16aaf1dad6aacef"
+    },
+    "docs/project/fixtures/c3-compatibility/upstream/json-schema/vocabularies/content": {
+      "bytes": 519,
+      "sha256": "08343747764e4a5814262793cf4d652057a7913863c5950d43297e8e1fdac5b6"
+    },
+    "docs/project/fixtures/c3-compatibility/upstream/json-schema/vocabularies/core": {
+      "bytes": 1564,
+      "sha256": "c2d12a8e4dd11d336dfc83a3f663aa4c69f0b49b3beb094ffeb25b5316f4803d"
+    },
+    "docs/project/fixtures/c3-compatibility/upstream/json-schema/vocabularies/format-annotation": {
+      "bytes": 448,
+      "sha256": "abc775adfefd89d22358170d9bf93f4ebd2349563bbbedd60f02bef7c812bcc0"
+    },
+    "docs/project/fixtures/c3-compatibility/upstream/json-schema/vocabularies/format-assertion": {
+      "bytes": 445,
+      "sha256": "c52242b9a1bb786b26c3e82c7add428c31f9c96e575dce99e56ea5feaa6da20c"
+    },
+    "docs/project/fixtures/c3-compatibility/upstream/json-schema/vocabularies/meta-data": {
+      "bytes": 892,
+      "sha256": "8f76d6e14f41b9b92ef933b708cdc5144c8b5268651ad11918485fb1754f1c76"
+    },
+    "docs/project/fixtures/c3-compatibility/upstream/json-schema/vocabularies/unevaluated": {
+      "bytes": 506,
+      "sha256": "2dbfbcb73994b670b0976492adee1fffb46c21682784d2f5a4ca561f9e2d0cb4"
+    },
+    "docs/project/fixtures/c3-compatibility/upstream/json-schema/vocabularies/validation": {
+      "bytes": 2834,
+      "sha256": "7010a31e541f32d2be721e2de348df75c9b36876a3ed304877fc0abda1d37a58"
+    },
+    "docs/project/fixtures/c3-compatibility/upstream/mcp-client.schema.json": {
+      "bytes": 67263,
+      "sha256": "1d06e528a1858d16b071b32e1759730f455a7229a033682e7d19b71095c87842"
+    },
+    "docs/project/fixtures/c3-compatibility/upstream/mcp-server.schema.json": {
+      "bytes": 119587,
+      "sha256": "d95ae7d27bde185b4a47a30763eb6655c520b177c9cda47bab41375fd8187408"
+    },
+    "docs/project/fixtures/c3-compatibility/upstream/rmcp-LICENSE": {
+      "bytes": 12227,
+      "sha256": "0382b0057770ca05e9c350a50aa3b1c1fea84da0bc81d723bf00b9aa841be58a"
+    },
+    "docs/project/fixtures/c3-compatibility/upstream/skills-docs-LICENSE": {
+      "bytes": 18656,
+      "sha256": "9e5f1b3c610b9c2da5c313bf81d577a7d1acec686bdb0384edefa6df0f90cd94"
+    },
+    "docs/project/fixtures/c3-compatibility/upstream/skills-specification.mdx": {
+      "bytes": 7166,
+      "sha256": "b9079c0c10b7930e8c6a20ff2bc10cda2a3343c55185120e3f1116a1a529b220"
+    },
+    "docs/project/fixtures/c3-compatibility/upstream/skills-validator-LICENSE": {
+      "bytes": 11357,
+      "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd"
+    },
+    "docs/project/fixtures/c3-compatibility/upstream/skills-validator-tests.py": {
+      "bytes": 7220,
+      "sha256": "daafa296fffd05be21dbd451d93d81ea4155ab6386934a5a522c3483aee6a7e4"
+    },
+    "docs/project/fixtures/c3-compatibility/upstream/skills-validator.py": {
+      "bytes": 5154,
+      "sha256": "b5ee3d8537c83c959c31c2cb080a5227646ede5aea545f1ac835ed3c4645f6c5"
+    },
+    "docs/project/fixtures/c3-deployment/README.md": {
+      "bytes": 4980,
+      "sha256": "67afcd76971b0d98d8823575f332a7337ba8e7beb2dfb968b0446544e11abcd5"
+    },
+    "docs/project/fixtures/c3-deployment/audit.py": {
+      "bytes": 6902,
+      "sha256": "6f066f784cd49552da17747c3a1e52bc71c3b6022f14ad3b2c6cce25d3e3a319"
+    },
+    "docs/project/fixtures/c3-deployment/canonical-vectors.json": {
+      "bytes": 946,
+      "sha256": "3b36568482db948be16cbf70978a3739d45afb3b7144c42b9a8314956687ab97"
+    },
+    "docs/project/fixtures/c3-deployment/cases.json": {
+      "bytes": 31064,
+      "sha256": "f414a0e5052c58afe9353f834ee062e77803eb36bcf75c46036c1d210b7c4e84"
+    },
+    "docs/project/fixtures/c3-deployment/credential-sources.toml": {
+      "bytes": 642,
+      "sha256": "05f6e15694c6fe303193ac1e46e34fbef3d1b650f3e62b06da3678bb700e264a"
+    },
+    "docs/project/fixtures/c3-deployment/development.toml": {
+      "bytes": 600,
+      "sha256": "20e9f969e0b0027b3123ebac8fef2fd8ee393048eebfea695885ab60a339cb67"
+    },
+    "docs/project/fixtures/c3-deployment/invalid/count.toml": {
+      "bytes": 65,
+      "sha256": "b691e471970951646128f5af4b37c9f47cb6578767ca41d671fdbf01da7c9e31"
+    },
+    "docs/project/fixtures/c3-deployment/invalid/date.toml": {
+      "bytes": 59,
+      "sha256": "bf5d3c33cabacc38e624a3b92838505f542b5177575007054c10e744feffd739"
+    },
+    "docs/project/fixtures/c3-deployment/invalid/duplicate-key.toml": {
+      "bytes": 38,
+      "sha256": "6c9088ecf36586f127add4520d15f4f8c78d602ab7d022bc9ea17c5bf1d2cf97"
+    },
+    "docs/project/fixtures/c3-deployment/invalid/float.toml": {
+      "bytes": 58,
+      "sha256": "80ad68c77f32b788841b97fd70876001710c59ddc5137d353690e3d65259a2f1"
+    },
+    "docs/project/fixtures/c3-deployment/invalid/future-feature.toml": {
+      "bytes": 69,
+      "sha256": "3d5fa279b6aa660a9627e423f1fe5749feee3043510c412a45f93c5120dd5771"
+    },
+    "docs/project/fixtures/c3-deployment/invalid/future-provider.toml": {
+      "bytes": 63,
+      "sha256": "b3ae3f934fab408079e69bed84223689afe8b4d6429db98ceedcf6e0a7932778"
+    },
+    "docs/project/fixtures/c3-deployment/invalid/inline-secret.toml": {
+      "bytes": 107,
+      "sha256": "6ca6ac59e075f473fe1fb3bb3ea2421db6b76216c10bf3c4c3c33962d3d2e42e"
+    },
+    "docs/project/fixtures/c3-deployment/invalid/list-operation.toml": {
+      "bytes": 119,
+      "sha256": "1e15e562a75e24db5e4b1138ced8620da99ba0bcce3771fcf9a1fe3061cd31f3"
+    },
+    "docs/project/fixtures/c3-deployment/invalid/old-proposal.toml": {
+      "bytes": 180,
+      "sha256": "7cec0d348e7e7201e380d06158aa96d6075a921c939111d64d69143ba4af4dfb"
+    },
+    "docs/project/fixtures/c3-deployment/invalid/override-permission.toml": {
+      "bytes": 99,
+      "sha256": "a022134f626ed31372108d1fd074363cee72233b6f29006b668783928b7aeaa7"
+    },
+    "docs/project/fixtures/c3-deployment/invalid/secret-destination.toml": {
+      "bytes": 99,
+      "sha256": "4be570075c5e07ba4cc5cc65d3a005df4c42d0d8f26fb93fbf3a16fb4fc58cc2"
+    },
+    "docs/project/fixtures/c3-deployment/invalid/type.toml": {
+      "bytes": 58,
+      "sha256": "2fb31e7859aeb21848120d8b4195fa49a27970baae2d47a92910791860c97cf7"
+    },
+    "docs/project/fixtures/c3-deployment/invalid/unknown-option.toml": {
+      "bytes": 53,
+      "sha256": "7958ba164e04f7b150201f72b68c336f7f635216666f6fcb50d1c8258ba0005d"
+    },
+    "docs/project/fixtures/c3-deployment/invalid/version.toml": {
+      "bytes": 19,
+      "sha256": "a2e85c3a3d4a7038836629ac100a3c647449e093309387e04b1c7c7e5151ca29"
+    },
+    "docs/project/fixtures/c3-deployment/modules/base.toml": {
+      "bytes": 544,
+      "sha256": "33b0094873bfbf0144f4a02dee940cc8c38be50c461334f3accbebe47c9f4ad4"
+    },
+    "docs/project/fixtures/c3-deployment/production.resolved.json": {
+      "bytes": 21802,
+      "sha256": "2fa5ddc2a79c2009f08e302007fd3e6a5b8fb825617bdd58160d76899d5dd2cd"
+    },
+    "docs/project/fixtures/c3-deployment/production.toml": {
+      "bytes": 915,
+      "sha256": "322c4c22ebae65114635d78710d8dd2641b06206c2e337289f34922f626b47f5"
+    },
+    "docs/project/fixtures/c3-open-responses/.gitattributes": {
+      "bytes": 231,
+      "sha256": "95acf838925898452562c79fd8db15136478a28e37958efa28f7b597943ddfe2"
+    },
+    "docs/project/fixtures/c3-open-responses/README.md": {
+      "bytes": 2592,
+      "sha256": "6af44240768e95344764a0712910bbaf30b91da18601dbddf8329a00b4e83560"
+    },
+    "docs/project/fixtures/c3-open-responses/audit.mjs": {
+      "bytes": 14697,
+      "sha256": "d3936f419f256305b5ec4e7f97da6585943f92697f2d2c5980cf7d7f0691a2ea"
+    },
+    "docs/project/fixtures/c3-open-responses/deployment.proposed.toml": {
+      "bytes": 533,
+      "sha256": "c7725398ad80051ce99484dbd3df86bc345cef8e424fc17757543ba2470af2c2"
+    },
+    "docs/project/fixtures/c3-open-responses/profile.json": {
+      "bytes": 1254,
+      "sha256": "19ad7443e0ca8f029f462d813662a5828163e20cdb4675d469811fd0387145eb"
+    },
+    "docs/project/fixtures/c3-open-responses/roundtrip.json": {
+      "bytes": 39936,
+      "sha256": "19d59198aa4561fef6b150b5a39b6f8cbd514f85c8262614527d8df9c524a004"
+    },
+    "docs/project/fixtures/c3-open-responses/terminals.json": {
+      "bytes": 11840,
+      "sha256": "2766e23aea73f629e881b6a83a688004c92dd44201f11513b5a9ebf2dab04a8b"
+    },
+    "docs/project/fixtures/c3-open-responses/turn-1.sse": {
+      "bytes": 6644,
+      "sha256": "8cf6cf1365fb9939aea41b30cdff2082d9c3ff18e1129730a7c526f2e2245abf"
+    },
+    "docs/project/fixtures/c3-open-responses/turn-2.sse": {
+      "bytes": 5950,
+      "sha256": "71f0a301c5f8854ff682a7e84f072bf76ed9971599c8c9699f4bf0db35391151"
+    },
+    "docs/project/fixtures/c3-open-responses/turn-3.sse": {
+      "bytes": 5902,
+      "sha256": "37a79af07764c128d36f7349d8fdfd8cb1587fa28458763f8907b8505a0917f5"
+    },
+    "docs/project/fixtures/c3-open-responses/upstream-pin.json": {
+      "bytes": 1301,
+      "sha256": "0fbfb813642e7e6642820ca3cf3bbf7b87d06e493d2a382ac097bdb5a674e313"
+    },
+    "docs/project/fixtures/c3-open-responses/upstream/LICENSE": {
+      "bytes": 11356,
+      "sha256": "43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1"
+    },
+    "docs/project/fixtures/c3-open-responses/upstream/compliance-tests.ts": {
+      "bytes": 50598,
+      "sha256": "63b5e6595ac831ee74b8e887af76c28d69aee8e2ec7d9e99dc688eec4bccb7fb"
+    },
+    "docs/project/fixtures/c3-open-responses/upstream/openapi.json": {
+      "bytes": 138849,
+      "sha256": "d598753c3a86fd8a2434828fe39dcc8786a7a694bbe46080a0d24c9fa40e72df"
+    },
+    "docs/project/fixtures/c3-open-responses/upstream/specification.mdx": {
+      "bytes": 46026,
+      "sha256": "a7a9e3848722b11feaea51df62233ac7b676b6dda42007d9fde02d41dd22aa75"
+    },
+    "docs/project/fixtures/c3-open-responses/upstream/sse-parser.ts": {
+      "bytes": 8167,
+      "sha256": "9a709fb5e4272a61914bd5e309fc5c88b098de98276420598b9b648cce63e76d"
+    },
+    "docs/project/schemas/deployment-defaults-v1.json": {
+      "bytes": 2983,
+      "sha256": "9c98b73ed427546ea317eac8730a0dd6b2b15642baa0e126aae12b10c856a11a"
+    },
+    "docs/project/schemas/deployment-v1.schema.json": {
+      "bytes": 79581,
+      "sha256": "7561c544e4eff77ae6dc0fd26ebc6e016d71e3d5b8a5ad4002129c3d87ede490"
+    },
+    "docs/project/schemas/resolved-deployment-v1.schema.json": {
+      "bytes": 10438,
+      "sha256": "a7e62a145a3c53f10ac3af0e706eeacd5db62145258ad151038c7e0d0adb6853"
+    },
+    "docs/protocol-compatibility.json": {
+      "bytes": 4208,
+      "sha256": "8b25f5ad42267aacb1299e64a1a381543487d114f72a336f0c5d9ee4c47c8109"
+    },
+    "node_modules/@agentclientprotocol/sdk/schema/schema.json": {
+      "bytes": 370113,
+      "sha256": "7f77702b34e0a0558e77220e9007bf8ee161a976bb8ac5021aba1b7e7b2c5708"
+    },
+    "tests/a2a-boundaries.test.ts": {
+      "bytes": 8976,
+      "sha256": "4b0ec592c23740b11865e7050573adf11cfe4bc1ba41a8693a91a7a718e45794"
+    },
+    "tests/a2a-supervisor.test.ts": {
+      "bytes": 7569,
+      "sha256": "c5d7f6545d9d28c2f3c929201c8e3fe7dd2836ee95248d822c888701294e8d5a"
+    },
+    "tests/acp.test.ts": {
+      "bytes": 55006,
+      "sha256": "bfb646e5e663ddf02f2ae6975c4e0bf8d85ca287c14bfe9b1ea598660a67b465"
+    },
+    "tests/compatibility.test.ts": {
+      "bytes": 11151,
+      "sha256": "9aa05cb2299d1ab241084ee3845d4ed927cf4b922ad8077cf4ec557e4da05fa6"
+    },
+    "tests/deployment.test.ts": {
+      "bytes": 27271,
+      "sha256": "8919469a436e7672be088a7b3858cbc9678152cc35fd64bf04a17d0650cf49ac"
+    },
+    "tests/fixtures/a2a/README.md": {
+      "bytes": 3131,
+      "sha256": "25be85086b44d2152ab9c2fda2a7792c516cf7307e3c88dfbf208902c60b89b3"
+    },
+    "tests/fixtures/a2a/assembly.json": {
+      "bytes": 1212,
+      "sha256": "93a18d0d42ef53f5dc9d0bb42927c5c8570225f30a639f0055b7352f01446dc8"
+    },
+    "tests/fixtures/a2a/boundary_server.py": {
+      "bytes": 2226,
+      "sha256": "cbd4839f7bf48fc204031c1e51eea9a5473ac619f30e559b37909db3e88a1a2a"
+    },
+    "tests/fixtures/a2a/card.json": {
+      "bytes": 726,
+      "sha256": "ba04b0258285985be7120df725577b3cf998aaa4b7788caaafafd495cdb194bf"
+    },
+    "tests/fixtures/a2a/generate_vectors.py": {
+      "bytes": 4642,
+      "sha256": "28867b8582838d45c244dfc589fcbfdeea0225978d3c57cd2196c8d037f60e19"
+    },
+    "tests/fixtures/a2a/lock.json": {
+      "bytes": 1003,
+      "sha256": "e06d8b2f23e656c30c8ce7e2aab0f41bf2ed8812a40174e7f0edf0299d60c905"
+    },
+    "tests/fixtures/a2a/requirements.txt": {
+      "bytes": 867,
+      "sha256": "e9cb4f3ae831c0df644e42eeff4ec4b90f54ab9ba61cde2c202b394d9255becb"
+    },
+    "tests/fixtures/a2a/server.py": {
+      "bytes": 1301,
+      "sha256": "531ea03c49f0792425f11f190b7e820d7b132d869d4104cc49808313e7f61bcf"
+    },
+    "tests/fixtures/a2a/telemetry_server.py": {
+      "bytes": 3654,
+      "sha256": "e09c19c3cba1ddccc9412e6e4b471cd65fc3409b36f1fe4c0a9062f550bcdc56"
+    },
+    "tests/fixtures/a2a/wire.json": {
+      "bytes": 4157,
+      "sha256": "7b06e7c7aa4c89a75540491e265a0ed60a18bda7f2b4b93312c53a406c4e5a05"
+    },
+    "tests/fixtures/a2a/wire_server.py": {
+      "bytes": 4463,
+      "sha256": "5379d96bf7734b120842602efdc39305b54d2d07c1855eb3859429b9228ea19e"
+    },
+    "tests/fixtures/mcp/README.md": {
+      "bytes": 1257,
+      "sha256": "2559879594dfcbe42817a57177eb08bc19b9d7c6594363f38ed32b5075e0dd80"
+    },
+    "tests/fixtures/mcp/adversarial.py": {
+      "bytes": 3200,
+      "sha256": "5c2fd4442e51e7c51aded9576fb40219aa3fb2f5ad1ccd8c0dcb72549718198f"
+    },
+    "tests/fixtures/mcp/http_fault_server.py": {
+      "bytes": 3275,
+      "sha256": "3be0faa2ef6359b0a7a62f8868daaf3e88071d5b32a8b2057a9c7b3949ffaebe"
+    },
+    "tests/fixtures/mcp/http_server.py": {
+      "bytes": 2738,
+      "sha256": "67edbaa38266408088ab60808932dc2aba6f4ec9729049f4567157d2ca590a1a"
+    },
+    "tests/fixtures/mcp/requirements.txt": {
+      "bytes": 518,
+      "sha256": "6f53b3b1223fc59ce66d1c7d22dcff7b07caf520fe2c8d25c07ac0ba1f767850"
+    },
+    "tests/fixtures/mcp/server.py": {
+      "bytes": 1149,
+      "sha256": "2982178d395631b984d172cb7383167c8a41fd37f500c52b59280ae68e8bd9ad"
+    },
+    "tests/mcp.test.ts": {
+      "bytes": 29385,
+      "sha256": "832d0deec86e3f9dddb72f920e6403887fde8dd5383c7eaa96295094297f9b38"
+    },
+    "tests/open-responses.test.ts": {
+      "bytes": 29944,
+      "sha256": "5be55c356bad24023b7000eac763f9d9fdc40d5405518613d3a0bc7b7c9f073d"
+    },
+    "tests/output-repair.test.ts": {
+      "bytes": 7673,
+      "sha256": "5af04144cebe1351257544abb44bf11a9ba73b055179db5ac6c07ecf366fbd8e"
+    },
+    "tests/output-validation.test.ts": {
+      "bytes": 10963,
+      "sha256": "6dfc82db22c360b4501bd87cea9cbe9aae62df7355c4fa66b71d15345e68cb51"
+    },
+    "tests/skills.test.ts": {
+      "bytes": 12624,
+      "sha256": "da82f9885085b9539bb1576068830d71d0a034a084ca18895869fd9409d34099"
+    }
+  }
+}

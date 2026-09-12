@@ -160,7 +160,7 @@ ${restricted ? `[options.shell.commands]\ndefault="deny"\nallow=[{id="measure.pr
           onModelAttempt: () => { routeNotifications++; },
           onUpdate: ({ update }) => { if (deliveredAt === undefined && update.sessionUpdate === 'agent_message_chunk') deliveredAt = performance.now(); },
         }, async cx => {
-          await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v1': true, 'pablo/model-route-v1': routeEvents, 'pablo/task-v1': structured, 'pablo/output-v1': structured, 'pablo/output-repair-v1': repair } } });
+          await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v1': true, 'pablo/v2': true, 'pablo/model-route-v1': routeEvents, 'pablo/task-v1': structured, 'pablo/task-v2': structured, 'pablo/output-v1': structured, 'pablo/output-repair-v1': repair } } });
           const { sessionId } = await cx.request('session/new', { cwd, mcpServers: [] });
           const result = measuredOutcome(await cx.request('session/prompt', { sessionId, prompt: [{ type: 'text', text: firstDeltaTask }] }));
           assert(result.status === 'completed' && result.output === firstOutput);
@@ -176,7 +176,7 @@ ${restricted ? `[options.shell.commands]\ndefault="deny"\nallow=[{id="measure.pr
           onModelAttempt: () => { routeNotifications++; },
           onUpdate: ({ update }) => { if (firstText === undefined && update.sessionUpdate === 'agent_message_chunk') firstText = performance.now(); },
         }, async cx => {
-          const init = await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v1': true, 'pablo/model-route-v1': routeEvents, 'pablo/task-v1': structured, 'pablo/output-v1': structured, 'pablo/output-repair-v1': repair } } });
+          const init = await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v1': true, 'pablo/v2': true, 'pablo/model-route-v1': routeEvents, 'pablo/task-v1': structured, 'pablo/task-v2': structured, 'pablo/output-v1': structured, 'pablo/output-repair-v1': repair } } });
           assert.equal(init.protocolVersion, 1); initializedAt = performance.now();
           // Idle after initialize, before session/prompt or provider creation.
           await delay(50);
@@ -210,7 +210,7 @@ ${restricted ? `[options.shell.commands]\ndefault="deny"\nallow=[{id="measure.pr
         onModelAttempt: () => { routeNotifications++; },
         onUpdate: ({ update }) => { if (firstText === undefined && update.sessionUpdate === 'agent_message_chunk') firstText = performance.now(); },
       }, async cx => {
-        await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v1': true, 'pablo/model-route-v1': routeEvents, 'pablo/task-v1': structured, 'pablo/output-v1': structured, 'pablo/output-repair-v1': repair } } });
+        await cx.request('initialize', { protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v1': true, 'pablo/v2': true, 'pablo/model-route-v1': routeEvents, 'pablo/task-v1': structured, 'pablo/task-v2': structured, 'pablo/output-v1': structured, 'pablo/output-repair-v1': repair } } });
         for (let index = 0; index < Math.min(40, count - base) + 5; index++) {
           const { sessionId } = await cx.request('session/new', { cwd, mcpServers: [] });
           requestTimes = []; firstText = undefined; routeNotifications=0;

@@ -126,9 +126,11 @@ ordinary terminal lifecycle.
 Native `skill.activated` carries the activation record. Instruction content is
 absent unless native capture is explicitly enabled. CLI text mode reports the
 qualified identity on stderr; JSON mode retains one terminal envelope. ACP clients
-opting into both `pablo/v1` and `pablo/skills-v1` receive `_pablo/skill` with native
+opting into both `pablo/v2` and `pablo/skills-v1` receive `_pablo/v1/skill` with native
 correlation and capture-gated instructions. Metadata-only resource events omit
 text and the requested resource path. OTel records activation count/catalog/body
 bytes on the run and resource digest/bytes on the tool span, never bodies or
 resource content. Native instruction digests and tool resource digests distinguish
 the loaded sources without inventing token usage.
+
+C3.33 migration: current native/task revisions are `c3.33`. Frozen C2 ACP remains a separate v1 projection for unconfigured tasks; configured C3 requires v2 or generic ACP. See [ACP negotiation](../../acp.md).

@@ -32,3 +32,5 @@ pub use tool::{Tool, ToolRegistry};
 pub mod output;
 
 pub mod mcp;
+#[cfg(test)]
+mod protocol_properties;

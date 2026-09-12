@@ -35,7 +35,7 @@ export async function a2aTelemetry(endpoint:string,mode:'negotiated'|'generic',b
     const args=['--config',entry,'--bind',`workspace=${cwd}`,'--fixture-endpoint',gateway.url,'--fixture-a2a-endpoint',`peer=${rpc}`];
     let task:any;
     await withPablo({binary,args,env:cleanEnv()},async cx=>{
-      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true,'pablo/task-v1':true}}});const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});task=taskOf(await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'PRIVATE_ROOT_CONTEXT'}]}));
+      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true,'pablo/task-v2':true}}});const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});task=taskOf(await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'PRIVATE_ROOT_CONTEXT'}]}));
     });
     assert.equal(task.outcome.status,'completed');assert(snapshot);assert.equal(snapshot.remote.remote_reported_usage.totalTokens,'20');
     const trace=await readFile(join(cwd,`trace-${task.session_id}.jsonl`),'utf8');const events=trace.trim().split('\n').map(x=>JSON.parse(x));

@@ -58,11 +58,11 @@ try {
     },
   }, async cx => {
     const init = await cx.request('initialize', {
-      protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v1': true } },
+      protocolVersion: 1, clientCapabilities: { _meta: { 'pablo/v2': true } },
       clientInfo: { name: 'pablo-live-acceptance', version: 'c1.4' },
     });
     assert.equal(init.protocolVersion, 1);
-    assert.equal(init.agentCapabilities?._meta?.['pablo/v1'], true);
+    assert.equal(init.agentCapabilities?._meta?.['pablo/v2'], true);
     const { sessionId } = await cx.request('session/new', { cwd: workspace!, mcpServers: [] });
     return cx.request('session/prompt', {
       sessionId, prompt: [{ type: 'text', text:
@@ -119,14 +119,14 @@ try {
   assert.deepEqual(last.outcome.usage, outcome.usage);
   let previous = 0;
   for (const notification of updates) {
-    const meta = notification._meta?.['pablo/v1'] as any;
+    const meta = notification._meta?.['pablo/v2'] as any;
     assert(meta.seq_start > previous && meta.seq_end >= meta.seq_start);
     previous = meta.seq_end;
     const native = records.find(e => e.seq === meta.seq_end);
     assert(native);
     for (const field of ['run_id', 'session_id', 'trace_id', 'span_id', 'trace_flags']) assert.equal(meta[field], native[field]);
   }
-  const terminal = response._meta?.['pablo/v1'] as any;
+  const terminal = response._meta?.['pablo/v2'] as any;
   assert.equal(terminal.trace_id, last.trace_id);
   assert.equal(terminal.run_id, last.run_id);
   assert(!traceRaw.includes(marker), 'native trace redacts evidence');
@@ -157,7 +157,7 @@ try {
 } catch (error) {
   // Never print SDK errors, assertions, model output, HTTP bodies, or stderr.
   // Only allow the runtime's closed failure fields into a diagnostic summary.
-  const native = error instanceof RequestError ? (error.data as any)?.['pablo/v1']?.outcome : undefined;
+  const native = error instanceof RequestError ? (error.data as any)?.['pablo/v2']?.outcome : undefined;
   const code = ['provider_rejected', 'provider_transport', 'malformed_stream'].includes(native?.code) ? native.code : undefined;
   console.error(JSON.stringify({ result: 'failed', stage, code, trace: relative(root, trace) }));
   process.exitCode = 1;

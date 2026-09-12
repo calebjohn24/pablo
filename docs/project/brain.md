@@ -33,11 +33,8 @@ The user selected `google/gemini-3.8-flash` for both CLI and ACP. The exact iden
 ### D015 — Call-count budgets are opt-in
 The user requested no default tool budget. Default both model and tool call counts to unlimited so the former four-model-call ceiling cannot silently replace the removed two-tool ceiling. Hosts use optional `RunLimits` counts; CLI/ACP expose `--max-tool-calls` and `--max-model-calls`. Zero disables those calls. Explicit caps remain hard limits, with a provider hint requesting a final answer when no further tool result can be consumed. Timeouts, memory/transport bounds, and cancellation remain separate. See [runtime limits](../runtime.md).
 ### D016 — Use generous execution and transport capacities
-
 The user asked for generous timeouts and sizes before committing C1.3. Defaults are one hour per run, 15 minutes per shell, 1 MiB input/arguments, 8 MiB tool results, 4 MiB model output, 32 MiB context, 65,536 requested output tokens, one million events, and 256 MiB native traces. Increase gateway and ACP capacities together so protocol framing and escaping do not impose the old smaller caps. Explicit run/tool timeout overrides accept up to 24 hours; cancellation and the separate short cleanup allowances remain. See [runtime limits](../runtime.md) and [ACP transport bounds](../acp.md#transport-bounds-and-ownership).
-
 ### D017 — Keep Collector export owned, bounded and separate from task content
-
 C1.5 shares one standalone SDK setup across CLI/ACP, using the pinned OTLP 0.32.0 exporter and bounded SDK batch processor. A dedicated current-thread executor lets shutdown cancel HTTP/retry work before the two-second deadline and join the batch thread without blocking the model loop. Adapt the pinned SDK's service-name precedence and overly broad retry classification; sanitize diagnostics and count losses, including partial rejection. Incoming context uses the existing negotiated `pablo/v1` ACP namespace (stable ACP has no dedicated fields), CLI flags, or explicit host OTel context. Baggage has an empty allowlist. The real Collector 0.160.0 proof checks native/span IDs and timestamps without a paid provider. See [configuration and ownership](../telemetry.md) and [evidence](evidence/c1.5.md).
 
 ### D018 — C1 acceptance establishes scoped baselines, not release ceilings
@@ -198,3 +195,6 @@ C3.31 doctor projects existing configuration/provenance and private credential p
 
 ### D059 — Versioned presets share one configured host lifecycle
 C3.32 ships portable base/production/development sources, external credential references, stable render identities and explicit migration guidance. G04 runs all subsystems through CLI, ACP and direct Runtime embedding with the existing root owner, preserving exact accounting, task-relevant compaction, write policy and joined cleanup. Mutable options are inventoried separately from fixed host callbacks/platform/protocol invariants so presets cannot promise nonexistent knobs. See [G04 evidence](evidence/c3.32-g04.md) and [bundle](../../presets/v1/README.md).
+
+### D060 — Negotiate C3 metadata independently of frozen C2
+C3.33 assigns pablo/v2 and task-v2 to C3 metadata and c3.33 native events/task results. Frozen C2 v1 remains available for unconfigured tasks; configured C3 requests require explicit migration before work. Versioned custom methods and project-controlled schema URIs prevent incompatible wire reuse. See [ACP contract](../acp.md) and [registry](../acp-extensions.json).

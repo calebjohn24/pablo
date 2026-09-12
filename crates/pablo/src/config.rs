@@ -22,7 +22,7 @@ pub struct Options {
     pub no_filesystem: bool,
     pub allow_write: bool,
     policy_path: Option<PathBuf>,
-    output_schema_path: Option<PathBuf>,
+    pub(crate) output_schema_path: Option<PathBuf>,
     skills: Vec<String>,
     pub traceparent: Option<String>,
     pub tracestate: Option<String>,

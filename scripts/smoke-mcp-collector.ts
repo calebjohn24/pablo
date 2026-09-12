@@ -74,9 +74,9 @@ ${mode==='stdio'?`transport="stdio"\ncommand=${JSON.stringify(python)}\nargs=[${
       const env={...cleanEnv(),MCP_TOKEN:mode==='stdio'?'synthetic-mcp-token':'synthetic-http-token',EXPORTER_TOKEN:'x-fixture=synthetic-exporter-private',AI_GATEWAY_API_KEY:'synthetic-provider-private'};
       const cli=await exec(binary,['run','Read evidence','--traceparent',traceparent,...args],{cwd:workspace,env,timeout:10000});assert.equal(cli.stdout.trim(),'Verified.');contexts.push(JSON.parse(await readFile(join(workspace,'context.json'),'utf8')));
       await withPablo({binary,args,env},async cx=>{
-        await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true}}});
+        await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true}}});
         const {sessionId}=await cx.request('session/new',{cwd:workspace,mcpServers:[]});
-        const result=outcomeOf(await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'Read evidence'}],_meta:{'pablo/v1':{traceparent}}}));assert.equal(result.status,'completed');
+        const result=outcomeOf(await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'Read evidence'}],_meta:{'pablo/v2':{traceparent}}}));assert.equal(result.status,'completed');
         contexts.push(JSON.parse(await readFile(join(workspace,'context.json'),'utf8')));
       });
       for(const name of await readdir(workspace))if(/^[0-9a-f-]+\.jsonl$/.test(name))events.push(...(await readFile(join(workspace,name),'utf8')).trim().split('\n').map(line=>JSON.parse(line)));

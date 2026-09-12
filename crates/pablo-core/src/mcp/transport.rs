@@ -170,6 +170,21 @@ where
 mod tests {
     use super::*;
     #[tokio::test]
+    async fn k01_bounded_sdk_frame_mutations_always_settle_within_owned_memory() {
+        let seed = b"{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n";
+        for bytes in crate::protocol_properties::mutations(seed) {
+            let mut transport =
+                BoundedTransport::new(std::io::Cursor::new(bytes), tokio::io::sink());
+            let result = transport.receive().await;
+            assert!(transport.buffer.len() <= MAX_FRAME_BYTES);
+            if result.is_some() {
+                assert!(!transport.bounds.failed());
+            }
+            transport.close().await.unwrap();
+            assert!(transport.cancellation.is_cancelled());
+        }
+    }
+    #[tokio::test]
     async fn framing_handles_fragmentation_and_rejects_unterminated_overflow() {
         let (host, mut peer) = tokio::io::duplex(8192);
         let (reader, writer) = tokio::io::split(host);

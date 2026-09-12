@@ -54,12 +54,12 @@ test('configured CLI and ACP use one lifecycle, identical identity and synthetic
     assert.equal(JSON.parse(cli.stdout).outcome.output,'configured answer');
     let identity:unknown;
     await withPablo({binary,args,env},async cx=>{
-      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true}}});
+      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true}}});
       const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});
       const response=await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'synthetic identical input'}]});
       const outcome=outcomeOf(response); assert.equal(outcome.status,'completed');
       assert(outcome.status==='completed'); assert.equal(outcome.output,'configured answer');
-      identity=(response._meta?.['pablo/v1'] as any).deployment;
+      identity=(response._meta?.['pablo/v2'] as any).deployment;
     });
     assert.deepEqual(identity,{schema_version:1,contract_revision:'c3.26',fingerprint:expected});
     assert.equal(seen.length,2); assert.deepEqual(seen[0],seen[1]);
@@ -99,7 +99,7 @@ test('legacy and configured CLI and ACP read beyond the former filesystem file c
       const cli=await invoke(['run','Read evidence',...args,...(configured?[]:['--workspace',cwd,'--json'])],env);
       assert.equal(cli.code,0,cli.stderr); assert.equal(JSON.parse(cli.stdout).outcome.status,'completed');
       await withPablo({binary,args,env},async cx=>{
-        await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true}}});
+        await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true}}});
         const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});
         const result=await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'Read evidence'}]});
         assert.equal(outcomeOf(result).status,'completed');
@@ -223,17 +223,17 @@ test('ACP keeps active policy snapshot and applies edits only to later tasks', {
     await writeFile(file,initial);await writeFile(join(cwd,'evidence.txt'),'snapshot evidence');
     const identities:string[]=[];
     await withPablo({binary,args:['--config',file,'--bind',`workspace=${cwd}`,'--fixture-endpoint',gateway.url+'/v1/chat/completions'],env:cleanEnv()},async cx=>{
-      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true}}});
+      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true}}});
       const first=await cx.request('session/new',{cwd,mcpServers:[]});
       const active=cx.request('session/prompt',{sessionId:first.sessionId,prompt:[{type:'text',text:'Read evidence'}]});
       await arrived.promise;
       await writeFile(file,initial+'\n[options.policy.tools]\ndefault="allow"\ndeny=[{id="later.deny",value="fs.read"}]\n');
       release.resolve();const response=await active;assert.equal(outcomeOf(response).status,'completed');
-      identities.push((response._meta!['pablo/v1'] as any).deployment.fingerprint);
+      identities.push((response._meta!['pablo/v2'] as any).deployment.fingerprint);
       const second=await cx.request('session/new',{cwd,mcpServers:[]});
       const denied=await cx.request('session/prompt',{sessionId:second.sessionId,prompt:[{type:'text',text:'Read evidence'}]});
       assert.equal(outcomeOf(denied).status,'policy_denied');
-      identities.push((denied._meta!['pablo/v1'] as any).deployment.fingerprint);
+      identities.push((denied._meta!['pablo/v2'] as any).deployment.fingerprint);
     });
     assert.notEqual(identities[0],identities[1]);assert.equal(requests,3);
   }finally{release.resolve();await gateway.close();await rm(cwd,{recursive:true,force:true});}
@@ -254,7 +254,7 @@ test('configured startup and session errors are bounded and do not admit a run',
     // Startup validation has no real session; a file named startup.jsonl must not collide.
     await writeFile(join(cwd,'startup.jsonl'),'existing evidence');
     await withPablo({binary,args,env:cleanEnv()},async cx=>{
-      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true}}});
+      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true}}});
       await assert.rejects(cx.request('session/new',{cwd:outside,mcpServers:[]}),(error:any)=>error.code===-32602&&JSON.stringify(error).includes('config_'));
       const {sessionId}=await cx.request('session/new',{cwd:child,mcpServers:[]});
       await writeFile(file,base+'\n[options.model]\nunknown="private-invalid-source"');
@@ -281,12 +281,12 @@ test('ACP refreshes physical workspace bindings without changing portable deploy
     const file=join(cwd,'entry.toml');await writeFile(file,preset().replace('[options.filesystem]\nenabled=false','[options.filesystem]\nenabled=true'));
     const identities:string[]=[];
     await withPablo({binary,args:['--config',file,'--bind',`workspace=${link}`,'--fixture-endpoint',gateway.url+'/v1/chat/completions'],env:cleanEnv()},async cx=>{
-      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true}}});
+      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true}}});
       for(let i=0;i<2;i++) {
         if(i===1){await unlink(link);await symlink(roots[1],link);}
         const {sessionId}=await cx.request('session/new',{cwd:roots[i],mcpServers:[]});
         const response=await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'Read evidence'}]});
-        assert.equal(outcomeOf(response).status,'completed');identities.push((response._meta!['pablo/v1'] as any).deployment.fingerprint);
+        assert.equal(outcomeOf(response).status,'completed');identities.push((response._meta!['pablo/v2'] as any).deployment.fingerprint);
       }
     });
     assert.deepEqual(evidence,['workspace-0','workspace-1']);assert.equal(requests,4);assert.equal(identities[0],identities[1]);
@@ -305,10 +305,10 @@ test('production preset admits equivalent CLI ACP and Rust core runs, and reject
     const cli=await invoke(['run','synthetic identical input',...flags,'--fixture-endpoint',endpoint]);
     assert.equal(cli.code,0,cli.stderr);assert.equal(cli.stdout,'configured answer\n');
     await withPablo({binary,args:[...flags,'--fixture-endpoint',endpoint],env:cleanEnv()},async cx=>{
-      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true}}});
+      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true}}});
       const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});
       const response=await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'synthetic identical input'}]});
-      assert.equal(outcomeOf(response).status,'completed');assert.equal((response._meta!['pablo/v1'] as any).deployment.fingerprint,expected.fingerprint);
+      assert.equal(outcomeOf(response).status,'completed');assert.equal((response._meta!['pablo/v2'] as any).deployment.fingerprint,expected.fingerprint);
     });
     const core=fileURLToPath(new URL('../target/debug/examples/measure',import.meta.url));
     const direct=JSON.parse((await exec(core,['http',endpoint,'synthetic identical input',...flags],{env:cleanEnv(),timeout:5000})).stdout);

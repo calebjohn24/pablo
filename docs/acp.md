@@ -10,17 +10,17 @@ cargo build --locked -p pablo
 node examples/acp-client.ts "Read README.md and summarize it." /absolute/workspace
 ```
 
-This command makes a live gateway request using the same privately loaded credential and model defaults as `pablo run`. Extra arguments after the workspace are passed to the executable, for example `--no-shell`, `--model google/gemini-3.8-flash`, `--max-tool-calls 10`, `--max-model-calls 20`, `--timeout 3600`, `--tool-timeout 900`, `--env-file /private/config.env`, or `--trace .pablo/traces/acp.jsonl`. Trace files must be new. For successive tasks in one process, use a per-session path such as `--trace ".pablo/traces/{session_id}.jsonl"`; the generated session ID replaces that placeholder. A fixed path remains exclusive and cannot be reused or overwritten. `--capture-content` requires `--trace`. Credentials are loaded from the invoking directory or the host's explicit file, independently of the session workspace. The reference client forwards Ctrl-C as `session/cancel` and waits for cleanup.
+This command makes a live gateway request using the same privately loaded credential and model defaults as `pablo run`. Extra arguments after the workspace are passed to the executable, for example `--no-shell`, `--model zai/glm-5.3-flash`, `--max-tool-calls 10`, `--max-model-calls 20`, `--timeout 3600`, `--tool-timeout 900`, `--env-file /private/config.env`, or `--trace .pablo/traces/acp.jsonl`. Trace files must be new. For successive tasks in one process, use a per-session path such as `--trace ".pablo/traces/{session_id}.jsonl"`; the generated session ID replaces that placeholder. A fixed path remains exclusive and cannot be reused or overwritten. `--capture-content` requires `--trace`. Credentials are loaded from the invoking directory or the host's explicit file, independently of the session workspace. The reference client forwards Ctrl-C as `session/cancel` and waits for cleanup.
 
 For another ACP host, spawn `target/debug/pablo acp --stdio` with stdin/stdout pipes. The host selects the working directory in `session/new`; `--workspace` is rejected in ACP mode. Diagnostics use stderr, and stdout carries only protocol messages. The current transport supports Unix pipes and sockets; C1.6 verifies macOS and Linux arm64.
 
 ## Session contract
 
-A process admits successive independent in-memory sessions, with one prompt per session and one current session at a time. After the prompt response, `session/new` retires the previous session and creates a fresh task. C1.7 reuses one lazily created worker thread, Tokio executor, provider HTTP client/pool, compiled tool registry and telemetry SDK across those tasks. Each task has its own input, workspace, run/trace identities, cancellation token and outcome; no history is implicitly carried forward. Provider/exporter credentials and process configuration are resolved when their shared setup is first constructed and stay fixed until process exit. `initialize` selects protocol version 1. A client that cannot use the returned version must disconnect. `session/new` requires an existing absolute directory and an empty `mcpServers` list. It canonicalizes that directory and returns a generated session ID. Repeated initialization, replacement of an unprompted or active session, unknown/retired session IDs, and concurrent or repeated prompts are rejected. Session data disappears when the process exits; there is no saved conversation or session loading.
+A process admits successive independent in-memory sessions, with one prompt per session and one current session at a time. After the prompt response, `session/new` retires the previous session and creates a fresh task. C1.7 reuses one lazily created worker thread, Tokio executor, provider HTTP client/pool, compiled tool registry and telemetry SDK across those tasks. Each task has its own input, workspace, run/trace identities, cancellation token and outcome; no history is implicitly carried forward. Provider/exporter credentials and process configuration are resolved when their shared setup is first constructed and stay fixed until process exit. `initialize` selects protocol version 1. A client that cannot use the returned version must disconnect. `session/new` requires an existing absolute directory. Its optional `mcpServers` selection must exactly match host-configured, admitted servers; it cannot introduce new authority. It canonicalizes that directory and returns a generated session ID. Repeated initialization, replacement of an unprompted or active session, unknown/retired session IDs, and concurrent or repeated prompts are rejected. Session data disappears when the process exits; there is no saved conversation or session loading.
 
 Prompts accept text and ACP's baseline resource links. Links become bounded textual references in the task; the adapter does not retrieve their URIs. Images, audio, and embedded context are rejected and their capabilities are false. Prompt text, including rendered links, is limited to 1020 KiB, reserving 4 KiB for the runtime's fixed instructions under its 1 MiB combined input limit. Provider, model, shell capability, deadlines, credential paths, and fixture endpoints come from host configuration, not prompt metadata.
 
-No filesystem/terminal callbacks, permission requests, MCP servers, modes, authentication methods, session management, or other optional ACP behavior is advertised. Shell and [filesystem reads](filesystem.md) are local tools reported through standard ACP tool updates; `--no-shell` and `--no-filesystem` independently remove them from the provider catalog. Unsupported methods return the SDK's `-32601` error; invalid supported requests use `-32602`. Unknown future fields are tolerated by the pinned SDK.
+No filesystem/terminal callbacks, permission requests, modes, authentication methods or persistent session management are advertised. Host-admitted MCP selection supports stdio and HTTP; the process remains an ACP agent and MCP client. Shell and [filesystem reads](filesystem.md) are local tools reported through standard ACP tool updates; `--no-shell` and `--no-filesystem` independently remove them from the provider catalog. Unsupported methods return the SDK's `-32601` error; invalid supported requests use `-32602`. Unknown future fields are tolerated by the pinned SDK.
 
 ## Events and terminal outcomes
 
@@ -34,11 +34,14 @@ No filesystem/terminal callbacks, permission requests, MCP servers, modes, authe
 
 Nonzero shell exits and unsuccessful tools have ACP status `failed`. The runtime still receives the full tool result and may continue according to its existing policy. Native run/model lifecycle events remain in the trace; the adapter does not invent additional ACP update variants for them.
 
-Negotiate the checkpoint-local `pablo/v1` extension by sending `clientCapabilities._meta["pablo/v1"] = true` in `initialize`. The agent advertises the same capability in `agentCapabilities._meta`. [The extension schema](pablo-acp-v1.schema.json) describes its values. This short namespace is a spike contract; a project-controlled URI and release-stable extension naming remain a deliberate release decision.
+Negotiate `pablo/v2` by sending `clientCapabilities._meta["pablo/v2"] = true` in `initialize`. The agent advertises the same capability. The [extension registry](acp-extensions.json) assigns project-controlled documentation URIs, schemas, capability dependencies, bounds, privacy and generic-peer fallbacks. The [v2 schema](pablo-acp-v2.schema.json) describes current metadata.
 
-For negotiated clients, each `session/update` carries `params._meta["pablo/v1"]` containing the native run/session IDs, inclusive `seq_start`/`seq_end`, timestamp, and OTel trace/span identities. Sequence numbers refer to native publication order; gaps are expected for native events without an ACP projection. Coalescing changes neither the native sequence nor its stored trace. Native contract revision `c2.4` includes filesystem results, configured policy and all-outcome accounting; the extension schema retains historical `c1.2` acceptance.
+C3.33 preserves the frozen C2 `pablo/v1` and `pablo/task-v1` contracts for unconfigured tasks. Those clients receive C2 correlation fields and task revision `c2.3`. Configured C3 tasks and output schemas require migration to `pablo/v2` (and `pablo/task-v2` for task results); the server rejects legacy requests before provider work. Combining legacy base metadata with C3 capabilities is rejected during initialize and may be retried with v2. If both base versions are requested, v2 wins. Generic ACP peers remain supported without Pablo metadata. An outcome unavailable in the frozen C2 failure vocabulary becomes a safe generic protocol error rather than an incompatible v1 payload.
 
-Terminal metadata adds the exact typed native `outcome`. Completed, cancelled, policy-denied, output-token-limit, and model/tool-call-limit outcomes map to `end_turn`, `cancelled`, `refusal`, `max_tokens`, and `max_turn_requests`. Timeouts, other limits, and failures use JSON-RPC `-32603` with the same terminal metadata at `error.data["pablo/v1"]`; they never pretend to be `end_turn`. Setup errors occur before run admission and have safe errors without invented run IDs. Generic clients receive standard updates, stop reasons and errors, with no Pablo update/terminal metadata. Usage stays unknown (`null`) when the provider omits it.
+Current task results use `c3.33`, with output-validation and output-repair records present only when configured and negotiated. Native events also use revision `c3.33`; frozen C2 ACP correlation is explicitly projected to native revision `c2.4`. Native JSONL consumers must accept the new revision before consuming C3 fields or variants.
+For negotiated clients, each `session/update` carries `params._meta["pablo/v2"]` containing the native run/session IDs, inclusive `seq_start`/`seq_end`, timestamp, and OTel trace/span identities. Sequence numbers refer to native publication order; gaps are expected for native events without an ACP projection. Coalescing changes neither the native sequence nor its stored trace. Native contract revision `c3.33` includes filesystem results, configured policy, C3 adapters and all-outcome accounting.
+
+Terminal metadata adds the exact typed native `outcome`. Completed, cancelled, policy-denied, output-token-limit, and model/tool-call-limit outcomes map to `end_turn`, `cancelled`, `refusal`, `max_tokens`, and `max_turn_requests`. Timeouts, other limits, and failures use JSON-RPC `-32603` with the same terminal metadata at `error.data["pablo/v2"]`; they never pretend to be `end_turn`. Setup errors occur before run admission and have safe errors without invented run IDs. Generic clients receive standard updates, stop reasons and errors, with no Pablo update/terminal metadata. Usage stays unknown (`null`) when the provider omits it.
 
 `session/cancel` affects only the matching active prompt. It cancels the core token, awaits owned process-group cleanup, drains pending updates, awaits that task's completion, then responds. The idle worker remains available to the next session; cancellation does not poison its token. Wrong-session and idle cancellations have no effect. A cancellation received while the final updates drain still returns ACP `cancelled`, as required by the protocol. If the core already emitted its terminal event, its immutable native outcome remains in metadata (possibly `completed`); use ACP `stopReason` for turn control and the typed outcome for the settled computation. This preserves trace truth without rewriting a completed run. The SDK's request-level `$/cancel_request` also propagates to this token while work is active.
 
@@ -52,7 +55,7 @@ The SDK has unbounded internal channels. The adapter bounds what can enter them:
 - Only **one projected notification** enters the SDK at a time. The forwarder waits for the physical stdout write/flush acknowledgement before sending another; SDK enqueue success is not treated as delivery. Bounded incoming traffic also bounds queued request responses. The write counter remains cumulative across tasks, so later sessions retain the same acknowledgement guarantees. Queue saturation produces one safe stderr diagnostic and blocks the worker until capacity returns.
 - A stdout write/flush stalled for **30 seconds** closes the connection and cancels owned work. An output error, stdin EOF, SIGINT, or SIGTERM likewise cancels, closes the event queue to wake blocked producers, and awaits the runtime worker and telemetry shutdown. The shared SDK stays alive between tasks; its bounded batch processor exports in the background and its two-second shutdown allowance starts when the process closes. The existing shell cleanup allowance still applies. A disconnected peer cannot be promised a terminal protocol response; a writable native trace records the settled lifecycle. Closing stdout alone is detectable on the next write.
 
-Native JSONL and OTel spans originate in the existing runtime. Optional traces retain the CLI's exclusive file creation, private permissions, byte bound and default redaction. Output to the ACP client includes task results and tool arguments by design. OTel content stays off; C1.5 adds opt-in network export and incoming W3C context inside negotiated `session/prompt` metadata `_meta["pablo/v1"]`. Neither pinned stable-v1 schema defines dedicated trace-context fields. See [telemetry](telemetry.md#incoming-context) for the carrier and Collector proof.
+Native JSONL and OTel spans originate in the existing runtime. Optional traces retain the CLI's exclusive file creation, private permissions, byte bound and default redaction. Output to the ACP client includes task results and tool arguments by design. OTel content stays off; C1.5 adds opt-in network export and incoming W3C context inside negotiated `session/prompt` metadata `_meta["pablo/v2"]`. Neither pinned stable-v1 schema defines dedicated trace-context fields. See [telemetry](telemetry.md#incoming-context) for the carrier and Collector proof.
 
 ## Offline verification
 
@@ -74,10 +77,10 @@ npm run smoke:live:acp
 
 This builds the executable and runs the official TypeScript client through initialize/session/prompt against Vercel. The fixture removes inherited gateway keys and `PABLO_FIXTURE_ENDPOINT` from the child environment and passes the absolute root `.env` path to Pablo. Only the executable reads that file, with the usual canonical key/alias support. The harness never reads or sources credentials.
 
-The default profile is `google/gemini-3.8-flash`. To select a previously built binary and optionally override the model:
+The default profile is `zai/glm-5.3-flash`. To select a previously built binary and optionally override the model:
 
 ```sh
-node scripts/smoke-live-acp.ts target/release/pablo google/gemini-3.8-flash
+node scripts/smoke-live-acp.ts target/release/pablo zai/glm-5.3-flash
 ```
 
 The fixture creates a random evidence file in a temporary workspace, then requires one successful shell read followed by a second model call whose answer contains that evidence. It verifies streamed text against the typed outcome, reported usage totals against both model events, ordered ACP/native identities, one terminal response, protocol-only stdout, private redacted trace permissions, shell process/group disappearance and clean ACP exit. It deletes the workspace and writes only a redacted summary plus the native trace under ignored `.pablo/traces`. Assertion and SDK errors are never dumped to the terminal.
@@ -97,28 +100,19 @@ The reference client shows each shell command/cwd and terminal status with exit 
 
 Default run/shell deadlines are one hour/15 minutes. ACP accepts up to 1020 KiB of combined prompt text/resource references, reserving 4 KiB of the core’s 1 MiB input limit for instructions. Larger tool results and terminal answers fit the 32 MiB wire frame, including worst-case JSON escaping of the default 4 MiB model output. Trace capacity is 256 MiB. The short process cleanup and SDK shutdown allowances are independent of task execution deadlines.
 
-C2.3 adds optional `pablo/task-v1: true` alongside `pablo/v1: true` in capability metadata. When both are negotiated, terminal `pablo/v1` metadata contains `task` ([schema](pablo-task.schema.json)) in place of `outcome`; its outcome comes from the same native terminal event. This avoids duplicating potentially 24 MiB of escaped output in the 32 MiB transport frame. Peers negotiating only `pablo/v1` retain `outcome`; generic peers retain standard stop reasons and safe errors. The reference client's `taskOf` validates canonical decimal accounting through u64 and exposes strings for exact `BigInt` conversion. Legacy numeric usage remains for compatibility; the task accounting strings are the exact representation above JavaScript's safe integer range. The envelope version is `c2.3`, independently of native event revision.
+## Task metadata
 
+Negotiate `pablo/task-v2` alongside `pablo/v2` to receive a terminal `task` ([schema](pablo-task.schema.json)) in place of `outcome`. Both come from the same native terminal event. This avoids duplicating potentially 24 MiB of escaped output in the 32 MiB frame. Base-only peers receive `outcome`; generic peers receive standard ACP. `taskOf` validates canonical decimal accounting through u64 for exact `BigInt` conversion. The current task envelope is `c3.33`; the frozen C2 path retains `c2.3` under its separate schema and negotiation.
 
-## C2 extension compatibility review
-
-| Name / capability | Schema and version | Bound and visibility | Generic fallback |
-| --- | --- | --- | --- |
-| `pablo/v1` | Local Draft 2020-12 metadata schema; native `c2.4`, historical revisions accepted | Correlation contains IDs/timestamps; native outcome contains task output. All share the 32 MiB frame limit. Incoming W3C fields are limited to 512 characters each and exclude baggage. | Standard ACP updates, stop reasons and safe errors; no project metadata and no remote parent extraction. |
-| `pablo/task-v1` (requires `pablo/v1`) | Shared task schema `c2.3`; exact u64 accounting strings | Terminal `task` replaces `outcome`, avoiding output duplication; six-times-output plus 8 KiB task bound within the transport frame. Output is client-visible content; counters/IDs are metadata. Native content remains opt-in; OTel stays content-free. | Existing `pablo/v1` peers retain the legacy `outcome`; generic peers retain standard ACP. |
-
-There are no custom methods or alternate lifecycle. The pinned ACP SDK/schema remains authoritative; both legacy and task-negotiated shapes, generic fallback and maximum escaping-heavy output have executable tests. Decimal schemas enforce canonical syntax; the core and reference client additionally enforce the u64 numerical maximum. JSON Schema `format` is annotation-only in the fixture validator, and no network schema resolution is enabled.
-
-The existing short project-prefixed names are retained for development compatibility. No project-controlled DNS URI is claimed. Final namespace ownership/release stability and `pablo doctor` remain explicit release-hardening decisions; C2 acceptance does not silently ratify them or publish a release.
-
+Incoming W3C fields are limited to 512 characters each; baggage is excluded. Task serialization has a six-times-output plus 8 KiB bound within the transport frame. Metadata may contain task output; native trace content remains opt-in and OTel remains content-free. Decimal schemas enforce canonical syntax, with core/client enforcement of the u64 maximum. Fixture schema validators use annotation-only formats and no remote retrieval.
 
 ### Negotiated route attempts
 
-C3.12 adds `pablo/model-route-v1` (requiring `pablo/v1`). Opted-in clients receive
-`_pablo/model_attempt` extension notifications for routed model start/finish events,
-with `sessionId`, native `type` and `pablo/v1` correlation containing `model_route`.
+C3.12 adds `pablo/model-route-v1` (requiring `pablo/v2`). Opted-in clients receive
+`_pablo/v1/model_attempt` extension notifications for routed model start/finish events,
+with `sessionId`, native `type` and `pablo/v2` correlation containing `model_route`.
 The terminal correlation carries the latest selection, including a selected entry
-blocked before dispatch. Standard updates and task schema `c2.3` are unchanged.
+blocked before dispatch. Standard updates and task schema `c3.33` are unchanged.
 See [the attempt contract](project/contracts/c3-model-routes.md#f03-attempt-observability--model-route-v1)
 and the `model_route` definition in the extension schema. Notifications share the
 existing bounded queue and acknowledged physical-write path. Non-opted clients
@@ -126,8 +120,8 @@ receive no new notification method or route metadata.
 
 ### Negotiated compaction
 
-C3.12a adds `pablo/compaction-v1`, requiring `pablo/v1`. Opted-in peers receive
-`_pablo/compaction` notifications for `context.compaction.started` and
+C3.12a adds `pablo/compaction-v1`, requiring `pablo/v2`. Opted-in peers receive
+`_pablo/v1/compaction` notifications for `context.compaction.started` and
 `context.compaction.finished`, with session/type/correlation and a bounded
 `compaction-v1` record. The terminal correlation includes the latest record.
 Notifications share physical-write acknowledgment with ordinary updates.
@@ -137,29 +131,29 @@ otherwise `summary` is null and `summary_bytes` describes its size. Capture requ
 a trace destination, such as `{base="workspace",path="{session_id}.jsonl"}`.
 Private provider continuation is never exposed. Summary deltas do not become agent
 answer chunks. Peers without the capability keep existing shapes; each new session
-has fresh history and compaction allowance. The task schema remains `c2.3`.
+has fresh history and compaction allowance. The task schema remains `c3.33`.
 See [the contract](project/contracts/c3-compaction.md) and the reference client's
 `onCompaction` callback.
 
 ### Negotiated structured output
 
-Clients enable `pablo/output-v1` together with `pablo/v1` and `pablo/task-v1`.
+Clients enable `pablo/output-v1` together with `pablo/v2` and `pablo/task-v2`.
 For schema-enabled tasks, provisional text correlation carries an `unvalidated`
-record; the terminal `c3.13` task carries the final validation status and bounded
+record; the terminal `c3.33` task carries the final validation status and bounded
 diagnostics. The reference client's `structuredOf(response)` parses output only
 when validation succeeded. A local validation failure uses JSON-RPC `-32603` and
 `output_validation_failed` in the terminal task. It makes no repair request.
 
-Legacy task peers retain the `c2.3` envelope, while generic peers receive standard
+Current task peers without the output capability retain the `c3.33` envelope without validation metadata, while generic peers receive standard
 text updates and terminal stop/error behavior. See the
 [J01 contract](project/contracts/c3-output-validation.md) for configuration and bounds.
 
 ### Negotiated output repair
 
 Enable `pablo/output-repair-v1` together with the output, task and base extensions
-to receive `c3.14` tasks and `output_repair` correlation metadata. Configuration
+to receive `c3.33` tasks and `output_repair` correlation metadata. Configuration
 controls repair execution; negotiation controls its projection. Output-only peers
-retain `c3.13` validity, legacy task peers retain `c2.3`, and generic peers keep
+retain `c3.33` validity, current task-only peers retain `c3.33` without output metadata, and generic peers keep
 standard updates and stop/error behavior. A repaired success contains only the
 corrected answer in terminal output, even though both provisional candidates may
 have streamed. `structuredOf(response)` accepts validated repaired output.
@@ -172,9 +166,9 @@ after rechecking authority against its session workspace. Prompt text cannot
 change that selection. `skill.read` uses standard tool updates for selected resource
 reads; scripts remain ordinary shell calls. See the [Skill contract](project/contracts/c3-skills.md#explicit-activation-and-selected-resources-s02).
 
-Clients negotiating both `pablo/v1` and `pablo/skills-v1` receive `_pablo/skill`
+Clients negotiating both `pablo/v2` and `pablo/skills-v1` receive `_pablo/v1/skill`
 notifications for native `skill.activated` events, with `sessionId`, `type`,
-`pablo/v1` correlation, the `skill` activation record, `instructions` and `content_redacted`.
+`pablo/v2` correlation, the `skill` activation record, `instructions` and `content_redacted`.
 Instructions are null unless content capture is enabled. Clients without this
 negotiation receive no activation extension notification. The same bounded event
 queue and physical stdout write acknowledgement apply. Activation setup errors
@@ -196,3 +190,43 @@ the stdio 30-second delivery timeout. Native event and extension metadata encodi
 still follows existing trace contracts; provider HTTP requests still use their
 provider's wire format. C3.21 does not advertise delegation: the
 [child contract](project/contracts/c3-children.md) defines the next checkpoints.
+
+## Registered extensions
+
+The registry bounds apply to every extension. Smaller runtime content limits apply before serialization. Optional capabilities require their listed base capabilities.
+
+### pablo/v1
+
+C2 correlation identifiers and terminal task content; no credentials. Fallback: Standard ACP updates, stop reasons and safe errors. See the [registry](acp-extensions.json) for the schema and dependencies.
+
+### pablo/task-v1
+
+C2 task output and exact accounting. Fallback: Standard ACP terminal response. See the [registry](acp-extensions.json) for the schema and dependencies.
+
+### pablo/v2
+
+Correlation and deployment identities, terminal task content; no credentials. Fallback: Standard ACP updates, stop reasons and safe errors. See the [registry](acp-extensions.json) for the schema and dependencies.
+
+### pablo/task-v2
+
+Task output and exact accounting; c3.33. Fallback: Standard ACP terminal response. See the [registry](acp-extensions.json) for the schema and dependencies.
+
+### pablo/model-route-v1
+
+Route identifiers and bounded attempt status, no credential values. Fallback: Normal model text and terminal outcome. See the [registry](acp-extensions.json) for the schema and dependencies.
+
+### pablo/compaction-v1
+
+Compaction accounting; summary content only with explicit capture-content. Fallback: No custom compaction notifications; normal task result. See the [registry](acp-extensions.json) for the schema and dependencies.
+
+### pablo/skills-v1
+
+Skill identifiers and digests; instruction content only with explicit capture-content. Fallback: No custom activation notifications; standard tool updates. See the [registry](acp-extensions.json) for the schema and dependencies.
+
+### pablo/output-v1
+
+Schema digest and bounded diagnostic paths; no rejected output content. Fallback: Standard ACP outcome without validation metadata. See the [registry](acp-extensions.json) for the schema and dependencies.
+
+### pablo/output-repair-v1
+
+Repair status and counters; no repair feedback content. Fallback: Standard ACP outcome without repair metadata. See the [registry](acp-extensions.json) for the schema and dependencies.

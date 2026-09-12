@@ -15,6 +15,28 @@ fn profile() -> OpenResponsesProfile {
     )
     .unwrap()
 }
+
+#[test]
+fn k01_bounded_sse_mutations_never_escape_adapter_limits_or_panic() {
+    let seed = include_bytes!("../../../../../docs/project/fixtures/c3-open-responses/turn-1.sse");
+    for bytes in crate::protocol_properties::mutations(seed) {
+        let mut decoder = transport::SseDecoder::default();
+        let mut completion = Completion::new(&request(), &profile());
+        for byte in bytes {
+            let frame = match decoder.push(byte) {
+                Ok(Some(frame)) => frame,
+                Ok(None) => continue,
+                Err(_) => break,
+            };
+            if completion
+                .frame(decoder.take_event().as_deref(), &frame)
+                .is_err()
+            {
+                break;
+            }
+        }
+    }
+}
 fn request() -> ModelRequest<'static> {
     ModelRequest {
         model: "fixture-text-tools-v1",

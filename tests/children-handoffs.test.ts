@@ -71,7 +71,7 @@ for(const surface of ['cli','acp'] as const)test(`A04 ${surface}: explicit fan-i
     const entry=join(cwd,'entry.toml');await writeFile(entry,base+'\n[options.children]\nenabled=true\n[options.trace]\npath={base="workspace",path="trace.jsonl"}\n');
     const args=['--config',entry,'--bind',`workspace=${cwd}`,'--fixture-endpoint',gateway.url];
     const task=surface==='cli'?JSON.parse((await promisify(execFile)(binary,['run','ROOT_PRIVATE',...args,'--json'],{env:cleanEnv(),timeout:12000})).stdout):await withPablo({binary,args,env:cleanEnv()},async cx=>{
-      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true,'pablo/task-v1':true}}});
+      await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true,'pablo/task-v2':true}}});
       const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});
       return taskOf(await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'ROOT_PRIVATE'}]}));
     });

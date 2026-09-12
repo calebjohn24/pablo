@@ -57,7 +57,7 @@ F02 covers first failure → second success with no third request, sticky select
 
 C3.12 adds optional `model_route` metadata to routed native `model.started`,
 `model.finished` and `run.finished` events. Legacy runs omit it. The task envelope
-remains the closed `c2.3` contract. Native `c2.4` permits this additive optional
+remains the closed `c3.33` contract. Native `c3.33` permits this additive optional
 metadata; deployment configuration remains `c3.11` because its meaning is unchanged.
 
 The record contains `schema_version: "model-route-v1"`, route and entry names,
@@ -73,9 +73,9 @@ a selected entry is not evidence that a request reached its provider. Admission
 failures such as missing credentials occur before a run and have no attempt ledger.
 
 CLI `--trace` exposes the complete native ledger under either content policy.
-ACP peers negotiate both `pablo/v1` and `pablo/model-route-v1` in capability `_meta`.
-Only those peers receive `_pablo/model_attempt` extension notifications containing
-`sessionId`, native event `type` and `pablo/v1` correlation (including model_route).
+ACP peers negotiate both `pablo/v2` and `pablo/model-route-v1` in capability `_meta`.
+Only those peers receive `_pablo/v1/model_attempt` extension notifications containing
+`sessionId`, native event `type` and `pablo/v2` correlation (including model_route).
 The terminal response carries the latest record in the existing correlation
 metadata. Standard session updates and the task envelope are unchanged. Extension
 notifications use the same bounded queue, physical-write backpressure and shutdown
@@ -87,3 +87,5 @@ reservation or bypass uncertain-delivery opt-in. A provider's explicit NotSent
 opening failure remains refundable. Cancellation/root limits and sink failures
 never authorize a later request. Failed attempts retain one model finish and one
 root outcome when the event sink remains writable.
+
+C3.33 migration: current native/task revisions are `c3.33`. Frozen C2 ACP remains a separate v1 projection for unconfigured tasks; configured C3 requires v2 or generic ACP. See [ACP negotiation](../../acp.md).

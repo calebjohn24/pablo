@@ -77,7 +77,7 @@ test('P02 CLI and reused ACP perform real OpenRouter file reads with stable pref
    const cli=await exec(binary,['run','Read evidence',...args,'--workspace',cwd,'--json'],{env,timeout:5000});stdout+=cli.stdout;stderr+=cli.stderr;tasks.push(JSON.parse(cli.stdout));
    const before=connections.size;
    await withPablo({binary,args,env,onSpawn:child=>{child.stdout.on('data',s=>{stdout+=s;});},onDiagnostic:s=>{stderr+=s;}},async cx=>{
-    await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true,'pablo/task-v1':true}}});
+    await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true,'pablo/task-v2':true}}});
     for(let i=0;i<2;i++){
      const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});
      tasks.push(taskOf(await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'Read evidence'}]})));
@@ -172,9 +172,9 @@ test('P02 OpenRouter errors, malformed accounting and bounded frames fail once w
    assert.deepEqual(task.outcome,{status:'failed',code,delivery:'response_received'});
    assert.equal(task.accounting.model_calls,'1');assert.equal(task.accounting.tool_calls,'0');
    await withPablo({binary,args,env,onSpawn:child=>{child.stdout.on('data',s=>{raw+=s;});},onDiagnostic:s=>{raw+=s;}},async cx=>{
-    await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true,'pablo/task-v1':true}}});
+    await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true,'pablo/task-v2':true}}});
     const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});
-    await assert.rejects(cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'task'}]}),(error:any)=>{assert.equal(error.code,-32603);const acp=error.data['pablo/v1'].task;assert.deepEqual(acp.outcome,task.outcome);assert.deepEqual(acp.accounting,task.accounting);return true;});
+    await assert.rejects(cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'task'}]}),(error:any)=>{assert.equal(error.code,-32603);const acp=error.data['pablo/v2'].task;assert.deepEqual(acp.outcome,task.outcome);assert.deepEqual(acp.accounting,task.accounting);return true;});
    });
    assert.equal(requests-before,2);assert.equal(redirects,0);
    const paths=(await readdir(cwd)).filter(n=>n.startsWith(mode+'-')&&n.endsWith('.jsonl'));assert.equal(paths.length,2);
@@ -207,7 +207,7 @@ test('P02 cancellation drops the OpenRouter stream, preserves completed-call usa
   await withPablo({binary,args,env,onUpdate:async({sessionId,update},cx)=>{
    if(!cancelled&&update.sessionUpdate==='agent_message_chunk'){cancelled=true;await cx.notify('session/cancel',{sessionId});}
   }},async cx=>{
-   await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true,'pablo/task-v1':true}}});
+   await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true,'pablo/task-v2':true}}});
    const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});
    const acp=taskOf(await cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'Read marker'}]}));
    assert.equal(acp.outcome.status,'cancelled');assert.deepEqual(acp.accounting,cli.accounting);await waitUntil(()=>closed===2);
@@ -235,7 +235,7 @@ test('P02 private OpenRouter key failures are isolated from Vercel keys and reje
    const args=['--provider','openrouter','--env-file',file,'--trace',trace];
    await assert.rejects(exec(binary,['run','task',...args,'--workspace',cwd,'--json'],{env,timeout:5000}),(e:any)=>{assert.equal(e.code,2);assert(!(e.stdout+e.stderr).includes('private'));assert((e.stdout+e.stderr).includes('OPENROUTER_API_KEY'));return true;});
    await withPablo({binary,args,env},async cx=>{
-    await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v1':true}}});
+    await cx.request('initialize',{protocolVersion:1,clientCapabilities:{_meta:{'pablo/v2':true}}});
     const {sessionId}=await cx.request('session/new',{cwd,mcpServers:[]});
     await assert.rejects(cx.request('session/prompt',{sessionId,prompt:[{type:'text',text:'task'}]}),(e:any)=>{assert.equal(e.code,-32603);assert.equal(e.data,'runtime setup or execution failed');return true;});
    });

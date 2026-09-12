@@ -16,14 +16,14 @@ pablo demo
 
 Embedded Rust hosts use `Runtime::new(tracer).with_parent_context(context)`. The host passes the OTel context explicitly; the runtime does not read thread-local context. A protocol adapter must first extract a remote context. Each runtime invocation starts its own run span under that supplied parent, with model and tool spans beneath the run. Native root records include the external parent ID; all records reuse SDK IDs and exact lifecycle timestamps.
 
-CLI `run` and `demo` accept `--traceparent VALUE` and optional `--tracestate VALUE`. ACP clients negotiate `clientCapabilities._meta["pablo/v1"] = true`, then send:
+CLI `run` and `demo` accept `--traceparent VALUE` and optional `--tracestate VALUE`. ACP clients negotiate `clientCapabilities._meta["pablo/v2"] = true`, then send:
 
 ```json
 {
   "sessionId": "<session/new result>",
   "prompt": [{ "type": "text", "text": "Inspect the workspace" }],
   "_meta": {
-    "pablo/v1": {
+    "pablo/v2": {
       "traceparent": "00-a123456789abcdef0123456789abcdef-b123456789abcdef-01",
       "tracestate": "pablofixture=parent"
     }

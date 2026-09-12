@@ -1,17 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Pablo single-task results c2.3 / c3.13 structured validation",
+  "title": "Pablo single-task result c3.33",
   "$ref": "#/$defs/task",
   "$defs": {
     "task": {
       "type": "object",
       "properties": {
         "schema_version": {
-          "enum": [
-            "c2.3",
-            "c3.13",
-            "c3.14"
-          ]
+          "const": "c3.33"
         },
         "run_id": {
           "type": [
@@ -141,35 +137,6 @@
       "allOf": [
         {
           "if": {
-            "properties": {
-              "schema_version": {
-                "enum": [
-                  "c3.13",
-                  "c3.14"
-                ]
-              }
-            }
-          },
-          "then": {
-            "required": [
-              "output_validation"
-            ],
-            "properties": {
-              "error": {
-                "type": "null"
-              }
-            }
-          },
-          "else": {
-            "not": {
-              "required": [
-                "output_validation"
-              ]
-            }
-          }
-        },
-        {
-          "if": {
             "required": [
               "output_validation"
             ],
@@ -236,41 +203,6 @@
         },
         {
           "if": {
-            "properties": {
-              "schema_version": {
-                "const": "c3.14"
-              }
-            }
-          },
-          "then": {
-            "required": [
-              "output_repair"
-            ],
-            "properties": {
-              "output_repair": {
-                "properties": {
-                  "status": {
-                    "enum": [
-                      "not_needed",
-                      "succeeded",
-                      "failed",
-                      "blocked"
-                    ]
-                  }
-                }
-              }
-            }
-          },
-          "else": {
-            "not": {
-              "required": [
-                "output_repair"
-              ]
-            }
-          }
-        },
-        {
-          "if": {
             "required": [
               "output_repair"
             ],
@@ -300,6 +232,32 @@
                   },
                   "validation_attempts": {
                     "const": 2
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "output_repair"
+            ]
+          },
+          "then": {
+            "required": [
+              "output_validation"
+            ],
+            "properties": {
+              "output_repair": {
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "not_needed",
+                      "succeeded",
+                      "failed",
+                      "blocked"
+                    ]
                   }
                 }
               }
@@ -717,5 +675,6 @@
         }
       }
     }
-  }
+  },
+  "$id": "https://github.com/calebjohn24/pablo/blob/main/docs/pablo-task.schema.json"
 }
