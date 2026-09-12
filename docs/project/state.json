@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-12T20:38:25.279Z",
+  "updated_at": "2026-09-12T20:42:54.032Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.34",
-  "next_action": "Merge the verified C3.33a TUI follow-up and stop; release rebuilt for user testing. C3.34 packaging remains pending until new user direction.",
-  "latest_log_entry": "LOG-0166",
+  "next_action": "C3.33a TUI fixes merged in PR #37; rebuilt release is ready for user testing. Stop here. C3.34 packaging and later native release gates remain pending until new user direction.",
+  "latest_log_entry": "LOG-0167",
   "checkpoints": [
     {
       "id": "C1.0",
