@@ -33,13 +33,32 @@ node --test --test-concurrency=1 scripts/knowledge-work/benchmark.test.mjs
 
 Every output directory must be new. A repository-local lock prevents two copies of this runner from overlapping. Do not run builds, tests or other benchmarks during retained measurements. The lock does not coordinate unrelated programs. Interrupted or incomplete result directories remain available for diagnosis; a force-killed controller can leave a lock, which must only be removed after verifying its processes ended.
 
-The runner does **not** load `.env`, source shell profiles or read authentication files. Pablo privately loads the repository `.env` through its native `--env-file`. Codex and Claude use their saved login. Direct Pi and Ori resolve their own credentials or an inherited `OPENROUTER_API_KEY`. Configure authentication using each client's documented workflow; never put keys in CLI arguments, benchmark config, or checked-in evidence. A private `.env` supplied for Pablo does not automatically authenticate the others.
+By default the runner does **not** load `.env`, source shell profiles or read authentication files. Explicit credential-reuse flags described below allow private key extraction for the user-authorized comparison. Pablo privately loads the repository `.env` through its native `--env-file`. Codex and Claude use their saved login. Direct Pi and Ori resolve their own credentials or an inherited `OPENROUTER_API_KEY`. Configure authentication using each client's documented workflow; never put keys in CLI arguments, benchmark config, or checked-in evidence. A private `.env` supplied for Pablo does not automatically authenticate the others.
 
 Pinned pilot installations: Pi `@earendil-works/pi-coding-agent@0.85.1` (npm `--ignore-scripts`, isolated prefix); Ori `0.14.3+6e62568`, macOS arm64 release SHA-256 `116131f0b0c9c7f2f0b8be5dbac20ef1f8090bc05f43beb26a7c9816caa93782`. Override executable locations with `PABLO_KNOWLEDGE_PABLO_BINARY`, `PABLO_KNOWLEDGE_CODEX_BINARY`, `PABLO_KNOWLEDGE_CLAUDE_BINARY`, `PABLO_KNOWLEDGE_PI_BINARY`, or `PABLO_KNOWLEDGE_ORI_BINARY`. Ori must also find `pi` on PATH. The runner records installed versions and entry hashes; an entry script hash is not a hash of the entire dependency distribution.
 
+## Explicit credential reuse and costs
+
+The user authorized privately reusing Pablo's OpenRouter key for Ori/Pi and a separate OpenAI API key for Codex. These are opt-in flags; dry runs never load credentials.
+
+```sh
+node scripts/knowledge-work/run.mjs --live --harnesses ori,pi \
+  --reuse-pablo-openrouter --output .pablo/measurements/knowledge-openrouter
+
+node scripts/knowledge-work/run.mjs --live --harnesses codex \
+  --codex-api-key-file /absolute/path/to/private.env \
+  --output .pablo/measurements/knowledge-codex-api
+```
+
+`--reuse-pablo-openrouter` selects inherited `OPENROUTER_API_KEY` first, otherwise privately parses that literal key from the root `.env` (bounded to 64 KiB). It passes only the selected key in the Ori/Pi child environment. `--codex-api-key-file` privately selects `OPENAI_API_KEY` from the requested file and supplies Codex's documented per-invocation `CODEX_API_KEY`; it does not change saved login. Other credential fields are discarded. Neither flag puts secrets in argv, monitor specs, reports or copied auth files. Captured streams mask the selected credential across chunk boundaries; first-event receipt timestamps can include this bounded buffering. Native client credential behavior and any native local caches remain those clients' responsibility.
+
+Headline output uses factual accuracy and costs; strict task passes were removed at the user's request. Exact citation checks remain only as diagnostic details. Cost aggregation preserves missing values as unknown. Pablo and the other clients expose their own reported costs, which can be SDK estimates rather than invoices. Codex does not expose a dollar amount, so API-key runs separately estimate standard text cost from reported input/cache-write/cache-read/output tokens using [official Astra pricing](https://developers.openai.com/api/docs/models/gpt-6-astra), verified 2026-09-12: $10/$12.50/$1/$50 per million respectively. Reasoning tokens are included in output and are not added twice. If aggregate input exceeds 272K, the estimator declines because it cannot resolve per-request long-context surcharges. Standard tier and no hosted-tool charges are explicit assumptions; estimates are not account billing receipts.
+
+To regenerate the graphic, install optional Matplotlib 3.11.2 in a local venv and run `python scripts/knowledge-work/plot.py REPORT.json OUTPUT_PREFIX`. It writes PNG and SVG, showing all requested metrics with no strict-pass column. The primary comparison should use multiple seeds/repetitions before drawing rankings.
+
 ## Correctness
 
-The agent writes `answer.json` and a short `report.md`. Each finding has a stable ID, typed value, and source filename list. The scorer checks exact values and the required source set, with unordered lists. It rejects duplicate/missing findings, wrong types, invented sources, extra answer fields, and missing reports. A task passes only if every factual and citation check passes, the report is present, source files are unchanged, and the client completed successfully. Partial factual/citation scores remain visible.
+The agent writes `answer.json` and a short `report.md`. Each finding has a stable ID, typed value, and source filename list. The scorer checks exact values and the required source set, with unordered lists. It rejects duplicate/missing findings, wrong types, invented sources, extra answer fields, and missing reports. The legacy strict-pass diagnostic requires every factual and citation check, a present report, unchanged sources and successful client completion. Headline correctness uses factual checks; citation results remain available for diagnosis.
 
 Citation scoring checks document selection, not entailment of arbitrary prose. The required sets are deliberately strict; a substantively valid alternative citation set may need rubric review before a new suite version. Extra redundant citations can fail. Prose length is only an artifact-presence check. It is **not** a writing-quality score. Review anonymized reports with this separate 0–4 rubric per dimension:
 

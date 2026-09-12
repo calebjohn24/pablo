@@ -68,7 +68,7 @@ test('full runner retains artifacts and report without reading provider credenti
     await exec('node',[resolve(import.meta.dirname,'run.mjs'),'--live','--harnesses','pablo','--tasks','reconciliation','--output',output],{env:{...process.env,PABLO_KNOWLEDGE_PABLO_BINARY:bin},timeout:10000});
     const r=JSON.parse(await readFile(join(output,'report.json'),'utf8'));
     assert.equal(r.summary.pablo.passed,1);assert.equal(r.rows[0].events.tool_calls,1);assert.equal(r.rows[0].events.reported_cost_usd,.000002);
-    assert(r.sourceHashes['monitor.py']);assert.match(await readFile(join(output,'report.md'),'utf8'),/1\/1/);
+    assert(r.sourceHashes['monitor.py']);assert.match(await readFile(join(output,'report.md'),'utf8'),/100\.0%/);assert.doesNotMatch(await readFile(join(output,'report.md'),'utf8'),/\| Passes \|/);
     await assert.rejects(exec('node',[resolve(import.meta.dirname,'run.mjs'),'--live','--harnesses','pablo','--tasks','reconciliation','--output',output],{env:{...process.env,PABLO_KNOWLEDGE_PABLO_BINARY:bin},timeout:10000}));
     await rm(r.workspace_root,{recursive:true,force:true});
   } finally {await rm(dir,{recursive:true,force:true});}
@@ -87,4 +87,27 @@ test('timeout also kills an observed tool in a separate process group',async()=>
   try {const {stdout:state}=await exec('ps',['-o','stat=','-p',String(pid)]);assert(state.trim()===''||state.trim().startsWith('Z'),'separate-group tool still running');}
   catch(e) {if(e.code!==1)throw e;}
   finally {try {process.kill(pid,'SIGKILL');}catch{}}
+});
+test('explicit private credential loader scopes keys and hides parse diagnostics',async()=>{
+  const {privateKey}=await import('./credentials.mjs');const dir=await mkdtemp(join(tmpdir(),'knowledge-credential-test-')),file=join(dir,'fixture.env');
+  try {await writeFile(file,'UNRELATED_SECRET=private-other\nOPENROUTER_API_KEY="fixture-key"\nOPENAI_API_KEY=fixture-oai\n');assert.equal(await privateKey(file,'OPENROUTER_API_KEY'),'fixture-key');assert.equal(await privateKey(file,'OPENAI_API_KEY'),'fixture-oai');
+    await writeFile(file,'OPENAI_API_KEY=private-one\nOPENAI_API_KEY=private-two\n');await assert.rejects(privateKey(file,'OPENAI_API_KEY'),e=>e.message==='Cannot privately resolve the selected provider credential');
+  } finally {await rm(dir,{recursive:true,force:true});}
+});
+test('Astra estimate handles cache tokens, avoids reasoning double count and preserves unknowns',async()=>{
+  const {astraCost}=await import('./cost.mjs');assert.equal(astraCost({input_tokens:1000,cached_input_tokens:500,cache_write_input_tokens:100,output_tokens:200,reasoning_output_tokens:50}).estimated_cost_usd,.01575);
+  assert.equal(astraCost({input_tokens:300000,cached_input_tokens:0,cache_write_input_tokens:0,output_tokens:10}).estimated_cost_usd,null);assert.equal(astraCost(null).estimated_cost_usd,null);
+});
+test('capture redacts credentials split across stream chunks without changing byte offsets',async()=>{
+  const code='import importlib.util; s=importlib.util.spec_from_file_location("monitor",'+JSON.stringify(resolve(import.meta.dirname,'monitor.py'))+'); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); r=m.Redactor("private-key"); chunks=[b"hello priv",b"ate-",b"key goodbye"]; result=b"".join(r.feed(c) for c in chunks)+r.feed(b"",True); assert result==b"hello *********** goodbye"';
+  await exec('python3',['-c',code]);
+});
+
+test('headline accuracy weights individual facts and incomplete costs stay unknown',()=>{
+  const row=(checks,events)=>({harness:'pi',status:'completed',correctness:{checks:checks.map(value=>({value}))},events});
+  const s=aggregate([row([true,true],{reported_cost_usd:.2}),row([false],{})]).pi;
+  assert.equal(aggregate([row([true],{}),{harness:'pi',status:'unavailable',factual_total:3}]).pi.factual_accuracy,.25);
+  assert.equal(s.factual_correct,2);assert.equal(s.factual_total,3);assert.equal(s.factual_accuracy,2/3);
+  assert.equal(s.reported_cost_usd,null);assert.equal(s.reported_cost_known_subtotal_usd,.2);assert.equal(s.estimated_cost_usd,null);
+  assert.equal(aggregate([row([true],{estimated_cost_usd:.3}),row([true],{estimated_cost_usd:.4})]).pi.estimated_cost_usd,.7);
 });

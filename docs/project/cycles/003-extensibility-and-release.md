@@ -488,7 +488,7 @@ Acceptance:
 
 Prerequisites: C3.33a.
 
-User-requested follow-up, independent of release packaging. Build a reproducible local-source knowledge-work comparison for Pablo, Codex, Claude Code, Ori and Pi. The user also requested a Pablo + Astra profile to compare alongside Pablo + GLM.
+User-requested follow-up, independent of release packaging. Build a reproducible local-source knowledge-work comparison for Pablo, Codex, Claude Code, Ori and Pi. The user also requested Pablo + Astra, private key reuse for Ori/Pi and Codex API auth, costs and a graphic, with strict task passes removed from headline output.
 
 Acceptance:
 

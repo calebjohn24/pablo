@@ -2,6 +2,20 @@
 import json, os, selectors, signal, subprocess, sys, time
 from pathlib import Path
 
+class Redactor:
+    def __init__(self, secret):
+        self.secret = secret.encode() if secret else b''
+        self.pending = b''
+    def feed(self, data, final=False):
+        self.pending += data
+        if not self.secret:
+            result, self.pending = self.pending, b''
+            return result
+        safe = self.pending.replace(self.secret, b'*' * len(self.secret))
+        count = len(safe) if final else max(0, len(safe)-len(self.secret)+1)
+        result, self.pending = safe[:count], safe[count:]
+        return result
+
 def run(spec):
     out = Path(spec['output'])
     out.mkdir(parents=True, exist_ok=True)
@@ -16,6 +30,14 @@ def run(spec):
     files = {n: (out / (n + '.jsonl')).open('wb') for n in ['stdout', 'stderr']}
     receipts = (out / 'receipts.jsonl').open('w')
     samples, sizes, first = [], {'stdout': 0, 'stderr': 0}, {'stdout': None, 'stderr': None}
+    redactors = {n: Redactor(os.environ.get('CODEX_API_KEY') or os.environ.get('OPENROUTER_API_KEY')) for n in files}
+    emitted = {n: 0 for n in files}
+    def capture(name, data, ms, final=False):
+        safe = redactors[name].feed(data, final)
+        if safe:
+            files[name].write(safe)
+            emitted[name] += len(safe)
+            receipts.write(json.dumps({'stream': name, 'end_byte': emitted[name], 'ms': ms})+'\n')
     status = usage = None
     reason = None
     cleanup_sent = False
@@ -75,6 +97,7 @@ def run(spec):
             for key, _ in sel.select(0.02):
                 data = os.read(key.fileobj.fileno(), 65536)
                 if not data:
+                    capture(key.data, b'', (time.monotonic()-start)*1000, True)
                     sel.unregister(key.fileobj)
                     key.fileobj.close()
                     continue
@@ -83,8 +106,7 @@ def run(spec):
                 if first[name] is None: first[name] = ms
                 sizes[name] += len(data)
                 if sizes[name] <= 16*1024*1024:
-                    files[name].write(data)
-                    receipts.write(json.dumps({'stream': name, 'end_byte': sizes[name], 'ms': ms})+'\n')
+                    capture(name, data, ms)
             if status is None:
                 pid, wait_status, ru = os.wait4(child.pid, os.WNOHANG)
                 if pid:
@@ -103,7 +125,9 @@ def run(spec):
             child.returncode = os.waitstatus_to_exitcode(status)
         for key in list(sel.get_map().values()): key.fileobj.close()
         sel.close()
-        for f in files.values(): f.close()
+        for name,f in files.items():
+            capture(name, b'', (time.monotonic()-start)*1000, True)
+            f.close()
         receipts.close()
         for sig, handler in old.items(): signal.signal(sig, handler)
     wall = time.monotonic()-start
