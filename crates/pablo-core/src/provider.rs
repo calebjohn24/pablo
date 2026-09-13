@@ -10,12 +10,14 @@ use tokio::time::Instant;
 use crate::{DeliveryCertainty, FailureCode, FinishReason, Message, Usage, tool::ToolDescriptor};
 use tokio_util::sync::CancellationToken;
 mod continuation;
+pub mod diagnostics;
 pub(crate) use continuation::ContinuationScope;
 pub use continuation::{Continuation, ContinuationEntry};
 
 /// No credentials are serialized or copied into a request. Adapters own them.
 pub struct ModelRequest<'a> {
     pub model: &'a str,
+    pub reasoning: crate::ReasoningConfig,
     pub input: &'a str,
     pub instructions: &'a str,
     pub messages: &'a [Message],
@@ -127,6 +129,18 @@ pub trait Provider: Send + Sync {
     }
     fn validate_model(&self, _model: &str, _max_output_tokens: u32) -> Result<(), &'static str> {
         Ok(())
+    }
+    fn validate_reasoning(
+        &self,
+        reasoning: crate::ReasoningConfig,
+        max_output_tokens: u32,
+    ) -> Result<(), &'static str> {
+        reasoning.validate(max_output_tokens)?;
+        if reasoning.is_default() {
+            Ok(())
+        } else {
+            Err("provider does not support explicit reasoning configuration")
+        }
     }
     fn profile_identity(&self) -> Option<crate::contracts::ProviderIdentity> {
         None

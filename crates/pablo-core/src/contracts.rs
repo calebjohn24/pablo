@@ -13,6 +13,8 @@ pub struct RunSpec {
     pub instructions: String,
     pub workspace: PathBuf,
     pub model: String,
+    #[serde(default, skip_serializing_if = "crate::ReasoningConfig::is_default")]
+    pub reasoning: crate::ReasoningConfig,
     pub session_id: Option<String>,
     pub limits: RunLimits,
     #[serde(default)]
@@ -29,6 +31,7 @@ impl RunSpec {
             instructions: String::new(),
             workspace,
             model: model.into(),
+            reasoning: crate::ReasoningConfig::default(),
             session_id: None,
             limits: RunLimits::default(),
             context: crate::context::ContextSettings::default(),
@@ -339,6 +342,8 @@ pub enum EventKind {
         finish_reason: Option<FinishReason>,
         usage: Usage,
         output_bytes: usize,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        diagnostics: Option<Box<crate::provider::diagnostics::ModelDiagnostics>>,
     },
     #[serde(rename = "tool.started")]
     ToolStarted { call: ToolCall },

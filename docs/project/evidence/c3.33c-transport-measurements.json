@@ -1,0 +1,1383 @@
+{
+  "builds": {
+    "h1": {
+      "sha256": "c25a004195eb6031953971a40a80d9781839d335f4eea9ba3c81af4209c6fee2",
+      "bytes": 15108832
+    },
+    "h2": {
+      "sha256": "98161dd90656af0486d0adc3abef36084614f5ccf04cc5267e41b2032dd26071",
+      "bytes": 15643616
+    }
+  },
+  "method": "Fresh process per call, six alternating pairs per model; low effort, same prompt, serial. Header wait includes network and provider processing. Pool reuse is checked by separate controlled fixtures.",
+  "rows": [
+    {
+      "id": "glm-0-h1",
+      "model": "z-ai/glm-5.3-flash",
+      "variant": "h1",
+      "repeat": 0,
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 1009.872708003968,
+        "first_stdout_ms": 961.6097500547767,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.022834999999999998,
+        "cpu_system_s": 0.007578,
+        "cpu_total_s": 0.030412999999999996,
+        "cpu_percent_one_core": 3.0115676717426942,
+        "cpu_percent_machine": 0.2151119765530496,
+        "sampled_tree_peak_rss_kib": 13168,
+        "rusage_maxrss_kib": 13920,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 594,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "status": "completed",
+      "correct": true,
+      "cost_usd": 0.000022,
+      "calls": [
+        {
+          "started_us": 1789253234654647,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 135,
+            "output_tokens": 3,
+            "cache_read_input_tokens": 0,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 2,
+          "elapsed_us": 633166,
+          "diagnostics": {
+            "requested_reasoning": "low",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 165,
+            "dispatch_us": 165,
+            "headers_us": 594302,
+            "first_data_us": 601525,
+            "first_text_us": 601574,
+            "first_tool_delta_us": null,
+            "terminal_us": 633130,
+            "complete_us": 633170
+          }
+        }
+      ]
+    },
+    {
+      "id": "glm-0-h2",
+      "model": "z-ai/glm-5.3-flash",
+      "variant": "h2",
+      "repeat": 0,
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 723.121833987534,
+        "first_stdout_ms": 676.6195420641452,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.024097999999999998,
+        "cpu_system_s": 0.0071189999999999995,
+        "cpu_total_s": 0.031216999999999998,
+        "cpu_percent_one_core": 4.316976549837956,
+        "cpu_percent_machine": 0.3083554678455683,
+        "sampled_tree_peak_rss_kib": 13440,
+        "rusage_maxrss_kib": 14224,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 596,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "status": "completed",
+      "correct": true,
+      "cost_usd": 0.000015,
+      "calls": [
+        {
+          "started_us": 1789253235697233,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 135,
+            "output_tokens": 3,
+            "cache_read_input_tokens": 64,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 2,
+          "elapsed_us": 371544,
+          "diagnostics": {
+            "requested_reasoning": "low",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/2",
+            "preparation_us": 144,
+            "dispatch_us": 154,
+            "headers_us": 362206,
+            "first_data_us": 362256,
+            "first_text_us": 362309,
+            "first_tool_delta_us": null,
+            "terminal_us": 371526,
+            "complete_us": 371547
+          }
+        }
+      ]
+    },
+    {
+      "id": "astra-0-h1",
+      "model": "openai/gpt-6-astra",
+      "variant": "h1",
+      "repeat": 0,
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 1141.228541964665,
+        "first_stdout_ms": 1090.707333991304,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.023039,
+        "cpu_system_s": 0.003381,
+        "cpu_total_s": 0.02642,
+        "cpu_percent_one_core": 2.315049004515523,
+        "cpu_percent_machine": 0.16536064317968022,
+        "sampled_tree_peak_rss_kib": 13184,
+        "rusage_maxrss_kib": 13760,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 596,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "status": "completed",
+      "correct": true,
+      "cost_usd": 0.00156,
+      "calls": [
+        {
+          "started_us": 1789253236175878,
+          "model": "openai/gpt-6-astra",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 131,
+            "output_tokens": 5,
+            "cache_read_input_tokens": 0,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 2,
+          "elapsed_us": 1084807,
+          "diagnostics": {
+            "requested_reasoning": "low",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 28,
+            "dispatch_us": 28,
+            "headers_us": 531202,
+            "first_data_us": 940892,
+            "first_text_us": 972642,
+            "first_tool_delta_us": null,
+            "terminal_us": 1084804,
+            "complete_us": 1084814
+          }
+        }
+      ]
+    },
+    {
+      "id": "astra-0-h2",
+      "model": "openai/gpt-6-astra",
+      "variant": "h2",
+      "repeat": 0,
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 1265.9460408613086,
+        "first_stdout_ms": 1219.1159159410745,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.023325,
+        "cpu_system_s": 0.003797,
+        "cpu_total_s": 0.027122,
+        "cpu_percent_one_core": 2.1424293867649427,
+        "cpu_percent_machine": 0.1530306704832102,
+        "sampled_tree_peak_rss_kib": 13712,
+        "rusage_maxrss_kib": 14240,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 596,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "status": "completed",
+      "correct": true,
+      "cost_usd": 0.00156,
+      "calls": [
+        {
+          "started_us": 1789253237370763,
+          "model": "openai/gpt-6-astra",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 131,
+            "output_tokens": 5,
+            "cache_read_input_tokens": 0,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 2,
+          "elapsed_us": 1213150,
+          "diagnostics": {
+            "requested_reasoning": "low",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/2",
+            "preparation_us": 31,
+            "dispatch_us": 31,
+            "headers_us": 428028,
+            "first_data_us": 843049,
+            "first_text_us": 1057325,
+            "first_tool_delta_us": null,
+            "terminal_us": 1213151,
+            "complete_us": 1213158
+          }
+        }
+      ]
+    },
+    {
+      "id": "glm-1-h2",
+      "model": "z-ai/glm-5.3-flash",
+      "variant": "h2",
+      "repeat": 1,
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 359.45083387196064,
+        "first_stdout_ms": 314.41124994307756,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.022742,
+        "cpu_system_s": 0.0038669999999999998,
+        "cpu_total_s": 0.026608999999999997,
+        "cpu_percent_one_core": 7.402681394106417,
+        "cpu_percent_machine": 0.5287629567218869,
+        "sampled_tree_peak_rss_kib": 13536,
+        "rusage_maxrss_kib": 14240,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 596,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "status": "completed",
+      "correct": true,
+      "cost_usd": 0.000015,
+      "calls": [
+        {
+          "started_us": 1789253238692644,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 135,
+            "output_tokens": 3,
+            "cache_read_input_tokens": 64,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 2,
+          "elapsed_us": 308443,
+          "diagnostics": {
+            "requested_reasoning": "low",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/2",
+            "preparation_us": 26,
+            "dispatch_us": 26,
+            "headers_us": 283971,
+            "first_data_us": 299397,
+            "first_text_us": 299421,
+            "first_tool_delta_us": null,
+            "terminal_us": 308438,
+            "complete_us": 308445
+          }
+        }
+      ]
+    },
+    {
+      "id": "glm-1-h1",
+      "model": "z-ai/glm-5.3-flash",
+      "variant": "h1",
+      "repeat": 1,
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 383.886958938092,
+        "first_stdout_ms": 335.27133404277265,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.022869,
+        "cpu_system_s": 0.003476,
+        "cpu_total_s": 0.026345,
+        "cpu_percent_one_core": 6.862697308831624,
+        "cpu_percent_machine": 0.49019266491654456,
+        "sampled_tree_peak_rss_kib": 12960,
+        "rusage_maxrss_kib": 13744,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 598,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "status": "completed",
+      "correct": true,
+      "cost_usd": 0.000018,
+      "calls": [
+        {
+          "started_us": 1789253239108060,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 135,
+            "output_tokens": 10,
+            "cache_read_input_tokens": 64,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 2,
+          "elapsed_us": 329427,
+          "diagnostics": {
+            "requested_reasoning": "low",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 7,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 26,
+            "dispatch_us": 26,
+            "headers_us": 318326,
+            "first_data_us": 318834,
+            "first_text_us": 320333,
+            "first_tool_delta_us": null,
+            "terminal_us": 329421,
+            "complete_us": 329429
+          }
+        }
+      ]
+    },
+    {
+      "id": "astra-1-h2",
+      "model": "openai/gpt-6-astra",
+      "variant": "h2",
+      "repeat": 1,
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 1265.5488750897348,
+        "first_stdout_ms": 1216.8323749210685,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.022836,
+        "cpu_system_s": 0.0034549999999999997,
+        "cpu_total_s": 0.026291,
+        "cpu_percent_one_core": 2.0774385341803425,
+        "cpu_percent_machine": 0.14838846672716732,
+        "sampled_tree_peak_rss_kib": 13728,
+        "rusage_maxrss_kib": 14288,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 596,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "status": "completed",
+      "correct": true,
+      "cost_usd": 0.00156,
+      "calls": [
+        {
+          "started_us": 1789253239545945,
+          "model": "openai/gpt-6-astra",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 131,
+            "output_tokens": 5,
+            "cache_read_input_tokens": 0,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 2,
+          "elapsed_us": 1211307,
+          "diagnostics": {
+            "requested_reasoning": "low",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/2",
+            "preparation_us": 23,
+            "dispatch_us": 23,
+            "headers_us": 501601,
+            "first_data_us": 917103,
+            "first_text_us": 1065267,
+            "first_tool_delta_us": null,
+            "terminal_us": 1211298,
+            "complete_us": 1211314
+          }
+        }
+      ]
+    },
+    {
+      "id": "astra-1-h1",
+      "model": "openai/gpt-6-astra",
+      "variant": "h1",
+      "repeat": 1,
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 1380.888083949685,
+        "first_stdout_ms": 1331.951417028904,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.023438,
+        "cpu_system_s": 0.0038299999999999996,
+        "cpu_total_s": 0.027268,
+        "cpu_percent_one_core": 1.9746712508378454,
+        "cpu_percent_machine": 0.14104794648841754,
+        "sampled_tree_peak_rss_kib": 13184,
+        "rusage_maxrss_kib": 13728,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 596,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "status": "completed",
+      "correct": true,
+      "cost_usd": 0.00156,
+      "calls": [
+        {
+          "started_us": 1789253240866518,
+          "model": "openai/gpt-6-astra",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 131,
+            "output_tokens": 5,
+            "cache_read_input_tokens": 0,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 2,
+          "elapsed_us": 1326022,
+          "diagnostics": {
+            "requested_reasoning": "low",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 30,
+            "dispatch_us": 30,
+            "headers_us": 608663,
+            "first_data_us": 1023090,
+            "first_text_us": 1194331,
+            "first_tool_delta_us": null,
+            "terminal_us": 1326024,
+            "complete_us": 1326031
+          }
+        }
+      ]
+    },
+    {
+      "id": "glm-2-h1",
+      "model": "z-ai/glm-5.3-flash",
+      "variant": "h1",
+      "repeat": 2,
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 437.79037497006357,
+        "first_stdout_ms": 381.60666706971824,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.022803999999999998,
+        "cpu_system_s": 0.004304,
+        "cpu_total_s": 0.027107999999999997,
+        "cpu_percent_one_core": 6.192004564251478,
+        "cpu_percent_machine": 0.442286040303677,
+        "sampled_tree_peak_rss_kib": 13152,
+        "rusage_maxrss_kib": 13920,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 596,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "status": "completed",
+      "correct": true,
+      "cost_usd": 0.000015,
+      "calls": [
+        {
+          "started_us": 1789253242299333,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 135,
+            "output_tokens": 3,
+            "cache_read_input_tokens": 64,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 2,
+          "elapsed_us": 375212,
+          "diagnostics": {
+            "requested_reasoning": "low",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 28,
+            "dispatch_us": 28,
+            "headers_us": 358969,
+            "first_data_us": 358979,
+            "first_text_us": 359000,
+            "first_tool_delta_us": null,
+            "terminal_us": 375195,
+            "complete_us": 375214
+          }
+        }
+      ]
+    },
+    {
+      "id": "glm-2-h2",
+      "model": "z-ai/glm-5.3-flash",
+      "variant": "h2",
+      "repeat": 2,
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 473.2010830193758,
+        "first_stdout_ms": 428.4226249437779,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.023177,
+        "cpu_system_s": 0.0035199999999999997,
+        "cpu_total_s": 0.026697,
+        "cpu_percent_one_core": 5.64178759474793,
+        "cpu_percent_machine": 0.40298482819628073,
+        "sampled_tree_peak_rss_kib": 13824,
+        "rusage_maxrss_kib": 14464,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 596,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "status": "completed",
+      "correct": true,
+      "cost_usd": 0.000015,
+      "calls": [
+        {
+          "started_us": 1789253242793339,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 135,
+            "output_tokens": 3,
+            "cache_read_input_tokens": 64,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 2,
+          "elapsed_us": 422537,
+          "diagnostics": {
+            "requested_reasoning": "low",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/2",
+            "preparation_us": 27,
+            "dispatch_us": 27,
+            "headers_us": 384763,
+            "first_data_us": 414126,
+            "first_text_us": 414151,
+            "first_tool_delta_us": null,
+            "terminal_us": 422533,
+            "complete_us": 422539
+          }
+        }
+      ]
+    },
+    {
+      "id": "astra-2-h1",
+      "model": "openai/gpt-6-astra",
+      "variant": "h1",
+      "repeat": 2,
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 1377.093582879752,
+        "first_stdout_ms": 1331.6984160337597,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.022883999999999998,
+        "cpu_system_s": 0.003545,
+        "cpu_total_s": 0.026428999999999998,
+        "cpu_percent_one_core": 1.9191869258973797,
+        "cpu_percent_machine": 0.13708478042124142,
+        "sampled_tree_peak_rss_kib": 13168,
+        "rusage_maxrss_kib": 13744,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 596,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "status": "completed",
+      "correct": true,
+      "cost_usd": 0.00156,
+      "calls": [
+        {
+          "started_us": 1789253243317330,
+          "model": "openai/gpt-6-astra",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 131,
+            "output_tokens": 5,
+            "cache_read_input_tokens": 0,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 2,
+          "elapsed_us": 1325746,
+          "diagnostics": {
+            "requested_reasoning": "low",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 27,
+            "dispatch_us": 27,
+            "headers_us": 465569,
+            "first_data_us": 872562,
+            "first_text_us": 962486,
+            "first_tool_delta_us": null,
+            "terminal_us": 1325745,
+            "complete_us": 1325754
+          }
+        }
+      ]
+    },
+    {
+      "id": "astra-2-h2",
+      "model": "openai/gpt-6-astra",
+      "variant": "h2",
+      "repeat": 2,
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 1120.2895001042634,
+        "first_stdout_ms": 1073.8576669245958,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.023,
+        "cpu_system_s": 0.003786,
+        "cpu_total_s": 0.026786,
+        "cpu_percent_one_core": 2.3909891146446585,
+        "cpu_percent_machine": 0.17078493676033274,
+        "sampled_tree_peak_rss_kib": 13616,
+        "rusage_maxrss_kib": 14176,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 596,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "status": "completed",
+      "correct": true,
+      "cost_usd": 0.00156,
+      "calls": [
+        {
+          "started_us": 1789253244750037,
+          "model": "openai/gpt-6-astra",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 131,
+            "output_tokens": 5,
+            "cache_read_input_tokens": 0,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 2,
+          "elapsed_us": 1067883,
+          "diagnostics": {
+            "requested_reasoning": "low",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/2",
+            "preparation_us": 23,
+            "dispatch_us": 24,
+            "headers_us": 498711,
+            "first_data_us": 910558,
+            "first_text_us": 910600,
+            "first_tool_delta_us": null,
+            "terminal_us": 1067878,
+            "complete_us": 1067889
+          }
+        }
+      ]
+    },
+    {
+      "id": "glm-3-h2",
+      "model": "z-ai/glm-5.3-flash",
+      "variant": "h2",
+      "repeat": 3,
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 391.5528329089284,
+        "first_stdout_ms": 340.95020801760256,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.022812,
+        "cpu_system_s": 0.0032059999999999996,
+        "cpu_total_s": 0.026018,
+        "cpu_percent_one_core": 6.644824864809891,
+        "cpu_percent_machine": 0.4746303474864208,
+        "sampled_tree_peak_rss_kib": 13520,
+        "rusage_maxrss_kib": 14240,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 596,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "status": "completed",
+      "correct": true,
+      "cost_usd": 0.000015,
+      "calls": [
+        {
+          "started_us": 1789253245919664,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 135,
+            "output_tokens": 3,
+            "cache_read_input_tokens": 64,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 2,
+          "elapsed_us": 335513,
+          "diagnostics": {
+            "requested_reasoning": "low",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/2",
+            "preparation_us": 23,
+            "dispatch_us": 24,
+            "headers_us": 321988,
+            "first_data_us": 323685,
+            "first_text_us": 323704,
+            "first_tool_delta_us": null,
+            "terminal_us": 335508,
+            "complete_us": 335515
+          }
+        }
+      ]
+    },
+    {
+      "id": "glm-3-h1",
+      "model": "z-ai/glm-5.3-flash",
+      "variant": "h1",
+      "repeat": 3,
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 408.60929107293487,
+        "first_stdout_ms": 362.80679097399116,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.024007999999999998,
+        "cpu_system_s": 0.0034479999999999997,
+        "cpu_total_s": 0.027455999999999998,
+        "cpu_percent_one_core": 6.71937731222544,
+        "cpu_percent_machine": 0.47995552230181715,
+        "sampled_tree_peak_rss_kib": 12992,
+        "rusage_maxrss_kib": 13760,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 596,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "status": "completed",
+      "correct": true,
+      "cost_usd": 0.000015,
+      "calls": [
+        {
+          "started_us": 1789253246367144,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 135,
+            "output_tokens": 3,
+            "cache_read_input_tokens": 64,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 2,
+          "elapsed_us": 356942,
+          "diagnostics": {
+            "requested_reasoning": "low",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 29,
+            "dispatch_us": 29,
+            "headers_us": 347443,
+            "first_data_us": 348832,
+            "first_text_us": 348881,
+            "first_tool_delta_us": null,
+            "terminal_us": 356936,
+            "complete_us": 356943
+          }
+        }
+      ]
+    },
+    {
+      "id": "astra-3-h2",
+      "model": "openai/gpt-6-astra",
+      "variant": "h2",
+      "repeat": 3,
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 1256.0687919612974,
+        "first_stdout_ms": 1208.4201250690967,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.022757,
+        "cpu_system_s": 0.0035629999999999998,
+        "cpu_total_s": 0.02632,
+        "cpu_percent_one_core": 2.095426633353612,
+        "cpu_percent_machine": 0.14967333095382943,
+        "sampled_tree_peak_rss_kib": 13744,
+        "rusage_maxrss_kib": 14256,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 596,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "status": "completed",
+      "correct": true,
+      "cost_usd": 0.00156,
+      "calls": [
+        {
+          "started_us": 1789253246829808,
+          "model": "openai/gpt-6-astra",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 131,
+            "output_tokens": 5,
+            "cache_read_input_tokens": 0,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 2,
+          "elapsed_us": 1202925,
+          "diagnostics": {
+            "requested_reasoning": "low",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/2",
+            "preparation_us": 22,
+            "dispatch_us": 23,
+            "headers_us": 474175,
+            "first_data_us": 857913,
+            "first_text_us": 1070758,
+            "first_tool_delta_us": null,
+            "terminal_us": 1202923,
+            "complete_us": 1202933
+          }
+        }
+      ]
+    },
+    {
+      "id": "astra-3-h1",
+      "model": "openai/gpt-6-astra",
+      "variant": "h1",
+      "repeat": 3,
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 1106.1887089163065,
+        "first_stdout_ms": 1060.515834018588,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.022727,
+        "cpu_system_s": 0.0036119999999999998,
+        "cpu_total_s": 0.026339,
+        "cpu_percent_one_core": 2.381058474715709,
+        "cpu_percent_machine": 0.17007560533683636,
+        "sampled_tree_peak_rss_kib": 13232,
+        "rusage_maxrss_kib": 13840,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 596,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "status": "completed",
+      "correct": true,
+      "cost_usd": 0.00156,
+      "calls": [
+        {
+          "started_us": 1789253248140814,
+          "model": "openai/gpt-6-astra",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 131,
+            "output_tokens": 5,
+            "cache_read_input_tokens": 0,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 2,
+          "elapsed_us": 1045735,
+          "diagnostics": {
+            "requested_reasoning": "low",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 29,
+            "dispatch_us": 29,
+            "headers_us": 494031,
+            "first_data_us": 820421,
+            "first_text_us": 927642,
+            "first_tool_delta_us": null,
+            "terminal_us": 1045733,
+            "complete_us": 1045742
+          }
+        }
+      ]
+    },
+    {
+      "id": "glm-4-h1",
+      "model": "z-ai/glm-5.3-flash",
+      "variant": "h1",
+      "repeat": 4,
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 421.8584580812603,
+        "first_stdout_ms": 374.87854110077024,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.023291,
+        "cpu_system_s": 0.003436,
+        "cpu_total_s": 0.026727,
+        "cpu_percent_one_core": 6.335537308310108,
+        "cpu_percent_machine": 0.45253837916500766,
+        "sampled_tree_peak_rss_kib": 13040,
+        "rusage_maxrss_kib": 13840,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 596,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "status": "completed",
+      "correct": true,
+      "cost_usd": 0.000015,
+      "calls": [
+        {
+          "started_us": 1789253249302173,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 135,
+            "output_tokens": 3,
+            "cache_read_input_tokens": 64,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 2,
+          "elapsed_us": 368641,
+          "diagnostics": {
+            "requested_reasoning": "low",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 26,
+            "dispatch_us": 26,
+            "headers_us": 360251,
+            "first_data_us": 360839,
+            "first_text_us": 360858,
+            "first_tool_delta_us": null,
+            "terminal_us": 368629,
+            "complete_us": 368643
+          }
+        }
+      ]
+    },
+    {
+      "id": "glm-4-h2",
+      "model": "z-ai/glm-5.3-flash",
+      "variant": "h2",
+      "repeat": 4,
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 449.09029197879136,
+        "first_stdout_ms": 377.90487497113645,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.022954,
+        "cpu_system_s": 0.003841,
+        "cpu_total_s": 0.026795,
+        "cpu_percent_one_core": 5.966506174501188,
+        "cpu_percent_machine": 0.42617901246437057,
+        "sampled_tree_peak_rss_kib": 13520,
+        "rusage_maxrss_kib": 14320,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 596,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "status": "completed",
+      "correct": true,
+      "cost_usd": 0.000015,
+      "calls": [
+        {
+          "started_us": 1789253249780060,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 135,
+            "output_tokens": 3,
+            "cache_read_input_tokens": 64,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 2,
+          "elapsed_us": 371493,
+          "diagnostics": {
+            "requested_reasoning": "low",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/2",
+            "preparation_us": 26,
+            "dispatch_us": 27,
+            "headers_us": 354970,
+            "first_data_us": 356268,
+            "first_text_us": 356315,
+            "first_tool_delta_us": null,
+            "terminal_us": 371489,
+            "complete_us": 371496
+          }
+        }
+      ]
+    },
+    {
+      "id": "astra-4-h1",
+      "model": "openai/gpt-6-astra",
+      "variant": "h1",
+      "repeat": 4,
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 1261.1189999151975,
+        "first_stdout_ms": 1216.5524999145418,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.023555,
+        "cpu_system_s": 0.0037579999999999996,
+        "cpu_total_s": 0.027313,
+        "cpu_percent_one_core": 2.165774998381329,
+        "cpu_percent_machine": 0.15469821417009494,
+        "sampled_tree_peak_rss_kib": 13232,
+        "rusage_maxrss_kib": 13776,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 596,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "status": "completed",
+      "correct": true,
+      "cost_usd": 0.00156,
+      "calls": [
+        {
+          "started_us": 1789253250283272,
+          "model": "openai/gpt-6-astra",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 131,
+            "output_tokens": 5,
+            "cache_read_input_tokens": 0,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 2,
+          "elapsed_us": 1210692,
+          "diagnostics": {
+            "requested_reasoning": "low",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 31,
+            "dispatch_us": 31,
+            "headers_us": 457117,
+            "first_data_us": 869779,
+            "first_text_us": 1038267,
+            "first_tool_delta_us": null,
+            "terminal_us": 1210688,
+            "complete_us": 1210700
+          }
+        }
+      ]
+    },
+    {
+      "id": "astra-4-h2",
+      "model": "openai/gpt-6-astra",
+      "variant": "h2",
+      "repeat": 4,
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 1186.9529578834772,
+        "first_stdout_ms": 1141.3780408911407,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.022337,
+        "cpu_system_s": 0.0036829999999999996,
+        "cpu_total_s": 0.026019999999999998,
+        "cpu_percent_one_core": 2.1921677541793847,
+        "cpu_percent_machine": 0.1565834110128132,
+        "sampled_tree_peak_rss_kib": 13856,
+        "rusage_maxrss_kib": 14400,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 596,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "status": "completed",
+      "correct": true,
+      "cost_usd": 0.00156,
+      "calls": [
+        {
+          "started_us": 1789253251595321,
+          "model": "openai/gpt-6-astra",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 131,
+            "output_tokens": 5,
+            "cache_read_input_tokens": 0,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 2,
+          "elapsed_us": 1135375,
+          "diagnostics": {
+            "requested_reasoning": "low",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/2",
+            "preparation_us": 24,
+            "dispatch_us": 25,
+            "headers_us": 510711,
+            "first_data_us": 916973,
+            "first_text_us": 943696,
+            "first_tool_delta_us": null,
+            "terminal_us": 1135359,
+            "complete_us": 1135383
+          }
+        }
+      ]
+    },
+    {
+      "id": "glm-5-h2",
+      "model": "z-ai/glm-5.3-flash",
+      "variant": "h2",
+      "repeat": 5,
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 376.3017919845879,
+        "first_stdout_ms": 329.21320805326104,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.022971,
+        "cpu_system_s": 0.003462,
+        "cpu_total_s": 0.026432999999999998,
+        "cpu_percent_one_core": 7.024415127176063,
+        "cpu_percent_machine": 0.501743937655433,
+        "sampled_tree_peak_rss_kib": 13680,
+        "rusage_maxrss_kib": 14448,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 596,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "status": "completed",
+      "correct": true,
+      "cost_usd": 0.000015,
+      "calls": [
+        {
+          "started_us": 1789253252832221,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 135,
+            "output_tokens": 3,
+            "cache_read_input_tokens": 64,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 2,
+          "elapsed_us": 323543,
+          "diagnostics": {
+            "requested_reasoning": "low",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/2",
+            "preparation_us": 24,
+            "dispatch_us": 25,
+            "headers_us": 306950,
+            "first_data_us": 311025,
+            "first_text_us": 311048,
+            "first_tool_delta_us": null,
+            "terminal_us": 323525,
+            "complete_us": 323545
+          }
+        }
+      ]
+    },
+    {
+      "id": "glm-5-h1",
+      "model": "z-ai/glm-5.3-flash",
+      "variant": "h1",
+      "repeat": 5,
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 404.30366597138345,
+        "first_stdout_ms": 357.3420410975814,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.023253,
+        "cpu_system_s": 0.0036769999999999997,
+        "cpu_total_s": 0.02693,
+        "cpu_percent_one_core": 6.660834977911405,
+        "cpu_percent_machine": 0.47577392699367177,
+        "sampled_tree_peak_rss_kib": 13088,
+        "rusage_maxrss_kib": 13824,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 596,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "status": "completed",
+      "correct": true,
+      "cost_usd": 0.000015,
+      "calls": [
+        {
+          "started_us": 1789253253263949,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 135,
+            "output_tokens": 3,
+            "cache_read_input_tokens": 64,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 2,
+          "elapsed_us": 351387,
+          "diagnostics": {
+            "requested_reasoning": "low",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 29,
+            "dispatch_us": 29,
+            "headers_us": 316995,
+            "first_data_us": 330942,
+            "first_text_us": 330974,
+            "first_tool_delta_us": null,
+            "terminal_us": 351370,
+            "complete_us": 351388
+          }
+        }
+      ]
+    },
+    {
+      "id": "astra-5-h2",
+      "model": "openai/gpt-6-astra",
+      "variant": "h2",
+      "repeat": 5,
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 1238.650457933545,
+        "first_stdout_ms": 1194.8867500759661,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.023235,
+        "cpu_system_s": 0.003531,
+        "cpu_total_s": 0.026765999999999998,
+        "cpu_percent_one_core": 2.16090018201374,
+        "cpu_percent_machine": 0.15435001300098142,
+        "sampled_tree_peak_rss_kib": 13616,
+        "rusage_maxrss_kib": 14256,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 596,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "status": "completed",
+      "correct": true,
+      "cost_usd": 0.00156,
+      "calls": [
+        {
+          "started_us": 1789253253719175,
+          "model": "openai/gpt-6-astra",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 131,
+            "output_tokens": 5,
+            "cache_read_input_tokens": 0,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 2,
+          "elapsed_us": 1169827,
+          "diagnostics": {
+            "requested_reasoning": "low",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/2",
+            "preparation_us": 26,
+            "dispatch_us": 27,
+            "headers_us": 445006,
+            "first_data_us": 805768,
+            "first_text_us": 1042571,
+            "first_tool_delta_us": null,
+            "terminal_us": 1169828,
+            "complete_us": 1169835
+          }
+        }
+      ]
+    },
+    {
+      "id": "astra-5-h1",
+      "model": "openai/gpt-6-astra",
+      "variant": "h1",
+      "repeat": 5,
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 2147.199416998774,
+        "first_stdout_ms": 2102.3500422015786,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.023136999999999998,
+        "cpu_system_s": 0.003753,
+        "cpu_total_s": 0.026889999999999997,
+        "cpu_percent_one_core": 1.252328954037498,
+        "cpu_percent_machine": 0.08945206814553557,
+        "sampled_tree_peak_rss_kib": 13216,
+        "rusage_maxrss_kib": 13760,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 596,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "status": "completed",
+      "correct": true,
+      "cost_usd": 0.00156,
+      "calls": [
+        {
+          "started_us": 1789253255008398,
+          "model": "openai/gpt-6-astra",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 131,
+            "output_tokens": 5,
+            "cache_read_input_tokens": 0,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 2,
+          "elapsed_us": 2096529,
+          "diagnostics": {
+            "requested_reasoning": "low",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 29,
+            "dispatch_us": 29,
+            "headers_us": 555470,
+            "first_data_us": 965260,
+            "first_text_us": 1920466,
+            "first_tool_delta_us": null,
+            "terminal_us": 2096520,
+            "complete_us": 2096544
+          }
+        }
+      ]
+    }
+  ]
+}

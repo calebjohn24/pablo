@@ -29,6 +29,7 @@ pub struct Options {
     input: String,
     workspace: Option<PathBuf>,
     model: Option<String>,
+    reasoning: Option<pablo_core::ReasoningConfig>,
     capture_content: bool,
     timeout_seconds: Option<u64>,
     tool_timeout_seconds: Option<u64>,
@@ -85,6 +86,7 @@ impl Options {
             input: String::new(),
             workspace: None,
             model: None,
+            reasoning: None,
             capture_content: false,
             timeout_seconds: None,
             tool_timeout_seconds: None,
@@ -150,6 +152,8 @@ impl Options {
                             | "--skill"
                             | "--workspace"
                             | "--model"
+                            | "--reasoning-effort"
+                            | "--reasoning-budget-tokens"
                             | "--provider"
                             | "--env-file"
                             | "--timeout"
@@ -198,6 +202,29 @@ impl Options {
                 "--provider" => {
                     options.provider =
                         Some(value.to_str().ok_or("provider must be UTF-8")?.parse()?);
+                }
+                "--reasoning-effort" | "--reasoning-budget-tokens" => {
+                    if options.reasoning.is_some() {
+                        return Err(
+                            "reasoning effort and token budget are mutually exclusive".into()
+                        );
+                    }
+                    options.reasoning = Some(if arg == "--reasoning-effort" {
+                        pablo_core::ReasoningConfig::Effort(
+                            value
+                                .to_str()
+                                .ok_or("reasoning effort must be UTF-8")?
+                                .parse()?,
+                        )
+                    } else {
+                        let budget_tokens = value
+                            .to_str()
+                            .filter(|v| !v.is_empty() && v.bytes().all(|b| b.is_ascii_digit()))
+                            .and_then(|v| v.parse::<u32>().ok())
+                            .filter(|n| *n > 0)
+                            .ok_or("reasoning budget must be a positive u32 integer")?;
+                        pablo_core::ReasoningConfig::Budget { budget_tokens }
+                    });
                 }
                 "--model" => {
                     options.model = Some(value.into_string().map_err(|_| "model must be UTF-8")?)
@@ -334,6 +361,12 @@ impl Options {
         }
         if let Some(provider) = self.provider {
             overrides.insert("model.provider".into(), provider.name().into());
+        }
+        if let Some(reasoning) = self.reasoning {
+            overrides.insert(
+                "model.reasoning".into(),
+                serde_json::to_value(reasoning).expect("typed reasoning"),
+            );
         }
         if let Some(model) = &self.model {
             overrides.insert("model.id".into(), model.clone().into());
@@ -472,6 +505,12 @@ impl Options {
         }
         spec.trace.capture_content = self.capture_content;
         spec.limits.max_tool_calls = self.max_tool_calls;
+        spec.reasoning = self.reasoning.unwrap_or_default();
+        spec.reasoning.validate_gateway(
+            self.provider.unwrap_or_default(),
+            None,
+            spec.limits.max_output_tokens,
+        )?;
         spec.limits.max_model_calls = self.max_model_calls;
         spec.limits.max_total_tokens = self.max_total_tokens;
         spec.limits.max_cost_microusd = self.max_cost_microusd;

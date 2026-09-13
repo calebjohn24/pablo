@@ -1,3 +1,4 @@
+use crate::provider::diagnostics::{CallDiagnostics, Phase};
 use crate::{
     contracts::*,
     events::{EventSink, SinkError},
@@ -81,6 +82,7 @@ struct Attempt<'a> {
     provider: &'a dyn Provider,
     model: &'a str,
     max_output_tokens: u32,
+    reasoning: crate::ReasoningConfig,
     ledger: crate::task::Ledger,
     window_tokens: Option<u64>,
 }
@@ -107,7 +109,11 @@ fn attempts<'a>(
                 provider
                     .validate_model(model, max_output_tokens)
                     .map_err(RunError::InvalidSpec)?;
+                provider
+                    .validate_reasoning(entry.profile().reasoning, max_output_tokens)
+                    .map_err(RunError::InvalidSpec)?;
                 Ok(Attempt {
+                    reasoning: entry.profile().reasoning,
                     window_tokens: entry.profile().context_window_tokens,
                     provider: provider.as_ref(),
                     model,
@@ -124,6 +130,7 @@ fn attempts<'a>(
             .collect()
     } else {
         Ok(vec![Attempt {
+            reasoning: spec.reasoning,
             window_tokens: spec.context.window_tokens,
             provider,
             model: &spec.model,
@@ -985,6 +992,7 @@ where
         if let Some(record) = &mut lifecycle.model_route {
             record.phase = "started".into();
         }
+        let diagnostics = CallDiagnostics::new(input.attempt.reasoning);
         let started = telemetry::now();
         let model = input.parent.with_span(
             telemetry::agent_span(
@@ -1008,6 +1016,7 @@ where
             )
             .start_with_context(&self.tracer, input.parent),
         );
+        let model = model.with_value(diagnostics.clone());
         let parent = input.parent.span().span_context().span_id().to_string();
         if let Some(profile) = &lifecycle.model_profile {
             model.span().set_attribute(KeyValue::new(
@@ -1086,6 +1095,8 @@ where
             record.outcome(result.as_ref().err());
         }
         let finished = telemetry::now();
+        diagnostics.mark(Phase::Complete);
+        diagnostics.export(&model);
         let finish_event = EventKind::ModelFinished {
             status: result
                 .as_ref()
@@ -1095,6 +1106,7 @@ where
             finish_reason: progress.finish_reason,
             usage: progress.usage.clone(),
             output_bytes: progress.output.len(),
+            diagnostics: Some(Box::new(diagnostics.snapshot())),
         };
         let closing = lifecycle.emit(finish_event, &model, Some(&parent), finished, true);
         if closing.is_err() {
@@ -1399,10 +1411,12 @@ async fn consume(
     progress: &mut ModelProgress,
     ids: &mut HashSet<String>,
 ) -> Result<(), RunOutcome> {
+    let diagnostics = model.get::<CallDiagnostics>();
     let spec = execution.spec;
     let parent = input.parent.span().span_context().span_id().to_string();
     let request = ModelRequest {
         model: input.attempt.model,
+        reasoning: input.attempt.reasoning,
         input: &spec.input,
         instructions: &spec.instructions,
         messages: input.history,
@@ -1538,6 +1552,11 @@ async fn consume(
                 }
             }
             Some(Ok(ProviderEvent::TextDelta(text))) => {
+                if !text.is_empty()
+                    && let Some(d) = diagnostics
+                {
+                    d.mark(Phase::FirstText);
+                }
                 if text.len() > input.max_output_bytes.saturating_sub(progress.output.len()) {
                     return Err(limit(LimitKind::OutputBytes));
                 }
@@ -1558,6 +1577,9 @@ async fn consume(
                 progress.chunks += 1;
             }
             Some(Ok(ProviderEvent::ToolCallStart { id, name })) => {
+                if let Some(d) = diagnostics {
+                    d.mark(Phase::FirstTool);
+                }
                 if input.summary {
                     if let Some(record) = &mut lifecycle.compaction {
                         record.reason = Some("tool_call_during_summary".into());
@@ -1618,6 +1640,9 @@ async fn consume(
                 call.arguments.push_str(&delta);
             }
             Some(Ok(ProviderEvent::Finished { reason, usage })) => {
+                if let Some(d) = diagnostics {
+                    d.mark(Phase::Terminal);
+                }
                 progress.usage = usage;
                 progress.finish_reason = Some(reason);
                 if reason == FinishReason::Length
@@ -1713,6 +1738,11 @@ fn attempt_timeout(execution: &Execution<'_>, progress: &mut ModelProgress) -> R
 
 fn validate(spec: &RunSpec, provider: &dyn Provider) -> Result<(), RunError> {
     spec.context.validate().map_err(RunError::InvalidSpec)?;
+    if provider.route().is_none() {
+        provider
+            .validate_reasoning(spec.reasoning, spec.limits.max_output_tokens)
+            .map_err(RunError::InvalidSpec)?;
+    }
     if let Some(output) = &spec.output {
         output.compile().map_err(RunError::InvalidSpec)?;
     }

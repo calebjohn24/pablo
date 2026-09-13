@@ -404,7 +404,12 @@ where
             .provider
             .validate_model(selected.model, max_output_tokens)
             .map_err(|_| reject(lifecycle, "summary_model_unsupported"))?;
+        selected
+            .provider
+            .validate_reasoning(selected.reasoning, max_output_tokens)
+            .map_err(|_| reject(lifecycle, "summary_reasoning_unsupported"))?;
         let attempt = Attempt {
+            reasoning: selected.reasoning,
             provider: selected.provider,
             model: selected.model,
             max_output_tokens,

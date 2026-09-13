@@ -39,6 +39,7 @@ fn k01_bounded_sse_mutations_never_escape_adapter_limits_or_panic() {
 }
 fn request() -> ModelRequest<'static> {
     ModelRequest {
+        reasoning: crate::ReasoningConfig::default(),
         model: "fixture-text-tools-v1",
         input: "",
         instructions: "",
@@ -54,6 +55,40 @@ fn request() -> ModelRequest<'static> {
         deadline: Instant::now() + Duration::from_secs(60),
         context: Context::new(),
         cancellation: CancellationToken::new(),
+    }
+}
+
+#[test]
+fn reasoning_matches_pinned_schema_and_preserves_explicit_intent() {
+    for model in [
+        "fixture-text-tools-v1",
+        "vendor/future-model",
+        "another-model",
+    ] {
+        for effort in [
+            crate::ReasoningEffort::ProviderDefault,
+            crate::ReasoningEffort::Low,
+            crate::ReasoningEffort::Xhigh,
+            crate::ReasoningEffort::Minimal,
+            crate::ReasoningEffort::Max,
+        ] {
+            let mut r = request();
+            r.model = model;
+            r.reasoning = crate::ReasoningConfig::Effort(effort);
+            let mut profile = profile();
+            profile.model = model.into();
+            let result = request_body(&r, &profile);
+            if matches!(
+                effort,
+                crate::ReasoningEffort::Minimal | crate::ReasoningEffort::Max
+            ) {
+                assert_eq!(result.unwrap_err().delivery, DeliveryCertainty::NotSent);
+            } else {
+                let body: Value = serde_json::from_slice(&result.unwrap()).unwrap();
+                assert_eq!(body.get("reasoning").cloned(), r.reasoning.wire());
+                assert_eq!(body["store"], false);
+            }
+        }
     }
 }
 fn fixture() -> Value {

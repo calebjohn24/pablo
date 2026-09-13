@@ -420,12 +420,12 @@
       "sha256": "9c98b73ed427546ea317eac8730a0dd6b2b15642baa0e126aae12b10c856a11a"
     },
     "docs/project/schemas/deployment-v1.schema.json": {
-      "bytes": 79581,
-      "sha256": "7561c544e4eff77ae6dc0fd26ebc6e016d71e3d5b8a5ad4002129c3d87ede490"
+      "bytes": 81564,
+      "sha256": "b44fed50436d5d4166a1594dc96bd3bcec3104e9323ebbbfde51a6c3fc75176a"
     },
     "docs/project/schemas/resolved-deployment-v1.schema.json": {
-      "bytes": 10438,
-      "sha256": "a7e62a145a3c53f10ac3af0e706eeacd5db62145258ad151038c7e0d0adb6853"
+      "bytes": 10723,
+      "sha256": "b93b7bd3fa8b70371a50b03feb049c49dc16544da3b66597fb05d7b189fe09f7"
     },
     "docs/protocol-compatibility.json": {
       "bytes": 4208,
@@ -532,8 +532,8 @@
       "sha256": "5be55c356bad24023b7000eac763f9d9fdc40d5405518613d3a0bc7b7c9f073d"
     },
     "tests/output-repair.test.ts": {
-      "bytes": 7673,
-      "sha256": "5af04144cebe1351257544abb44bf11a9ba73b055179db5ac6c07ecf366fbd8e"
+      "bytes": 7750,
+      "sha256": "dac2105fb2b636bae5ec13b5fa1c5b45efc6263131179e5469f375d37f2150e1"
     },
     "tests/output-validation.test.ts": {
       "bytes": 10963,

@@ -240,6 +240,7 @@ fn entry(config: &Value, name: &str, model: &Value) -> Result<RouteEntry, Config
     {
         return Err(invalid(&path));
     }
+    reasoning_profile(&mut profile, model, tokens as u32)?;
     profile.capabilities.text_streaming &= model["capabilities"]["text_streaming"]
         .as_bool()
         .unwrap_or(true);
@@ -360,4 +361,35 @@ pub(super) fn resolve(config: &Value) -> Result<Option<ResolvedRoute>, ConfigErr
         return Err(invalid("/options/model_route"));
     }
     Ok(selected)
+}
+
+/// Parse the same typed intent for the root model and named route entries.
+pub(super) fn reasoning_profile(
+    profile: &mut ModelProfile,
+    model: &Value,
+    max_output_tokens: u32,
+) -> Result<(), ConfigError> {
+    let value = model
+        .get("reasoning")
+        .or_else(|| model.get("model_options").and_then(|o| o.get("reasoning")));
+    profile.reasoning = value
+        .map(|v| serde_json::from_value(v.clone()))
+        .transpose()
+        .map_err(|_| invalid("/model/reasoning"))?
+        .unwrap_or_default();
+    let caps = model
+        .get("reasoning_capabilities")
+        .or_else(|| model.get("capabilities").and_then(|c| c.get("reasoning")));
+    profile.reasoning_capabilities = caps
+        .map(|v| serde_json::from_value(v.clone()))
+        .transpose()
+        .map_err(|_| invalid("/model/reasoning_capabilities"))?;
+    profile
+        .reasoning
+        .validate_gateway(
+            profile.provider,
+            profile.reasoning_capabilities.as_ref(),
+            max_output_tokens,
+        )
+        .map_err(|_| invalid("/model/reasoning"))
 }

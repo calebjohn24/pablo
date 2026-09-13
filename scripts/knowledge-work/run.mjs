@@ -7,6 +7,7 @@ import {tasks,score,hash,suiteVersion} from './tasks.mjs';
 import {openRouterKey,privateKey} from './credentials.mjs';
 import {astraCost} from './cost.mjs';
 import {command,models,normalize} from './adapters.mjs';
+import {latencyProfiles,traceDiagnostics,traceTimings} from './latency.mjs';
 let interrupted=false;
 const root=resolve(import.meta.dirname,'../..'), exec=promisify(execFile);
 export function aggregate(rows) {
@@ -32,8 +33,8 @@ export function aggregate(rows) {
   }));
 }
 function options(argv) {
-  const o={harnesses:'pablo,pablo-astra,codex,claude,ori,pi',seeds:'42',tasks:'all',repeats:'1',timeout:'180',output:'.pablo/measurements/knowledge-work',live:false,'reuse-pablo-openrouter':false,'codex-api-key-file':null};
-  for(let i=0;i<argv.length;i++) {const k=argv[i].replace(/^--/,'');if(k==='live'||k==='reuse-pablo-openrouter')o[k]=true;else if(Object.hasOwn(o,k))o[k]=argv[++i];else throw Error(`Unknown option ${argv[i]}`);}
+  const o={harnesses:'pablo,pablo-astra,codex,claude,ori,pi',seeds:'42',tasks:'all',repeats:'1',timeout:'180',output:'.pablo/measurements/knowledge-work',live:false,'reuse-pablo-openrouter':false,'codex-api-key-file':null,'latency-matrix':false};
+  for(let i=0;i<argv.length;i++) {const k=argv[i].replace(/^--/,'');if(k==='live'||k==='reuse-pablo-openrouter'||k==='latency-matrix')o[k]=true;else if(Object.hasOwn(o,k))o[k]=argv[++i];else throw Error(`Unknown option ${argv[i]}`);}
   for(const k of ['repeats','timeout']){o[k]=Number(o[k]);if(!Number.isInteger(o[k])||o[k]<1||o[k]>(k==='repeats'?20:3600))throw Error(`Invalid ${k}`);}
   o.harnesses=o.harnesses.split(',');if(o.harnesses.some(h=>!Object.hasOwn(models,h)))throw Error('Unknown harness');
   o.seeds=o.seeds.split(',').map(Number);o.seeds.forEach(s=>tasks(s));if(new Set(o.harnesses).size!==o.harnesses.length||new Set(o.seeds).size!==o.seeds.length)throw Error('Duplicate harnesses or seeds');return o;
@@ -48,7 +49,8 @@ async function launch(specPath,env) {
 export async function main(argv=process.argv.slice(2)) {
   const o=options(argv), output=resolve(root,o.output), selected=o.seeds.flatMap(seed=>tasks(seed).map(t=>({...t,seed}))).filter(t=>o.tasks==='all'||o.tasks.split(',').includes(t.id));
   if(!selected.length)throw Error('No selected tasks');
-  const matrix={suiteVersion,models,harnesses:o.harnesses,tasks:selected.map(t=>({id:t.id,seed:t.seed,fingerprint:t.fingerprint})),repeats:o.repeats,planned_runs:selected.length*o.harnesses.length*o.repeats};
+  const profiles=o['latency-matrix']?latencyProfiles(o.harnesses):o.harnesses.map(h=>({id:h,harness:h}));
+  const matrix={suiteVersion,profiles,models,harnesses:o.harnesses,tasks:selected.map(t=>({id:t.id,seed:t.seed,fingerprint:t.fingerprint})),repeats:o.repeats,planned_runs:selected.length*profiles.length*o.repeats};
   if(!o.live){console.log(JSON.stringify({...matrix,message:'Dry run only. Add --live to invoke providers. No credentials are read by this runner.'},null,2));return;}
   await mkdir(resolve(root,'.pablo'),{recursive:true});const lock=resolve(root,'.pablo/knowledge-work.lock');await mkdir(lock);
   let base;
@@ -66,24 +68,25 @@ export async function main(argv=process.argv.slice(2)) {
         paths[h]=path;builds[h]={path,version,entry_sha256:hash(await readFile(path)),entry_bytes:(await stat(path)).size};
       } catch {builds[h]={unavailable:true,reason:'executable/version preflight failed'};}
     }
-    const sourceFiles=['tasks.mjs','adapters.mjs','run.mjs','monitor.py','credentials.mjs','cost.mjs'];
+    const sourceFiles=['tasks.mjs','adapters.mjs','run.mjs','monitor.py','credentials.mjs','cost.mjs','latency.mjs'];
     const sourceHashes=Object.fromEntries(await Promise.all(sourceFiles.map(async f=>[f,hash(await readFile(join(import.meta.dirname,f)))])));
     const sharedKey=o['reuse-pablo-openrouter']&&o.harnesses.some(h=>h==='ori'||h==='pi')?await openRouterKey(resolve(root,'.env')):null;
     const codexKey=o['codex-api-key-file']?await privateKey(resolve(o['codex-api-key-file']),'OPENAI_API_KEY'):null;
     const rows=[];
     const report={...matrix,sourceHashes,timestamp:new Date().toISOString(),platform:{os:process.platform,arch:process.arch,kernel:release(),cpu:cpus()[0].model,logical_cpus:cpus().length,memory_bytes:totalmem(),node:process.version,python:(await exec('python3',['--version'])).stdout.trim()},builds,workspace_root:base,
-      method:{execution:'serial fresh process and workspace; rotated harness order per task/repetition; no warmup or retries',timing:'process spawn through reaping and pipe cleanup, includes network inference/tools/startup; no server-side inference CPU/RAM visibility',permissions:'equivalent local read/write/shell task capability, different native enforcement; no browsing/delegation requested',models:'GLM via OpenRouter; lab clients native provider/subscription; model and harness effects confounded across model families',effort:{pablo:'provider default','pablo-astra':'provider default',pi:'off',ori:'none / Pi off',codex:'medium',claude:'high'},scoring:'exact factual values and required filename sets; no semantic judge; prose existence is not prose quality',credentials:sharedKey?'Explicit private Pablo OpenRouter key reuse for Ori/Pi via child environment; no credential argv or saved key files':'Native clients resolve credentials; Pablo privately loads root .env',limitations:'sampled RSS includes shared pages, misses short processes; wait4 CPU can miss unjoined descendants; native tools/prompts differ; no cache flush; p95 with a small sample is descriptive only'},rows,summary:{}};
+      method:{execution:'serial fresh process and workspace; rotated harness order per task/repetition; no warmup or retries',timing:'process spawn through reaping and pipe cleanup, includes network inference/tools/startup; no server-side inference CPU/RAM visibility',permissions:'equivalent local read/write/shell task capability, different native enforcement; no browsing/delegation requested',models:'GLM via OpenRouter; lab clients native provider/subscription; model and harness effects confounded across model families',effort_profiles:profiles,effort:o['latency-matrix']?Object.fromEntries(profiles.map(p=>[p.id,p.reasoning??p.piThinking])):{pablo:'provider default','pablo-astra':'provider default',pi:'off',ori:'none / Pi off',codex:'medium',claude:'high'},scoring:'exact factual values and required filename sets; no semantic judge; prose existence is not prose quality',credentials:sharedKey?'Explicit private Pablo OpenRouter key reuse for Ori/Pi via child environment; no credential argv or saved key files':'Native clients resolve credentials; Pablo privately loads root .env',limitations:'sampled RSS includes shared pages, misses short processes; wait4 CPU can miss unjoined descendants; native tools/prompts differ; no cache flush; p95 with a small sample is descriptive only'},rows,summary:{}};
     let n=0;
     trials: for(let rep=0;rep<o.repeats;rep++)for(const task of selected) {
-      const order=o.harnesses.map((_,i)=>o.harnesses[(i+n)%o.harnesses.length]);n++;
-      for(const h of order) {
-        const id=`${task.id}-s${task.seed}-r${rep}-${h}`, trial=join(base,id), workspace=join(trial,'workspace'), artifacts=join(output,id);
+      const order=profiles.map((_,i)=>profiles[(i+n)%profiles.length]);n++;
+      for(const profile of order) {
+        const h=profile.harness;
+        const id=`${task.id}-s${task.seed}-r${rep}-${profile.id}`, trial=join(base,id), workspace=join(trial,'workspace'), artifacts=join(output,id);
         await mkdir(workspace,{recursive:true});await mkdir(artifacts);
         for(const[name,content]of Object.entries(task.files))await writeFile(join(workspace,name),content);
         await writeFile(join(artifacts,'prompt.txt'),task.prompt);
-        const row={id,harness:h,model:models[h],task:task.id,seed:task.seed,repeat:rep,fingerprint:task.fingerprint,factual_total:task.questions.length,status:'unavailable',resources:null,correctness:null};
+        const row={id,harness:profile.id,base_harness:h,reasoning:profile.reasoning??null,pi_thinking:profile.piThinking??null,model:models[h],task:task.id,seed:task.seed,repeat:rep,fingerprint:task.fingerprint,factual_total:task.questions.length,status:'unavailable',resources:null,correctness:null};
         if(!builds[h].unavailable) {
-          const cmd=command(h,{root,workspace,prompt:task.prompt,timeout:o.timeout,paths});
+          const cmd=command(h,{root,workspace,prompt:task.prompt,timeout:o.timeout,paths,reasoning:profile.reasoning,piThinking:profile.piThinking});
           row.command=cmd.map(a=>a===task.prompt?'<prompt.txt>':a);row.workspace=workspace;
           const spec=join(trial,'monitor-spec.json');await writeFile(spec,JSON.stringify({argv:cmd,cwd:workspace,output:artifacts,timeout_s:o.timeout,sample_ms:100}));
           console.log(`Running ${id}`);
@@ -95,7 +98,7 @@ export async function main(argv=process.argv.slice(2)) {
             if(codexKey&&h==='codex'){row.authentication='openai_api_key';Object.assign(row.events,astraCost(row.events.reported_usage));}
             const diagnostic=raw+'\n'+await readFile(join(artifacts,'stderr.jsonl'),'utf8');
             if(/No API key found for openrouter|not signed in to OpenRouter/i.test(diagnostic))row.failure_category='authentication_unavailable';
-            if(h.startsWith('pablo')) {try {const trace=(await readFile(join(trial,'pablo-trace.jsonl'),'utf8')).trim().split('\n').map(JSON.parse);row.events.reported_model=trace.find(e=>e.type==='model.started')?.model??null;}catch{}}
+            if(h.startsWith('pablo')) {try {const trace=(await readFile(join(trial,'pablo-trace.jsonl'),'utf8')).trim().split('\n').map(JSON.parse);row.events.reported_model=trace.find(e=>e.type==='model.started')?.model??null;row.model_calls=traceDiagnostics(trace);row.timings=traceTimings(trace,row.resources.wall_ms);await writeFile(join(artifacts,'model-diagnostics.json'),JSON.stringify(row.model_calls,null,2)+'\n');}catch{}}
             let answer=null,prose='';
             // Reject symlinks and oversized artifacts before scoring/copying.
             for(const name of ['answer.json','report.md']) {
@@ -116,7 +119,7 @@ export async function main(argv=process.argv.slice(2)) {
     if(interrupted)process.exitCode=130;
     const table=['| Harness / model | Facts | Completed-task wall p50 s | Peak tree MiB | CPU p50 s | Total cost USD |','|---|---:|---:|---:|---:|---:|'];
     const fmt=(n,d=1)=>n==null?'—':n.toFixed(d);
-    for(const[h,s]of Object.entries(report.summary))table.push(`| ${h} / ${models[h]} | ${s.factual_accuracy==null?'—':fmt(s.factual_accuracy*100)+'%'} | ${fmt(s.completed_wall_p50_ms==null?null:s.completed_wall_p50_ms/1000)} | ${fmt(s.peak_tree_rss_kib==null?null:s.peak_tree_rss_kib/1024)} | ${fmt(s.cpu_p50_s,3)} | ${fmt(s.reported_cost_usd??s.estimated_cost_usd,4)}${s.reported_cost_usd==null&&s.estimated_cost_usd!=null?' (estimate)':''} |`);
+    for(const[h,s]of Object.entries(report.summary))table.push(`| ${h} / ${models[profiles.find(p=>p.id===h)?.harness??h]} | ${s.factual_accuracy==null?'—':fmt(s.factual_accuracy*100)+'%'} | ${fmt(s.completed_wall_p50_ms==null?null:s.completed_wall_p50_ms/1000)} | ${fmt(s.peak_tree_rss_kib==null?null:s.peak_tree_rss_kib/1024)} | ${fmt(s.cpu_p50_s,3)} | ${fmt(s.reported_cost_usd??s.estimated_cost_usd,4)}${s.reported_cost_usd==null&&s.estimated_cost_usd!=null?' (estimate)':''} |`);
     await writeFile(join(output,'report.md'),`# Knowledge-work benchmark\n\n${table.join('\n')}\n\nFailures remain in the denominator. Table latency includes completed client runs, including wrong answers; JSON also retains passed-only and all-attempt latency. Authentication failures are not workload measurements. Missing metrics are not zero. This is a model + harness comparison, with subjective prose quality ungraded.\n`);
     console.log(JSON.stringify({output,summary:report.summary},null,2));
   } finally {await rm(lock,{recursive:true,force:true});}

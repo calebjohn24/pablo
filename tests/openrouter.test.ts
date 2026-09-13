@@ -17,13 +17,14 @@ const privateKey='private-router-sentinel';
 const frame=(delta:object={},finish:string|null=null,usage?:object)=>'data: '+JSON.stringify({choices:[{index:0,delta,finish_reason:finish}],...(usage===undefined?{}:{usage})})+'\r\n\r\n';
 const done='data: [DONE]\n\n';
 const end=(usage?:object)=>frame({},'stop')+(usage===undefined?'':frame({role:'assistant',content:''},'stop',usage))+done;
-const accounting={prompt_tokens:17,completion_tokens:3,prompt_tokens_details:{cached_tokens:8,cache_write_tokens:4},cost:0.0000025,cost_details:{upstream_inference_cost:999}};
+const accounting={prompt_tokens:17,completion_tokens:3,completion_tokens_details:{reasoning_tokens:2},prompt_tokens_details:{cached_tokens:8,cache_write_tokens:4},cost:0.0000025,cost_details:{upstream_inference_cost:999}};
 const unknown={input_tokens:null,output_tokens:null,cache_read_input_tokens:null,cache_write_input_tokens:null};
 const preset=(otel:string)=>`schema_version=1
 [credentials.gateway]
 consumer="provider.openrouter"
 sources=[{kind="environment",name="OPENROUTER_API_KEY"}]
 [options.model]
+reasoning="low"
 provider="openrouter"
 [options.shell]
 enabled=false
@@ -50,7 +51,7 @@ test('P02 CLI and reused ACP perform real OpenRouter file reads with stable pref
  const gateway=await server(async(req,res)=>{
   assert.equal(req.headers.authorization,'Bearer pablo-local-fixture');assert.equal(req.headers.traceparent,undefined);
   connections.add(req.socket);const request=JSON.parse((await body(req)).toString());requests.push(request);
-  assert.equal(request.model,model);assert.equal(request.stream,true);assert.equal(request.stream_options,undefined);
+  assert.equal(request.model,model);assert.deepEqual(request.reasoning,{effort:"low"});assert.equal(request.stream,true);assert.equal(request.stream_options,undefined);
   assert.equal(request.parallel_tool_calls,false);assert.equal(request.max_tokens,65536);
   if(request.messages.at(-1).role==='tool'){
    assert.equal(request.messages.at(-1).tool_call_id,'call_read');
@@ -71,7 +72,7 @@ test('P02 CLI and reused ACP perform real OpenRouter file reads with stable pref
  try{
   await writeFile(join(cwd,'evidence-🟣.txt'),marker);await writeFile(join(cwd,'entry.toml'),preset(collector.url+'/v1/traces'));
   const env={...cleanEnv(),OPENROUTER_API_KEY:privateKey,AI_GATEWAY_API_KEY:'private-vercel-sentinel',PABLO_FIXTURE_ENDPOINT:gateway.url+'/v1/chat/completions',OTEL_TRACES_EXPORTER:'otlp',OTEL_EXPORTER_OTLP_ENDPOINT:collector.url};
-  const variants=[['--provider','openrouter','--no-shell','--trace',join(cwd,'legacy-{session_id}.jsonl')],['--config',join(cwd,'entry.toml'),'--bind',`workspace=${cwd}`,'--fixture-endpoint',gateway.url+'/v1/chat/completions']];
+  const variants=[['--reasoning-effort','low','--provider','openrouter','--no-shell','--trace',join(cwd,'legacy-{session_id}.jsonl')],['--config',join(cwd,'entry.toml'),'--bind',`workspace=${cwd}`,'--fixture-endpoint',gateway.url+'/v1/chat/completions']];
   const tasks:any[]=[];
   for(const args of variants){
    const cli=await exec(binary,['run','Read evidence',...args,'--workspace',cwd,'--json'],{env,timeout:5000});stdout+=cli.stdout;stderr+=cli.stderr;tasks.push(JSON.parse(cli.stdout));
@@ -98,6 +99,11 @@ test('P02 CLI and reused ACP perform real OpenRouter file reads with stable pref
   for(const name of traces){const path=join(cwd,name);native+=await readFile(path,'utf8');const events=await records(path);
    assert.equal(events.filter(e=>e.type==='run.finished').length,1);assert.equal(events.filter(e=>e.type==='model.finished').length,2);
    assert(events.filter(e=>e.type==='model.started').every(e=>e.provider==='openrouter'&&e.model===model));
+   for(const e of events.filter(e=>e.type==='model.finished')) {
+    const d=e.diagnostics;assert.equal(d.requested_reasoning,'low');assert.equal(d.reasoning_tokens,2);assert.equal(d.reported_reasoning_effort,null);assert.equal(d.http_version,'HTTP/1.1');
+    const phases=[d.preparation_us,d.dispatch_us,d.headers_us,d.first_data_us,d.first_text_us??d.first_tool_delta_us,d.terminal_us,d.complete_us];
+    assert(phases.every(Number.isSafeInteger));assert.deepEqual(phases,phases.toSorted((a,b)=>a-b));
+   }
    assert.deepEqual(events.at(-1).accounting,tasks[0].accounting);
   }
   assert(exports.length>=4);assert(exports.every(p=>p.includes(Buffer.from('openrouter'))));

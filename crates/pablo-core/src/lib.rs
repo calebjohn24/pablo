@@ -13,6 +13,8 @@ pub mod filesystem;
 pub mod gateway;
 pub mod policy;
 pub mod provider;
+pub mod reasoning;
+pub use reasoning::{ReasoningCapabilities, ReasoningConfig, ReasoningEffort};
 pub mod runtime;
 pub mod shell;
 pub mod shell_policy;

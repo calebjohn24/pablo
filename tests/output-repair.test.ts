@@ -15,7 +15,7 @@ const textOf=(m:any)=>typeof m?.content==='string'?m.content:(m?.content??[]).ma
 for(const provider of ['vercel','openrouter','open_responses'])for(const mode of ['valid','invalid','first_valid','disabled','tool_history','provider_failure'])test(`J02 ${provider} ${mode}: one repair, same conversation and negotiated result`,{timeout:15000},async()=>{
  const cwd=await realpath(await mkdtemp(join(tmpdir(),'pablo-repair-')));const requests:any[]=[];let first:any;let firstFinal:any;
  const gateway=await server(async(req,res)=>{
-  const r=JSON.parse((await body(req)).toString());requests.push(r);const history=r.input??r.messages;const last=history.at(-1);const repairing=textOf(last).startsWith('Correct the previous final answer.');
+  const r=JSON.parse((await body(req)).toString());requests.push(r);assert.deepEqual(r.reasoning,{effort:"low"});const history=r.input??r.messages;const last=history.at(-1);const repairing=textOf(last).startsWith('Correct the previous final answer.');
   const prefix=r.instructions??textOf(history.find((m:any)=>m.role==='system'));
   if(!repairing&&!(last.role==='tool'||last.type==='function_call_output')){first={history:structuredClone(history),prefix,tools:structuredClone(r.tools)};firstFinal=undefined;}
   assert.equal(prefix,first.prefix);assert.deepEqual(r.tools,first.tools);
@@ -44,6 +44,7 @@ model_route="repair-route"
 [options.routes.repair-route]
 entries=[{model="primary"},{model="fallback"}]
 [options.models.primary]
+model_options={reasoning="low"}
 provider="${provider}"
 id="${model}"
 credential="key"

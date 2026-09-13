@@ -497,9 +497,24 @@ Acceptance:
 - Verify scorer negative controls, process monitoring and cleanup, adapter event normalization and report generation offline. Run a bounded live pilot where authentication/model access exists, recording unavailable competitors explicitly without substituting models or fabricating results.
 - Document reproducible commands, benchmark limitations and existing benchmark alternatives. Preserve C3.34 and later release gates as pending.
 
+## C3.33c: General reasoning controls and latency
+
+Prerequisites: C3.33b.
+
+User-approved latency follow-up. Reasoning configuration must work across supported models and providers, without GLM-specific runtime branches. Global defaults remain provider-default; faster model-profile defaults require their own evidence.
+
+Acceptance:
+
+- One typed reasoning option supports provider default, none/minimal/low/medium/high/xhigh/max effort or an explicit token budget. CLI, deployments, routes, compaction, repair and inherited profiles retain it; each adapter validates and translates supported syntax without silently dropping explicit settings.
+- OpenRouter, Vercel Chat Completions and pinned Open Responses have focused request, unsupported-setting, privacy and compatibility tests, including non-GLM and unknown-model fixtures.
+- Content-free monotonic model timing distinguishes preparation, dispatch, headers, first data/delta, terminal and completion. Reports retain calls, tools, gaps, cache/reasoning tokens, HTTP version and missing values; no network-only inference from combined provider wait.
+- Evaluate HTTP/2 with HTTP/1.1 fallback using controlled fixtures and matched requests. Preserve cancellation, accounting, stream validation and connection ownership; keep only demonstrated improvements.
+- Serial six-task live comparisons use three seeds and three repetitions for Pablo GLM/Astra at provider default versus low, plus matched Pi/GLM low. Preserve all attempts and historical baselines. Faster defaults require at least 20% lower p50, no worse p95, factual accuracy overall/per family, completion or cost, and reviewed report detail.
+- Finish useful tests, evidence and the comparison graphic; keep release packaging held. Failed promotion gates retain existing defaults without blocking the general controls and diagnostics.
+
 ## C3.34: Release archives and installation
 
-Prerequisites: C3.33, C3.33a.
+Prerequisites: C3.33, C3.33a, C3.33c.
 
 Build installable release candidates for macOS arm64/x86_64 and Linux x86_64/arm64, with a small explicit-destination installation path.
 

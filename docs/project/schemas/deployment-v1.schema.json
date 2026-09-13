@@ -787,6 +787,12 @@
                   "$ref": "#/$defs/unset"
                 }
               ]
+            },
+            "reasoning": {
+              "$ref": "#/$defs/reasoning"
+            },
+            "reasoning_capabilities": {
+              "$ref": "#/$defs/reasoningCapabilities"
             }
           }
         },
@@ -1397,6 +1403,12 @@
                   "$ref": "#/$defs/unset"
                 }
               ]
+            },
+            "reasoning": {
+              "$ref": "#/$defs/reasoning"
+            },
+            "reasoning_capabilities": {
+              "$ref": "#/$defs/reasoningCapabilities"
             }
           },
           "required": [
@@ -2447,6 +2459,9 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 4294967295
+            },
+            "reasoning": {
+              "$ref": "#/$defs/reasoning"
             }
           }
         },
@@ -2459,6 +2474,9 @@
             },
             "tool_calls": {
               "type": "boolean"
+            },
+            "reasoning": {
+              "$ref": "#/$defs/reasoningCapabilities"
             }
           }
         },
@@ -2524,6 +2542,9 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 4294967295
+            },
+            "reasoning": {
+              "$ref": "#/$defs/reasoning"
             }
           },
           "required": [
@@ -2539,6 +2560,9 @@
             },
             "tool_calls": {
               "type": "boolean"
+            },
+            "reasoning": {
+              "$ref": "#/$defs/reasoningCapabilities"
             }
           },
           "required": [
@@ -3187,6 +3211,65 @@
           "card_url",
           "endpoint"
         ]
+      }
+    },
+    "reasoning": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "provider_default",
+            "none",
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "budget_tokens": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            }
+          },
+          "required": [
+            "budget_tokens"
+          ]
+        }
+      ]
+    },
+    "reasoningCapabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "efforts": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "none",
+              "minimal",
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max"
+            ]
+          },
+          "maxItems": 7,
+          "uniqueItems": true
+        },
+        "mandatory": {
+          "type": "boolean"
+        },
+        "token_budget": {
+          "type": "boolean"
+        }
       }
     }
   }

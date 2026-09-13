@@ -9,6 +9,7 @@ use std::sync::Mutex;
 
 #[derive(Clone)]
 struct Seen {
+    reasoning: ReasoningConfig,
     messages: Vec<Message>,
     summary: bool,
     tools: serde_json::Value,
@@ -21,6 +22,13 @@ struct Fixture {
     overflow: Mutex<bool>,
 }
 impl Provider for Fixture {
+    fn validate_reasoning(
+        &self,
+        reasoning: ReasoningConfig,
+        max_output_tokens: u32,
+    ) -> Result<(), &'static str> {
+        reasoning.validate(max_output_tokens)
+    }
     fn name(&self) -> &'static str {
         "compaction-fixture"
     }
@@ -31,6 +39,7 @@ impl Provider for Fixture {
         Box::pin(async move {
             let summary = matches!(r.messages.last(),Some(Message::User{text}) if text.starts_with("Create a concise handoff"));
             self.seen.lock().unwrap().push(Seen {
+                reasoning: r.reasoning,
                 messages: r.messages.to_vec(),
                 summary,
                 tools: serde_json::to_value(r.tools).unwrap(),
@@ -77,6 +86,87 @@ impl Provider for Fixture {
             });
             Ok(Box::pin(stream::iter(events.into_iter().map(Ok))) as ProviderStream<'a>)
         })
+    }
+}
+
+#[tokio::test]
+async fn reasoning_budget_survives_compaction_or_rejects_before_replacing_history() {
+    for budget_tokens in [64, 128] {
+        let cwd = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+        std::fs::create_dir(&cwd).unwrap();
+        std::fs::write(cwd.join("evidence.txt"), "e".repeat(6000)).unwrap();
+        let provider = Fixture {
+            mode: "threshold",
+            seen: Mutex::new(Vec::new()),
+            reads: Mutex::new(0),
+            overflow: Mutex::new(false),
+        };
+        let mut spec = RunSpec::new(
+            "Inspect evidence in three steps. Preserve workspace constraints.",
+            cwd.clone(),
+            "fixture/model",
+        );
+        spec.instructions = "unchanged authority".into();
+        spec.reasoning = ReasoningConfig::Budget { budget_tokens };
+        spec.limits.max_output_tokens = 2048;
+        spec.context.max_summary_tokens = 128;
+        spec.context.window_tokens = Some(8000);
+        let sdk = SdkTracerProvider::builder().build();
+        let mut events = Vec::new();
+        let result = Runtime::new(sdk.tracer("test"))
+            .run_with_tools(
+                &spec,
+                &provider,
+                &ToolRegistry::with_filesystem_reads().unwrap(),
+                &CancellationToken::new(),
+                &mut |e: &RunEvent| {
+                    events.push(e.clone());
+                    Ok(())
+                },
+            )
+            .await
+            .unwrap();
+        let seen = provider.seen.lock().unwrap();
+        assert!(seen.iter().all(|r| r.reasoning == spec.reasoning));
+        let record = events.last().unwrap().compaction.as_ref().unwrap();
+        if budget_tokens == 64 {
+            assert!(result.is_completed());
+            assert_eq!(seen.iter().filter(|r| r.summary).count(), 1);
+            assert_eq!(record.status, "completed");
+        } else {
+            assert!(matches!(
+                result,
+                RunOutcome::Failed {
+                    code: FailureCode::CompactionFailed,
+                    ..
+                }
+            ));
+            assert!(seen.iter().all(|r| !r.summary));
+            assert_eq!(
+                record.reason.as_deref(),
+                Some("summary_reasoning_unsupported")
+            );
+            assert_eq!(
+                record.after_bytes, None,
+                "no replacement history was committed"
+            );
+            assert!(
+                !events
+                    .iter()
+                    .any(|e| matches!(e.kind, EventKind::TextDelta { .. }))
+            );
+            assert_eq!(
+                TaskResult::from_terminal(events.last().unwrap())
+                    .unwrap()
+                    .accounting
+                    .unwrap()
+                    .model_calls as usize,
+                seen.len(),
+                "no summary request was charged"
+            );
+        }
+        assert_eq!(*provider.reads.lock().unwrap(), 3, "no tool replay");
+        std::fs::remove_dir_all(cwd).unwrap();
     }
 }
 #[tokio::test]

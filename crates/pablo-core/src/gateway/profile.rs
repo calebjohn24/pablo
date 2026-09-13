@@ -65,6 +65,10 @@ impl GatewayKind {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct ModelProfile {
+    #[serde(default, skip_serializing_if = "crate::ReasoningConfig::is_default")]
+    pub reasoning: crate::ReasoningConfig,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reasoning_capabilities: Option<crate::ReasoningCapabilities>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub context_window_tokens: Option<u64>,
     pub provider: GatewayKind,
@@ -99,6 +103,8 @@ impl ModelProfile {
             return Err("model must be a nonempty provider/model identifier");
         }
         Ok(Self {
+            reasoning: crate::ReasoningConfig::default(),
+            reasoning_capabilities: None,
             context_window_tokens: None,
             provider,
             model: model.into(),
@@ -117,6 +123,8 @@ impl ModelProfile {
     }
     pub fn responses(profile: super::OpenResponsesProfile) -> Self {
         Self {
+            reasoning: crate::ReasoningConfig::default(),
+            reasoning_capabilities: None,
             context_window_tokens: None,
             provider: GatewayKind::OpenResponses,
             model: profile.model().into(),
