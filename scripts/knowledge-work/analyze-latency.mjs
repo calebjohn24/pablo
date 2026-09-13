@@ -19,7 +19,7 @@ export function compare(rows, base, candidate) {
   completion:b.filter(r=>r.status==='completed').length>=a.filter(r=>r.status==='completed').length,
   cost:y.reported_cost_usd!=null&&x.reported_cost_usd!=null&&Math.round(y.reported_cost_usd*1e6)<=Math.round(x.reported_cost_usd*1e6)};
  const paired=a.flatMap(r=>{const other=b.find(t=>key(t)===key(r));return r.resources?.wall_ms&&other?.resources?.wall_ms?[{task:r.task,seed:r.seed,repeat:r.repeat,ratio:other.resources.wall_ms/r.resources.wall_ms}]:[];});
- return {promote:false,numeric_gates_pass:Object.values(gates).every(Boolean),gates,detail_review:'required before promotion',families,p50_improvement:1-y.wall_p50_ms/x.wall_p50_ms,paired_ratio_p50:quantile(paired.map(r=>r.ratio),.5),paired};
+ return {promote:false,numeric_gates_pass:Object.values(gates).every(Boolean),gates,detail_review:'separate qualitative review; not evaluated by this script',families,p50_improvement:1-y.wall_p50_ms/x.wall_p50_ms,paired_ratio_p50:quantile(paired.map(r=>r.ratio),.5),paired};
 }
 export function summarize(report) {
  const summary=aggregate(report.rows),calls={};
