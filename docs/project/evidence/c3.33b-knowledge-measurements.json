@@ -1,0 +1,4980 @@
+{
+  "timestamp": "2026-09-12T22:01:30.757Z",
+  "suite": "knowledge-work-v1.1 (unchanged five-task v1 inputs verified; handoff rerun)",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "kernel": "25.5.0",
+    "cpu": "Apple M4 Pro",
+    "logical_cpus": 14,
+    "memory_bytes": 25769803776,
+    "node": "v24.11.0",
+    "python": "Python 3.12.13"
+  },
+  "method": {
+    "execution": "serial fresh process and workspace; rotated harness order per task/repetition; no warmup or retries",
+    "timing": "process spawn through reaping and pipe cleanup, includes network inference/tools/startup; no server-side inference CPU/RAM visibility",
+    "permissions": "equivalent local read/write/shell task capability, different native enforcement; no browsing/delegation requested",
+    "models": "GLM via OpenRouter; lab clients native provider/subscription; model and harness effects confounded across model families",
+    "effort": {
+      "pablo": "provider default",
+      "pablo-astra": "provider default",
+      "pi": "off",
+      "ori": "none / Pi off",
+      "codex": "medium",
+      "claude": "high"
+    },
+    "scoring": "exact factual values and required filename sets; no semantic judge; prose existence is not prose quality",
+    "credentials": "runner never reads .env/auth files; native clients resolve their credentials; Pablo privately loads root .env",
+    "limitations": "sampled RSS includes shared pages, misses short processes; wait4 CPU can miss unjoined descendants; native tools/prompts differ; no cache flush; p95 with a small sample is descriptive only"
+  },
+  "provenance": [
+    {
+      "name": "knowledge-work-six-task-pilot",
+      "timestamp": "2026-09-12T21:15:16.442Z",
+      "suiteVersion": "knowledge-work-v1",
+      "sourceHashes": {
+        "tasks.mjs": "e683d6ac23c60abdaa259df9d7e42715ee0376474ed135230303aad70a5d00ef",
+        "adapters.mjs": "e2dbea43e214cd65b21c3e3f7a34d596110430d3bb037a4afd5393308aca0908",
+        "run.mjs": "5fc60e7d839f48bdb530666669cbb430c5668e52f5a1fbcdf99d77954668d698",
+        "monitor.py": "3308c332e85e770fdd42da6628008c73f4177ab63f56a5b5c29f2cf80f3474f7"
+      },
+      "builds": {
+        "pablo": {
+          "version": "pablo 0.1.0-dev.1 (OTel mapping c1.2; GenAI fee465db333bdd6a7d2faa320edab5cf3101a4f4)",
+          "entry_sha256": "39669a6c4e38421a5180ad2a55278a94d95a09a440a758adfc96c3365e1126d0",
+          "entry_bytes": 15042000
+        },
+        "codex": {
+          "version": "codex-cli 0.154.0",
+          "entry_sha256": "61b0194f3bb6534439c8d26a3ed57d0805f84b884588b761795323eeb92fcf70",
+          "entry_bytes": 8790
+        },
+        "claude": {
+          "version": "2.1.263 (Claude Code)",
+          "entry_sha256": "ef5d2909c8af49f31ab6d5487e90316777bc2fac170adfe8160716caa8aaf4f9",
+          "entry_bytes": 199257984
+        },
+        "ori": {
+          "version": "{\n  \"ok\": true,\n  \"command\": \"version\",\n  \"data\": {\n    \"name\": \"@ori-runtime/cli\",\n    \"version\": \"0.14.3+6e62568\",\n    \"latestVersion\": \"0.14.3+6e62568\",\n    \"updateAvailable\": false,\n    \"severity\": \"none\",\n    \"channel\": \"stable\"\n  }\n}",
+          "entry_sha256": "116131f0b0c9c7f2f0b8be5dbac20ef1f8090bc05f43beb26a7c9816caa93782",
+          "entry_bytes": 81006240
+        },
+        "pi": {
+          "version": "0.85.1",
+          "entry_sha256": "e6d7fcf36a239cf3746e67ddf4222081ac01a601b85a3ee688bdfe9c161d754c",
+          "entry_bytes": 660
+        }
+      }
+    },
+    {
+      "name": "knowledge-work-pablo-astra-pilot",
+      "timestamp": "2026-09-12T21:26:49.103Z",
+      "suiteVersion": "knowledge-work-v1",
+      "sourceHashes": {
+        "tasks.mjs": "e683d6ac23c60abdaa259df9d7e42715ee0376474ed135230303aad70a5d00ef",
+        "adapters.mjs": "f74edb36c4b4f34ba1a5f8ba4b7fb8b14cffac1e987620d2b3bee508fb0c4abf",
+        "run.mjs": "7c174f6ecc8ccc432fe0a56575de3a7ef6ebd94ac4fa5ddf422c6f44195102da",
+        "monitor.py": "3308c332e85e770fdd42da6628008c73f4177ab63f56a5b5c29f2cf80f3474f7"
+      },
+      "builds": {
+        "pablo-astra": {
+          "version": "pablo 0.1.0-dev.1 (OTel mapping c1.2; GenAI fee465db333bdd6a7d2faa320edab5cf3101a4f4)",
+          "entry_sha256": "39669a6c4e38421a5180ad2a55278a94d95a09a440a758adfc96c3365e1126d0",
+          "entry_bytes": 15042000
+        }
+      }
+    },
+    {
+      "name": "knowledge-work-handoff-v1-1",
+      "timestamp": "2026-09-12T21:30:19.719Z",
+      "suiteVersion": "knowledge-work-v1.1",
+      "sourceHashes": {
+        "tasks.mjs": "029c3431c0cf7fcffcf89567ab430f07945044359525f7d771bed6656b2bb927",
+        "adapters.mjs": "f74edb36c4b4f34ba1a5f8ba4b7fb8b14cffac1e987620d2b3bee508fb0c4abf",
+        "run.mjs": "7c174f6ecc8ccc432fe0a56575de3a7ef6ebd94ac4fa5ddf422c6f44195102da",
+        "monitor.py": "3308c332e85e770fdd42da6628008c73f4177ab63f56a5b5c29f2cf80f3474f7"
+      },
+      "builds": {
+        "pablo": {
+          "version": "pablo 0.1.0-dev.1 (OTel mapping c1.2; GenAI fee465db333bdd6a7d2faa320edab5cf3101a4f4)",
+          "entry_sha256": "39669a6c4e38421a5180ad2a55278a94d95a09a440a758adfc96c3365e1126d0",
+          "entry_bytes": 15042000
+        },
+        "pablo-astra": {
+          "version": "pablo 0.1.0-dev.1 (OTel mapping c1.2; GenAI fee465db333bdd6a7d2faa320edab5cf3101a4f4)",
+          "entry_sha256": "39669a6c4e38421a5180ad2a55278a94d95a09a440a758adfc96c3365e1126d0",
+          "entry_bytes": 15042000
+        },
+        "codex": {
+          "version": "codex-cli 0.154.0",
+          "entry_sha256": "61b0194f3bb6534439c8d26a3ed57d0805f84b884588b761795323eeb92fcf70",
+          "entry_bytes": 8790
+        },
+        "claude": {
+          "version": "2.1.263 (Claude Code)",
+          "entry_sha256": "ef5d2909c8af49f31ab6d5487e90316777bc2fac170adfe8160716caa8aaf4f9",
+          "entry_bytes": 199257984
+        }
+      }
+    }
+  ],
+  "parity": {
+    "unchanged_input_and_argv_trials": 20,
+    "monitor_sha256": "3308c332e85e770fdd42da6628008c73f4177ab63f56a5b5c29f2cf80f3474f7",
+    "note": "Same measurement supervisor for every retained run; later changes add Astra profile, metadata normalization, cancellation reporting and additional summary fields. No model request, source input or scorer change in the five unaffected tasks."
+  },
+  "rows": [
+    {
+      "id": "reconciliation-s42-r0-pablo",
+      "harness": "pablo",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "reconciliation",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "230d29a6dd951a87327be41a4f8c9cac07fcc72b0e14c8010010f6aaf16a22dd",
+      "status": "completed",
+      "correctness": {
+        "points": 5,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 0.25,
+        "score": 0.625,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "north_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "south_due",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "total_due",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "excluded",
+            "value": true,
+            "citations": false
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 7,
+        "reported_usage": {
+          "model_calls": "5",
+          "tool_calls": "7",
+          "usage": {
+            "input_tokens": "11041",
+            "output_tokens": "1114",
+            "cache_read_input_tokens": "7552",
+            "cache_write_input_tokens": "0"
+          },
+          "cost_microusd": "1310",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.00131,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 32511.448958190158,
+        "first_stdout_ms": 32510.30808314681,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.035047,
+        "cpu_system_s": 0.021275,
+        "cpu_total_s": 0.056322,
+        "cpu_percent_one_core": 0.17323743421103838,
+        "cpu_percent_machine": 0.012374102443645599,
+        "sampled_tree_peak_rss_kib": 18192,
+        "rusage_maxrss_kib": 18208,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 1378,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 255
+    },
+    {
+      "id": "reconciliation-s42-r0-claude",
+      "harness": "claude",
+      "model": "claude-fable-5-1",
+      "task": "reconciliation",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "230d29a6dd951a87327be41a4f8c9cac07fcc72b0e14c8010010f6aaf16a22dd",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "north_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "south_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "total_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "excluded",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 1913.0342081189156,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 3,
+        "reported_usage": {
+          "input_tokens": 98,
+          "cache_creation_input_tokens": 2907,
+          "cache_read_input_tokens": 33060,
+          "output_tokens": 1828,
+          "output_tokens_details": {
+            "thinking_tokens": 113
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 2907,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 32,
+              "output_tokens": 282,
+              "cache_read_input_tokens": 9143,
+              "cache_creation_input_tokens": 1022,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1022
+              },
+              "type": "message",
+              "model": null
+            }
+          ],
+          "speed": "standard"
+        },
+        "reported_cost_usd": 0.159977,
+        "reported_model": "claude-fable-5-1",
+        "errors": [],
+        "event_count": 325
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 25361.29133310169,
+        "first_stdout_ms": 941.837582970038,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.9907269999999999,
+        "cpu_system_s": 0.639911,
+        "cpu_total_s": 1.6306379999999998,
+        "cpu_percent_one_core": 6.4296331704201615,
+        "cpu_percent_machine": 0.4592595121728687,
+        "sampled_tree_peak_rss_kib": 291952,
+        "rusage_maxrss_kib": 291952,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 108262,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 197
+    },
+    {
+      "id": "policy-review-s42-r0-claude",
+      "harness": "claude",
+      "model": "claude-fable-5-1",
+      "task": "policy-review",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "17ca4855e7e8a0c5413ca3a32825e39a9d2c583c95695c2cdf9a586a2c324985",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "A",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "B",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "C",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "D",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 2098.534374963492,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 3,
+        "reported_usage": {
+          "input_tokens": 98,
+          "cache_creation_input_tokens": 3446,
+          "cache_read_input_tokens": 33322,
+          "output_tokens": 2400,
+          "output_tokens_details": {
+            "thinking_tokens": 337
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 3446,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 32,
+              "output_tokens": 355,
+              "cache_read_input_tokens": 9369,
+              "cache_creation_input_tokens": 1335,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1335
+              },
+              "type": "message",
+              "model": null
+            }
+          ],
+          "speed": "standard"
+        },
+        "reported_cost_usd": 0.1994145,
+        "reported_model": "claude-fable-5-1",
+        "errors": [],
+        "event_count": 401
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 32101.33883380331,
+        "first_stdout_ms": 699.4416669476777,
+        "first_stderr_ms": null,
+        "cpu_user_s": 1.054445,
+        "cpu_system_s": 0.665511,
+        "cpu_total_s": 1.719956,
+        "cpu_percent_one_core": 5.357894911812382,
+        "cpu_percent_machine": 0.3827067794151701,
+        "sampled_tree_peak_rss_kib": 279344,
+        "rusage_maxrss_kib": 279344,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 132928,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 249
+    },
+    {
+      "id": "policy-review-s42-r0-pablo",
+      "harness": "pablo",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "policy-review",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "17ca4855e7e8a0c5413ca3a32825e39a9d2c583c95695c2cdf9a586a2c324985",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "A",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "B",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "C",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "D",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 6,
+        "reported_usage": {
+          "model_calls": "5",
+          "tool_calls": "6",
+          "usage": {
+            "input_tokens": "11747",
+            "output_tokens": "1782",
+            "cache_read_input_tokens": "0",
+            "cache_write_input_tokens": "0"
+          },
+          "cost_microusd": "2485",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.002485,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 23481.173541862518,
+        "first_stdout_ms": 23479.941125027835,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.043400999999999995,
+        "cpu_system_s": 0.034866999999999995,
+        "cpu_total_s": 0.07826799999999999,
+        "cpu_percent_one_core": 0.333322352311152,
+        "cpu_percent_machine": 0.02380873945079657,
+        "sampled_tree_peak_rss_kib": 17344,
+        "rusage_maxrss_kib": 17344,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 1419,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 184
+    },
+    {
+      "id": "vendor-selection-s42-r0-claude",
+      "harness": "claude",
+      "model": "claude-fable-5-1",
+      "task": "vendor-selection",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "91af333da80febed7638ca1dd32988f72a6ea8c1e96c384a9a46f16c723336b6",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "winner",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "annual_cost",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "savings",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "ineligible",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 1724.6309171896428,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 6,
+        "reported_usage": {
+          "input_tokens": 98,
+          "cache_creation_input_tokens": 3704,
+          "cache_read_input_tokens": 32942,
+          "output_tokens": 2353,
+          "output_tokens_details": {
+            "thinking_tokens": 231
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 3704,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 32,
+              "output_tokens": 270,
+              "cache_read_input_tokens": 9143,
+              "cache_creation_input_tokens": 1819,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1819
+              },
+              "type": "message",
+              "model": null
+            }
+          ],
+          "speed": "standard"
+        },
+        "reported_cost_usd": 0.20212950000000002,
+        "reported_model": "claude-fable-5-1",
+        "errors": [],
+        "event_count": 386
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 30124.46775007993,
+        "first_stdout_ms": 748.7696669995785,
+        "first_stderr_ms": null,
+        "cpu_user_s": 1.038125,
+        "cpu_system_s": 0.649803,
+        "cpu_total_s": 1.6879279999999999,
+        "cpu_percent_one_core": 5.603179495164761,
+        "cpu_percent_machine": 0.4002271067974829,
+        "sampled_tree_peak_rss_kib": 292960,
+        "rusage_maxrss_kib": 292960,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 127903,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 234
+    },
+    {
+      "id": "vendor-selection-s42-r0-pablo",
+      "harness": "pablo",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "vendor-selection",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "91af333da80febed7638ca1dd32988f72a6ea8c1e96c384a9a46f16c723336b6",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "winner",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "annual_cost",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "savings",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "ineligible",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 7,
+        "reported_usage": {
+          "model_calls": "5",
+          "tool_calls": "7",
+          "usage": {
+            "input_tokens": "11514",
+            "output_tokens": "1525",
+            "cache_read_input_tokens": "0",
+            "cache_write_input_tokens": "0"
+          },
+          "cost_microusd": "2331",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.002331,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 18979.977292008698,
+        "first_stdout_ms": 18978.956749895588,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.046324,
+        "cpu_system_s": 0.040558,
+        "cpu_total_s": 0.08688199999999999,
+        "cpu_percent_one_core": 0.4577560798061685,
+        "cpu_percent_machine": 0.03269686284329775,
+        "sampled_tree_peak_rss_kib": 18192,
+        "rusage_maxrss_kib": 18448,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 1626,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 149
+    },
+    {
+      "id": "incident-brief-s42-r0-pablo",
+      "harness": "pablo",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "incident-brief",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "f2db4196643a42ede95bc9bcc0336a5465842894a00386aa39a67af46cd9a0b6",
+      "status": "completed",
+      "correctness": {
+        "points": 7,
+        "total": 8,
+        "factualScore": 0.75,
+        "citationScore": 1,
+        "score": 0.875,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "duration_minutes",
+            "value": false,
+            "citations": true
+          },
+          {
+            "id": "unrecovered_requests",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "root_cause",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "data_loss_confirmed",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 8,
+        "reported_usage": {
+          "model_calls": "6",
+          "tool_calls": "8",
+          "usage": {
+            "input_tokens": "14251",
+            "output_tokens": "1245",
+            "cache_read_input_tokens": "0",
+            "cache_write_input_tokens": "0"
+          },
+          "cost_microusd": "2582",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.002582,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 25967.98533317633,
+        "first_stdout_ms": 25966.75108303316,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.088986,
+        "cpu_system_s": 0.0544,
+        "cpu_total_s": 0.14338599999999999,
+        "cpu_percent_one_core": 0.5521645139594717,
+        "cpu_percent_machine": 0.039440322425676556,
+        "sampled_tree_peak_rss_kib": 31232,
+        "rusage_maxrss_kib": 18448,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 2351,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 203
+    },
+    {
+      "id": "incident-brief-s42-r0-claude",
+      "harness": "claude",
+      "model": "claude-fable-5-1",
+      "task": "incident-brief",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "f2db4196643a42ede95bc9bcc0336a5465842894a00386aa39a67af46cd9a0b6",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "duration_minutes",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "unrecovered_requests",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "root_cause",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "data_loss_confirmed",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 3184.340290958062,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 6,
+        "reported_usage": {
+          "input_tokens": 98,
+          "cache_creation_input_tokens": 3651,
+          "cache_read_input_tokens": 32965,
+          "output_tokens": 2435,
+          "output_tokens_details": {
+            "thinking_tokens": 192
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 3651,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 32,
+              "output_tokens": 391,
+              "cache_read_input_tokens": 9141,
+              "cache_creation_input_tokens": 1768,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1768
+              },
+              "type": "message",
+              "model": null
+            }
+          ],
+          "speed": "standard"
+        },
+        "reported_cost_usd": 0.20517425,
+        "reported_model": "claude-fable-5-1",
+        "errors": [],
+        "event_count": 481
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 59664.76716590114,
+        "first_stdout_ms": 673.9630829542875,
+        "first_stderr_ms": null,
+        "cpu_user_s": 1.053725,
+        "cpu_system_s": 0.655909,
+        "cpu_total_s": 1.7096339999999999,
+        "cpu_percent_one_core": 2.8653996004815863,
+        "cpu_percent_machine": 0.20467140003439901,
+        "sampled_tree_peak_rss_kib": 281328,
+        "rusage_maxrss_kib": 280640,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 156659,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 463
+    },
+    {
+      "id": "project-plan-s42-r0-pablo",
+      "harness": "pablo",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "project-plan",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "c1639a9309b0d5bad7441176eef6fa5ecb33c1a017253e50596fa195b1f0675f",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "finish_day",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "critical_tasks",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "c_slack",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "deadline_met",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 6,
+        "reported_usage": {
+          "model_calls": "6",
+          "tool_calls": "6",
+          "usage": {
+            "input_tokens": "14211",
+            "output_tokens": "1761",
+            "cache_read_input_tokens": "10176",
+            "cache_write_input_tokens": "0"
+          },
+          "cost_microusd": "1793",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.001793,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 40188.44670802355,
+        "first_stdout_ms": 40187.297499971464,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.061322999999999996,
+        "cpu_system_s": 0.044101999999999995,
+        "cpu_total_s": 0.10542499999999999,
+        "cpu_percent_one_core": 0.26232663522910454,
+        "cpu_percent_machine": 0.018737616802078895,
+        "sampled_tree_peak_rss_kib": 25616,
+        "rusage_maxrss_kib": 18160,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 1514,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 315
+    },
+    {
+      "id": "project-plan-s42-r0-claude",
+      "harness": "claude",
+      "model": "claude-fable-5-1",
+      "task": "project-plan",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "c1639a9309b0d5bad7441176eef6fa5ecb33c1a017253e50596fa195b1f0675f",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "finish_day",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "critical_tasks",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "c_slack",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "deadline_met",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 1671.9047909136862,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 5,
+        "reported_usage": {
+          "input_tokens": 98,
+          "cache_creation_input_tokens": 3373,
+          "cache_read_input_tokens": 32663,
+          "output_tokens": 2222,
+          "output_tokens_details": {
+            "thinking_tokens": 152
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 3373,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 32,
+              "output_tokens": 367,
+              "cache_read_input_tokens": 8914,
+              "cache_creation_input_tokens": 1717,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1717
+              },
+              "type": "message",
+              "model": null
+            }
+          ],
+          "speed": "standard"
+        },
+        "reported_cost_usd": 0.18889475,
+        "reported_model": "claude-fable-5-1",
+        "errors": [],
+        "event_count": 354
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 28141.981082968414,
+        "first_stdout_ms": 717.305124970153,
+        "first_stderr_ms": null,
+        "cpu_user_s": 1.069668,
+        "cpu_system_s": 0.807383,
+        "cpu_total_s": 1.877051,
+        "cpu_percent_one_core": 6.669931994005907,
+        "cpu_percent_machine": 0.47642371385756477,
+        "sampled_tree_peak_rss_kib": 272240,
+        "rusage_maxrss_kib": 268352,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 118448,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 216
+    },
+    {
+      "id": "reconciliation-s42-r0-pablo-astra",
+      "harness": "pablo-astra",
+      "model": "openai/gpt-6-astra",
+      "task": "reconciliation",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "230d29a6dd951a87327be41a4f8c9cac07fcc72b0e14c8010010f6aaf16a22dd",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "north_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "south_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "total_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "excluded",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 4,
+        "reported_usage": {
+          "model_calls": "5",
+          "tool_calls": "4",
+          "usage": {
+            "input_tokens": "9696",
+            "output_tokens": "1557",
+            "cache_read_input_tokens": "6364",
+            "cache_write_input_tokens": "3317"
+          },
+          "cost_microusd": "125828",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.125828,
+        "reported_model": "openai/gpt-6-astra",
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-pablo-astra-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 26762.78558303602,
+        "first_stdout_ms": 26762.54600007087,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.06397499999999999,
+        "cpu_system_s": 0.068838,
+        "cpu_total_s": 0.132813,
+        "cpu_percent_one_core": 0.4962600009925179,
+        "cpu_percent_machine": 0.03544714292803699,
+        "sampled_tree_peak_rss_kib": 19440,
+        "rusage_maxrss_kib": 18544,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 891,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 203
+    },
+    {
+      "id": "policy-review-s42-r0-pablo-astra",
+      "harness": "pablo-astra",
+      "model": "openai/gpt-6-astra",
+      "task": "policy-review",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "17ca4855e7e8a0c5413ca3a32825e39a9d2c583c95695c2cdf9a586a2c324985",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "A",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "B",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "C",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "D",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 5,
+        "reported_usage": {
+          "model_calls": "6",
+          "tool_calls": "5",
+          "usage": {
+            "input_tokens": "10821",
+            "output_tokens": "915",
+            "cache_read_input_tokens": "8154",
+            "cache_write_input_tokens": "2649"
+          },
+          "cost_microusd": "87199",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.087199,
+        "reported_model": "openai/gpt-6-astra",
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-pablo-astra-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 21459.1139589902,
+        "first_stdout_ms": 21458.836333826184,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.047542,
+        "cpu_system_s": 0.036650999999999996,
+        "cpu_total_s": 0.08419299999999999,
+        "cpu_percent_one_core": 0.39234145529446574,
+        "cpu_percent_machine": 0.028024389663890408,
+        "sampled_tree_peak_rss_kib": 18352,
+        "rusage_maxrss_kib": 18608,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 762,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 163
+    },
+    {
+      "id": "vendor-selection-s42-r0-pablo-astra",
+      "harness": "pablo-astra",
+      "model": "openai/gpt-6-astra",
+      "task": "vendor-selection",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "91af333da80febed7638ca1dd32988f72a6ea8c1e96c384a9a46f16c723336b6",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "winner",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "annual_cost",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "savings",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "ineligible",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 3,
+        "reported_usage": {
+          "model_calls": "4",
+          "tool_calls": "3",
+          "usage": {
+            "input_tokens": "6401",
+            "output_tokens": "824",
+            "cache_read_input_tokens": "3918",
+            "cache_write_input_tokens": "2471"
+          },
+          "cost_microusd": "76126",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.076126,
+        "reported_model": "openai/gpt-6-astra",
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-pablo-astra-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 16712.359458208084,
+        "first_stdout_ms": 16711.122375214472,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.09986099999999999,
+        "cpu_system_s": 0.056762,
+        "cpu_total_s": 0.15662299999999998,
+        "cpu_percent_one_core": 0.9371686887878443,
+        "cpu_percent_machine": 0.06694062062770316,
+        "sampled_tree_peak_rss_kib": 23776,
+        "rusage_maxrss_kib": 17600,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 807,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 126
+    },
+    {
+      "id": "incident-brief-s42-r0-pablo-astra",
+      "harness": "pablo-astra",
+      "model": "openai/gpt-6-astra",
+      "task": "incident-brief",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "f2db4196643a42ede95bc9bcc0336a5465842894a00386aa39a67af46cd9a0b6",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "duration_minutes",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "unrecovered_requests",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "root_cause",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "data_loss_confirmed",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 5,
+        "reported_usage": {
+          "model_calls": "6",
+          "tool_calls": "5",
+          "usage": {
+            "input_tokens": "10200",
+            "output_tokens": "759",
+            "cache_read_input_tokens": "7700",
+            "cache_write_input_tokens": "2482"
+          },
+          "cost_microusd": "76857",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.076857,
+        "reported_model": "openai/gpt-6-astra",
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-pablo-astra-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 20473.048833897337,
+        "first_stdout_ms": 20471.850958885625,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.046664,
+        "cpu_system_s": 0.032735,
+        "cpu_total_s": 0.079399,
+        "cpu_percent_one_core": 0.3878220613069542,
+        "cpu_percent_machine": 0.027701575807639583,
+        "sampled_tree_peak_rss_kib": 18368,
+        "rusage_maxrss_kib": 18624,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 988,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 160
+    },
+    {
+      "id": "project-plan-s42-r0-pablo-astra",
+      "harness": "pablo-astra",
+      "model": "openai/gpt-6-astra",
+      "task": "project-plan",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "c1639a9309b0d5bad7441176eef6fa5ecb33c1a017253e50596fa195b1f0675f",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "finish_day",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "critical_tasks",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "c_slack",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "deadline_met",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 4,
+        "reported_usage": {
+          "model_calls": "5",
+          "tool_calls": "4",
+          "usage": {
+            "input_tokens": "10169",
+            "output_tokens": "1760",
+            "cache_read_input_tokens": "6283",
+            "cache_write_input_tokens": "3871"
+          },
+          "cost_microusd": "142822",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.142822,
+        "reported_model": "openai/gpt-6-astra",
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-pablo-astra-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 31118.90645790845,
+        "first_stdout_ms": 31117.659749928862,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.06669699999999999,
+        "cpu_system_s": 0.065883,
+        "cpu_total_s": 0.13257999999999998,
+        "cpu_percent_one_core": 0.4260432485933533,
+        "cpu_percent_machine": 0.03043166061381095,
+        "sampled_tree_peak_rss_kib": 18384,
+        "rusage_maxrss_kib": 18080,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 911,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 243
+    },
+    {
+      "id": "meeting-handoff-s42-r0-pablo",
+      "harness": "pablo",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "meeting-handoff",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "23a2795db06b2d5fd64dbfef31a49560b4278ab5ee85e5533e8f1179f091f19c",
+      "status": "completed",
+      "correctness": {
+        "points": 9,
+        "total": 10,
+        "factualScore": 1,
+        "citationScore": 0.8,
+        "score": 0.9,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "launch_date",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "migration_owner",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "legal_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "open_actions",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "finance_due",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 7,
+        "reported_usage": {
+          "model_calls": "4",
+          "tool_calls": "7",
+          "usage": {
+            "input_tokens": "15376",
+            "output_tokens": "6154",
+            "cache_read_input_tokens": "2304",
+            "cache_write_input_tokens": "0"
+          },
+          "cost_microusd": "4780",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.00478,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-handoff-v1-1",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 101071.61062513478,
+        "first_stdout_ms": 101070.53275010549,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.105637,
+        "cpu_system_s": 0.10547799999999999,
+        "cpu_total_s": 0.211115,
+        "cpu_percent_one_core": 0.20887665556553356,
+        "cpu_percent_machine": 0.014919761111823826,
+        "sampled_tree_peak_rss_kib": 18032,
+        "rusage_maxrss_kib": 18048,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 1820,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 790
+    },
+    {
+      "id": "meeting-handoff-s42-r0-pablo-astra",
+      "harness": "pablo-astra",
+      "model": "openai/gpt-6-astra",
+      "task": "meeting-handoff",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "23a2795db06b2d5fd64dbfef31a49560b4278ab5ee85e5533e8f1179f091f19c",
+      "status": "completed",
+      "correctness": {
+        "points": 10,
+        "total": 10,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "launch_date",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "migration_owner",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "legal_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "open_actions",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "finance_due",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 3,
+        "reported_usage": {
+          "model_calls": "4",
+          "tool_calls": "3",
+          "usage": {
+            "input_tokens": "12092",
+            "output_tokens": "926",
+            "cache_read_input_tokens": "6898",
+            "cache_write_input_tokens": "5182"
+          },
+          "cost_microusd": "118094",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.118094,
+        "reported_model": "openai/gpt-6-astra",
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-handoff-v1-1",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 18856.147959129885,
+        "first_stdout_ms": 18855.057999957353,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.098754,
+        "cpu_system_s": 0.06816699999999999,
+        "cpu_total_s": 0.16692099999999999,
+        "cpu_percent_one_core": 0.8852338259213709,
+        "cpu_percent_machine": 0.0632309875658122,
+        "sampled_tree_peak_rss_kib": 20640,
+        "rusage_maxrss_kib": 18528,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 885,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 147
+    },
+    {
+      "id": "meeting-handoff-s42-r0-claude",
+      "harness": "claude",
+      "model": "claude-fable-5-1",
+      "task": "meeting-handoff",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "23a2795db06b2d5fd64dbfef31a49560b4278ab5ee85e5533e8f1179f091f19c",
+      "status": "completed",
+      "correctness": {
+        "points": 9,
+        "total": 10,
+        "factualScore": 1,
+        "citationScore": 0.8,
+        "score": 0.9,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "launch_date",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "migration_owner",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "legal_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "open_actions",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "finance_due",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 1855.2609169855714,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 7,
+        "reported_usage": {
+          "input_tokens": 98,
+          "cache_creation_input_tokens": 7739,
+          "cache_read_input_tokens": 37175,
+          "output_tokens": 2526,
+          "output_tokens_details": {
+            "thinking_tokens": 184
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 7739,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 32,
+              "output_tokens": 354,
+              "cache_read_input_tokens": 13220,
+              "cache_creation_input_tokens": 1777,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1777
+              },
+              "type": "message",
+              "model": null
+            }
+          ],
+          "speed": "standard"
+        },
+        "reported_cost_usd": 0.29261075,
+        "reported_model": "claude-fable-5-1",
+        "errors": [],
+        "event_count": 417
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-handoff-v1-1",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 31669.369084062055,
+        "first_stdout_ms": 735.1312499959022,
+        "first_stderr_ms": null,
+        "cpu_user_s": 1.100473,
+        "cpu_system_s": 0.66914,
+        "cpu_total_s": 1.769613,
+        "cpu_percent_one_core": 5.58777472106502,
+        "cpu_percent_machine": 0.39912676579035855,
+        "sampled_tree_peak_rss_kib": 282192,
+        "rusage_maxrss_kib": 282192,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 162737,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 245
+    },
+    {
+      "id": "reconciliation-s42-r0-codex",
+      "harness": "codex",
+      "model": "gpt-6-astra",
+      "task": "reconciliation",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "25aab1ac5ea128360fd52095eafc5f1d3ed0d463e671643424cd4a5b1b561b81",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "north_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "south_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "total_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "excluded",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 4027.6783329900354,
+        "first_assistant_boundary": "completed message event, not first token",
+        "tool_calls": 3,
+        "reported_usage": {
+          "input_tokens": 57299,
+          "cached_input_tokens": 41984,
+          "cache_write_input_tokens": 15303,
+          "output_tokens": 982,
+          "reasoning_output_tokens": 47
+        },
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 11,
+        "estimated_cost_usd": 0.2824915,
+        "cost_estimate_basis": {
+          "model": "gpt-6-astra",
+          "verified": "2026-09-12",
+          "source": "https://developers.openai.com/api/docs/models/gpt-6-astra",
+          "usd_per_million": {
+            "input": 10,
+            "cached_input": 1,
+            "cache_write": 12.5,
+            "output": 50
+          },
+          "long_context_threshold": 272000,
+          "assumptions": "Standard tier, text-only, cache tokens included in total input, output includes reasoning; no hosted tool charges. Estimate, not an account billing receipt."
+        }
+      },
+      "authentication": "openai_api_key",
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-pilot",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 21565.117958001792,
+        "first_stdout_ms": 327.55570812150836,
+        "first_stderr_ms": 89.87749996595085,
+        "cpu_user_s": 1.588507,
+        "cpu_system_s": 1.798499,
+        "cpu_total_s": 3.387006,
+        "cpu_percent_one_core": 15.7059470140447,
+        "cpu_percent_machine": 1.12185335814605,
+        "sampled_tree_peak_rss_kib": 200736,
+        "rusage_maxrss_kib": 100400,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 8733,
+        "stderr_bytes": 39,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 166
+    },
+    {
+      "id": "reconciliation-s42-r0-ori",
+      "harness": "ori",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "reconciliation",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "25aab1ac5ea128360fd52095eafc5f1d3ed0d463e671643424cd4a5b1b561b81",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "north_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "south_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "total_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "excluded",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 7503.9847497828305,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 6,
+        "reported_usage": {
+          "input": 3301,
+          "output": 638,
+          "cacheRead": 6784,
+          "cacheWrite": 0,
+          "reasoning": 46,
+          "totalTokens": 10723
+        },
+        "reported_cost_usd": 0.00101767,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 124
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-pilot",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 8010.358999948949,
+        "first_stdout_ms": 1185.677707893774,
+        "first_stderr_ms": 435.4187499266118,
+        "cpu_user_s": 1.310265,
+        "cpu_system_s": 0.170648,
+        "cpu_total_s": 1.480913,
+        "cpu_percent_one_core": 18.487473532827156,
+        "cpu_percent_machine": 1.3205338237733684,
+        "sampled_tree_peak_rss_kib": 343776,
+        "rusage_maxrss_kib": 344016,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 58987,
+        "stderr_bytes": 82,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 62
+    },
+    {
+      "id": "reconciliation-s42-r0-pi",
+      "harness": "pi",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "reconciliation",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "25aab1ac5ea128360fd52095eafc5f1d3ed0d463e671643424cd4a5b1b561b81",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "north_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "south_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "total_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "excluded",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 6135.6932919006795,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 6,
+        "reported_usage": {
+          "input": 3205,
+          "output": 640,
+          "cacheRead": 8960,
+          "cacheWrite": 0,
+          "reasoning": 46,
+          "totalTokens": 12805
+        },
+        "reported_cost_usd": 0.0005347749999999999,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 149
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-pilot",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 7187.230333918706,
+        "first_stdout_ms": 164.82879198156297,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.266245,
+        "cpu_system_s": 0.039026,
+        "cpu_total_s": 0.305271,
+        "cpu_percent_one_core": 4.247408053131874,
+        "cpu_percent_machine": 0.3033862895094196,
+        "sampled_tree_peak_rss_kib": 162576,
+        "rusage_maxrss_kib": 162576,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 63284,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 55
+    },
+    {
+      "id": "policy-review-s42-r0-codex",
+      "harness": "codex",
+      "model": "gpt-6-astra",
+      "task": "policy-review",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "7c62e343873c86cf8383e379902b917ca9b1a09cbe204330f6fdec1d13f6fe03",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "A",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "B",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "C",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "D",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 2861.4077079109848,
+        "first_assistant_boundary": "completed message event, not first token",
+        "tool_calls": 6,
+        "reported_usage": {
+          "input_tokens": 57371,
+          "cached_input_tokens": 42180,
+          "cache_write_input_tokens": 15179,
+          "output_tokens": 920,
+          "reasoning_output_tokens": 0
+        },
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 17,
+        "estimated_cost_usd": 0.2780375,
+        "cost_estimate_basis": {
+          "model": "gpt-6-astra",
+          "verified": "2026-09-12",
+          "source": "https://developers.openai.com/api/docs/models/gpt-6-astra",
+          "usd_per_million": {
+            "input": 10,
+            "cached_input": 1,
+            "cache_write": 12.5,
+            "output": 50
+          },
+          "long_context_threshold": 272000,
+          "assumptions": "Standard tier, text-only, cache tokens included in total input, output includes reasoning; no hosted tool charges. Estimate, not an account billing receipt."
+        }
+      },
+      "authentication": "openai_api_key",
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 18894.37595801428,
+        "first_stdout_ms": 220.2484579756856,
+        "first_stderr_ms": 95.51137499511242,
+        "cpu_user_s": 0.700927,
+        "cpu_system_s": 0.7275659999999999,
+        "cpu_total_s": 1.428493,
+        "cpu_percent_one_core": 7.5604137610805155,
+        "cpu_percent_machine": 0.540029554362894,
+        "sampled_tree_peak_rss_kib": 169952,
+        "rusage_maxrss_kib": 99072,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 5091,
+        "stderr_bytes": 39,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 144
+    },
+    {
+      "id": "policy-review-s42-r0-ori",
+      "harness": "ori",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "policy-review",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "7c62e343873c86cf8383e379902b917ca9b1a09cbe204330f6fdec1d13f6fe03",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "A",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "B",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "C",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "D",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 9279.858333058655,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 6,
+        "reported_usage": {
+          "input": 3294,
+          "output": 738,
+          "cacheRead": 6464,
+          "cacheWrite": 0,
+          "reasoning": 76,
+          "totalTokens": 10496
+        },
+        "reported_cost_usd": 0.0010570199999999999,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 151
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 16296.033791964874,
+        "first_stdout_ms": 1168.6148329172283,
+        "first_stderr_ms": 490.3592080809176,
+        "cpu_user_s": 1.270861,
+        "cpu_system_s": 0.185951,
+        "cpu_total_s": 1.456812,
+        "cpu_percent_one_core": 8.939672184027465,
+        "cpu_percent_machine": 0.6385480131448189,
+        "sampled_tree_peak_rss_kib": 302176,
+        "rusage_maxrss_kib": 302176,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 64600,
+        "stderr_bytes": 82,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 123
+    },
+    {
+      "id": "policy-review-s42-r0-pi",
+      "harness": "pi",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "policy-review",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "7c62e343873c86cf8383e379902b917ca9b1a09cbe204330f6fdec1d13f6fe03",
+      "status": "completed",
+      "correctness": {
+        "points": 7,
+        "total": 8,
+        "factualScore": 0.75,
+        "citationScore": 1,
+        "score": 0.875,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "A",
+            "value": false,
+            "citations": true
+          },
+          {
+            "id": "B",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "C",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "D",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 33667.28770802729,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 5,
+        "reported_usage": {
+          "input": 2895,
+          "output": 797,
+          "cacheRead": 12224,
+          "cacheWrite": 0,
+          "reasoning": 77,
+          "totalTokens": 15916
+        },
+        "reported_cost_usd": 0.0005997349999999999,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 244
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 34222.200457938015,
+        "first_stdout_ms": 185.04016706719995,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.320534,
+        "cpu_system_s": 0.062214,
+        "cpu_total_s": 0.382748,
+        "cpu_percent_one_core": 1.1184201918004357,
+        "cpu_percent_machine": 0.07988715655717397,
+        "sampled_tree_peak_rss_kib": 142000,
+        "rusage_maxrss_kib": 142000,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 92509,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 262
+    },
+    {
+      "id": "vendor-selection-s42-r0-ori",
+      "harness": "ori",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "vendor-selection",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "427a70128ea3ffc74ea0ab4230094163e4cb80032f87588ca5cc8241da099095",
+      "status": "completed",
+      "correctness": {
+        "points": 7,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 0.75,
+        "score": 0.875,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "winner",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "annual_cost",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "savings",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "ineligible",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 14741.050417069346,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 6,
+        "reported_usage": {
+          "input": 3309,
+          "output": 818,
+          "cacheRead": 6400,
+          "cacheWrite": 0,
+          "reasoning": 73,
+          "totalTokens": 10527
+        },
+        "reported_cost_usd": 0.00109735,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 162
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 16187.970249913633,
+        "first_stdout_ms": 1108.6104579735547,
+        "first_stderr_ms": 471.41341702081263,
+        "cpu_user_s": 1.217693,
+        "cpu_system_s": 0.16695,
+        "cpu_total_s": 1.3846429999999998,
+        "cpu_percent_one_core": 8.553530668907595,
+        "cpu_percent_machine": 0.6109664763505425,
+        "sampled_tree_peak_rss_kib": 285648,
+        "rusage_maxrss_kib": 285648,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 70673,
+        "stderr_bytes": 82,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 123
+    },
+    {
+      "id": "vendor-selection-s42-r0-pi",
+      "harness": "pi",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "vendor-selection",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "427a70128ea3ffc74ea0ab4230094163e4cb80032f87588ca5cc8241da099095",
+      "status": "completed",
+      "correctness": {
+        "points": 5,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 0.25,
+        "score": 0.625,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "winner",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "annual_cost",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "savings",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "ineligible",
+            "value": true,
+            "citations": false
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 8783.038416877389,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 7,
+        "reported_usage": {
+          "input": 3376,
+          "output": 582,
+          "cacheRead": 11200,
+          "cacheWrite": 0,
+          "reasoning": 0,
+          "totalTokens": 15158
+        },
+        "reported_cost_usd": 0.0005667,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 126
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 9179.978291969746,
+        "first_stdout_ms": 174.63270900771022,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.28973099999999996,
+        "cpu_system_s": 0.044489,
+        "cpu_total_s": 0.33421999999999996,
+        "cpu_percent_one_core": 3.6407493500541435,
+        "cpu_percent_machine": 0.2600535250038674,
+        "sampled_tree_peak_rss_kib": 163664,
+        "rusage_maxrss_kib": 163664,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 55783,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 70
+    },
+    {
+      "id": "vendor-selection-s42-r0-codex",
+      "harness": "codex",
+      "model": "gpt-6-astra",
+      "task": "vendor-selection",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "427a70128ea3ffc74ea0ab4230094163e4cb80032f87588ca5cc8241da099095",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "winner",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "annual_cost",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "savings",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "ineligible",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 4610.346958041191,
+        "first_assistant_boundary": "completed message event, not first token",
+        "tool_calls": 3,
+        "reported_usage": {
+          "input_tokens": 56976,
+          "cached_input_tokens": 42007,
+          "cache_write_input_tokens": 14957,
+          "output_tokens": 883,
+          "reasoning_output_tokens": 0
+        },
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 11,
+        "estimated_cost_usd": 0.2732395,
+        "cost_estimate_basis": {
+          "model": "gpt-6-astra",
+          "verified": "2026-09-12",
+          "source": "https://developers.openai.com/api/docs/models/gpt-6-astra",
+          "usd_per_million": {
+            "input": 10,
+            "cached_input": 1,
+            "cache_write": 12.5,
+            "output": 50
+          },
+          "long_context_threshold": 272000,
+          "assumptions": "Standard tier, text-only, cache tokens included in total input, output includes reasoning; no hosted tool charges. Estimate, not an account billing receipt."
+        }
+      },
+      "authentication": "openai_api_key",
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 22213.037375127897,
+        "first_stdout_ms": 118.13516612164676,
+        "first_stderr_ms": 73.03887512534857,
+        "cpu_user_s": 0.552318,
+        "cpu_system_s": 0.48982899999999996,
+        "cpu_total_s": 1.042147,
+        "cpu_percent_one_core": 4.691600623545971,
+        "cpu_percent_machine": 0.33511433025328363,
+        "sampled_tree_peak_rss_kib": 180000,
+        "rusage_maxrss_kib": 107280,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 7504,
+        "stderr_bytes": 39,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 172
+    },
+    {
+      "id": "meeting-handoff-s42-r0-pi",
+      "harness": "pi",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "meeting-handoff",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "23a2795db06b2d5fd64dbfef31a49560b4278ab5ee85e5533e8f1179f091f19c",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 10,
+        "factualScore": 1,
+        "citationScore": 0.6,
+        "score": 0.8,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "launch_date",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "migration_owner",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "legal_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "open_actions",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "finance_due",
+            "value": true,
+            "citations": false
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 8899.696707958356,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 7,
+        "reported_usage": {
+          "input": 6219,
+          "output": 940,
+          "cacheRead": 9344,
+          "cacheWrite": 0,
+          "reasoning": 0,
+          "totalTokens": 16503
+        },
+        "reported_cost_usd": 0.0008415850000000001,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 143
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 11481.476499931887,
+        "first_stdout_ms": 191.71150005422533,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.267458,
+        "cpu_system_s": 0.044208,
+        "cpu_total_s": 0.311666,
+        "cpu_percent_one_core": 2.7145115003444804,
+        "cpu_percent_machine": 0.19389367859603432,
+        "sampled_tree_peak_rss_kib": 161248,
+        "rusage_maxrss_kib": 161248,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 126285,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 88
+    },
+    {
+      "id": "meeting-handoff-s42-r0-codex",
+      "harness": "codex",
+      "model": "gpt-6-astra",
+      "task": "meeting-handoff",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "23a2795db06b2d5fd64dbfef31a49560b4278ab5ee85e5533e8f1179f091f19c",
+      "status": "completed",
+      "correctness": {
+        "points": 10,
+        "total": 10,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "launch_date",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "migration_owner",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "legal_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "open_actions",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "finance_due",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 3375.9059589356184,
+        "first_assistant_boundary": "completed message event, not first token",
+        "tool_calls": 7,
+        "reported_usage": {
+          "input_tokens": 63130,
+          "cached_input_tokens": 45104,
+          "cache_write_input_tokens": 18014,
+          "output_tokens": 963,
+          "reasoning_output_tokens": 0
+        },
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 19,
+        "estimated_cost_usd": 0.318549,
+        "cost_estimate_basis": {
+          "model": "gpt-6-astra",
+          "verified": "2026-09-12",
+          "source": "https://developers.openai.com/api/docs/models/gpt-6-astra",
+          "usd_per_million": {
+            "input": 10,
+            "cached_input": 1,
+            "cache_write": 12.5,
+            "output": 50
+          },
+          "long_context_threshold": 272000,
+          "assumptions": "Standard tier, text-only, cache tokens included in total input, output includes reasoning; no hosted tool charges. Estimate, not an account billing receipt."
+        }
+      },
+      "authentication": "openai_api_key",
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 18466.25241707079,
+        "first_stdout_ms": 119.01349993422627,
+        "first_stderr_ms": 73.18037492223084,
+        "cpu_user_s": 0.669522,
+        "cpu_system_s": 0.5451389999999999,
+        "cpu_total_s": 1.214661,
+        "cpu_percent_one_core": 6.577734196231005,
+        "cpu_percent_machine": 0.4698381568736432,
+        "sampled_tree_peak_rss_kib": 182272,
+        "rusage_maxrss_kib": 108288,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 17138,
+        "stderr_bytes": 39,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 143
+    },
+    {
+      "id": "meeting-handoff-s42-r0-ori",
+      "harness": "ori",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "meeting-handoff",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "23a2795db06b2d5fd64dbfef31a49560b4278ab5ee85e5533e8f1179f091f19c",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 10,
+        "factualScore": 1,
+        "citationScore": 0.6,
+        "score": 0.8,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "launch_date",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "migration_owner",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "legal_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "open_actions",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "finance_due",
+            "value": true,
+            "citations": false
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 9550.387917086482,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 7,
+        "reported_usage": {
+          "input": 6124,
+          "output": 850,
+          "cacheRead": 9344,
+          "cacheWrite": 0,
+          "reasoning": 69,
+          "totalTokens": 16318
+        },
+        "reported_cost_usd": 0.00162392,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 166
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 13675.716958008707,
+        "first_stdout_ms": 1097.5732079241425,
+        "first_stderr_ms": 450.32104197889566,
+        "cpu_user_s": 1.228748,
+        "cpu_system_s": 0.164356,
+        "cpu_total_s": 1.393104,
+        "cpu_percent_one_core": 10.186698103489025,
+        "cpu_percent_machine": 0.7276212931063589,
+        "sampled_tree_peak_rss_kib": 301056,
+        "rusage_maxrss_kib": 301056,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 132372,
+        "stderr_bytes": 82,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 104
+    },
+    {
+      "id": "incident-brief-s42-r0-codex",
+      "harness": "codex",
+      "model": "gpt-6-astra",
+      "task": "incident-brief",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "867ba5a1f1ea7533e9350635c9626a1c09227e82f7357cc704cf14a2c3f55c97",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "duration_minutes",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "unrecovered_requests",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "root_cause",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "data_loss_confirmed",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 2929.722375003621,
+        "first_assistant_boundary": "completed message event, not first token",
+        "tool_calls": 6,
+        "reported_usage": {
+          "input_tokens": 57298,
+          "cached_input_tokens": 42153,
+          "cache_write_input_tokens": 15133,
+          "output_tokens": 960,
+          "reasoning_output_tokens": 0
+        },
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 17,
+        "estimated_cost_usd": 0.2794355,
+        "cost_estimate_basis": {
+          "model": "gpt-6-astra",
+          "verified": "2026-09-12",
+          "source": "https://developers.openai.com/api/docs/models/gpt-6-astra",
+          "usd_per_million": {
+            "input": 10,
+            "cached_input": 1,
+            "cache_write": 12.5,
+            "output": 50
+          },
+          "long_context_threshold": 272000,
+          "assumptions": "Standard tier, text-only, cache tokens included in total input, output includes reasoning; no hosted tool charges. Estimate, not an account billing receipt."
+        }
+      },
+      "authentication": "openai_api_key",
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 19647.461999906227,
+        "first_stdout_ms": 115.17791706137359,
+        "first_stderr_ms": 69.28766705095768,
+        "cpu_user_s": 0.652542,
+        "cpu_system_s": 0.5335449999999999,
+        "cpu_total_s": 1.186087,
+        "cpu_percent_one_core": 6.036845878646621,
+        "cpu_percent_machine": 0.4312032770461872,
+        "sampled_tree_peak_rss_kib": 188352,
+        "rusage_maxrss_kib": 110000,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 5430,
+        "stderr_bytes": 39,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 152
+    },
+    {
+      "id": "incident-brief-s42-r0-ori",
+      "harness": "ori",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "incident-brief",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "867ba5a1f1ea7533e9350635c9626a1c09227e82f7357cc704cf14a2c3f55c97",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "duration_minutes",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "unrecovered_requests",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "root_cause",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "data_loss_confirmed",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 7484.8104999400675,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 6,
+        "reported_usage": {
+          "input": 3018,
+          "output": 600,
+          "cacheRead": 6464,
+          "cacheWrite": 0,
+          "reasoning": 26,
+          "totalTokens": 10082
+        },
+        "reported_cost_usd": 0.00094662,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 138
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 10443.084541941062,
+        "first_stdout_ms": 1075.8272088132799,
+        "first_stderr_ms": 424.73937501199543,
+        "cpu_user_s": 1.190143,
+        "cpu_system_s": 0.150427,
+        "cpu_total_s": 1.34057,
+        "cpu_percent_one_core": 12.836916091371867,
+        "cpu_percent_machine": 0.9169225779551333,
+        "sampled_tree_peak_rss_kib": 308464,
+        "rusage_maxrss_kib": 308464,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 61726,
+        "stderr_bytes": 82,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 79
+    },
+    {
+      "id": "incident-brief-s42-r0-pi",
+      "harness": "pi",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "incident-brief",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "867ba5a1f1ea7533e9350635c9626a1c09227e82f7357cc704cf14a2c3f55c97",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "duration_minutes",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "unrecovered_requests",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "root_cause",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "data_loss_confirmed",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 6058.210582938045,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 6,
+        "reported_usage": {
+          "input": 5323,
+          "output": 623,
+          "cacheRead": 4224,
+          "cacheWrite": 0,
+          "reasoning": 31,
+          "totalTokens": 10170
+        },
+        "reported_cost_usd": 0.000618335,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 142
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 6902.259916067123,
+        "first_stdout_ms": 175.76050013303757,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.25781,
+        "cpu_system_s": 0.037021,
+        "cpu_total_s": 0.29483099999999995,
+        "cpu_percent_one_core": 4.271514019831252,
+        "cpu_percent_machine": 0.30510814427366084,
+        "sampled_tree_peak_rss_kib": 164080,
+        "rusage_maxrss_kib": 164080,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 62752,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 53
+    },
+    {
+      "id": "project-plan-s42-r0-ori",
+      "harness": "ori",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "project-plan",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "36947d8fa665d15617076318fb79d94f57cd032c8fe9ceaa16b4c51502df8709",
+      "status": "completed",
+      "correctness": {
+        "points": 6,
+        "total": 8,
+        "factualScore": 0.5,
+        "citationScore": 1,
+        "score": 0.75,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "finish_day",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "critical_tasks",
+            "value": false,
+            "citations": true
+          },
+          {
+            "id": "c_slack",
+            "value": false,
+            "citations": true
+          },
+          {
+            "id": "deadline_met",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 3583.437583874911,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 5,
+        "reported_usage": {
+          "input": 3369,
+          "output": 926,
+          "cacheRead": 6400,
+          "cacheWrite": 0,
+          "reasoning": 135,
+          "totalTokens": 10695
+        },
+        "reported_cost_usd": 0.00116035,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 197
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 14195.343167055398,
+        "first_stdout_ms": 1085.7594169210643,
+        "first_stderr_ms": 428.7364589981735,
+        "cpu_user_s": 1.272825,
+        "cpu_system_s": 0.166396,
+        "cpu_total_s": 1.439221,
+        "cpu_percent_one_core": 10.138684095641654,
+        "cpu_percent_machine": 0.724191721117261,
+        "sampled_tree_peak_rss_kib": 298992,
+        "rusage_maxrss_kib": 298992,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 76403,
+        "stderr_bytes": 82,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 107
+    },
+    {
+      "id": "project-plan-s42-r0-pi",
+      "harness": "pi",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "project-plan",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "36947d8fa665d15617076318fb79d94f57cd032c8fe9ceaa16b4c51502df8709",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "finish_day",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "critical_tasks",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "c_slack",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "deadline_met",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 9746.649416862056,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 5,
+        "reported_usage": {
+          "input": 3294,
+          "output": 884,
+          "cacheRead": 6400,
+          "cacheWrite": 0,
+          "reasoning": 160,
+          "totalTokens": 10578
+        },
+        "reported_cost_usd": 0.00056405,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 199
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 11401.594792027026,
+        "first_stdout_ms": 189.03291691094637,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.316895,
+        "cpu_system_s": 0.04713,
+        "cpu_total_s": 0.364025,
+        "cpu_percent_one_core": 3.1927551069834332,
+        "cpu_percent_machine": 0.22805393621310238,
+        "sampled_tree_peak_rss_kib": 163504,
+        "rusage_maxrss_kib": 163504,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 76073,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 87
+    },
+    {
+      "id": "project-plan-s42-r0-codex",
+      "harness": "codex",
+      "model": "gpt-6-astra",
+      "task": "project-plan",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "36947d8fa665d15617076318fb79d94f57cd032c8fe9ceaa16b4c51502df8709",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "finish_day",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "critical_tasks",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "c_slack",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "deadline_met",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 3592.1378748025745,
+        "first_assistant_boundary": "completed message event, not first token",
+        "tool_calls": 4,
+        "reported_usage": {
+          "input_tokens": 57463,
+          "cached_input_tokens": 42043,
+          "cache_write_input_tokens": 15408,
+          "output_tokens": 1132,
+          "reasoning_output_tokens": 25
+        },
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 13,
+        "estimated_cost_usd": 0.291363,
+        "cost_estimate_basis": {
+          "model": "gpt-6-astra",
+          "verified": "2026-09-12",
+          "source": "https://developers.openai.com/api/docs/models/gpt-6-astra",
+          "usd_per_million": {
+            "input": 10,
+            "cached_input": 1,
+            "cache_write": 12.5,
+            "output": 50
+          },
+          "long_context_threshold": 272000,
+          "assumptions": "Standard tier, text-only, cache tokens included in total input, output includes reasoning; no hosted tool charges. Estimate, not an account billing receipt."
+        }
+      },
+      "authentication": "openai_api_key",
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 21080.995082855225,
+        "first_stdout_ms": 152.3067078087479,
+        "first_stderr_ms": 106.09233286231756,
+        "cpu_user_s": 0.591079,
+        "cpu_system_s": 0.528645,
+        "cpu_total_s": 1.1197240000000002,
+        "cpu_percent_one_core": 5.311532949934847,
+        "cpu_percent_machine": 0.37939521070963195,
+        "sampled_tree_peak_rss_kib": 181536,
+        "rusage_maxrss_kib": 109776,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 9053,
+        "stderr_bytes": 39,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 163
+    }
+  ],
+  "summary": {
+    "pablo": {
+      "attempts": 6,
+      "measured": 6,
+      "passed": 3,
+      "pass_rate": 0.5,
+      "factual_correct": 24,
+      "factual_total": 25,
+      "factual_accuracy": 0.96,
+      "mean_factual_score": 0.9583333333333334,
+      "mean_citation_score": 0.8416666666666667,
+      "completed_wall_p50_ms": 25967.98533317633,
+      "successful_wall_p50_ms": 23481.173541862518,
+      "wall_p50_ms": 25967.98533317633,
+      "wall_p95_ms": 101071.61062513478,
+      "peak_tree_rss_kib": 31232,
+      "cpu_p50_s": 0.08688199999999999,
+      "cpu_one_core_p50_percent": 0.26232663522910454,
+      "estimated_cost_usd": null,
+      "reported_cost_usd": 0.015281,
+      "reported_cost_known_subtotal_usd": 0.015281,
+      "cost_reported_attempts": 6,
+      "failures": []
+    },
+    "claude": {
+      "attempts": 6,
+      "measured": 6,
+      "passed": 5,
+      "pass_rate": 0.8333333333333334,
+      "factual_correct": 25,
+      "factual_total": 25,
+      "factual_accuracy": 1,
+      "mean_factual_score": 1,
+      "mean_citation_score": 0.9666666666666667,
+      "completed_wall_p50_ms": 30124.46775007993,
+      "successful_wall_p50_ms": 30124.46775007993,
+      "wall_p50_ms": 30124.46775007993,
+      "wall_p95_ms": 59664.76716590114,
+      "peak_tree_rss_kib": 292960,
+      "cpu_p50_s": 1.7096339999999999,
+      "cpu_one_core_p50_percent": 5.58777472106502,
+      "estimated_cost_usd": null,
+      "reported_cost_usd": 1.2482007499999999,
+      "reported_cost_known_subtotal_usd": 1.2482007499999999,
+      "cost_reported_attempts": 6,
+      "failures": []
+    },
+    "pablo-astra": {
+      "attempts": 6,
+      "measured": 6,
+      "passed": 6,
+      "pass_rate": 1,
+      "factual_correct": 25,
+      "factual_total": 25,
+      "factual_accuracy": 1,
+      "mean_factual_score": 1,
+      "mean_citation_score": 1,
+      "completed_wall_p50_ms": 20473.048833897337,
+      "successful_wall_p50_ms": 20473.048833897337,
+      "wall_p50_ms": 20473.048833897337,
+      "wall_p95_ms": 31118.90645790845,
+      "peak_tree_rss_kib": 23776,
+      "cpu_p50_s": 0.13257999999999998,
+      "cpu_one_core_p50_percent": 0.4260432485933533,
+      "estimated_cost_usd": null,
+      "reported_cost_usd": 0.626926,
+      "reported_cost_known_subtotal_usd": 0.626926,
+      "cost_reported_attempts": 6,
+      "failures": []
+    },
+    "codex": {
+      "attempts": 6,
+      "measured": 6,
+      "passed": 6,
+      "pass_rate": 1,
+      "factual_correct": 25,
+      "factual_total": 25,
+      "factual_accuracy": 1,
+      "mean_factual_score": 1,
+      "mean_citation_score": 1,
+      "completed_wall_p50_ms": 19647.461999906227,
+      "successful_wall_p50_ms": 19647.461999906227,
+      "wall_p50_ms": 19647.461999906227,
+      "wall_p95_ms": 22213.037375127897,
+      "peak_tree_rss_kib": 200736,
+      "cpu_p50_s": 1.186087,
+      "cpu_one_core_p50_percent": 6.036845878646621,
+      "estimated_cost_usd": 1.723116,
+      "reported_cost_usd": null,
+      "reported_cost_known_subtotal_usd": null,
+      "cost_reported_attempts": 0,
+      "failures": []
+    },
+    "ori": {
+      "attempts": 6,
+      "measured": 6,
+      "passed": 3,
+      "pass_rate": 0.5,
+      "factual_correct": 23,
+      "factual_total": 25,
+      "factual_accuracy": 0.92,
+      "mean_factual_score": 0.9166666666666666,
+      "mean_citation_score": 0.8916666666666666,
+      "completed_wall_p50_ms": 13675.716958008707,
+      "successful_wall_p50_ms": 10443.084541941062,
+      "wall_p50_ms": 13675.716958008707,
+      "wall_p95_ms": 16296.033791964874,
+      "peak_tree_rss_kib": 343776,
+      "cpu_p50_s": 1.393104,
+      "cpu_one_core_p50_percent": 10.138684095641654,
+      "estimated_cost_usd": null,
+      "reported_cost_usd": 0.006902930000000001,
+      "reported_cost_known_subtotal_usd": 0.006902930000000001,
+      "cost_reported_attempts": 6,
+      "failures": []
+    },
+    "pi": {
+      "attempts": 6,
+      "measured": 6,
+      "passed": 3,
+      "pass_rate": 0.5,
+      "factual_correct": 24,
+      "factual_total": 25,
+      "factual_accuracy": 0.96,
+      "mean_factual_score": 0.9583333333333334,
+      "mean_citation_score": 0.8083333333333332,
+      "completed_wall_p50_ms": 9179.978291969746,
+      "successful_wall_p50_ms": 7187.230333918706,
+      "wall_p50_ms": 9179.978291969746,
+      "wall_p95_ms": 34222.200457938015,
+      "peak_tree_rss_kib": 164080,
+      "cpu_p50_s": 0.311666,
+      "cpu_one_core_p50_percent": 3.1927551069834332,
+      "estimated_cost_usd": null,
+      "reported_cost_usd": 0.00372518,
+      "reported_cost_known_subtotal_usd": 0.00372518,
+      "cost_reported_attempts": 6,
+      "failures": []
+    }
+  },
+  "superseded_handoff": [
+    {
+      "id": "meeting-handoff-s42-r0-pablo",
+      "harness": "pablo",
+      "run": "knowledge-work-six-task-pilot",
+      "correctness": {
+        "points": 5,
+        "total": 10,
+        "factualScore": 1,
+        "citationScore": 0,
+        "score": 0.5,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "launch_date",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "migration_owner",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "legal_due",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "open_actions",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "finance_due",
+            "value": true,
+            "citations": false
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "wall_ms": 85813.67754214443,
+      "reason": "v1 omitted year despite year-specific answer key and unnecessarily required an older source for current open actions; excluded from final comparison"
+    },
+    {
+      "id": "meeting-handoff-s42-r0-codex",
+      "harness": "codex",
+      "run": "knowledge-work-six-task-pilot",
+      "correctness": {
+        "points": 9,
+        "total": 10,
+        "factualScore": 1,
+        "citationScore": 0.8,
+        "score": 0.9,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "launch_date",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "migration_owner",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "legal_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "open_actions",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "finance_due",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "wall_ms": 35405.73274996132,
+      "reason": "v1 omitted year despite year-specific answer key and unnecessarily required an older source for current open actions; excluded from final comparison"
+    },
+    {
+      "id": "meeting-handoff-s42-r0-claude",
+      "harness": "claude",
+      "run": "knowledge-work-six-task-pilot",
+      "correctness": {
+        "points": 8,
+        "total": 10,
+        "factualScore": 1,
+        "citationScore": 0.6,
+        "score": 0.8,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "launch_date",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "migration_owner",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "legal_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "open_actions",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "finance_due",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "wall_ms": 35345.98470898345,
+      "reason": "v1 omitted year despite year-specific answer key and unnecessarily required an older source for current open actions; excluded from final comparison"
+    },
+    {
+      "id": "meeting-handoff-s42-r0-pablo-astra",
+      "harness": "pablo-astra",
+      "run": "knowledge-work-pablo-astra-pilot",
+      "correctness": {
+        "points": 7,
+        "total": 10,
+        "factualScore": 0.6,
+        "citationScore": 0.8,
+        "score": 0.7,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "launch_date",
+            "value": false,
+            "citations": true
+          },
+          {
+            "id": "migration_owner",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "legal_due",
+            "value": false,
+            "citations": true
+          },
+          {
+            "id": "open_actions",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "finance_due",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "wall_ms": 22190.29300007969,
+      "reason": "v1 omitted year despite year-specific answer key and unnecessarily required an older source for current open actions; excluded from final comparison"
+    }
+  ],
+  "post_pilot_supervisor": {
+    "sha256": "ffa75277feef3e88e8ac9ddc680d8b1d719f33621959bf3848a2fc7610c89b47",
+    "validation": "11 offline tests passed, including observed separate-process-group timeout cleanup",
+    "performance": "No new retained measurements after this hardening; pilot supervisor identities remain in provenance and parity."
+  },
+  "archived_subscription_and_authentication_rows": [
+    {
+      "id": "reconciliation-s42-r0-codex",
+      "harness": "codex",
+      "model": "gpt-6-astra",
+      "task": "reconciliation",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "230d29a6dd951a87327be41a4f8c9cac07fcc72b0e14c8010010f6aaf16a22dd",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "north_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "south_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "total_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "excluded",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 6144.687500083819,
+        "first_assistant_boundary": "completed message event, not first token",
+        "tool_calls": 3,
+        "reported_usage": {
+          "input_tokens": 68993,
+          "cached_input_tokens": 59520,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 840,
+          "reasoning_output_tokens": 0
+        },
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 11
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 37033.10866700485,
+        "first_stdout_ms": 740.7187919598073,
+        "first_stderr_ms": 111.87762510962784,
+        "cpu_user_s": 0.6929879999999999,
+        "cpu_system_s": 0.6398079999999999,
+        "cpu_total_s": 1.3327959999999999,
+        "cpu_percent_one_core": 3.598930924174541,
+        "cpu_percent_machine": 0.2570664945838958,
+        "sampled_tree_peak_rss_kib": 257504,
+        "rusage_maxrss_kib": 220672,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 7281,
+        "stderr_bytes": 39,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 290
+    },
+    {
+      "id": "reconciliation-s42-r0-ori",
+      "harness": "ori",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "reconciliation",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "230d29a6dd951a87327be41a4f8c9cac07fcc72b0e14c8010010f6aaf16a22dd",
+      "status": "authentication_unavailable",
+      "correctness": null,
+      "events": {
+        "completed": false,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 0,
+        "reported_usage": null,
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [
+          "CliFailureError"
+        ],
+        "event_count": 0
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "failure_category": "authentication_unavailable",
+      "resources": {
+        "exit_code": 1,
+        "failure": null,
+        "wall_ms": 430.8582921512425,
+        "first_stdout_ms": 423.0254581198096,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.402198,
+        "cpu_system_s": 0.070746,
+        "cpu_total_s": 0.47294400000000003,
+        "cpu_percent_one_core": 109.76787695987626,
+        "cpu_percent_machine": 7.840562639991162,
+        "sampled_tree_peak_rss_kib": 151680,
+        "rusage_maxrss_kib": 183408,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 263,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 4
+    },
+    {
+      "id": "reconciliation-s42-r0-pi",
+      "harness": "pi",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "reconciliation",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "230d29a6dd951a87327be41a4f8c9cac07fcc72b0e14c8010010f6aaf16a22dd",
+      "status": "authentication_unavailable",
+      "correctness": null,
+      "events": {
+        "completed": false,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 0,
+        "reported_usage": null,
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "failure_category": "authentication_unavailable",
+      "resources": {
+        "exit_code": 1,
+        "failure": null,
+        "wall_ms": 194.06070793047547,
+        "first_stdout_ms": 187.58058291859925,
+        "first_stderr_ms": 187.87754094228148,
+        "cpu_user_s": 0.16275,
+        "cpu_system_s": 0.028332,
+        "cpu_total_s": 0.191082,
+        "cpu_percent_one_core": 98.46506386468371,
+        "cpu_percent_machine": 7.033218847477408,
+        "sampled_tree_peak_rss_kib": 109344,
+        "rusage_maxrss_kib": 135808,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 237,
+        "stderr_bytes": 324,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 2
+    },
+    {
+      "id": "policy-review-s42-r0-codex",
+      "harness": "codex",
+      "model": "gpt-6-astra",
+      "task": "policy-review",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "17ca4855e7e8a0c5413ca3a32825e39a9d2c583c95695c2cdf9a586a2c324985",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "A",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "B",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "C",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "D",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 4852.449250174686,
+        "first_assistant_boundary": "completed message event, not first token",
+        "tool_calls": 4,
+        "reported_usage": {
+          "input_tokens": 68861,
+          "cached_input_tokens": 59520,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 734,
+          "reasoning_output_tokens": 0
+        },
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 13
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 32339.327125111595,
+        "first_stdout_ms": 517.4732091836631,
+        "first_stderr_ms": 93.1181670166552,
+        "cpu_user_s": 0.7308549999999999,
+        "cpu_system_s": 0.642423,
+        "cpu_total_s": 1.373278,
+        "cpu_percent_one_core": 4.246464358046723,
+        "cpu_percent_machine": 0.3033188827176231,
+        "sampled_tree_peak_rss_kib": 252288,
+        "rusage_maxrss_kib": 190144,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 3920,
+        "stderr_bytes": 39,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 253
+    },
+    {
+      "id": "policy-review-s42-r0-ori",
+      "harness": "ori",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "policy-review",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "17ca4855e7e8a0c5413ca3a32825e39a9d2c583c95695c2cdf9a586a2c324985",
+      "status": "authentication_unavailable",
+      "correctness": null,
+      "events": {
+        "completed": false,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 0,
+        "reported_usage": null,
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [
+          "CliFailureError"
+        ],
+        "event_count": 0
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "failure_category": "authentication_unavailable",
+      "resources": {
+        "exit_code": 1,
+        "failure": null,
+        "wall_ms": 547.0477079506963,
+        "first_stdout_ms": 538.8467079028487,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.40390499999999996,
+        "cpu_system_s": 0.071827,
+        "cpu_total_s": 0.47573199999999993,
+        "cpu_percent_one_core": 86.96353043542523,
+        "cpu_percent_machine": 6.2116807453875165,
+        "sampled_tree_peak_rss_kib": 153968,
+        "rusage_maxrss_kib": 184816,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 263,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 5
+    },
+    {
+      "id": "policy-review-s42-r0-pi",
+      "harness": "pi",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "policy-review",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "17ca4855e7e8a0c5413ca3a32825e39a9d2c583c95695c2cdf9a586a2c324985",
+      "status": "authentication_unavailable",
+      "correctness": null,
+      "events": {
+        "completed": false,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 0,
+        "reported_usage": null,
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "failure_category": "authentication_unavailable",
+      "resources": {
+        "exit_code": 1,
+        "failure": null,
+        "wall_ms": 204.92804097011685,
+        "first_stdout_ms": 198.86262505315244,
+        "first_stderr_ms": 199.26229096017778,
+        "cpu_user_s": 0.16600199999999998,
+        "cpu_system_s": 0.029803,
+        "cpu_total_s": 0.19580499999999998,
+        "cpu_percent_one_core": 95.5481734334994,
+        "cpu_percent_machine": 6.824869530964243,
+        "sampled_tree_peak_rss_kib": 106800,
+        "rusage_maxrss_kib": 134672,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 236,
+        "stderr_bytes": 324,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 2
+    },
+    {
+      "id": "vendor-selection-s42-r0-ori",
+      "harness": "ori",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "vendor-selection",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "91af333da80febed7638ca1dd32988f72a6ea8c1e96c384a9a46f16c723336b6",
+      "status": "authentication_unavailable",
+      "correctness": null,
+      "events": {
+        "completed": false,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 0,
+        "reported_usage": null,
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [
+          "CliFailureError"
+        ],
+        "event_count": 0
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "failure_category": "authentication_unavailable",
+      "resources": {
+        "exit_code": 1,
+        "failure": null,
+        "wall_ms": 409.6891670487821,
+        "first_stdout_ms": 409.4707921613008,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.391389,
+        "cpu_system_s": 0.067118,
+        "cpu_total_s": 0.458507,
+        "cpu_percent_one_core": 111.91582225687824,
+        "cpu_percent_machine": 7.993987304062732,
+        "sampled_tree_peak_rss_kib": 169008,
+        "rusage_maxrss_kib": 184448,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 263,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 4
+    },
+    {
+      "id": "vendor-selection-s42-r0-pi",
+      "harness": "pi",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "vendor-selection",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "91af333da80febed7638ca1dd32988f72a6ea8c1e96c384a9a46f16c723336b6",
+      "status": "authentication_unavailable",
+      "correctness": null,
+      "events": {
+        "completed": false,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 0,
+        "reported_usage": null,
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "failure_category": "authentication_unavailable",
+      "resources": {
+        "exit_code": 1,
+        "failure": null,
+        "wall_ms": 184.0037079527974,
+        "first_stdout_ms": 177.82433307729661,
+        "first_stderr_ms": 178.08445799164474,
+        "cpu_user_s": 0.159045,
+        "cpu_system_s": 0.027677,
+        "cpu_total_s": 0.186722,
+        "cpu_percent_one_core": 101.47730286386398,
+        "cpu_percent_machine": 7.248378775990284,
+        "sampled_tree_peak_rss_kib": 109904,
+        "rusage_maxrss_kib": 134480,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 239,
+        "stderr_bytes": 324,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 2
+    },
+    {
+      "id": "vendor-selection-s42-r0-codex",
+      "harness": "codex",
+      "model": "gpt-6-astra",
+      "task": "vendor-selection",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "91af333da80febed7638ca1dd32988f72a6ea8c1e96c384a9a46f16c723336b6",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "winner",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "annual_cost",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "savings",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "ineligible",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 5520.758207887411,
+        "first_assistant_boundary": "completed message event, not first token",
+        "tool_calls": 3,
+        "reported_usage": {
+          "input_tokens": 68717,
+          "cached_input_tokens": 59520,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 736,
+          "reasoning_output_tokens": 0
+        },
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 11
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 32038.704707985744,
+        "first_stdout_ms": 482.44166607037187,
+        "first_stderr_ms": 96.09375009313226,
+        "cpu_user_s": 0.65786,
+        "cpu_system_s": 0.57863,
+        "cpu_total_s": 1.2364899999999999,
+        "cpu_percent_one_core": 3.8593632647445983,
+        "cpu_percent_machine": 0.2756688046246142,
+        "sampled_tree_peak_rss_kib": 273632,
+        "rusage_maxrss_kib": 223536,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 6422,
+        "stderr_bytes": 39,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 251
+    },
+    {
+      "id": "meeting-handoff-s42-r0-ori",
+      "harness": "ori",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "meeting-handoff",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "9ffc6fd5a209bf7aee0e26285681efcf33acb2653d1ae497a434bfb1f9e2ccad",
+      "status": "authentication_unavailable",
+      "correctness": null,
+      "events": {
+        "completed": false,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 0,
+        "reported_usage": null,
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [
+          "CliFailureError"
+        ],
+        "event_count": 0
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "failure_category": "authentication_unavailable",
+      "resources": {
+        "exit_code": 1,
+        "failure": null,
+        "wall_ms": 534.435415873304,
+        "first_stdout_ms": 525.804708013311,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.431561,
+        "cpu_system_s": 0.098524,
+        "cpu_total_s": 0.5300849999999999,
+        "cpu_percent_one_core": 99.18597912037787,
+        "cpu_percent_machine": 7.084712794312705,
+        "sampled_tree_peak_rss_kib": 139312,
+        "rusage_maxrss_kib": 185056,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 263,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 4
+    },
+    {
+      "id": "meeting-handoff-s42-r0-pi",
+      "harness": "pi",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "meeting-handoff",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "9ffc6fd5a209bf7aee0e26285681efcf33acb2653d1ae497a434bfb1f9e2ccad",
+      "status": "authentication_unavailable",
+      "correctness": null,
+      "events": {
+        "completed": false,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 0,
+        "reported_usage": null,
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "failure_category": "authentication_unavailable",
+      "resources": {
+        "exit_code": 1,
+        "failure": null,
+        "wall_ms": 189.27037506364286,
+        "first_stdout_ms": 184.2116671614349,
+        "first_stderr_ms": 184.60216699168086,
+        "cpu_user_s": 0.161718,
+        "cpu_system_s": 0.028541999999999998,
+        "cpu_total_s": 0.19025999999999998,
+        "cpu_percent_one_core": 100.52286309255972,
+        "cpu_percent_machine": 7.180204506611409,
+        "sampled_tree_peak_rss_kib": 107824,
+        "rusage_maxrss_kib": 134592,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 238,
+        "stderr_bytes": 324,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 2
+    },
+    {
+      "id": "incident-brief-s42-r0-pi",
+      "harness": "pi",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "incident-brief",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "f2db4196643a42ede95bc9bcc0336a5465842894a00386aa39a67af46cd9a0b6",
+      "status": "authentication_unavailable",
+      "correctness": null,
+      "events": {
+        "completed": false,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 0,
+        "reported_usage": null,
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "failure_category": "authentication_unavailable",
+      "resources": {
+        "exit_code": 1,
+        "failure": null,
+        "wall_ms": 188.54129104875028,
+        "first_stdout_ms": 184.36420802026987,
+        "first_stderr_ms": 184.68841607682407,
+        "cpu_user_s": 0.161372,
+        "cpu_system_s": 0.024513,
+        "cpu_total_s": 0.185885,
+        "cpu_percent_one_core": 98.59113564250312,
+        "cpu_percent_machine": 7.042223974464508,
+        "sampled_tree_peak_rss_kib": 107648,
+        "rusage_maxrss_kib": 134976,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 237,
+        "stderr_bytes": 324,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 2
+    },
+    {
+      "id": "incident-brief-s42-r0-codex",
+      "harness": "codex",
+      "model": "gpt-6-astra",
+      "task": "incident-brief",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "f2db4196643a42ede95bc9bcc0336a5465842894a00386aa39a67af46cd9a0b6",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "duration_minutes",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "unrecovered_requests",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "root_cause",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "data_loss_confirmed",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 5678.323042113334,
+        "first_assistant_boundary": "completed message event, not first token",
+        "tool_calls": 4,
+        "reported_usage": {
+          "input_tokens": 68632,
+          "cached_input_tokens": 59520,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 646,
+          "reasoning_output_tokens": 0
+        },
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 13
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 32650.60029202141,
+        "first_stdout_ms": 746.522834058851,
+        "first_stderr_ms": 97.19654195941985,
+        "cpu_user_s": 0.7150179999999999,
+        "cpu_system_s": 0.612193,
+        "cpu_total_s": 1.327211,
+        "cpu_percent_one_core": 4.064890042233989,
+        "cpu_percent_machine": 0.2903492887309992,
+        "sampled_tree_peak_rss_kib": 233392,
+        "rusage_maxrss_kib": 202608,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 3699,
+        "stderr_bytes": 39,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 255
+    },
+    {
+      "id": "incident-brief-s42-r0-ori",
+      "harness": "ori",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "incident-brief",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "f2db4196643a42ede95bc9bcc0336a5465842894a00386aa39a67af46cd9a0b6",
+      "status": "authentication_unavailable",
+      "correctness": null,
+      "events": {
+        "completed": false,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 0,
+        "reported_usage": null,
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [
+          "CliFailureError"
+        ],
+        "event_count": 0
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "failure_category": "authentication_unavailable",
+      "resources": {
+        "exit_code": 1,
+        "failure": null,
+        "wall_ms": 446.74854213371873,
+        "first_stdout_ms": 437.96979216858745,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.39696699999999996,
+        "cpu_system_s": 0.070167,
+        "cpu_total_s": 0.46713399999999994,
+        "cpu_percent_one_core": 104.56307205143145,
+        "cpu_percent_machine": 7.468790860816532,
+        "sampled_tree_peak_rss_kib": 151488,
+        "rusage_maxrss_kib": 182096,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 263,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 4
+    },
+    {
+      "id": "project-plan-s42-r0-codex",
+      "harness": "codex",
+      "model": "gpt-6-astra",
+      "task": "project-plan",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "c1639a9309b0d5bad7441176eef6fa5ecb33c1a017253e50596fa195b1f0675f",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "finish_day",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "critical_tasks",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "c_slack",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "deadline_met",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 4327.107541030273,
+        "first_assistant_boundary": "completed message event, not first token",
+        "tool_calls": 4,
+        "reported_usage": {
+          "input_tokens": 68595,
+          "cached_input_tokens": 59136,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 1111,
+          "reasoning_output_tokens": 0
+        },
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 13
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 42633.448500186205,
+        "first_stdout_ms": 172.15895815752447,
+        "first_stderr_ms": 94.07816617749631,
+        "cpu_user_s": 0.705137,
+        "cpu_system_s": 0.60574,
+        "cpu_total_s": 1.310877,
+        "cpu_percent_one_core": 3.074761826959118,
+        "cpu_percent_machine": 0.21962584478279415,
+        "sampled_tree_peak_rss_kib": 250528,
+        "rusage_maxrss_kib": 201376,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 8867,
+        "stderr_bytes": 39,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 331
+    },
+    {
+      "id": "project-plan-s42-r0-ori",
+      "harness": "ori",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "project-plan",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "c1639a9309b0d5bad7441176eef6fa5ecb33c1a017253e50596fa195b1f0675f",
+      "status": "authentication_unavailable",
+      "correctness": null,
+      "events": {
+        "completed": false,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 0,
+        "reported_usage": null,
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [
+          "CliFailureError"
+        ],
+        "event_count": 0
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "failure_category": "authentication_unavailable",
+      "resources": {
+        "exit_code": 1,
+        "failure": null,
+        "wall_ms": 449.1304580587894,
+        "first_stdout_ms": 441.06145785190165,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.419276,
+        "cpu_system_s": 0.06890099999999999,
+        "cpu_total_s": 0.48817699999999997,
+        "cpu_percent_one_core": 108.69380850053585,
+        "cpu_percent_machine": 7.7638434643239895,
+        "sampled_tree_peak_rss_kib": 151792,
+        "rusage_maxrss_kib": 185776,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 263,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 4
+    },
+    {
+      "id": "project-plan-s42-r0-pi",
+      "harness": "pi",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "project-plan",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "c1639a9309b0d5bad7441176eef6fa5ecb33c1a017253e50596fa195b1f0675f",
+      "status": "authentication_unavailable",
+      "correctness": null,
+      "events": {
+        "completed": false,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 0,
+        "reported_usage": null,
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "failure_category": "authentication_unavailable",
+      "resources": {
+        "exit_code": 1,
+        "failure": null,
+        "wall_ms": 207.61845796369016,
+        "first_stdout_ms": 200.98025002516806,
+        "first_stderr_ms": 201.3324999716133,
+        "cpu_user_s": 0.17083099999999998,
+        "cpu_system_s": 0.032962,
+        "cpu_total_s": 0.20379299999999997,
+        "cpu_percent_one_core": 98.15745767442353,
+        "cpu_percent_machine": 7.011246976744538,
+        "sampled_tree_peak_rss_kib": 105456,
+        "rusage_maxrss_kib": 134448,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 235,
+        "stderr_bytes": 324,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 2
+    },
+    {
+      "id": "meeting-handoff-s42-r0-codex",
+      "harness": "codex",
+      "model": "gpt-6-astra",
+      "task": "meeting-handoff",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "23a2795db06b2d5fd64dbfef31a49560b4278ab5ee85e5533e8f1179f091f19c",
+      "status": "completed",
+      "correctness": {
+        "points": 10,
+        "total": 10,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "launch_date",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "migration_owner",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "legal_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "open_actions",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "finance_due",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 6078.068125061691,
+        "first_assistant_boundary": "completed message event, not first token",
+        "tool_calls": 3,
+        "reported_usage": {
+          "input_tokens": 74586,
+          "cached_input_tokens": 62464,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 842,
+          "reasoning_output_tokens": 0
+        },
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 11
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-handoff-v1-1",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 38268.36341712624,
+        "first_stdout_ms": 526.6973341349512,
+        "first_stderr_ms": 101.74845904111862,
+        "cpu_user_s": 0.653037,
+        "cpu_system_s": 0.564719,
+        "cpu_total_s": 1.217756,
+        "cpu_percent_one_core": 3.1821481016222863,
+        "cpu_percent_machine": 0.22729629297302045,
+        "sampled_tree_peak_rss_kib": 249664,
+        "rusage_maxrss_kib": 215184,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 19295,
+        "stderr_bytes": 39,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 298
+    }
+  ],
+  "authenticated_followup": {
+    "runs": [
+      {
+        "name": "knowledge-work-authenticated-pilot",
+        "timestamp": "2026-09-12T21:50:13.244Z",
+        "suiteVersion": "knowledge-work-v1.1",
+        "sourceHashes": {
+          "tasks.mjs": "029c3431c0cf7fcffcf89567ab430f07945044359525f7d771bed6656b2bb927",
+          "adapters.mjs": "f74edb36c4b4f34ba1a5f8ba4b7fb8b14cffac1e987620d2b3bee508fb0c4abf",
+          "run.mjs": "4aab81acff265e557b74a9655ca816b52918708409db2de9e3697127e8ee5e09",
+          "monitor.py": "06db0819007441b8c858dc653a04b2332200e3abdd07a30f37bfc43af99b48ba",
+          "credentials.mjs": "d822ff08fc5536a886d56aaf890220dff865ae72799fa7567ff0a3fb421fc894",
+          "cost.mjs": "8c83305043cec8d99a18f07b7e9d0a4ace7feb7198c603e9c3a00bbd58bfa0af"
+        },
+        "method": {
+          "execution": "serial fresh process and workspace; rotated harness order per task/repetition; no warmup or retries",
+          "timing": "process spawn through reaping and pipe cleanup, includes network inference/tools/startup; no server-side inference CPU/RAM visibility",
+          "permissions": "equivalent local read/write/shell task capability, different native enforcement; no browsing/delegation requested",
+          "models": "GLM via OpenRouter; lab clients native provider/subscription; model and harness effects confounded across model families",
+          "effort": {
+            "pablo": "provider default",
+            "pablo-astra": "provider default",
+            "pi": "off",
+            "ori": "none / Pi off",
+            "codex": "medium",
+            "claude": "high"
+          },
+          "scoring": "exact factual values and required filename sets; no semantic judge; prose existence is not prose quality",
+          "credentials": "Explicit private Pablo OpenRouter key reuse for Ori/Pi via child environment; no credential argv or saved key files",
+          "limitations": "sampled RSS includes shared pages, misses short processes; wait4 CPU can miss unjoined descendants; native tools/prompts differ; no cache flush; p95 with a small sample is descriptive only"
+        },
+        "builds": {
+          "codex": {
+            "version": "codex-cli 0.154.0",
+            "entry_sha256": "61b0194f3bb6534439c8d26a3ed57d0805f84b884588b761795323eeb92fcf70",
+            "entry_bytes": 8790
+          },
+          "ori": {
+            "version": "{\n  \"ok\": true,\n  \"command\": \"version\",\n  \"data\": {\n    \"name\": \"@ori-runtime/cli\",\n    \"version\": \"0.14.3+6e62568\",\n    \"latestVersion\": \"0.14.3+6e62568\",\n    \"updateAvailable\": false,\n    \"severity\": \"none\",\n    \"channel\": \"stable\"\n  }\n}",
+            "entry_sha256": "116131f0b0c9c7f2f0b8be5dbac20ef1f8090bc05f43beb26a7c9816caa93782",
+            "entry_bytes": 81006240
+          },
+          "pi": {
+            "version": "0.85.1",
+            "entry_sha256": "e6d7fcf36a239cf3746e67ddf4222081ac01a601b85a3ee688bdfe9c161d754c",
+            "entry_bytes": 660
+          }
+        }
+      },
+      {
+        "name": "knowledge-work-authenticated-remaining",
+        "timestamp": "2026-09-12T21:53:17.285Z",
+        "suiteVersion": "knowledge-work-v1.1",
+        "sourceHashes": {
+          "tasks.mjs": "029c3431c0cf7fcffcf89567ab430f07945044359525f7d771bed6656b2bb927",
+          "adapters.mjs": "f74edb36c4b4f34ba1a5f8ba4b7fb8b14cffac1e987620d2b3bee508fb0c4abf",
+          "run.mjs": "4aab81acff265e557b74a9655ca816b52918708409db2de9e3697127e8ee5e09",
+          "monitor.py": "06db0819007441b8c858dc653a04b2332200e3abdd07a30f37bfc43af99b48ba",
+          "credentials.mjs": "d822ff08fc5536a886d56aaf890220dff865ae72799fa7567ff0a3fb421fc894",
+          "cost.mjs": "8c83305043cec8d99a18f07b7e9d0a4ace7feb7198c603e9c3a00bbd58bfa0af"
+        },
+        "method": {
+          "execution": "serial fresh process and workspace; rotated harness order per task/repetition; no warmup or retries",
+          "timing": "process spawn through reaping and pipe cleanup, includes network inference/tools/startup; no server-side inference CPU/RAM visibility",
+          "permissions": "equivalent local read/write/shell task capability, different native enforcement; no browsing/delegation requested",
+          "models": "GLM via OpenRouter; lab clients native provider/subscription; model and harness effects confounded across model families",
+          "effort": {
+            "pablo": "provider default",
+            "pablo-astra": "provider default",
+            "pi": "off",
+            "ori": "none / Pi off",
+            "codex": "medium",
+            "claude": "high"
+          },
+          "scoring": "exact factual values and required filename sets; no semantic judge; prose existence is not prose quality",
+          "credentials": "Explicit private Pablo OpenRouter key reuse for Ori/Pi via child environment; no credential argv or saved key files",
+          "limitations": "sampled RSS includes shared pages, misses short processes; wait4 CPU can miss unjoined descendants; native tools/prompts differ; no cache flush; p95 with a small sample is descriptive only"
+        },
+        "builds": {
+          "codex": {
+            "version": "codex-cli 0.154.0",
+            "entry_sha256": "61b0194f3bb6534439c8d26a3ed57d0805f84b884588b761795323eeb92fcf70",
+            "entry_bytes": 8790
+          },
+          "ori": {
+            "version": "{\n  \"ok\": true,\n  \"command\": \"version\",\n  \"data\": {\n    \"name\": \"@ori-runtime/cli\",\n    \"version\": \"0.14.3+6e62568\",\n    \"latestVersion\": \"0.14.3+6e62568\",\n    \"updateAvailable\": false,\n    \"severity\": \"none\",\n    \"channel\": \"stable\"\n  }\n}",
+            "entry_sha256": "116131f0b0c9c7f2f0b8be5dbac20ef1f8090bc05f43beb26a7c9816caa93782",
+            "entry_bytes": 81006240
+          },
+          "pi": {
+            "version": "0.85.1",
+            "entry_sha256": "e6d7fcf36a239cf3746e67ddf4222081ac01a601b85a3ee688bdfe9c161d754c",
+            "entry_bytes": 660
+          }
+        }
+      }
+    ],
+    "credential_artifacts_scanned": 128,
+    "credential_matches": 0,
+    "authorization": "User explicitly authorized Pablo OpenRouter key reuse for Ori/Pi and provided a private OpenAI API key file for the Codex rerun. No keys or private file contents are retained."
+  }
+}

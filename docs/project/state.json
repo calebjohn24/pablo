@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-12T20:42:54.032Z",
+  "updated_at": "2026-09-12T22:08:19.307Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.34",
-  "next_action": "C3.33a TUI fixes merged in PR #37; rebuilt release is ready for user testing. Stop here. C3.34 packaging and later native release gates remain pending until new user direction.",
-  "latest_log_entry": "LOG-0167",
+  "next_action": "Chart label update complete. Release packaging remains pending and held.",
+  "latest_log_entry": "LOG-0173",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -700,6 +700,21 @@
       "blockers": [],
       "verification": [
         "LOG-0166"
+      ]
+    },
+    {
+      "id": "C3.33b",
+      "title": "Knowledge-work benchmark",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c333b-knowledge-work-benchmark",
+      "depends_on": [
+        "C3.33a"
+      ],
+      "status": "done",
+      "blockers": [],
+      "verification": [
+        "LOG-0171",
+        "LOG-0172",
+        "LOG-0173"
       ]
     },
     {

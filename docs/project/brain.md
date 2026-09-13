@@ -39,11 +39,8 @@ C1.5 shares one standalone SDK setup across CLI/ACP, using the pinned OTLP 0.32.
 ### D018 — C1 acceptance establishes scoped baselines, not release ceilings
 C1.6 verifies the focused fixtures on native macOS arm64 and an isolated Ubuntu 24.04 arm64 VM, plus a fresh explicit live Vercel ACP run on macOS and real Collector proof on both systems. Release measurements use 30 samples after five warm-ups; event latency uses 30,000 deltas. Report timing boundaries, virtualization and source fingerprints so setup costs are not mistaken for pure protocol overhead. C1 is complete, while native Linux x86_64 measurements and broader alpha.1/0.1 gates remain unclaimed. No provisional performance number becomes a CI failure threshold. See [acceptance](evidence/c1.6.md), [methods](../measurements.md), and [the original C2 proposal](proposals/002-single-agent-completion.md), adopted by D021.
 ### D019 — Optimize Pablo without changing model behavior
-
 The user requested a C1.7 performance follow-up and explicitly excluded provider routing and model/prompt optimization. Serialize borrowed redacted trace views into one bounded reusable buffer, count ACP sizes without temporary JSON allocations, and forward the first text of each model operation immediately. Reuse one worker, HTTP client/pool, compiled tool catalog and SDK across successive independent ACP sessions; retain one prompt per session, process-lifetime ingress bounds, per-task cancellation/context and exclusive per-session trace files. This lowers local latency while preserving the existing lifecycle and isolation. See [ACP](../acp.md) and [performance evidence](evidence/c1.7.md).
-
 ### D020 — Prefer the measured speed/size balance of thin LTO
-
 Use thin LTO, one codegen unit and stripped symbols for release builds. Full LTO makes the binary smaller but repeated alternating comparisons show slower trace encoding; the selected profile already fits the provisional 10 MiB headless target on measured macOS and Linux arm64 systems. Preserve unwinding and portable target defaults. The [C1.7 report](evidence/c1.7.md) retains all candidate measurements, workload boundaries and remaining performance limits.
 
 ### D021 — Adopt the bounded single-agent completion cycle
@@ -198,3 +195,6 @@ C3.33 assigns pablo/v2 and task-v2 to C3 metadata and c3.33 native events/task r
 
 ### D061 — Retained terminal history and changed-row painting
 C3.33a keeps bounded visible prompts, answers and tool lifecycle entries across independent tasks, with live-tail/history navigation and basic Markdown. Revision-based layout and changed-row synchronized painting eliminate idle output and full-screen redraw flicker. Input context remains fresh per task. See [TUI contract](contracts/c3-tui.md).
+
+### D062 — Separate factual knowledge-work scores from system performance
+C3.33b adds seeded local-source office tasks and a serial native-client comparison using the requested GLM/Astra/Fable models. Score factual answers and source selection deterministically; leave prose quality to blinded review, preserve failures and unknown metrics, and report model/provider differences. Ori wraps Pi. Explicit credential flags privately reuse the user-authorized OpenRouter/OpenAI keys; headline results use facts and distinguish reported from estimated costs. See [benchmark method](../../scripts/knowledge-work/README.md).
