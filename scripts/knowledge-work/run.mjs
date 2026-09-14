@@ -2,7 +2,7 @@ import {spawn,execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {mkdir,mkdtemp,readFile,writeFile,stat,realpath,rm} from 'node:fs/promises';
 import {tmpdir,cpus,release,totalmem} from 'node:os';
-import {resolve,join,delimiter} from 'node:path';
+import {resolve,join,dirname,delimiter} from 'node:path';
 import {tasks,score,hash,suiteVersion} from './tasks.mjs';
 import {openRouterKey,privateKey} from './credentials.mjs';
 import {astraCost} from './cost.mjs';
@@ -55,9 +55,10 @@ export async function main(argv=process.argv.slice(2)) {
   await mkdir(resolve(root,'.pablo'),{recursive:true});const lock=resolve(root,'.pablo/knowledge-work.lock');await mkdir(lock);
   let base;
   try {
+    await mkdir(dirname(output),{recursive:true});
     await mkdir(output); // Refuse to overwrite retained results.
     base=await realpath(await mkdtemp(join(tmpdir(),'pablo-knowledge-')));
-    const env={};for(const k of ['PATH','HOME','TMPDIR','LANG','USER','SHELL','CODEX_HOME','OPENAI_API_KEY','ANTHROPIC_API_KEY','CLAUDE_CODE_OAUTH_TOKEN','OPENROUTER_API_KEY'])if(process.env[k])env[k]=process.env[k];
+    const env={};for(const k of ['PATH','HOME','TMPDIR','LANG','USER','SHELL','CODEX_HOME','OPENAI_API_KEY','ANTHROPIC_API_KEY','CLAUDE_CODE_OAUTH_TOKEN','OPENROUTER_API_KEY','AI_GATEWAY_API_KEY','VERCEL_AI_GATEWAY'])if(process.env[k])env[k]=process.env[k];
     env.PATH=resolve(root,'.pablo/knowledge-tools/node_modules/.bin')+delimiter+(env.PATH??'');env.ORI_TELEMETRY='0';env.OTEL_TRACES_EXPORTER='none';
     const paths={},builds={};
     for(const h of o.harnesses) {
@@ -74,7 +75,7 @@ export async function main(argv=process.argv.slice(2)) {
     const codexKey=o['codex-api-key-file']?await privateKey(resolve(o['codex-api-key-file']),'OPENAI_API_KEY'):null;
     const rows=[];
     const report={...matrix,sourceHashes,timestamp:new Date().toISOString(),platform:{os:process.platform,arch:process.arch,kernel:release(),cpu:cpus()[0].model,logical_cpus:cpus().length,memory_bytes:totalmem(),node:process.version,python:(await exec('python3',['--version'])).stdout.trim()},builds,workspace_root:base,
-      method:{execution:'serial fresh process and workspace; rotated harness order per task/repetition; no warmup or retries',timing:'process spawn through reaping and pipe cleanup, includes network inference/tools/startup; no server-side inference CPU/RAM visibility',permissions:'equivalent local read/write/shell task capability, different native enforcement; no browsing/delegation requested',models:'GLM via OpenRouter; lab clients native provider/subscription; model and harness effects confounded across model families',effort_profiles:profiles,effort:o['latency-matrix']?Object.fromEntries(profiles.map(p=>[p.id,p.reasoning??p.piThinking])):{pablo:'provider default','pablo-astra':'provider default',pi:'off',ori:'none / Pi off',codex:'medium',claude:'high'},scoring:'exact factual values and required filename sets; no semantic judge; prose existence is not prose quality',credentials:sharedKey?'Explicit private Pablo OpenRouter key reuse for Ori/Pi via child environment; no credential argv or saved key files':'Native clients resolve credentials; Pablo privately loads root .env',limitations:'sampled RSS includes shared pages, misses short processes; wait4 CPU can miss unjoined descendants; native tools/prompts differ; no cache flush; p95 with a small sample is descriptive only'},rows,summary:{}};
+      method:{execution:'serial fresh process and workspace; rotated harness order per task/repetition; no warmup or retries',timing:'process spawn through reaping and pipe cleanup, includes network inference/tools/startup; no server-side inference CPU/RAM visibility',permissions:'equivalent local read/write/shell task capability, different native enforcement; no browsing/delegation requested',models:'GLM through the selected Pablo gateway or OpenRouter for Pi/Ori; lab clients use their native provider/subscription; model and harness effects are confounded across model families',effort_profiles:profiles,effort:o['latency-matrix']?Object.fromEntries(profiles.map(p=>[p.id,p.reasoning??p.piThinking])):{pablo:'provider default','pablo-vercel':'provider default','pablo-astra':'provider default',pi:'off',ori:'none / Pi off',codex:'medium',claude:'high'},scoring:'exact factual values and required filename sets; no semantic judge; prose existence is not prose quality',credentials:sharedKey?'Explicit private Pablo OpenRouter key reuse for Ori/Pi via child environment; no credential argv or saved key files':'Native clients resolve credentials; Pablo privately loads the selected gateway credential',limitations:'sampled RSS includes shared pages, misses short processes; wait4 CPU can miss unjoined descendants; native tools/prompts differ; no cache flush; p95 with a small sample is descriptive only'},rows,summary:{}};
     let n=0;
     trials: for(let rep=0;rep<o.repeats;rep++)for(const task of selected) {
       const order=profiles.map((_,i)=>profiles[(i+n)%profiles.length]);n++;
