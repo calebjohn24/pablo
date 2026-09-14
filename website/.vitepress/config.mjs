@@ -48,7 +48,7 @@ export default defineConfig({
       { text: "Docs", link: "/getting-started" },
       { text: "Configuration", link: "/configuration" },
       { text: "Integrate", link: "/acp" },
-      { text: "v0.1.0-dev.1", link: "/release-status" },
+      { text: "v0.0.1", link: "/release-status" },
     ],
     sidebar: [
       {

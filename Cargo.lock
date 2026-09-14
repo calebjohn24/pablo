@@ -1616,7 +1616,7 @@ checksum = "1a80800c0488c3a21695ea981a54918fbb37abf04f4d0720c453632255e2ff0e"
 
 [[package]]
 name = "pablo"
-version = "0.1.0-dev.1"
+version = "0.0.1"
 dependencies = [
  "agent-client-protocol",
  "async-channel",
@@ -1641,7 +1641,7 @@ dependencies = [
 
 [[package]]
 name = "pablo-core"
-version = "0.1.0-dev.1"
+version = "0.0.1"
 dependencies = [
  "aws-lc-rs",
  "base64",

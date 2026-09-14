@@ -28,7 +28,7 @@ Usage:
   install.sh --prefix ABSOLUTE_PATH --remove
 
 Options:
-  --version TAG         Exact GitHub release tag, for example v0.1.0-dev.1.
+  --version TAG         Exact release tag, for example v0.0.1.
   --prefix PATH         Absolute installation prefix. The binary goes in PATH/bin.
   --archive FILE        Install a local release archive instead of downloading it.
   --checksum FILE       SHA-256 file for --archive; required with --archive.

@@ -86,7 +86,7 @@ Every admitted task ends as `completed`, `cancelled`, `timed_out`, `policy_denie
 </div>
 
 ::: warning Prerelease status
-Pablo is currently `0.1.0-dev.1` and must be built from source. Release archives, installers, signing limits and the full four-platform acceptance matrix are still in progress. The current runtime contract is intentionally versioned and may change before 0.1.
+Pablo `v0.0.1` is being prepared and must currently be built from source. Release archives, signing limits and the full four-platform acceptance matrix are still in progress. The runtime contract is versioned and may change before 0.1.
 :::
 
 <div class="final-cta">

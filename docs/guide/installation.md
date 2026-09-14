@@ -30,7 +30,7 @@ Download the small POSIX shell installer from the documentation site and inspect
 curl -fsSLo /tmp/pablo-install.sh https://runpablo.pages.dev/install.sh
 less /tmp/pablo-install.sh
 sh /tmp/pablo-install.sh \
-  --version v0.1.0-dev.1 \
+  --version v0.0.1 \
   --prefix "$HOME/.local"
 ```
 
@@ -53,7 +53,7 @@ Update to another exact version with the same inspected installer:
 
 ```sh
 sh /tmp/pablo-install.sh \
-  --version v0.1.0-dev.2 \
+  --version v0.0.2 \
   --prefix "$HOME/.local" \
   --update
 ```
@@ -75,7 +75,7 @@ Removal leaves unrelated files and directories beneath the prefix in place.
 Every archive has an adjacent checksum file, and the release set includes `SHA256SUMS`:
 
 ```sh
-version=v0.1.0-dev.1
+version=v0.0.1
 target=aarch64-apple-darwin
 base="https://runpablo.pages.dev/releases/$version"
 archive="pablo-$version-$target.tar.gz"
@@ -93,8 +93,9 @@ On Linux, use `sha256sum -c` instead of `shasum -a 256 -c` when preferred.
 The archive has one versioned root and never writes outside it:
 
 ```text
-pablo-v0.1.0-dev.1-aarch64-apple-darwin/
+pablo-v0.0.1-aarch64-apple-darwin/
 ├── bin/pablo
+├── LICENSE
 ├── NOTICE
 ├── THIRD_PARTY_NOTICES.json
 ├── licenses/<license-content-sha256>.txt
@@ -104,7 +105,7 @@ pablo-v0.1.0-dev.1-aarch64-apple-darwin/
     └── target.json
 ```
 
-`source.json` records the Git commit and tree, source fingerprint, `Cargo.lock` hash, version, and source epoch. `build.json` records the locked release command, Rust, Cargo and Node identities, runner, binary hash, and deterministic archive settings. `target.json` records the target triple, platform requirements, dynamic libraries, signing state, and native-acceptance status.
+`LICENSE` contains Pablo’s MIT license. `source.json` records the Git commit and tree, source fingerprint, `Cargo.lock` hash, version, and source epoch. `build.json` records the locked release command, Rust, Cargo and Node identities, runner, binary hash, and deterministic archive settings. `target.json` records the target triple, platform requirements, dynamic libraries, signing state, and native-acceptance status.
 
 The packer writes lexically ordered ustar entries with fixed ownership and timestamps, then creates a gzip stream with a zero timestamp. Repackaging identical inputs produces identical archive bytes. The third-party inventory comes from the target-filtered locked Cargo dependency closure; bundled license and notice files are deduplicated by content hash while package attribution remains machine-readable.
 

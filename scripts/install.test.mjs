@@ -64,7 +64,7 @@ test("installs, receipt-verifies updates, explicitly replaces, and removes", () 
     fs.mkdirSync(path.dirname(unrelated), { recursive: true });
     fs.writeFileSync(unrelated, "keep\n");
 
-    const first = fixture(root, "0.1.0-dev.1", "first");
+    const first = fixture(root, "0.0.1", "first");
     const installed = run(installArgs(first, prefix));
     assert.equal(installed.status, 0, installed.stderr);
     const binary = path.join(prefix, "bin", "pablo");
@@ -75,7 +75,7 @@ test("installs, receipt-verifies updates, explicitly replaces, and removes", () 
     assert.match(collision.stderr, /already exists/);
     assert.equal(execFileSync(binary, [], { encoding: "utf8" }).trim(), "first");
 
-    const second = fixture(root, "0.1.0-dev.2", "second");
+    const second = fixture(root, "0.0.2", "second");
     const updated = run(installArgs(second, prefix, ["--update"]));
     assert.equal(updated.status, 0, updated.stderr);
     assert.equal(execFileSync(binary, [], { encoding: "utf8" }).trim(), "second");
@@ -84,7 +84,7 @@ test("installs, receipt-verifies updates, explicitly replaces, and removes", () 
     assert.notEqual(sameVersion.status, 0);
     assert.match(sameVersion.stderr, /already installed/);
 
-    const third = fixture(root, "0.1.0-dev.3", "third");
+    const third = fixture(root, "0.0.3", "third");
     const replaced = run(installArgs(third, prefix, ["--replace"]));
     assert.equal(replaced.status, 0, replaced.stderr);
     assert.equal(execFileSync(binary, [], { encoding: "utf8" }).trim(), "third");
@@ -101,7 +101,7 @@ test("installs, receipt-verifies updates, explicitly replaces, and removes", () 
 test("rejects a corrupt checksum before installing content", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "pablo-installer-checksum-"));
   try {
-    const item = fixture(root, "0.1.0-dev.1");
+    const item = fixture(root, "0.0.1");
     fs.writeFileSync(item.checksum, `${"0".repeat(64)}  ${path.basename(item.archive)}\n`);
     const prefix = path.join(root, "prefix");
     const result = run(installArgs(item, prefix));
@@ -116,7 +116,7 @@ test("rejects a corrupt checksum before installing content", () => {
 test("refuses a pablo command outside the selected prefix", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "pablo-installer-command-"));
   try {
-    const item = fixture(root, "0.1.0-dev.1");
+    const item = fixture(root, "0.0.1");
     const commands = path.join(root, "commands");
     fs.mkdirSync(commands);
     const existing = path.join(commands, "pablo");
@@ -138,13 +138,13 @@ test("refuses a pablo command outside the selected prefix", () => {
 test("refuses removal when the installed binary changed", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "pablo-installer-remove-"));
   try {
-    const item = fixture(root, "0.1.0-dev.1");
+    const item = fixture(root, "0.0.1");
     const prefix = path.join(root, "prefix");
     const installed = run(installArgs(item, prefix));
     assert.equal(installed.status, 0, installed.stderr);
     const binary = path.join(prefix, "bin", "pablo");
     fs.appendFileSync(binary, "# changed\n");
-    const next = fixture(root, "0.1.0-dev.2");
+    const next = fixture(root, "0.0.2");
     const updated = run(installArgs(next, prefix, ["--update"]));
     assert.notEqual(updated.status, 0);
     assert.match(updated.stderr, /changed; refusing to update/);

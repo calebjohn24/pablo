@@ -35,7 +35,7 @@ Once release assets are available, download and inspect the script, then choose 
 ```sh
 curl -fsSLo /tmp/pablo-install.sh https://runpablo.pages.dev/install.sh
 sh /tmp/pablo-install.sh \
-  --version v0.1.0-dev.1 \
+  --version v0.0.1 \
   --prefix "$HOME/.local"
 ```
 

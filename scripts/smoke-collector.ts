@@ -62,7 +62,7 @@ try {
   for (const resource of resources) {
     const attrs = Object.fromEntries(resource.resource.attributes.map((a: any) => [a.key, a.value.stringValue]));
     assert.equal(attrs['service.name'], 'pablo-collector-proof');
-    assert.equal(attrs['service.version'], '0.1.0-dev.1');
+    assert.equal(attrs['service.version'], '0.0.1');
     assert.equal(attrs['deployment.environment.name'], 'fixture');
     for (const scope of resource.scopeSpans) {
       assert.equal(scope.scope.name, 'pablo');

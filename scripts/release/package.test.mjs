@@ -25,7 +25,7 @@ function fixtureMetadata(root) {
   writeFileSync(join(dependency, 'LICENSE-MIT'), 'fixture dependency license\n');
   return {
     packages: [
-      { id: 'path+pablo', name: 'pablo', version: '0.1.0-dev.1', manifest_path: join(root, 'pablo-Cargo.toml') },
+      { id: 'path+pablo', name: 'pablo', version: '0.0.1', manifest_path: join(root, 'pablo-Cargo.toml') },
       {
         id: 'registry+fixture',
         name: 'fixture-dependency',
@@ -53,10 +53,10 @@ test('release packaging is deterministic, complete, checksummed, installable, an
   const root = mkdtempSync(join(tmpdir(), 'pablo-package-test-'));
   try {
     const binary = join(root, 'pablo');
-    writeFileSync(binary, '#!/bin/sh\nprintf "pablo 0.1.0-dev.1\\n"\n', { mode: 0o755 });
+    writeFileSync(binary, '#!/bin/sh\nprintf "pablo 0.0.1\\n"\n', { mode: 0o755 });
     const metadata = fixtureMetadata(root);
     const common = {
-      version: 'v0.1.0-dev.1',
+      version: 'v0.0.1',
       target: HOST_TARGET,
       binary,
       sourceRevision: REVISION,
@@ -86,7 +86,7 @@ test('release packaging is deterministic, complete, checksummed, installable, an
     });
     assert.equal(result.source_revision, REVISION);
     assert.equal(result.third_party_packages, 1);
-    assert.equal(result.version_output, 'pablo 0.1.0-dev.1');
+    assert.equal(result.version_output, 'pablo 0.0.1');
 
     for (const target of Object.keys(TARGETS).filter((candidate) => candidate !== HOST_TARGET)) {
       await packageRelease({ ...common, target, outDir: candidates });
@@ -105,7 +105,7 @@ test('release packaging is deterministic, complete, checksummed, installable, an
     mkdirSync(env.TMPDIR);
     execFileSync('sh', [join(process.cwd(), 'install.sh'), '--version', common.version, '--prefix', prefix,
       '--archive', first.archivePath, '--checksum', first.checksumPath], { env });
-    assert.equal(execFileSync(join(prefix, 'bin/pablo'), ['--version'], { encoding: 'utf8', env }).trim(), 'pablo 0.1.0-dev.1');
+    assert.equal(execFileSync(join(prefix, 'bin/pablo'), ['--version'], { encoding: 'utf8', env }).trim(), 'pablo 0.0.1');
     execFileSync('sh', [join(process.cwd(), 'install.sh'), '--prefix', prefix, '--remove'], { env });
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -116,15 +116,15 @@ test('release verification rejects a corrupt checksum before extraction', async 
   const root = mkdtempSync(join(tmpdir(), 'pablo-package-corrupt-'));
   try {
     const binary = join(root, 'pablo');
-    writeFileSync(binary, '#!/bin/sh\nprintf "pablo 0.1.0-dev.1\\n"\n', { mode: 0o755 });
+    writeFileSync(binary, '#!/bin/sh\nprintf "pablo 0.0.1\\n"\n', { mode: 0o755 });
     const result = await packageRelease({
-      version: 'v0.1.0-dev.1', target: 'aarch64-apple-darwin', binary, outDir: join(root, 'dist'),
+      version: 'v0.0.1', target: 'aarch64-apple-darwin', binary, outDir: join(root, 'dist'),
       sourceRevision: REVISION, sourceTree: TREE, sourceEpoch: '1700000000', sourceFingerprint: FINGERPRINT,
       rustc: ['fixture'], cargo: 'fixture', node: 'fixture', allowDirty: true, metadata: fixtureMetadata(root),
     });
     writeFileSync(result.checksumPath, `${'0'.repeat(64)}  ${result.archiveName}\n`);
     assert.throws(() => verifyRelease({
-      version: 'v0.1.0-dev.1', target: 'aarch64-apple-darwin', archive: result.archivePath,
+      version: 'v0.0.1', target: 'aarch64-apple-darwin', archive: result.archivePath,
       checksum: result.checksumPath,
     }), /archive checksum mismatch/);
   } finally {

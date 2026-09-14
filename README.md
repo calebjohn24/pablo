@@ -4,7 +4,7 @@ A small Rust agent runtime for applications doing non-coding knowledge work.
 
 Pablo gives your application a model-and-tool loop with streaming output, cancellation, policy enforcement and tracing. Run tasks from the CLI, use the interactive terminal, connect an editor through the Agent Client Protocol (ACP), or embed `pablo-core` in a Rust application. Each interface uses the same runtime; your host owns the sandbox, approvals and application state.
 
-**Status:** prerelease development (`0.1.0-dev.1`). Build from source today. Release archives, installation tooling and the complete native platform acceptance matrix are still pending; this is not a published 0.1 release.
+**Status:** preparing the first `v0.0.1` release. Build from source until the four native archives pass acceptance and are published.
 
 ## Documentation
 
@@ -59,7 +59,7 @@ The checked-in installer is ready for versioned release archives, but no install
 ```sh
 curl -fsSLo /tmp/pablo-install.sh https://runpablo.pages.dev/install.sh
 sh /tmp/pablo-install.sh \
-  --version v0.1.0-dev.1 \
+  --version v0.0.1 \
   --prefix "$HOME/.local"
 ```
 
@@ -67,7 +67,7 @@ The installer detects macOS/Linux and arm64/x86_64, downloads the matching archi
 
 ```sh
 sh /tmp/pablo-install.sh \
-  --version v0.1.0-dev.2 \
+  --version v0.0.2 \
   --prefix "$HOME/.local" \
   --update
 ```
@@ -212,3 +212,7 @@ These development checks use offline fixtures. Live provider checks are separate
 Release preparation now includes a deterministic four-target candidate pipeline, verified archive layout, checksums, dependency notices, source/build/target manifests and explicit-prefix installation policy. The remaining gates are native acceptance of those exact candidates on macOS arm64/x86_64 and Linux x86_64/arm64, matched release measurements, and prerelease publication. The full 0.1 contract also retains the deferred Otto integration proof. See the [release plan](docs/project/cycles/003-extensibility-and-release.md#c334-release-archives-and-installation) and [product design](docs/context.md#291-focused-release-contract).
 
 For current progress and the next handoff, run `node scripts/project.mjs context`. Contributors should read [AGENTS.md](AGENTS.md); [project decisions](docs/project/brain.md) and the [backlog](docs/project/backlog.md) retain design rationale and deferred work.
+
+## License
+
+Pablo is available under the [MIT License](LICENSE). Release archives include this license plus a target-specific third-party dependency inventory and bundled dependency license texts.

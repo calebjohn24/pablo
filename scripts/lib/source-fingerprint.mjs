@@ -5,6 +5,7 @@ import { join } from 'node:path';
 /** Covers executable, fixtures, toolchain and measurement code, not changing handoff records. */
 export async function sourceFingerprint(root) {
   const paths = ['Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', 'package.json', 'package-lock.json', 'tsconfig.json', '.nvmrc',
+    'LICENSE', 'NOTICE', 'install.sh',
     'docs/project/schemas/deployment-v1.schema.json', 'docs/project/schemas/resolved-deployment-v1.schema.json',
     'docs/project/schemas/deployment-defaults-v1.json', 'docs/acp-lock.json', 'docs/protocol-compatibility.json', 'docs/protocol-pins.json', 'docs/acp-extensions.json',
     'docs/pablo-acp-v1.schema.json', 'docs/pablo-acp-v2.schema.json', 'docs/pablo-task.schema.json',
