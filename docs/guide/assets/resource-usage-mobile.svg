@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 1120" role="img" aria-labelledby="title description">
+  <title id="title">Pablo local resource use compared with Claude Code, Codex, and Pi</title>
+  <desc id="description">Vertical bar-chart layout for small screens. Pablo measured 19.11 MiB peak process-tree memory and 0.37 percent median CPU utilization, below Claude Code, Codex, and Pi.</desc>
+  <defs>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#141820" />
+      <stop offset="1" stop-color="#0f1217" />
+    </linearGradient>
+    <linearGradient id="pablo" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff6b35" />
+      <stop offset="1" stop-color="#ff986f" />
+    </linearGradient>
+    <pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse">
+      <path d="M28 0H0V28" fill="none" stroke="#ffffff" stroke-opacity=".018" />
+    </pattern>
+  </defs>
+
+  <rect width="600" height="1120" rx="18" fill="#0b0d10" />
+  <rect width="600" height="1120" rx="18" fill="url(#grid)" />
+  <rect x="1" y="1" width="598" height="1118" rx="17" fill="none" stroke="#ffffff" stroke-opacity=".12" />
+
+  <rect x="30" y="42" width="10" height="10" rx="2" fill="#ff6b35" />
+  <text x="54" y="53" fill="#ff8b61" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" font-weight="600" letter-spacing="2">PABLO / LOCAL RESOURCE USE</text>
+  <text x="30" y="98" fill="#f4f2ed" font-family="Manrope, Inter, system-ui, sans-serif" font-size="29" font-weight="700">A smaller runtime footprint</text>
+  <text x="30" y="132" fill="#f4f2ed" font-family="Manrope, Inter, system-ui, sans-serif" font-size="29" font-weight="700">on the measured workload.</text>
+  <text x="30" y="165" fill="#8f97a3" font-family="Manrope, Inter, system-ui, sans-serif" font-size="14">6 non-coding knowledge-work tasks · lower is better</text>
+
+  <g aria-label="Peak process-tree memory in mebibytes">
+    <rect x="20" y="195" width="560" height="390" rx="12" fill="url(#panel)" stroke="#ffffff" stroke-opacity=".10" />
+    <text x="48" y="234" fill="#f4f2ed" font-family="Manrope, Inter, system-ui, sans-serif" font-size="20" font-weight="700">Peak process-tree memory</text>
+    <text x="552" y="234" text-anchor="end" fill="#737c88" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">MiB</text>
+    <text x="48" y="278" fill="#f4f2ed" font-family="Manrope, Inter, system-ui, sans-serif" font-size="17" font-weight="700">Pablo</text>
+    <text x="552" y="278" text-anchor="end" fill="#ff8b61" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" font-weight="600">19.11</text>
+    <rect x="48" y="292" width="504" height="11" rx="6" fill="#1d232c" /><rect x="48" y="292" width="34" height="11" rx="6" fill="url(#pablo)" />
+    <text x="48" y="353" fill="#c8ccd2" font-family="Manrope, Inter, system-ui, sans-serif" font-size="17">Claude Code</text>
+    <text x="552" y="353" text-anchor="end" fill="#a9b0ba" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">286.09</text>
+    <rect x="48" y="367" width="504" height="11" rx="6" fill="#1d232c" /><rect x="48" y="367" width="504" height="11" rx="6" fill="#626d7b" />
+    <text x="48" y="428" fill="#c8ccd2" font-family="Manrope, Inter, system-ui, sans-serif" font-size="17">Codex</text>
+    <text x="552" y="428" text-anchor="end" fill="#a9b0ba" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">196.03</text>
+    <rect x="48" y="442" width="504" height="11" rx="6" fill="#1d232c" /><rect x="48" y="442" width="345" height="11" rx="6" fill="#626d7b" />
+    <text x="48" y="503" fill="#c8ccd2" font-family="Manrope, Inter, system-ui, sans-serif" font-size="17">Pi</text>
+    <text x="552" y="503" text-anchor="end" fill="#a9b0ba" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">160.23</text>
+    <rect x="48" y="517" width="504" height="11" rx="6" fill="#1d232c" /><rect x="48" y="517" width="282" height="11" rx="6" fill="#626d7b" />
+  </g>
+
+  <g aria-label="Median CPU utilization as a percentage of one core">
+    <rect x="20" y="610" width="560" height="390" rx="12" fill="url(#panel)" stroke="#ffffff" stroke-opacity=".10" />
+    <text x="48" y="649" fill="#f4f2ed" font-family="Manrope, Inter, system-ui, sans-serif" font-size="20" font-weight="700">Median CPU utilization</text>
+    <text x="552" y="649" text-anchor="end" fill="#737c88" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">% of one core</text>
+    <text x="48" y="693" fill="#f4f2ed" font-family="Manrope, Inter, system-ui, sans-serif" font-size="17" font-weight="700">Pablo</text>
+    <text x="552" y="693" text-anchor="end" fill="#ff8b61" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" font-weight="600">0.37%</text>
+    <rect x="48" y="707" width="504" height="11" rx="6" fill="#1d232c" /><rect x="48" y="707" width="31" height="11" rx="6" fill="url(#pablo)" />
+    <text x="48" y="768" fill="#c8ccd2" font-family="Manrope, Inter, system-ui, sans-serif" font-size="17">Claude Code</text>
+    <text x="552" y="768" text-anchor="end" fill="#a9b0ba" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">5.59%</text>
+    <rect x="48" y="782" width="504" height="11" rx="6" fill="#1d232c" /><rect x="48" y="782" width="467" height="11" rx="6" fill="#626d7b" />
+    <text x="48" y="843" fill="#c8ccd2" font-family="Manrope, Inter, system-ui, sans-serif" font-size="17">Codex</text>
+    <text x="552" y="843" text-anchor="end" fill="#a9b0ba" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">6.04%</text>
+    <rect x="48" y="857" width="504" height="11" rx="6" fill="#1d232c" /><rect x="48" y="857" width="504" height="11" rx="6" fill="#626d7b" />
+    <text x="48" y="918" fill="#c8ccd2" font-family="Manrope, Inter, system-ui, sans-serif" font-size="17">Pi</text>
+    <text x="552" y="918" text-anchor="end" fill="#a9b0ba" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">3.19%</text>
+    <rect x="48" y="932" width="504" height="11" rx="6" fill="#1d232c" /><rect x="48" y="932" width="266" height="11" rx="6" fill="#626d7b" />
+  </g>
+
+  <text x="30" y="1040" fill="#7e8793" font-family="Manrope, Inter, system-ui, sans-serif" font-size="13">Peak tree RSS · CPU utilization p50 · macOS arm64</text>
+  <text x="30" y="1070" fill="#626b77" font-family="Manrope, Inter, system-ui, sans-serif" font-size="12">Exploratory single-seed pilot · Pablo rerun later</text>
+  <text x="30" y="1094" fill="#626b77" font-family="Manrope, Inter, system-ui, sans-serif" font-size="12">Models, providers, tools and reasoning settings differ</text>
+</svg>

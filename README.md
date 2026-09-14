@@ -1,148 +1,169 @@
 # pablo
 
-A small, headless Rust agent runtime for applications doing arbitrary work.
+A small Rust agent runtime for applications doing non-coding knowledge work.
 
-The focused [C1 spike](docs/project/cycles/001-first-spike.md) and [C2 cycle](docs/project/cycles/002-single-agent-completion.md) are complete. C2 implements bounded filesystem tools, machine-readable task output, static policy and accounting, with acceptance on macOS arm64 and [native Linux x86_64](docs/project/evidence/c2.5-linux-x64.md). This is not a published release. The [architecture brief](docs/context.md) describes the larger product; section 29.1 defines the 0.1 release contract. The project-state command reports checkpoint progress across retained cycles.
+Pablo gives your application a model-and-tool loop with streaming output, cancellation, policy enforcement and tracing. Run tasks from the CLI, use the interactive terminal, connect an editor through the Agent Client Protocol (ACP), or embed `pablo-core` in a Rust application. Each interface uses the same runtime; your host owns the sandbox, approvals and application state.
 
-The selected [C3 plan](docs/project/cycles/003-extensibility-and-release.md) covers declarative deployment configuration, ordered model fallback, basic context compaction, shell command rules, providers, MCP, Skills, structured output, temporary children, A2A, a basic TUI and release delivery in small checkpoints. Otto integration remains deferred. Deployment loading/inspection, shell command rules, Vercel/OpenRouter gateways and configured Open Responses are implemented; later capabilities remain checkpointed in the plan. See the [deployment contract and examples](docs/project/contracts/c3-deployment-config.md).
+**Status:** prerelease development (`0.1.0-dev.1`). Build from source today. Release archives, installation tooling and the complete native platform acceptance matrix are still pending; this is not a published 0.1 release.
 
-## Run a real task
+## Documentation
 
-From the project directory:
+Read the [public documentation](https://runpablo.pages.dev), or start in the repository with the [introduction](docs/guide/introduction.md) and [getting-started guide](docs/guide/getting-started.md). The same Markdown powers both views, so examples remain reviewable in GitHub.
+
+- Use Pablo through the [CLI and TUI](docs/guide/cli.md), [ACP](docs/guide/acp.md), or [Rust embedding](docs/guide/embedding.md).
+- Configure [deployments](docs/guide/configuration.md), [providers and model routes](docs/guide/providers.md), and [tools and policy](docs/guide/tools-and-policy.md).
+- Add [MCP, Skills and supervised agents](docs/guide/extensibility.md), [structured output](docs/guide/structured-output.md), and [observability](docs/guide/observability.md).
+- Consult the [resource benchmark](docs/guide/benchmarks.md), [limits and outcomes](docs/guide/reference.md), [troubleshooting](docs/guide/troubleshooting.md), and the current [release status](docs/guide/release-status.md).
+
+## What it does
+
+- **Work with files and tools:** read, list and search a workspace, opt into revision-checked file writes and edits, and execute shell commands with deadlines and joined cancellation cleanup.
+- **Connect models:** Vercel AI Gateway, OpenRouter and explicitly configured Open Responses endpoints, with named model profiles, ordered fallback, context compaction and optional reasoning controls.
+- **Extend tasks:** configured MCP tools over stdio or Streamable HTTP, explicit local Skills, supervised local children and remote A2A tasks.
+- **Return usable results:** streaming text or a JSON task envelope with outcome and accounting; validate final answers against a supported JSON Schema subset, with configurable single-attempt repair.
+- **Operate and inspect:** composable TOML deployments, static tool and filesystem policy, offline diagnostics, native JSONL traces and OpenTelemetry export.
+
+## Build and run
+
+Use the pinned Rust **1.98.1** toolchain and a native build toolchain on macOS or Linux. Node is needed only for the TypeScript client and development tooling.
 
 ```sh
-cargo run --locked -p pablo -- run "Read README.md and summarize what Pablo can do."
+git clone https://github.com/calebjohn24/pablo.git
+cd pablo
+cargo build --release --locked -p pablo --bin pablo
+./target/release/pablo demo
 ```
 
-Pablo loads your gateway key from the ignored `.env`, streams the answer, and shows shell activity in the terminal. Both `AI_GATEWAY_API_KEY` and your existing `VERCEL_AI_GATEWAY` name work. It uses direct HTTPS through a Rust HTTP client; no Vercel SDK is installed. The default provider is Vercel with model `zai/glm-5.3-flash`; `--provider vercel` selects it explicitly. OpenRouter uses `z-ai/glm-5.3-flash` with `--provider openrouter`, reading only `OPENROUTER_API_KEY` from the environment or selected credential file. These are also the selected provider-testing models.
+The offline demo prints `Hello from pablo.` without a provider credential. Commands below run from the checkout and use the built executable directly.
 
-With `OPENROUTER_API_KEY` supplied privately in the environment or ignored `.env`:
+For a real task, supply a gateway credential in your environment or an ignored `.env` in the directory where you invoke Pablo:
 
-```sh
-cargo run --locked -p pablo -- run "Read README.md and summarize it." --provider openrouter --model z-ai/glm-5.3-flash --no-shell
-cargo run --locked -p pablo -- acp --stdio --provider openrouter --model z-ai/glm-5.3-flash --no-shell
+```dotenv
+AI_GATEWAY_API_KEY=your-vercel-ai-gateway-key
 ```
 
-These commands contact OpenRouter. Ordinary regression tests use local HTTP/SSE fixtures. The explicit paid [C3.7 live check](docs/project/evidence/c3.7.md) exercises CLI and the TypeScript ACP client with fresh file evidence:
+Then run:
 
 ```sh
-cargo build --release --locked -p pablo
-node scripts/smoke-live-openrouter.ts target/release/pablo .env
+./target/release/pablo run "Read README.md and summarize what Pablo can do." --no-shell
 ```
 
-The explicit credential-file argument selects only that file, so an older environment key cannot override it. The executable privately resolves the credential; the harness prints sanitized timing/usage summaries and removes its temporary workspaces. Each task permits one file read and two model calls with a 90-second deadline. [Adapter details](docs/project/contracts/c3-openrouter.md) describe cost granularity and capability limits.
+This sends a task to Vercel AI Gateway. The default model is `zai/glm-5.3-flash`. Filesystem reads remain enabled with `--no-shell`.
 
-Open Responses uses an explicit deployment with a complete HTTPS endpoint, model, capability profile and scoped credential reference. See the [runnable configuration](docs/gateway.md#open-responses) and [supported protocol subset](docs/project/contracts/c3-open-responses.md). It preserves private reasoning continuation across tool rounds.
-
-To work in a different folder while keeping credentials in this project:
+For OpenRouter, supply `OPENROUTER_API_KEY` instead and select the provider:
 
 ```sh
-cargo run --locked -p pablo -- run "List the files here and explain the project." --workspace /path/to/project
+./target/release/pablo run "Summarize README.md." --provider openrouter --no-shell
 ```
 
-Press **Ctrl-C** to cancel and wait for shell cleanup. Each invocation is a fresh task. Tool and model call counts are unlimited by default; the default deadline is one hour per run and 15 minutes per shell call. Shell runs on your machine with your user permissions; the workspace selects its working directory, not an OS sandbox. Filesystem read/list/search tools are also enabled; `--allow-write` opts in to revision-checked write/edit; use `--no-shell --no-filesystem` for text-only tasks. See [filesystem behavior](docs/filesystem.md). Use `./target/release/pablo tui --provider openrouter` for the interactive terminal. It displays Markdown, persistent tool entries and scrollable history within the current TUI session. Page Up/Down or the mouse wheel scroll; Ctrl-End returns to the latest output. Each submitted task has independent runtime context.
+OpenRouter defaults to `z-ai/glm-5.3-flash`. Use `--model ID` to select another compatible model. Reasoning stays provider-controlled by default; supported models can use `--reasoning-effort low` or `--reasoning-budget-tokens N`. See [providers and credentials](docs/gateway.md) and [reasoning controls](docs/project/contracts/c3-reasoning-latency.md).
 
-Set `--max-tool-calls N` or `--max-model-calls N` to opt into call-count limits (zero disables the corresponding calls). Omit these options for unlimited call counts. These options work with both `run` and `acp --stdio`, including through the reference client.
+Environment credentials take precedence over `.env`; `--env-file PATH` selects a different credential file. `VERCEL_AI_GATEWAY` is also accepted as a Vercel key alias. `--workspace PATH` changes the task workspace, independently of credential-file selection. Deployments using `--config` use explicit credential references instead of automatically reading `.env`.
 
-Default capacities are 1 MiB input, 8 MiB per tool result, 32 MiB context, 4 MiB model output, and 65,536 requested output tokens per model call. Optional native traces allow 256 MiB.
-
-Use `--model provider/model` to choose another compatible model, `--timeout SECONDS` or `--tool-timeout SECONDS` to change the run or shell deadline (1–86400 each), or `--env-file PATH` to select a credential file. Environment variables take precedence over file values; credential files are parsed privately without sourcing them or modifying the process environment. `--workspace` does not change where `.env` is loaded from.
-
-For a built executable:
+## Everyday use
 
 ```sh
-cargo build --release --locked -p pablo
-./target/release/pablo run "Read README.md and summarize it."
+# Work in another directory.
+./target/release/pablo run "Explain this project." --workspace /path/to/project --no-shell
+
+# Enable revision-checked filesystem writes and edits.
+./target/release/pablo run "Write a summary of README.md to SUMMARY.md." --allow-write --no-shell
+
+# Emit one JSON task envelope for a script or host application.
+./target/release/pablo run "Summarize README.md." --json --no-shell
+
+# Run a text-only task with explicit time and call limits.
+./target/release/pablo run "Explain how a hash table works." \
+  --no-shell --no-filesystem --timeout 60 --max-model-calls 2
+
+# Open the interactive terminal.
+./target/release/pablo tui
 ```
 
-Filesystem work has no default file-size, entry-count, search-depth or scanned-byte quota. Tool responses remain bounded and paginated; cancellation, deadlines and workspace policy still apply. Deployments and Rust hosts can explicitly set filesystem quotas when needed.
+The TUI displays Markdown, tool activity and scrollable history. Page Up/Down or the mouse wheel scroll; Ctrl-End returns to the latest output. Each submitted task has fresh model context, even though earlier output remains visible. Press **Ctrl-C** to cancel active work and wait for cleanup. See [terminal controls](docs/project/contracts/c3-tui.md).
 
-Shorthand and machine output use the same runtime:
+Shell and filesystem reads are enabled by default. Shell commands run with your user permissions and can modify files independently of `--allow-write`; the workspace is not an OS sandbox. Use `--no-shell` for filesystem-only work, add `--no-filesystem` for text-only work, and configure `--policy PATH` for tool, launcher and filesystem-root rules. Hosts provide isolation and approvals. See [shell execution](docs/shell.md) and [filesystem behavior](docs/filesystem.md).
+
+Runs default to a one-hour deadline and shell calls to 15 minutes. Model and tool call counts are unlimited unless you set `--max-model-calls` or `--max-tool-calls`; zero disables those calls. Payload, context and transport bounds still apply. Hard aggregate token/cost ceilings require attested provider bounds and are currently rejected by the live gateways. [Runtime contracts](docs/runtime.md) describe limits and accounting.
+
+`--json` wraps the answer in a [task envelope](docs/pablo-task.schema.json); the output field remains a string. To require a structured answer, add `--output-schema /path/to/schema.json`. See [supported schemas](docs/project/contracts/c3-output-validation.md) and [optional output repair](docs/project/contracts/c3-output-repair.md).
+
+## Configure a deployment
+
+TOML deployments compose provider credentials, model routes, tool policy, Skills, MCP servers, child tasks, output settings and telemetry. Inspect them locally before running a task:
 
 ```sh
-./target/release/pablo "Summarize README.md" --json --no-shell
+./target/release/pablo config validate --config presets/v1/production.toml \
+  --bind workspace=. --bind preset=./presets/v1
+./target/release/pablo config explain --config presets/v1/production.toml \
+  --bind workspace=. --bind preset=./presets/v1
 ```
 
-`--json` emits one [task envelope](docs/pablo-task.schema.json) with the native outcome and exact decimal-string accounting. `--policy PATH` sets host tool, launcher and filesystem-root rules. Optional `--max-total-tokens` and `--max-cost-microusd` require attested provider bounds; the live gateway currently rejects these before delivery. See [runtime contracts](docs/runtime.md).
+These commands inspect configuration without model calls or service startup. The [versioned deployment presets](presets/v1/README.md) include base, production and development examples. Copy the whole bundle and replace its example MCP/A2A service URLs before execution; the bundled URLs are placeholders. The guide covers credentials, rendering, execution and migration.
 
-See [the gateway and CLI contract](docs/gateway.md) for transport details, trace options, and the explicit live smoke check.
+| Configure | Reference |
+| --- | --- |
+| Composition, profiles and host policy | [Deployment configuration](docs/project/contracts/c3-deployment-config.md) |
+| Ordered model fallback | [Model routes](docs/project/contracts/c3-model-routes.md) |
+| Context compaction | [Compaction](docs/project/contracts/c3-compaction.md) |
+| Open Responses endpoint and capabilities | [Provider example](docs/gateway.md#open-responses) |
+| MCP tools and explicit local Skills | [MCP](docs/project/contracts/c3-mcp.md), [Skills](docs/project/contracts/c3-skills.md) |
+| Supervised children and validated handoffs | [Local children](docs/project/contracts/c3-children.md), [remote A2A](docs/project/contracts/c3-a2a.md) |
 
-Named models and ordered routes can be inspected offline with `pablo config explain`. Ordered fallback runs through CLI/ACP with shared task budgets and preserved tool history. See [route configuration and examples](docs/project/contracts/c3-model-routes.md).
+## Integrate with an application
 
-## Use ACP from TypeScript
+An ACP host launches the executable over stdio:
 
 ```sh
+./target/release/pablo acp --stdio
+```
+
+The process supports successive independent sessions, with one prompt per session. Model connections and runtime setup can stay warm. Streaming updates, cancellation and typed task outcomes use the pinned stable ACP v1 protocol with negotiated Pablo extensions. See the [ACP integration contract](docs/acp.md).
+
+To try the included TypeScript client, use the Node version pinned in `.nvmrc`:
+
+```sh
+nvm use
 npm ci
-cargo build --locked -p pablo
-node examples/acp-client.ts "Read README.md and summarize it." /absolute/workspace
+cargo build --locked -p pablo --bin pablo
+node examples/acp-client.ts "Read README.md and summarize it." "$PWD"
 ```
 
-The reference client starts `pablo acp --stdio`, negotiates stable ACP v1, streams message/tool updates, and reads the typed outcome. Ctrl-C sends cancellation and waits for cleanup. An ACP host can reuse the process for successive independent sessions, with one prompt per session; provider connections, compiled tools and telemetry setup stay warm. The reference CLI still runs one task and exits. See [the ACP contract](docs/acp.md) for host configuration, protocol bounds, SDK pins and the offline acceptance suite.
+The client uses `target/debug/pablo` and makes a real provider request. Rust applications can call `pablo-core::Runtime` directly; see [embedding contracts](docs/runtime.md) and the [configured reference host](crates/pablo/examples/preset_host.rs).
 
-## Offline demo and development checks
-
-The Cargo workspace contains `pablo-core` and the `pablo` executable. Rust 1.98.1 is pinned in `rust-toolchain.toml`; Cargo dependencies are pinned in the manifests and `Cargo.lock`.
+## Diagnostics and traces
 
 ```sh
-cargo run --locked -p pablo -- demo
+./target/release/pablo --help
+./target/release/pablo doctor
 ```
 
-The offline demo streams `Hello from pablo.` through the core. To save a native trace, choose a new file:
+`doctor` checks local setup and credential presence without model calls or MCP startup. Pass the same provider/configuration options as your task. Explicit `--probe provider` and `--probe mcp` opt into a provider request or MCP startup check; see [diagnostics](docs/project/contracts/c3-doctor.md).
+
+To record an offline demo trace, choose a new filename:
 
 ```sh
 mkdir -p .pablo/traces
-cargo run --locked -p pablo -- demo --trace .pablo/traces/demo.jsonl
+./target/release/pablo demo --trace .pablo/traces/demo.jsonl
 ```
 
-Add `--capture-content` to include the synthetic response in that trace. The default records metadata and byte counts. Trace files are created with private permissions on Unix and existing files are preserved. OTel content stays disabled; network export is off by default.
+Native traces record metadata by default and preserve existing files. `--capture-content` explicitly includes task content in native traces. Network telemetry is off by default; [OpenTelemetry configuration](docs/telemetry.md) covers OTLP/HTTP export, incoming W3C context and privacy behavior.
+
+## Development and release status
 
 ```sh
-cargo fmt --all -- --check
+cargo fmt --all --check
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --locked
 npm run typecheck
 npm run test:acp
 npm run test:telemetry
-cargo build --release --locked -p pablo
-```
-
-See [the runtime contracts and telemetry mapping](docs/runtime.md) for embedding and limits. The core supports streamed model/tool turns, bounded shell execution, and cancellation. See [the shell contract](docs/shell.md). The `run` command uses the live gateway; `demo` remains an offline text fixture. The ACP command drives the same runtime, with [verified live Vercel acceptance](docs/project/evidence/c1.4.md). Run `npm run smoke:live:acp` to repeat the explicit paid fixture. CLI and ACP support [OTLP/HTTP Protobuf export and incoming W3C context](docs/telemetry.md). Run `npm run smoke:collector` for the pinned real local Collector proof; it uses an offline model fixture and no provider credential. The [C1 acceptance report](docs/project/evidence/c1.6.md) records macOS/Linux arm64 checks, live Vercel and Collector proof, and release measurements. The focused spike is complete; the full alpha.1/0.1 surface remains future work.
-
-Run the real shell round-trip fixture with:
-
-```sh
-cargo test --locked -p pablo-core --test tool_loop actual_shell_evidence_round_trip
-```
-
-The release profile uses thin LTO, one codegen unit and stripped symbols. The [C1.7 performance report](docs/project/evidence/c1.7.md) compares trace encoding, first-text delivery, reused tasks and build profiles. Repeat the offline release measurements with `npm run measure -- 30`; see [measurement methods](docs/measurements.md) for timing boundaries and limitations.
-
-## Getting oriented
-
-Use the installed Node version with `nvm use`. In a noninteractive shell, load nvm first if Node is absent from `PATH`:
-
-```sh
-export NVM_DIR="$HOME/.nvm"
-. "$NVM_DIR/nvm.sh"
-nvm use
-```
-
-The project helper has no external dependencies and runs without `npm install`:
-
-```sh
-node scripts/project.mjs status
-node scripts/project.mjs context
+npm run test:deployment
 node scripts/project.mjs check
-node --test scripts/project.test.mjs
 ```
 
-Equivalent npm commands are `npm run project:status`, `npm run project:context`, `npm run project:check`, and `npm test`.
+These development checks use offline fixtures. Live provider checks are separate, explicit commands documented in the [gateway guide](docs/gateway.md#explicit-verification). The [knowledge-work benchmark](scripts/knowledge-work/README.md) covers factual scoring, latency, memory, CPU and cost comparisons; `npm run bench:knowledge` previews its matrix without model calls.
 
-`status` shows checkpoint progress and the next action. `context` assembles a bounded handoff from the brain, state, selected checkpoint, and three recent log entries. `check` validates record consistency and exits nonzero on errors. All three commands are read-only and resolve paths from the repository, so they also work when invoked from another directory.
+Release preparation still includes archives and installation checks, native acceptance on macOS arm64/x86_64 and Linux x86_64/arm64, matched release measurements, and prerelease distribution. Minimum OS/libc requirements and signing/notarization limits belong to that pending work. The full 0.1 contract also retains the deferred Otto integration proof. See the [release plan](docs/project/cycles/003-extensibility-and-release.md#c334-release-archives-and-installation) and [product design](docs/context.md#291-focused-release-contract).
 
-Read [AGENTS.md](AGENTS.md) for the one-checkpoint-per-session workflow and the project-record format. Use [the brain](docs/project/brain.md) for accepted decisions and [the backlog](docs/project/backlog.md) for deferred work.
-
-Local credentials belong in the ignored root `.env`. Project helper commands do not load that file. The `run` command privately reads the Vercel credential; `demo` stays offline.
-
-### Knowledge-work benchmark
-
-Compare Pablo (GLM or Astra), Codex, Claude Code, Ori + Pi, and Pi on seeded noncoding document tasks with factual/citation scoring, latency, process-tree memory and CPU measurements. Run `npm run bench:knowledge` to inspect the matrix without model calls. See [the benchmark guide](scripts/knowledge-work/README.md) for credentials, live runs, metrics and limitations.
+For current progress and the next handoff, run `node scripts/project.mjs context`. Contributors should read [AGENTS.md](AGENTS.md); [project decisions](docs/project/brain.md) and the [backlog](docs/project/backlog.md) retain design rationale and deferred work.

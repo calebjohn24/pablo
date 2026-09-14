@@ -1,0 +1,9 @@
+/node_modules/
+/dist/
+/.content/
+/.public/
+/.vitepress/cache/
+/.vitepress/dist/
+/.wrangler/
+*.log
+.DS_Store

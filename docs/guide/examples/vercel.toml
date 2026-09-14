@@ -1,0 +1,20 @@
+schema_version = 1
+
+[credentials.gateway]
+consumer = "provider.vercel"
+sources = [{ kind = "environment", name = "AI_GATEWAY_API_KEY" }]
+
+[options.model]
+provider = "vercel"
+id = "zai/glm-5.3-flash"
+credential = "gateway"
+
+[options.run]
+workspace = { base = "binding", name = "workspace", path = "." }
+
+[options.shell]
+enabled = false
+
+[options.filesystem]
+enabled = true
+write = false

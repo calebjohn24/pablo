@@ -1,0 +1,56 @@
+name: Docs site
+
+on:
+  pull_request:
+    paths:
+      - "docs/guide/**"
+      - "website/**"
+      - ".github/workflows/docs-pages.yml"
+  push:
+    branches: [main]
+    paths:
+      - "docs/guide/**"
+      - "website/**"
+      - ".github/workflows/docs-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: docs-pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Use Node 24
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build and verify site
+        run: npm test
+
+      - name: Deploy production to Cloudflare Pages
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: website
+          command: pages deploy dist --project-name=runpablo --branch=main
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
