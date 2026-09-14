@@ -121,6 +121,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p "$PWD/dist/release"
           binary="$PWD/target/$RELEASE_TARGET/release/pablo"
           revision="$(git rev-parse HEAD)"
           tree="$(git rev-parse 'HEAD^{tree}')"
