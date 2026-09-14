@@ -16,6 +16,7 @@
     "test:telemetry": "cargo build --locked -p pablo && node --test tests/telemetry.test.ts",
     "smoke:collector": "cargo build --locked -p pablo && node scripts/smoke-collector.ts",
     "measure": "cargo build --release --locked -p pablo --bin pablo --example measure && node scripts/measure.ts",
+    "measure:search": "cargo build --release --locked -p pablo --bin pablo && node scripts/measure-search.ts",
     "test:deployment": "cargo build --locked -p pablo --bin pablo --example measure && node --test tests/deployment.test.ts tests/deployment-telemetry.test.ts tests/shell-policy.test.ts tests/provider-selection.test.ts tests/openrouter.test.ts tests/open-responses.test.ts tests/model-routes.test.ts tests/model-fallback.test.ts",
     "bench:knowledge": "node scripts/knowledge-work/run.mjs",
     "test:knowledge": "node --test --test-concurrency=1 scripts/knowledge-work/benchmark.test.mjs"

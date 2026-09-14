@@ -2,7 +2,7 @@
 use futures_util::{future::BoxFuture, stream};
 use opentelemetry_sdk::trace::{InMemorySpanExporter, SdkTracerProvider};
 use pablo_core::{
-    filesystem::{FilesystemResult, FsError},
+    filesystem::{FilesystemResult, FsError, SearchMatch},
     policy::{DefaultDecision, Policy, PolicySet, Rule, Rules},
     provider::{ModelRequest, ProviderError, ProviderEvent, ProviderStream},
     tool::{ToolResult, ToolStatus},
@@ -12,7 +12,7 @@ use serde_json::{Value, json};
 use std::os::unix::fs::symlink;
 use std::{
     fs,
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::{
         Mutex,
         atomic::{AtomicUsize, Ordering},
@@ -352,6 +352,84 @@ fn error(o: &Observed, code: FsError) {
         Some(Box::new(FilesystemResult::Error { code }))
     );
 }
+
+/// Independent fixture oracle for the frozen C3.34a literal-search contract.
+/// It deliberately uses std path traversal and whole-file validation rather
+/// than any production filesystem helpers.
+fn reference_search(
+    root: &Path,
+    path: &Path,
+    query: &str,
+    max_matches: usize,
+) -> (Vec<SearchMatch>, bool) {
+    fn walk(
+        root: &Path,
+        path: &Path,
+        query: &str,
+        max_matches: usize,
+        matches: &mut Vec<SearchMatch>,
+    ) -> bool {
+        let mut entries = fs::read_dir(path)
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .collect::<Vec<_>>();
+        entries.sort_unstable_by(|left, right| {
+            left.strip_prefix(root)
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .cmp(right.strip_prefix(root).unwrap().to_str().unwrap())
+        });
+        for entry in entries {
+            let metadata = fs::symlink_metadata(&entry).unwrap();
+            if metadata.file_type().is_symlink() {
+                continue;
+            }
+            if metadata.is_dir() {
+                if walk(root, &entry, query, max_matches, matches) {
+                    return true;
+                }
+                continue;
+            }
+            if !metadata.is_file() {
+                continue;
+            }
+            let bytes = fs::read(&entry).unwrap();
+            if bytes.contains(&0) {
+                continue;
+            }
+            let Ok(text) = std::str::from_utf8(&bytes) else {
+                continue;
+            };
+            let relative = entry
+                .strip_prefix(root)
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_owned();
+            for (index, line) in text.split('\n').enumerate() {
+                let line = line.strip_suffix('\r').unwrap_or(line);
+                if !line.contains(query) {
+                    continue;
+                }
+                if matches.len() >= max_matches {
+                    return true;
+                }
+                matches.push(SearchMatch {
+                    path: relative.clone(),
+                    line: index + 1,
+                    text: line.to_owned(),
+                });
+            }
+        }
+        false
+    }
+
+    let mut matches = Vec::new();
+    let truncated = walk(root, path, query, max_matches, &mut matches);
+    (matches, truncated)
+}
+
 #[tokio::test]
 async fn actual_read_reaches_model_and_correlates_redacted_native_spans() {
     let f = Fixture::new();
@@ -523,6 +601,98 @@ async fn recursive_literal_search_has_exact_lines_and_explicit_truncation() {
         json!([])
     );
 }
+
+#[tokio::test]
+async fn search_matches_independent_oracle_on_adversarial_text_corpus() {
+    let f = Fixture::new();
+    let directory = f.root.join("oracle");
+    fs::create_dir_all(directory.join("04-nested")).unwrap();
+    fs::write(directory.join(".hidden.txt"), "needle\n").unwrap();
+    fs::write(
+        directory.join("00-chunk.txt"),
+        format!("{}needle\n", "x".repeat(8189)),
+    )
+    .unwrap();
+    fs::write(
+        directory.join("01-crlf.txt"),
+        "ordinary\r\nneedle twice needle\r\n",
+    )
+    .unwrap();
+    fs::write(directory.join("02-dense.txt"), "needle\nneedle\n").unwrap();
+    fs::write(directory.join("03-unicode.txt"), "é🙂 needle Ω\n").unwrap();
+    fs::write(
+        directory.join("04-nested/no-final.txt"),
+        "ordinary\nneedle at eof",
+    )
+    .unwrap();
+    fs::write(directory.join("05-no-match.txt"), "x".repeat(128 * 1024)).unwrap();
+    let mut invalid = b"needle before invalid\n".to_vec();
+    invalid.push(0xff);
+    fs::write(directory.join("06-invalid-after.bin"), invalid).unwrap();
+    fs::write(directory.join("07-nul-after.bin"), b"needle before nul\n\0").unwrap();
+    symlink("02-dense.txt", directory.join("08-link")).unwrap();
+
+    for max_matches in [100, 3] {
+        let expected = reference_search(&f.root, &directory, "needle", max_matches);
+        let actual = payload(
+            &call(
+                &f,
+                "fs.search",
+                json!({"path":"oracle","query":"needle","max_matches":max_matches}),
+            )
+            .await,
+        );
+        assert_eq!(actual["matches"], serde_json::to_value(expected.0).unwrap());
+        assert_eq!(actual["truncated"], expected.1);
+        assert_eq!(actual["path"], "oracle");
+    }
+}
+
+#[tokio::test]
+async fn search_long_line_and_invalid_tail_preserve_frozen_limit_semantics() {
+    let f = Fixture::new();
+    fs::write(f.root.join("long-no-match.txt"), "x".repeat(2 << 20)).unwrap();
+    let no_match = call(
+        &f,
+        "fs.search",
+        json!({"path":".","query":"needle","max_output_bytes":1024}),
+    )
+    .await;
+    assert!(no_match.outcome.is_completed(), "{:?}", no_match.outcome);
+    assert_eq!(payload(&no_match)["matches"], json!([]));
+
+    fs::write(
+        f.root.join("long-match.txt"),
+        format!("{}needle", "x".repeat(2048)),
+    )
+    .unwrap();
+    let oversized = call(
+        &f,
+        "fs.search",
+        json!({"path":".","query":"needle","max_output_bytes":1024}),
+    )
+    .await;
+    assert_eq!(
+        oversized.outcome,
+        RunOutcome::LimitExceeded {
+            limit: LimitKind::ToolOutputBytes
+        }
+    );
+
+    fs::remove_file(f.root.join("long-match.txt")).unwrap();
+    let mut invalid = b"needle\n".to_vec();
+    invalid.push(0xff);
+    fs::write(f.root.join("invalid-tail.bin"), invalid).unwrap();
+    let skipped = call(
+        &f,
+        "fs.search",
+        json!({"path":".","query":"needle","max_output_bytes":1024}),
+    )
+    .await;
+    assert!(skipped.outcome.is_completed(), "{:?}", skipped.outcome);
+    assert_eq!(payload(&skipped)["matches"], json!([]));
+}
+
 #[tokio::test]
 async fn recoverable_errors_and_schema_failures_have_distinct_disposition() {
     let f = Fixture::new();
