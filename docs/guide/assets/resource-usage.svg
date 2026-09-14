@@ -81,5 +81,5 @@
   </g>
 
   <text x="58" y="665" fill="#7e8793" font-family="Manrope, Inter, system-ui, sans-serif" font-size="14">Peak RSS is the maximum observed process-tree memory. CPU utilization is p50 CPU time divided by task wall time.</text>
-  <text x="58" y="692" fill="#626b77" font-family="Manrope, Inter, system-ui, sans-serif" font-size="13">Exploratory single-seed pilot · Pablo rerun later · models, provider routes, native tools and reasoning settings differ</text>
+  <text x="58" y="692" fill="#626b77" font-family="Manrope, Inter, system-ui, sans-serif" font-size="13">Six-task local comparison · Pablo rerun later · models, provider routes, native tools and reasoning settings differ</text>
 </svg>

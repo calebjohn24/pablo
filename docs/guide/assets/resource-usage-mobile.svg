@@ -62,6 +62,6 @@
   </g>
 
   <text x="30" y="1040" fill="#7e8793" font-family="Manrope, Inter, system-ui, sans-serif" font-size="13">Peak tree RSS · CPU utilization p50 · macOS arm64</text>
-  <text x="30" y="1070" fill="#626b77" font-family="Manrope, Inter, system-ui, sans-serif" font-size="12">Exploratory single-seed pilot · Pablo rerun later</text>
+  <text x="30" y="1070" fill="#626b77" font-family="Manrope, Inter, system-ui, sans-serif" font-size="12">Six-task local comparison · Pablo rerun later</text>
   <text x="30" y="1094" fill="#626b77" font-family="Manrope, Inter, system-ui, sans-serif" font-size="12">Models, providers, tools and reasoning settings differ</text>
 </svg>

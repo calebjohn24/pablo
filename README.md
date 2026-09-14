@@ -54,28 +54,22 @@ The offline demo prints `Hello from pablo.` without a provider credential. Comma
 
 ### Installer preview
 
-The checked-in installer is ready for versioned release archives, but no installable release asset is published yet. Build from source until the release candidate is available. Once a tag and its four platform archives are published, install that exact version to an explicit prefix:
+The checked-in installer is ready for versioned release archives, but no installable release asset is published yet. Build from source until the release candidate is available. Once `v0.0.1` and its four platform archives are published, install the native Mac or Linux binary with one command:
 
 ```sh
-curl -fsSLo /tmp/pablo-install.sh https://runpablo.pages.dev/install.sh
-sh /tmp/pablo-install.sh \
-  --version v0.0.1 \
-  --prefix "$HOME/.local"
+curl -fsSL https://runpablo.pages.dev/install.sh | sh
 ```
 
-The installer detects macOS/Linux and arm64/x86_64, downloads the matching archive and checksum from the Cloudflare R2-backed release route, verifies SHA-256 before extraction, and checks the binary’s reported version before installation. It never invokes `sudo`, package managers, Node or Python. Upgrade an unchanged receipt-backed installation to another exact version with `--update`; `--replace` explicitly overwrites another regular file at the selected path. Remove an unchanged receipt-backed installation with:
+The script pins `v0.0.1` and installs to `$HOME/.local/bin/pablo`; add that directory to `PATH` if needed. The installer detects macOS/Linux and arm64/x86_64, downloads the matching archive and checksum from the Cloudflare R2-backed release route, verifies SHA-256 before extraction, and checks the binary’s reported version before installation. It never invokes `sudo`, package managers, Node or Python. Upgrade an unchanged receipt-backed installation to another exact version with `--update`; `--replace` explicitly overwrites another regular file at the selected path.
 
 ```sh
-sh /tmp/pablo-install.sh \
-  --version v0.0.2 \
-  --prefix "$HOME/.local" \
-  --update
+curl -fsSL https://runpablo.pages.dev/install.sh | sh -s -- --version v0.0.2 --update
 ```
 
 Remove it with:
 
 ```sh
-sh /tmp/pablo-install.sh --prefix "$HOME/.local" --remove
+curl -fsSL https://runpablo.pages.dev/install.sh | sh -s -- --remove
 ```
 
 Review the [installer source](install.sh) and [archive layout, platform requirements, manifests and signing limits](docs/guide/installation.md) before running it. Release publication and four-platform artifact acceptance remain pending.

@@ -41,19 +41,19 @@ The installer is live, but the `v0.0.1` archives remain private until all four n
 
 ### Versioned installer
 
-Download and inspect the script, then install an exact version:
+When `v0.0.1` is published, install the native Mac or Linux binary with one command:
 
 ```sh
-curl -fsSLo /tmp/pablo-install.sh https://runpablo.pages.dev/install.sh
-less /tmp/pablo-install.sh
-sh /tmp/pablo-install.sh \
-  --version v0.0.1 \
-  --prefix "$HOME/.local"
+curl -fsSL https://runpablo.pages.dev/install.sh | sh
+```
 
+The script pins `v0.0.1` and installs to `$HOME/.local/bin/pablo`. It never resolves a moving `latest` version. Add that directory to the current shell if needed:
+
+```sh
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-There is no moving `latest` channel. A later exact version can replace an unchanged receipt-backed installation with `--update`. See [Installation and release files](./installation.md) for supported platforms, manual verification, archive contents, upgrades and removal.
+A later exact version can replace an unchanged receipt-backed installation with `--update`. See [Installation and release files](./installation.md) for inspection, version and prefix overrides, supported platforms, manual verification, upgrades and removal.
 
 ### Build from source today
 
