@@ -80,7 +80,7 @@ Every admitted task ends as `completed`, `cancelled`, `timed_out`, `policy_denie
 <div class="capability-list">
   <div><b>Model routing</b><span>Vercel, OpenRouter, Open Responses, ordered fallback and private reasoning continuation.</span></div>
   <div><b>Local capabilities</b><span>Filesystem reads, revision-checked mutations and shell commands under explicit policy.</span></div>
-  <div><b>Open extensions</b><span>MCP tools, portable Agent Skills, supervised local children and remote A2A tasks.</span></div>
+  <div><b>Open extensions</b><span>MCP tools, portable Agent Skills, supervised subagents and remote A2A tasks.</span></div>
   <div><b>Output contracts</b><span>Machine envelopes, local JSON Schema validation and one bounded repair attempt.</span></div>
   <div><b>Operations</b><span>Offline config inspection, focused diagnostics, bounded JSONL traces and OTLP export.</span></div>
 </div>

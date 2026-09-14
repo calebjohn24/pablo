@@ -204,5 +204,6 @@ The workspace is a filesystem boundary inside Pablo’s built-in tools, not an o
 - Follow the [ACP host guide](./acp.md) for language-neutral process integration.
 - Follow [Rust embedding](./embedding.md) for direct runtime construction.
 - Turn flags into a reviewable [deployment](./configuration.md).
+- Add bounded local or remote delegation with [Subagents](./subagents.md).
 - Configure [tools and policy](./tools-and-policy.md), then add [MCP, Agent Skills and A2A](./extensibility.md).
 - Validate [structured output](./structured-output.md) and wire [observability](./observability.md) before writing results into application state.

@@ -64,6 +64,18 @@ test("getting started leads application hosts from installation to embedding", (
   assert(html.indexOf("Install Pablo") < html.indexOf("Verify the installation offline"));
 });
 
+test("subagent guide documents bounded local and remote delegation", () => {
+  const html = fs.readFileSync(path.join(dist, "subagents.html"), "utf8");
+  const source = fs.readFileSync(path.join(guideRoot, "subagents.md"), "utf8");
+  assert.match(html, /Enable local subagents/);
+  assert.match(html, /Validated handoffs/);
+  assert.match(source, /options\.children/);
+  assert.match(source, /spawn_remote/);
+  assert.match(source, /two active children/i);
+  assert.match(source, /depth one/i);
+  assert.match(source, /A2A client/);
+});
+
 test("resource benchmark publishes measured values and its graphic", () => {
   const html = fs.readFileSync(path.join(dist, "benchmarks.html"), "utf8");
   const desktopGraphic = fs.readFileSync(
