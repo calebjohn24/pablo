@@ -5,12 +5,18 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import test from 'node:test';
 import { buildReleaseIndex } from './index.mjs';
-import { packageRelease } from './package.mjs';
+import { packageRelease, TARGETS } from './package.mjs';
 import { verifyRelease } from './verify.mjs';
 
 const REVISION = '1'.repeat(40);
 const TREE = '2'.repeat(40);
 const FINGERPRINT = '3'.repeat(64);
+const HOST_TARGET = ({
+  'darwin:arm64': 'aarch64-apple-darwin',
+  'darwin:x64': 'x86_64-apple-darwin',
+  'linux:arm64': 'aarch64-unknown-linux-gnu',
+  'linux:x64': 'x86_64-unknown-linux-gnu',
+})[`${process.platform}:${process.arch}`];
 
 function fixtureMetadata(root) {
   const dependency = join(root, 'dependency');
@@ -43,6 +49,7 @@ function fixtureMetadata(root) {
 }
 
 test('release packaging is deterministic, complete, checksummed, installable, and removable', async () => {
+  assert(HOST_TARGET, `unsupported test host: ${process.platform} ${process.arch}`);
   const root = mkdtempSync(join(tmpdir(), 'pablo-package-test-'));
   try {
     const binary = join(root, 'pablo');
@@ -50,7 +57,7 @@ test('release packaging is deterministic, complete, checksummed, installable, an
     const metadata = fixtureMetadata(root);
     const common = {
       version: 'v0.1.0-dev.1',
-      target: 'aarch64-apple-darwin',
+      target: HOST_TARGET,
       binary,
       sourceRevision: REVISION,
       sourceTree: TREE,
@@ -81,11 +88,7 @@ test('release packaging is deterministic, complete, checksummed, installable, an
     assert.equal(result.third_party_packages, 1);
     assert.equal(result.version_output, 'pablo 0.1.0-dev.1');
 
-    for (const target of [
-      'x86_64-apple-darwin',
-      'x86_64-unknown-linux-gnu',
-      'aarch64-unknown-linux-gnu',
-    ]) {
+    for (const target of Object.keys(TARGETS).filter((candidate) => candidate !== HOST_TARGET)) {
       await packageRelease({ ...common, target, outDir: candidates });
     }
     const release = await buildReleaseIndex({
