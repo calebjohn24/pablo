@@ -3,12 +3,11 @@
 set -eu
 
 PROGRAM="pablo"
-REPOSITORY="calebjohn24/pablo"
 VERSION=""
 PREFIX=""
 ARCHIVE_PATH=""
 CHECKSUM_PATH=""
-DOWNLOAD_BASE="https://github.com/${REPOSITORY}/releases/download"
+DOWNLOAD_BASE="https://runpablo.pages.dev/releases"
 REPLACE=0
 REMOVE=0
 WORKDIR=""

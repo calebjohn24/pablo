@@ -1,5 +1,12 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "runpablo",
-  "pages_build_output_dir": "./dist"
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2026-09-14",
+  "r2_buckets": [
+    {
+      "binding": "PABLO_RELEASES",
+      "bucket_name": "pablo-releases"
+    }
+  ]
 }

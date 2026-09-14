@@ -28,7 +28,7 @@ The executable is `target/release/pablo`. `--locked` ensures Cargo uses the chec
 
 ## Installer preview
 
-The repository includes a checksum-verifying installer for the upcoming versioned archives. It is published for review at <https://runpablo.pages.dev/install.sh>, but it cannot install until a matching release tag and archive set exist.
+The repository includes a checksum-verifying installer for the upcoming versioned archives. It is published for review at <https://runpablo.pages.dev/install.sh>, but it cannot install until a matching accepted archive set exists on the site’s Cloudflare R2-backed release route.
 
 Once release assets are available, download and inspect the script, then choose an exact version and absolute prefix:
 
@@ -40,6 +40,8 @@ sh /tmp/pablo-install.sh \
 ```
 
 The installer refuses checksum failures and existing commands. Pass `--replace` only to replace the selected prefix’s regular `pablo` executable. `--remove` removes an unchanged installation after checking its receipt and leaves unrelated prefix files in place.
+
+See [Installation and release files](./installation.md) for supported targets, minimum OS and libc versions, archive manifests, manual verification, and signing limits.
 
 ## Verify offline
 

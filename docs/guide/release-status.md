@@ -5,7 +5,7 @@ description: What is implemented, what remains before release, and which claims 
 
 # Release status
 
-Pablo is currently prerelease development software at `0.1.0-dev.1`. The source tree contains a broad working runtime, but installation archives and the full native release matrix are not complete. Build from source for evaluation.
+Pablo is currently prerelease development software at `0.1.0-dev.1`. The source tree contains a broad working runtime plus deterministic packaging and installation tooling, but the four exact artifacts have not passed the full native release matrix or been published. Build from source for evaluation.
 
 ## Implemented today
 
@@ -24,20 +24,17 @@ Pablo is currently prerelease development software at `0.1.0-dev.1`. The source 
 
 The selected release cycle still requires:
 
-1. Reproducible archives for macOS arm64/x86_64 and Linux x86_64/arm64.
-2. Checksums, notices and source/build/target manifests.
-3. A tested explicit-prefix installer with collision, replacement and removal behavior.
-4. Documented minimum macOS and Linux/libc requirements.
-5. Documented signing and notarization limits.
-6. Native acceptance of the exact artifacts on all four targets, including CLI, Rust embedding, ACP, TUI, Collector and bounded live-provider proofs.
-7. Matched release measurements across accepted targets.
-8. Prerelease publication and cycle handoff.
+1. Produce the four candidates through the native-runner workflow and freeze their identities.
+2. Pass native acceptance of those exact artifacts on all four targets, including CLI, Rust embedding, ACP, TUI, Collector and bounded live-provider proofs.
+3. Record matched release measurements across accepted targets.
+4. Publish the accepted prerelease set through the R2-backed release route and verify clean downloads and installs.
+5. Complete the cycle handoff.
 
 Cross-compilation may prepare an archive but does not count as native acceptance. Published artifacts must be the exact artifacts exercised by the platform gates.
 
 ## Current limitations
 
-- The checksum-verifying install script is available for review, but no matching release archives or package-manager formula are published yet.
+- The deterministic candidate builder, verifier, four-runner workflow and checksum-verifying install script are available for review, but no accepted release archive or package-manager formula is published yet.
 - The source packages are not published to crates.io.
 - Each direct CLI invocation and ACP session is one fresh task; durable chat/job state belongs to the host.
 - The workspace is not an OS sandbox. Shell commands execute with the host account’s permissions.
@@ -51,7 +48,7 @@ Cross-compilation may prepare an archive but does not count as native acceptance
 
 Pin the exact source revision when evaluating Pablo. Use `cargo build --locked` and preserve `Cargo.lock`. Hosts should validate the native task schema and negotiate the ACP extension version rather than accepting unknown revisions.
 
-The release profile uses thin LTO, one codegen unit and stripped symbols. Native acceptance, minimum OS/libc statements and artifact identity will be published with the eventual archives.
+The release profile uses thin LTO, one codegen unit and stripped symbols. [Installation and release files](./installation.md) records minimum OS/libc requirements, the unsigned/not-notarized macOS limit, deterministic archive layout, manifests, checksums, replacement and removal policy.
 
 ## Follow progress
 
