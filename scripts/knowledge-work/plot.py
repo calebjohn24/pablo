@@ -12,17 +12,18 @@ def quantile(values):
 
 def render(source, destination):
     data=json.loads(Path(source).read_text())
-    groups={h:[r for r in data['rows'] if r['harness']==h and r['status']=='completed'] for h in NAMES}
+    groups={h:[r for r in data['rows'] if r['harness']==h] for h in NAMES}
     groups={h:r for h,r in groups.items() if r}
     names=[NAMES[h] for h in groups]
     facts=[]; walls=[]; memory=[]; cpu=[]; utilization=[]; costs=[]
     for rows in groups.values():
-        checks=[c for r in rows for c in r['correctness']['checks']]
-        facts.append(100*sum(c['value'] for c in checks)/len(checks))
-        walls.append(quantile([r['resources']['wall_ms']/1000 for r in rows]))
-        memory.append(max(r['resources']['sampled_tree_peak_rss_kib']/1024 for r in rows))
-        cpu.append(quantile([r['resources']['cpu_total_s'] for r in rows]))
-        utilization.append(quantile([r['resources']['cpu_percent_one_core'] for r in rows]))
+        checks=[c for r in rows for c in (r.get('correctness') or {}).get('checks', [{'value':False}]*r.get('factual_total', 0))]
+        facts.append(100*sum(c['value'] for c in checks)/len(checks) if checks else None)
+        measured=[r['resources'] for r in rows if r.get('resources')]
+        walls.append(quantile([r['wall_ms']/1000 for r in measured]))
+        memory.append(max((r['sampled_tree_peak_rss_kib']/1024 for r in measured), default=None))
+        cpu.append(quantile([r['cpu_total_s'] for r in measured]))
+        utilization.append(quantile([r['cpu_percent_one_core'] for r in measured]))
         reported=[r.get('events',{}).get('reported_cost_usd') if r.get('events',{}).get('reported_cost_usd') is not None else r.get('events',{}).get('estimated_cost_usd') for r in rows]
         costs.append(sum(reported) if all(isinstance(v,(int,float)) for v in reported) else None)
     # One shared row per configuration avoids repeating six long labels in every panel.
@@ -33,7 +34,7 @@ def render(source, destination):
     ax.set(xlim=(0, 18), ylim=(0, 9)); ax.axis('off')
     ax.text(.65, 8.48, 'PABLO  /  BENCHMARKS', fontsize=11, color=accent, weight='bold')
     ax.text(.65, 7.91, 'Knowledge work, measured.', fontsize=29, color=ink, weight='bold')
-    ax.text(.65, 7.47, 'Six synthetic tasks per configuration · one seed · one attempt per task', fontsize=13, color=muted)
+    ax.text(.65, 7.47, data.get('chart', {}).get('subtitle', 'Six synthetic tasks per configuration · one seed · one attempt per task'), fontsize=13, color=muted)
 
     columns = [
         ('Accuracy ↑', 'Factual checks', facts, lambda v:f'{v:.0f}%', 100),
@@ -57,7 +58,8 @@ def render(source, destination):
             ax.add_patch(plt.Rectangle((.45, y-.43), 17.10, .74, color='#F5F8F9', lw=0))
         harness, model = NAMES[h].split(' · ')
         ax.text(.65, y+.025, harness, fontsize=15, color=ink, weight='bold', va='center')
-        ax.text(.65, y-.245, model, fontsize=11, color=muted, va='center')
+        suffix = ' · rerun' if h in data.get('chart', {}).get('refreshed_harnesses', []) else ''
+        ax.text(.65, y-.245, model+suffix, fontsize=11, color=muted, va='center')
         for x, (title, _, values, fmt, limit) in zip(starts, columns):
             v=values[i]
             estimated = title.startswith('Cost') and any(r.get('events',{}).get('reported_cost_usd') is None and r.get('events',{}).get('estimated_cost_usd') is not None for r in rows)
@@ -70,7 +72,7 @@ def render(source, destination):
     ax.plot([.65, 17.35], [.98, .98], color=rule, lw=1)
     ax.text(.65, .69, 'Bars use independent linear scales from zero in each column. ↑ Higher is better; ↓ lower is better.', fontsize=10.5, color=muted)
     ax.text(.65, .43, '*Codex cost: standard token-price estimate. Other costs: client-reported, not necessarily billed amounts.', fontsize=10.5, color=muted)
-    ax.text(.65, .17, 'Exploratory pilot · provider routes and reasoning settings differ · local CPU and RAM only', fontsize=10.5, color=muted)
+    ax.text(.65, .17, data.get('chart', {}).get('footer', 'Exploratory pilot · all attempts included · provider routes and reasoning settings differ · local CPU and RAM only'), fontsize=10.5, color=muted)
     dest=Path(destination);dest.parent.mkdir(parents=True,exist_ok=True)
     fig.savefig(str(dest)+'.png',dpi=180)
     fig.savefig(str(dest)+'.svg')

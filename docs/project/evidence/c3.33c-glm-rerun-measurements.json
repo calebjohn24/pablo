@@ -1,0 +1,5261 @@
+{
+  "timestamp": "2026-09-13T00:25:57.663Z",
+  "suite": "knowledge-work-v1.1",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "kernel": "25.5.0",
+    "cpu": "Apple M4 Pro",
+    "logical_cpus": 14,
+    "memory_bytes": 25769803776,
+    "node": "v24.11.0",
+    "python": "Python 3.12.13"
+  },
+  "method": "Refresh only Pablo GLM: six seed-42 tasks, one attempt each, provider-default reasoning. Other 30 observations retained exactly from the historical six-harness pilot. All attempts remain in factual/latency/cost metrics; different collection times and native reasoning/provider settings prevent causal attribution.",
+  "chart": {
+    "subtitle": "Six tasks per configuration · seed 42 · only Pablo GLM rerun; other results retained",
+    "refreshed_harnesses": [
+      "pablo"
+    ],
+    "footer": "Only Pablo GLM rerun · all attempts included · exploratory pilot · different collection times and reasoning settings · local CPU / RAM only"
+  },
+  "baseline": {
+    "path": "docs/project/evidence/c3.33b-knowledge-measurements.json",
+    "sha256": "6d026f6c8088d6c99e33f05821feb8f937e56c9bebad9c5812c76385b39f6d7c",
+    "provenance": [
+      {
+        "name": "knowledge-work-six-task-pilot",
+        "timestamp": "2026-09-12T21:15:16.442Z",
+        "suiteVersion": "knowledge-work-v1",
+        "sourceHashes": {
+          "tasks.mjs": "e683d6ac23c60abdaa259df9d7e42715ee0376474ed135230303aad70a5d00ef",
+          "adapters.mjs": "e2dbea43e214cd65b21c3e3f7a34d596110430d3bb037a4afd5393308aca0908",
+          "run.mjs": "5fc60e7d839f48bdb530666669cbb430c5668e52f5a1fbcdf99d77954668d698",
+          "monitor.py": "3308c332e85e770fdd42da6628008c73f4177ab63f56a5b5c29f2cf80f3474f7"
+        },
+        "builds": {
+          "pablo": {
+            "version": "pablo 0.1.0-dev.1 (OTel mapping c1.2; GenAI fee465db333bdd6a7d2faa320edab5cf3101a4f4)",
+            "entry_sha256": "39669a6c4e38421a5180ad2a55278a94d95a09a440a758adfc96c3365e1126d0",
+            "entry_bytes": 15042000
+          },
+          "codex": {
+            "version": "codex-cli 0.154.0",
+            "entry_sha256": "61b0194f3bb6534439c8d26a3ed57d0805f84b884588b761795323eeb92fcf70",
+            "entry_bytes": 8790
+          },
+          "claude": {
+            "version": "2.1.263 (Claude Code)",
+            "entry_sha256": "ef5d2909c8af49f31ab6d5487e90316777bc2fac170adfe8160716caa8aaf4f9",
+            "entry_bytes": 199257984
+          },
+          "ori": {
+            "version": "{\n  \"ok\": true,\n  \"command\": \"version\",\n  \"data\": {\n    \"name\": \"@ori-runtime/cli\",\n    \"version\": \"0.14.3+6e62568\",\n    \"latestVersion\": \"0.14.3+6e62568\",\n    \"updateAvailable\": false,\n    \"severity\": \"none\",\n    \"channel\": \"stable\"\n  }\n}",
+            "entry_sha256": "116131f0b0c9c7f2f0b8be5dbac20ef1f8090bc05f43beb26a7c9816caa93782",
+            "entry_bytes": 81006240
+          },
+          "pi": {
+            "version": "0.85.1",
+            "entry_sha256": "e6d7fcf36a239cf3746e67ddf4222081ac01a601b85a3ee688bdfe9c161d754c",
+            "entry_bytes": 660
+          }
+        }
+      },
+      {
+        "name": "knowledge-work-pablo-astra-pilot",
+        "timestamp": "2026-09-12T21:26:49.103Z",
+        "suiteVersion": "knowledge-work-v1",
+        "sourceHashes": {
+          "tasks.mjs": "e683d6ac23c60abdaa259df9d7e42715ee0376474ed135230303aad70a5d00ef",
+          "adapters.mjs": "f74edb36c4b4f34ba1a5f8ba4b7fb8b14cffac1e987620d2b3bee508fb0c4abf",
+          "run.mjs": "7c174f6ecc8ccc432fe0a56575de3a7ef6ebd94ac4fa5ddf422c6f44195102da",
+          "monitor.py": "3308c332e85e770fdd42da6628008c73f4177ab63f56a5b5c29f2cf80f3474f7"
+        },
+        "builds": {
+          "pablo-astra": {
+            "version": "pablo 0.1.0-dev.1 (OTel mapping c1.2; GenAI fee465db333bdd6a7d2faa320edab5cf3101a4f4)",
+            "entry_sha256": "39669a6c4e38421a5180ad2a55278a94d95a09a440a758adfc96c3365e1126d0",
+            "entry_bytes": 15042000
+          }
+        }
+      },
+      {
+        "name": "knowledge-work-handoff-v1-1",
+        "timestamp": "2026-09-12T21:30:19.719Z",
+        "suiteVersion": "knowledge-work-v1.1",
+        "sourceHashes": {
+          "tasks.mjs": "029c3431c0cf7fcffcf89567ab430f07945044359525f7d771bed6656b2bb927",
+          "adapters.mjs": "f74edb36c4b4f34ba1a5f8ba4b7fb8b14cffac1e987620d2b3bee508fb0c4abf",
+          "run.mjs": "7c174f6ecc8ccc432fe0a56575de3a7ef6ebd94ac4fa5ddf422c6f44195102da",
+          "monitor.py": "3308c332e85e770fdd42da6628008c73f4177ab63f56a5b5c29f2cf80f3474f7"
+        },
+        "builds": {
+          "pablo": {
+            "version": "pablo 0.1.0-dev.1 (OTel mapping c1.2; GenAI fee465db333bdd6a7d2faa320edab5cf3101a4f4)",
+            "entry_sha256": "39669a6c4e38421a5180ad2a55278a94d95a09a440a758adfc96c3365e1126d0",
+            "entry_bytes": 15042000
+          },
+          "pablo-astra": {
+            "version": "pablo 0.1.0-dev.1 (OTel mapping c1.2; GenAI fee465db333bdd6a7d2faa320edab5cf3101a4f4)",
+            "entry_sha256": "39669a6c4e38421a5180ad2a55278a94d95a09a440a758adfc96c3365e1126d0",
+            "entry_bytes": 15042000
+          },
+          "codex": {
+            "version": "codex-cli 0.154.0",
+            "entry_sha256": "61b0194f3bb6534439c8d26a3ed57d0805f84b884588b761795323eeb92fcf70",
+            "entry_bytes": 8790
+          },
+          "claude": {
+            "version": "2.1.263 (Claude Code)",
+            "entry_sha256": "ef5d2909c8af49f31ab6d5487e90316777bc2fac170adfe8160716caa8aaf4f9",
+            "entry_bytes": 199257984
+          }
+        }
+      }
+    ],
+    "parity": {
+      "unchanged_input_and_argv_trials": 20,
+      "monitor_sha256": "3308c332e85e770fdd42da6628008c73f4177ab63f56a5b5c29f2cf80f3474f7",
+      "note": "Same measurement supervisor for every retained run; later changes add Astra profile, metadata normalization, cancellation reporting and additional summary fields. No model request, source input or scorer change in the five unaffected tasks."
+    }
+  },
+  "refresh": {
+    "run": "knowledge-pablo-glm-rerun-20260913",
+    "timestamp": "2026-09-13T00:23:25.190Z",
+    "sourceHashes": {
+      "tasks.mjs": "029c3431c0cf7fcffcf89567ab430f07945044359525f7d771bed6656b2bb927",
+      "adapters.mjs": "9c10a71b45351936abc198e2eb278e369fed266fb0abb58dd8e6f628109637ef",
+      "run.mjs": "3df7dc69f8113be53a4227759c84119990f15626e38fc9695f09a00b3ce6cafd",
+      "monitor.py": "06db0819007441b8c858dc653a04b2332200e3abdd07a30f37bfc43af99b48ba",
+      "credentials.mjs": "d822ff08fc5536a886d56aaf890220dff865ae72799fa7567ff0a3fb421fc894",
+      "cost.mjs": "8c83305043cec8d99a18f07b7e9d0a4ace7feb7198c603e9c3a00bbd58bfa0af",
+      "latency.mjs": "a43f7c13f6b93ee4756d00a3cae31bd85badb9d444899811291865b57f05c3bd"
+    },
+    "builds": {
+      "pablo": {
+        "version": "pablo 0.1.0-dev.1 (OTel mapping c1.2; GenAI fee465db333bdd6a7d2faa320edab5cf3101a4f4)",
+        "entry_sha256": "b549d9eee623313cd26bf71712b48d2feff87006bfdc1011afe0f0e48c820fe2",
+        "entry_bytes": 15108832
+      }
+    }
+  },
+  "rows": [
+    {
+      "id": "reconciliation-s42-r0-pablo",
+      "harness": "pablo",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "reconciliation",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "25aab1ac5ea128360fd52095eafc5f1d3ed0d463e671643424cd4a5b1b561b81",
+      "factual_total": 4,
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "north_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "south_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "total_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "excluded",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 7,
+        "reported_usage": {
+          "model_calls": "5",
+          "tool_calls": "7",
+          "usage": {
+            "input_tokens": "11441",
+            "output_tokens": "1465",
+            "cache_read_input_tokens": "7616",
+            "cache_write_input_tokens": "0"
+          },
+          "cost_microusd": "1538",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.001538,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-pablo-glm-rerun-20260913",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 18688.187249936163,
+        "first_stdout_ms": 18606.59325006418,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.058495,
+        "cpu_system_s": 0.040128,
+        "cpu_total_s": 0.09862299999999999,
+        "cpu_percent_one_core": 0.5277290872625265,
+        "cpu_percent_machine": 0.03769493480446618,
+        "sampled_tree_peak_rss_kib": 18400,
+        "rusage_maxrss_kib": 18400,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 1343,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 141,
+      "model_calls": [
+        {
+          "started_us": 1789259005256119,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 1626,
+            "output_tokens": 25,
+            "cache_read_input_tokens": 0,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 0,
+          "elapsed_us": 1213221,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 13,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 98,
+            "dispatch_us": 98,
+            "headers_us": 1105932,
+            "first_data_us": 1105979,
+            "first_text_us": null,
+            "first_tool_delta_us": 1159563,
+            "terminal_us": 1213133,
+            "complete_us": 1213205
+          }
+        },
+        {
+          "started_us": 1789259006469760,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 1721,
+            "output_tokens": 43,
+            "cache_read_input_tokens": 1536,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 0,
+          "elapsed_us": 671631,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 8,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 67,
+            "dispatch_us": 67,
+            "headers_us": 427359,
+            "first_data_us": 427474,
+            "first_text_us": null,
+            "first_tool_delta_us": 472513,
+            "terminal_us": 671579,
+            "complete_us": 671622
+          }
+        },
+        {
+          "started_us": 1789259007141708,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 2235,
+            "output_tokens": 414,
+            "cache_read_input_tokens": 1600,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 58,
+          "elapsed_us": 4779523,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 274,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 65,
+            "dispatch_us": 65,
+            "headers_us": 551667,
+            "first_data_us": 551673,
+            "first_text_us": 3653288,
+            "first_tool_delta_us": 3749930,
+            "terminal_us": 4779449,
+            "complete_us": 4779461
+          }
+        },
+        {
+          "started_us": 1789259011982518,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 2467,
+            "output_tokens": 776,
+            "cache_read_input_tokens": 2112,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 124,
+          "elapsed_us": 9502604,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 55,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 82,
+            "dispatch_us": 82,
+            "headers_us": 407804,
+            "first_data_us": 407811,
+            "first_text_us": 793417,
+            "first_tool_delta_us": 1401695,
+            "terminal_us": 9502411,
+            "complete_us": 9502481
+          }
+        },
+        {
+          "started_us": 1789259021488236,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 3392,
+            "output_tokens": 207,
+            "cache_read_input_tokens": 2368,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 721,
+          "elapsed_us": 2362632,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 7,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 139,
+            "dispatch_us": 139,
+            "headers_us": 611928,
+            "first_data_us": 612208,
+            "first_text_us": 627234,
+            "first_tool_delta_us": null,
+            "terminal_us": 2362594,
+            "complete_us": 2362601
+          }
+        }
+      ],
+      "timings": {
+        "runtime_us": 18595064,
+        "model_us": 18529370,
+        "tool_us": 64665,
+        "tools": [
+          {
+            "name": "fs.list",
+            "elapsed_us": 275
+          },
+          {
+            "name": "fs.read",
+            "elapsed_us": 143
+          },
+          {
+            "name": "fs.read",
+            "elapsed_us": 49
+          },
+          {
+            "name": "fs.read",
+            "elapsed_us": 46
+          },
+          {
+            "name": "shell.run",
+            "elapsed_us": 61206
+          },
+          {
+            "name": "fs.write",
+            "elapsed_us": 2514
+          },
+          {
+            "name": "fs.write",
+            "elapsed_us": 432
+          }
+        ],
+        "runtime_other_us": 1029,
+        "process_other_us": 93123.24993616343
+      }
+    },
+    {
+      "id": "policy-review-s42-r0-pablo",
+      "harness": "pablo",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "policy-review",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "7c62e343873c86cf8383e379902b917ca9b1a09cbe204330f6fdec1d13f6fe03",
+      "factual_total": 4,
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "A",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "B",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "C",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "D",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 7,
+        "reported_usage": {
+          "model_calls": "6",
+          "tool_calls": "7",
+          "usage": {
+            "input_tokens": "14601",
+            "output_tokens": "1895",
+            "cache_read_input_tokens": "7744",
+            "cache_write_input_tokens": "0"
+          },
+          "cost_microusd": "2211",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.002211,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-pablo-glm-rerun-20260913",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 31359.449375187978,
+        "first_stdout_ms": 31312.79587512836,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.063495,
+        "cpu_system_s": 0.039125,
+        "cpu_total_s": 0.10261999999999999,
+        "cpu_percent_one_core": 0.3272378885618901,
+        "cpu_percent_machine": 0.023374134897277864,
+        "sampled_tree_peak_rss_kib": 18624,
+        "rusage_maxrss_kib": 18624,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 1518,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 240,
+      "model_calls": [
+        {
+          "started_us": 1789259024032113,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 1618,
+            "output_tokens": 25,
+            "cache_read_input_tokens": 0,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 0,
+          "elapsed_us": 612308,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 13,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 55,
+            "dispatch_us": 56,
+            "headers_us": 446634,
+            "first_data_us": 446656,
+            "first_text_us": null,
+            "first_tool_delta_us": 546237,
+            "terminal_us": 612287,
+            "complete_us": 612300
+          }
+        },
+        {
+          "started_us": 1789259024644623,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 1715,
+            "output_tokens": 37,
+            "cache_read_input_tokens": 1536,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 0,
+          "elapsed_us": 719336,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 76,
+            "dispatch_us": 76,
+            "headers_us": 551374,
+            "first_data_us": 555594,
+            "first_text_us": null,
+            "first_tool_delta_us": 556139,
+            "terminal_us": 719315,
+            "complete_us": 719327
+          }
+        },
+        {
+          "started_us": 1789259025364207,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 2282,
+            "output_tokens": 555,
+            "cache_read_input_tokens": 1600,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 194,
+          "elapsed_us": 6117576,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 386,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 68,
+            "dispatch_us": 68,
+            "headers_us": 384032,
+            "first_data_us": 384039,
+            "first_text_us": 3676885,
+            "first_tool_delta_us": 4098221,
+            "terminal_us": 6117486,
+            "complete_us": 6117496
+          }
+        },
+        {
+          "started_us": 1789259031538706,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 2552,
+            "output_tokens": 282,
+            "cache_read_input_tokens": 2176,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 57,
+          "elapsed_us": 2327061,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 133,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 100,
+            "dispatch_us": 100,
+            "headers_us": 321830,
+            "first_data_us": 322458,
+            "first_text_us": 1386599,
+            "first_tool_delta_us": 1500230,
+            "terminal_us": 2325493,
+            "complete_us": 2327031
+          }
+        },
+        {
+          "started_us": 1789259033867944,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 2805,
+            "output_tokens": 716,
+            "cache_read_input_tokens": 2432,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 0,
+          "elapsed_us": 7052384,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 302,
+            "dispatch_us": 302,
+            "headers_us": 748434,
+            "first_data_us": 865393,
+            "first_text_us": null,
+            "first_tool_delta_us": 865436,
+            "terminal_us": 7052283,
+            "complete_us": 7052292
+          }
+        },
+        {
+          "started_us": 1789259040921002,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 3629,
+            "output_tokens": 280,
+            "cache_read_input_tokens": 0,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 891,
+          "elapsed_us": 14415446,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 84,
+            "dispatch_us": 84,
+            "headers_us": 10011573,
+            "first_data_us": 10431293,
+            "first_text_us": 13775642,
+            "first_tool_delta_us": null,
+            "terminal_us": 14415257,
+            "complete_us": 14415260
+          }
+        }
+      ],
+      "timings": {
+        "runtime_us": 31304433,
+        "model_us": 31243706,
+        "tool_us": 58918,
+        "tools": [
+          {
+            "name": "fs.list",
+            "elapsed_us": 154
+          },
+          {
+            "name": "fs.read",
+            "elapsed_us": 126
+          },
+          {
+            "name": "fs.read",
+            "elapsed_us": 43
+          },
+          {
+            "name": "fs.read",
+            "elapsed_us": 30
+          },
+          {
+            "name": "shell.run",
+            "elapsed_us": 56817
+          },
+          {
+            "name": "fs.write",
+            "elapsed_us": 1122
+          },
+          {
+            "name": "fs.write",
+            "elapsed_us": 626
+          }
+        ],
+        "runtime_other_us": 1809,
+        "process_other_us": 55016.37518797815
+      }
+    },
+    {
+      "id": "vendor-selection-s42-r0-pablo",
+      "harness": "pablo",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "vendor-selection",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "427a70128ea3ffc74ea0ab4230094163e4cb80032f87588ca5cc8241da099095",
+      "factual_total": 4,
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "winner",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "annual_cost",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "savings",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "ineligible",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 7,
+        "reported_usage": {
+          "model_calls": "6",
+          "tool_calls": "7",
+          "usage": {
+            "input_tokens": "13908",
+            "output_tokens": "1655",
+            "cache_read_input_tokens": "8576",
+            "cache_write_input_tokens": "0"
+          },
+          "cost_microusd": "1870",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.00187,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-pablo-glm-rerun-20260913",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 27586.961125023663,
+        "first_stdout_ms": 27535.46674991958,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.042776,
+        "cpu_system_s": 0.025325999999999998,
+        "cpu_total_s": 0.068102,
+        "cpu_percent_one_core": 0.24686300057249086,
+        "cpu_percent_machine": 0.01763307146946363,
+        "sampled_tree_peak_rss_kib": 19568,
+        "rusage_maxrss_kib": 18912,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 1730,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 214,
+      "model_calls": [
+        {
+          "started_us": 1789259055466469,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 1624,
+            "output_tokens": 25,
+            "cache_read_input_tokens": 0,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 0,
+          "elapsed_us": 12142387,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 17,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 66,
+            "dispatch_us": 66,
+            "headers_us": 10065778,
+            "first_data_us": 10485689,
+            "first_text_us": null,
+            "first_tool_delta_us": 12106267,
+            "terminal_us": 12142204,
+            "complete_us": 12142230
+          }
+        },
+        {
+          "started_us": 1789259067609154,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 1720,
+            "output_tokens": 36,
+            "cache_read_input_tokens": 0,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 0,
+          "elapsed_us": 977126,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 63,
+            "dispatch_us": 63,
+            "headers_us": 796277,
+            "first_data_us": 800020,
+            "first_text_us": null,
+            "first_tool_delta_us": 800077,
+            "terminal_us": 977103,
+            "complete_us": 977113
+          }
+        },
+        {
+          "started_us": 1789259068586864,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 2212,
+            "output_tokens": 357,
+            "cache_read_input_tokens": 1600,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 0,
+          "elapsed_us": 2956969,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 311,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 77,
+            "dispatch_us": 77,
+            "headers_us": 440493,
+            "first_data_us": 440499,
+            "first_text_us": null,
+            "first_tool_delta_us": 2624673,
+            "terminal_us": 2956924,
+            "complete_us": 2956931
+          }
+        },
+        {
+          "started_us": 1789259071556052,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 2362,
+            "output_tokens": 436,
+            "cache_read_input_tokens": 2112,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 169,
+          "elapsed_us": 3825975,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 214,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 69,
+            "dispatch_us": 69,
+            "headers_us": 357074,
+            "first_data_us": 357080,
+            "first_text_us": 2233640,
+            "first_tool_delta_us": 2887686,
+            "terminal_us": 3825917,
+            "complete_us": 3825926
+          }
+        },
+        {
+          "started_us": 1789259075382745,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 2691,
+            "output_tokens": 509,
+            "cache_read_input_tokens": 2240,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 0,
+          "elapsed_us": 4648721,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 92,
+            "dispatch_us": 92,
+            "headers_us": 670515,
+            "first_data_us": 684689,
+            "first_text_us": null,
+            "first_tool_delta_us": 685421,
+            "terminal_us": 4648635,
+            "complete_us": 4648661
+          }
+        },
+        {
+          "started_us": 1789259080032230,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 3299,
+            "output_tokens": 292,
+            "cache_read_input_tokens": 2624,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 1102,
+          "elapsed_us": 2960713,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 8,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 101,
+            "dispatch_us": 101,
+            "headers_us": 419068,
+            "first_data_us": 419661,
+            "first_text_us": 428908,
+            "first_tool_delta_us": null,
+            "terminal_us": 2960669,
+            "complete_us": 2960675
+          }
+        }
+      ],
+      "timings": {
+        "runtime_us": 27526534,
+        "model_us": 27511536,
+        "tool_us": 14280,
+        "tools": [
+          {
+            "name": "fs.list",
+            "elapsed_us": 217
+          },
+          {
+            "name": "fs.read",
+            "elapsed_us": 276
+          },
+          {
+            "name": "fs.read",
+            "elapsed_us": 137
+          },
+          {
+            "name": "fs.read",
+            "elapsed_us": 119
+          },
+          {
+            "name": "shell.run",
+            "elapsed_us": 12167
+          },
+          {
+            "name": "fs.write",
+            "elapsed_us": 665
+          },
+          {
+            "name": "fs.write",
+            "elapsed_us": 699
+          }
+        ],
+        "runtime_other_us": 718,
+        "process_other_us": 60427.125023663044
+      }
+    },
+    {
+      "id": "meeting-handoff-s42-r0-pablo",
+      "harness": "pablo",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "meeting-handoff",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "23a2795db06b2d5fd64dbfef31a49560b4278ab5ee85e5533e8f1179f091f19c",
+      "factual_total": 5,
+      "status": "completed",
+      "correctness": {
+        "points": 9,
+        "total": 10,
+        "factualScore": 1,
+        "citationScore": 0.8,
+        "score": 0.9,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "launch_date",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "migration_owner",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "legal_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "open_actions",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "finance_due",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 8,
+        "reported_usage": {
+          "model_calls": "5",
+          "tool_calls": "8",
+          "usage": {
+            "input_tokens": "22404",
+            "output_tokens": "2264",
+            "cache_read_input_tokens": "14976",
+            "cache_write_input_tokens": "0"
+          },
+          "cost_microusd": "2698",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.002698,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-pablo-glm-rerun-20260913",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 22234.48024992831,
+        "first_stdout_ms": 22188.445208827034,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.088888,
+        "cpu_system_s": 0.047252999999999996,
+        "cpu_total_s": 0.13614099999999998,
+        "cpu_percent_one_core": 0.612296750226212,
+        "cpu_percent_machine": 0.04373548215901514,
+        "sampled_tree_peak_rss_kib": 18592,
+        "rusage_maxrss_kib": 18464,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 1987,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 172,
+      "model_calls": [
+        {
+          "started_us": 1789259083128748,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 1665,
+            "output_tokens": 25,
+            "cache_read_input_tokens": 0,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 0,
+          "elapsed_us": 577143,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 13,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 62,
+            "dispatch_us": 62,
+            "headers_us": 469595,
+            "first_data_us": 472091,
+            "first_text_us": null,
+            "first_tool_delta_us": 520955,
+            "terminal_us": 577124,
+            "complete_us": 577137
+          }
+        },
+        {
+          "started_us": 1789259083706132,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 1781,
+            "output_tokens": 66,
+            "cache_read_input_tokens": 1600,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 0,
+          "elapsed_us": 649024,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 8,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 63,
+            "dispatch_us": 63,
+            "headers_us": 344136,
+            "first_data_us": 344477,
+            "first_text_us": null,
+            "first_tool_delta_us": 361265,
+            "terminal_us": 649007,
+            "complete_us": 649015
+          }
+        },
+        {
+          "started_us": 1789259084355405,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 5290,
+            "output_tokens": 1738,
+            "cache_read_input_tokens": 1664,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 511,
+          "elapsed_us": 17264027,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 612,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 137,
+            "dispatch_us": 140,
+            "headers_us": 857235,
+            "first_data_us": 857242,
+            "first_text_us": 9037013,
+            "first_tool_delta_us": 10239533,
+            "terminal_us": 17263773,
+            "complete_us": 17263803
+          }
+        },
+        {
+          "started_us": 1789259101620742,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 6626,
+            "output_tokens": 76,
+            "cache_read_input_tokens": 5184,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 39,
+          "elapsed_us": 890448,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 15,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 108,
+            "dispatch_us": 108,
+            "headers_us": 389615,
+            "first_data_us": 389620,
+            "first_text_us": 525598,
+            "first_tool_delta_us": 606330,
+            "terminal_us": 890426,
+            "complete_us": 890436
+          }
+        },
+        {
+          "started_us": 1789259102603347,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 7042,
+            "output_tokens": 359,
+            "cache_read_input_tokens": 6528,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 1351,
+          "elapsed_us": 2704224,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 13,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 120,
+            "dispatch_us": 120,
+            "headers_us": 353318,
+            "first_data_us": 353747,
+            "first_text_us": 406613,
+            "first_tool_delta_us": null,
+            "terminal_us": 2704182,
+            "complete_us": 2704188
+          }
+        }
+      ],
+      "timings": {
+        "runtime_us": 22178985,
+        "model_us": 22084579,
+        "tool_us": 93663,
+        "tools": [
+          {
+            "name": "fs.list",
+            "elapsed_us": 183
+          },
+          {
+            "name": "fs.read",
+            "elapsed_us": 93
+          },
+          {
+            "name": "fs.read",
+            "elapsed_us": 35
+          },
+          {
+            "name": "fs.read",
+            "elapsed_us": 27
+          },
+          {
+            "name": "fs.read",
+            "elapsed_us": 24
+          },
+          {
+            "name": "fs.write",
+            "elapsed_us": 713
+          },
+          {
+            "name": "fs.write",
+            "elapsed_us": 518
+          },
+          {
+            "name": "shell.run",
+            "elapsed_us": 92070
+          }
+        ],
+        "runtime_other_us": 743,
+        "process_other_us": 55495.24992831051
+      }
+    },
+    {
+      "id": "incident-brief-s42-r0-pablo",
+      "harness": "pablo",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "incident-brief",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "867ba5a1f1ea7533e9350635c9626a1c09227e82f7357cc704cf14a2c3f55c97",
+      "factual_total": 4,
+      "status": "completed",
+      "correctness": {
+        "points": 7,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 0.75,
+        "score": 0.875,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "duration_minutes",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "unrecovered_requests",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "root_cause",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "data_loss_confirmed",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 6,
+        "reported_usage": {
+          "model_calls": "4",
+          "tool_calls": "6",
+          "usage": {
+            "input_tokens": "8737",
+            "output_tokens": "1234",
+            "cache_read_input_tokens": "5248",
+            "cache_write_input_tokens": "0"
+          },
+          "cost_microusd": "1299",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.001299,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-pablo-glm-rerun-20260913",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 12863.849707879126,
+        "first_stdout_ms": 12818.924041930586,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.035448,
+        "cpu_system_s": 0.015844,
+        "cpu_total_s": 0.051292000000000004,
+        "cpu_percent_one_core": 0.3987297828004286,
+        "cpu_percent_machine": 0.028480698771459183,
+        "sampled_tree_peak_rss_kib": 18336,
+        "rusage_maxrss_kib": 18608,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 1959,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 100,
+      "model_calls": [
+        {
+          "started_us": 1789259105432903,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 1630,
+            "output_tokens": 25,
+            "cache_read_input_tokens": 0,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 0,
+          "elapsed_us": 734869,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 13,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 53,
+            "dispatch_us": 53,
+            "headers_us": 575066,
+            "first_data_us": 575085,
+            "first_text_us": null,
+            "first_tool_delta_us": 684942,
+            "terminal_us": 734816,
+            "complete_us": 734860
+          }
+        },
+        {
+          "started_us": 1789259106167991,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 1726,
+            "output_tokens": 36,
+            "cache_read_input_tokens": 1536,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 0,
+          "elapsed_us": 485047,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 57,
+            "dispatch_us": 58,
+            "headers_us": 312196,
+            "first_data_us": 326469,
+            "first_text_us": null,
+            "first_tool_delta_us": 326515,
+            "terminal_us": 485032,
+            "complete_us": 485040
+          }
+        },
+        {
+          "started_us": 1789259106653304,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 2203,
+            "output_tokens": 852,
+            "cache_read_input_tokens": 1600,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 492,
+          "elapsed_us": 8915897,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 85,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 66,
+            "dispatch_us": 66,
+            "headers_us": 425644,
+            "first_data_us": 426232,
+            "first_text_us": 938045,
+            "first_tool_delta_us": 1652511,
+            "terminal_us": 8915759,
+            "complete_us": 8915781
+          }
+        },
+        {
+          "started_us": 1789259115570663,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 3178,
+            "output_tokens": 321,
+            "cache_read_input_tokens": 2112,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 1336,
+          "elapsed_us": 2661485,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 10,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 94,
+            "dispatch_us": 94,
+            "headers_us": 481864,
+            "first_data_us": 481887,
+            "first_text_us": 513013,
+            "first_tool_delta_us": null,
+            "terminal_us": 2661445,
+            "complete_us": 2661450
+          }
+        }
+      ],
+      "timings": {
+        "runtime_us": 12799342,
+        "model_us": 12797131,
+        "tool_us": 1454,
+        "tools": [
+          {
+            "name": "fs.list",
+            "elapsed_us": 154
+          },
+          {
+            "name": "fs.read",
+            "elapsed_us": 122
+          },
+          {
+            "name": "fs.read",
+            "elapsed_us": 42
+          },
+          {
+            "name": "fs.read",
+            "elapsed_us": 35
+          },
+          {
+            "name": "fs.write",
+            "elapsed_us": 735
+          },
+          {
+            "name": "fs.write",
+            "elapsed_us": 366
+          }
+        ],
+        "runtime_other_us": 757,
+        "process_other_us": 64507.70787912607
+      }
+    },
+    {
+      "id": "project-plan-s42-r0-pablo",
+      "harness": "pablo",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "project-plan",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "36947d8fa665d15617076318fb79d94f57cd032c8fe9ceaa16b4c51502df8709",
+      "factual_total": 4,
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "finish_day",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "critical_tasks",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "c_slack",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "deadline_met",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 6,
+        "reported_usage": {
+          "model_calls": "6",
+          "tool_calls": "6",
+          "usage": {
+            "input_tokens": "14229",
+            "output_tokens": "1756",
+            "cache_read_input_tokens": "10240",
+            "cache_write_input_tokens": "0"
+          },
+          "cost_microusd": "1787",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.001787,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-pablo-glm-rerun-20260913",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 22184.897207887843,
+        "first_stdout_ms": 22130.291874986142,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.056006999999999994,
+        "cpu_system_s": 0.026737999999999998,
+        "cpu_total_s": 0.08274499999999999,
+        "cpu_percent_one_core": 0.3729789650347354,
+        "cpu_percent_machine": 0.02664135464533824,
+        "sampled_tree_peak_rss_kib": 18832,
+        "rusage_maxrss_kib": 19072,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 1348,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 172,
+      "model_calls": [
+        {
+          "started_us": 1789259118365291,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 1624,
+            "output_tokens": 25,
+            "cache_read_input_tokens": 0,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 0,
+          "elapsed_us": 625838,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 13,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 61,
+            "dispatch_us": 61,
+            "headers_us": 547259,
+            "first_data_us": 547621,
+            "first_text_us": null,
+            "first_tool_delta_us": 579517,
+            "terminal_us": 625803,
+            "complete_us": 625830
+          }
+        },
+        {
+          "started_us": 1789259118991339,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 1711,
+            "output_tokens": 25,
+            "cache_read_input_tokens": 1536,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 0,
+          "elapsed_us": 410005,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 62,
+            "dispatch_us": 62,
+            "headers_us": 350188,
+            "first_data_us": 350196,
+            "first_text_us": null,
+            "first_tool_delta_us": 350220,
+            "terminal_us": 409991,
+            "complete_us": 409999
+          }
+        },
+        {
+          "started_us": 1789259119401547,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 2063,
+            "output_tokens": 480,
+            "cache_read_input_tokens": 1600,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 0,
+          "elapsed_us": 6639092,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 217,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 61,
+            "dispatch_us": 61,
+            "headers_us": 284655,
+            "first_data_us": 285835,
+            "first_text_us": null,
+            "first_tool_delta_us": 3885099,
+            "terminal_us": 6638982,
+            "complete_us": 6639006
+          }
+        },
+        {
+          "started_us": 1789259126087738,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 2502,
+            "output_tokens": 304,
+            "cache_read_input_tokens": 1984,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 0,
+          "elapsed_us": 2355634,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 132,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 81,
+            "dispatch_us": 81,
+            "headers_us": 578862,
+            "first_data_us": 579507,
+            "first_text_us": null,
+            "first_tool_delta_us": 1481782,
+            "terminal_us": 2355577,
+            "complete_us": 2355603
+          }
+        },
+        {
+          "started_us": 1789259128444046,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 2781,
+            "output_tokens": 660,
+            "cache_read_input_tokens": 2432,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 0,
+          "elapsed_us": 9825302,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 0,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 70,
+            "dispatch_us": 70,
+            "headers_us": 507968,
+            "first_data_us": 520517,
+            "first_text_us": null,
+            "first_tool_delta_us": 520556,
+            "terminal_us": 9825158,
+            "complete_us": 9825175
+          }
+        },
+        {
+          "started_us": 1789259138270081,
+          "model": "z-ai/glm-5.3-flash",
+          "status": "completed",
+          "usage": {
+            "input_tokens": 3548,
+            "output_tokens": 262,
+            "cache_read_input_tokens": 2688,
+            "cache_write_input_tokens": 0
+          },
+          "output_bytes": 716,
+          "elapsed_us": 2217513,
+          "diagnostics": {
+            "requested_reasoning": "provider_default",
+            "reported_reasoning_effort": null,
+            "reasoning_tokens": 11,
+            "http_version": "HTTP/1.1",
+            "preparation_us": 95,
+            "dispatch_us": 95,
+            "headers_us": 396770,
+            "first_data_us": 397216,
+            "first_text_us": 463774,
+            "first_tool_delta_us": null,
+            "terminal_us": 2217475,
+            "complete_us": 2217485
+          }
+        }
+      ],
+      "timings": {
+        "runtime_us": 22122392,
+        "model_us": 22073098,
+        "tool_us": 48558,
+        "tools": [
+          {
+            "name": "fs.list",
+            "elapsed_us": 152
+          },
+          {
+            "name": "fs.read",
+            "elapsed_us": 91
+          },
+          {
+            "name": "fs.read",
+            "elapsed_us": 53
+          },
+          {
+            "name": "shell.run",
+            "elapsed_us": 46959
+          },
+          {
+            "name": "fs.write",
+            "elapsed_us": 626
+          },
+          {
+            "name": "fs.write",
+            "elapsed_us": 677
+          }
+        ],
+        "runtime_other_us": 736,
+        "process_other_us": 62505.20788784325
+      }
+    },
+    {
+      "id": "reconciliation-s42-r0-claude",
+      "harness": "claude",
+      "model": "claude-fable-5-1",
+      "task": "reconciliation",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "230d29a6dd951a87327be41a4f8c9cac07fcc72b0e14c8010010f6aaf16a22dd",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "north_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "south_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "total_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "excluded",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 1913.0342081189156,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 3,
+        "reported_usage": {
+          "input_tokens": 98,
+          "cache_creation_input_tokens": 2907,
+          "cache_read_input_tokens": 33060,
+          "output_tokens": 1828,
+          "output_tokens_details": {
+            "thinking_tokens": 113
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 2907,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 32,
+              "output_tokens": 282,
+              "cache_read_input_tokens": 9143,
+              "cache_creation_input_tokens": 1022,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1022
+              },
+              "type": "message",
+              "model": null
+            }
+          ],
+          "speed": "standard"
+        },
+        "reported_cost_usd": 0.159977,
+        "reported_model": "claude-fable-5-1",
+        "errors": [],
+        "event_count": 325
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 25361.29133310169,
+        "first_stdout_ms": 941.837582970038,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.9907269999999999,
+        "cpu_system_s": 0.639911,
+        "cpu_total_s": 1.6306379999999998,
+        "cpu_percent_one_core": 6.4296331704201615,
+        "cpu_percent_machine": 0.4592595121728687,
+        "sampled_tree_peak_rss_kib": 291952,
+        "rusage_maxrss_kib": 291952,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 108262,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 197
+    },
+    {
+      "id": "policy-review-s42-r0-claude",
+      "harness": "claude",
+      "model": "claude-fable-5-1",
+      "task": "policy-review",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "17ca4855e7e8a0c5413ca3a32825e39a9d2c583c95695c2cdf9a586a2c324985",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "A",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "B",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "C",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "D",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 2098.534374963492,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 3,
+        "reported_usage": {
+          "input_tokens": 98,
+          "cache_creation_input_tokens": 3446,
+          "cache_read_input_tokens": 33322,
+          "output_tokens": 2400,
+          "output_tokens_details": {
+            "thinking_tokens": 337
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 3446,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 32,
+              "output_tokens": 355,
+              "cache_read_input_tokens": 9369,
+              "cache_creation_input_tokens": 1335,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1335
+              },
+              "type": "message",
+              "model": null
+            }
+          ],
+          "speed": "standard"
+        },
+        "reported_cost_usd": 0.1994145,
+        "reported_model": "claude-fable-5-1",
+        "errors": [],
+        "event_count": 401
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 32101.33883380331,
+        "first_stdout_ms": 699.4416669476777,
+        "first_stderr_ms": null,
+        "cpu_user_s": 1.054445,
+        "cpu_system_s": 0.665511,
+        "cpu_total_s": 1.719956,
+        "cpu_percent_one_core": 5.357894911812382,
+        "cpu_percent_machine": 0.3827067794151701,
+        "sampled_tree_peak_rss_kib": 279344,
+        "rusage_maxrss_kib": 279344,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 132928,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 249
+    },
+    {
+      "id": "vendor-selection-s42-r0-claude",
+      "harness": "claude",
+      "model": "claude-fable-5-1",
+      "task": "vendor-selection",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "91af333da80febed7638ca1dd32988f72a6ea8c1e96c384a9a46f16c723336b6",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "winner",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "annual_cost",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "savings",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "ineligible",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 1724.6309171896428,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 6,
+        "reported_usage": {
+          "input_tokens": 98,
+          "cache_creation_input_tokens": 3704,
+          "cache_read_input_tokens": 32942,
+          "output_tokens": 2353,
+          "output_tokens_details": {
+            "thinking_tokens": 231
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 3704,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 32,
+              "output_tokens": 270,
+              "cache_read_input_tokens": 9143,
+              "cache_creation_input_tokens": 1819,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1819
+              },
+              "type": "message",
+              "model": null
+            }
+          ],
+          "speed": "standard"
+        },
+        "reported_cost_usd": 0.20212950000000002,
+        "reported_model": "claude-fable-5-1",
+        "errors": [],
+        "event_count": 386
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 30124.46775007993,
+        "first_stdout_ms": 748.7696669995785,
+        "first_stderr_ms": null,
+        "cpu_user_s": 1.038125,
+        "cpu_system_s": 0.649803,
+        "cpu_total_s": 1.6879279999999999,
+        "cpu_percent_one_core": 5.603179495164761,
+        "cpu_percent_machine": 0.4002271067974829,
+        "sampled_tree_peak_rss_kib": 292960,
+        "rusage_maxrss_kib": 292960,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 127903,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 234
+    },
+    {
+      "id": "incident-brief-s42-r0-claude",
+      "harness": "claude",
+      "model": "claude-fable-5-1",
+      "task": "incident-brief",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "f2db4196643a42ede95bc9bcc0336a5465842894a00386aa39a67af46cd9a0b6",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "duration_minutes",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "unrecovered_requests",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "root_cause",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "data_loss_confirmed",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 3184.340290958062,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 6,
+        "reported_usage": {
+          "input_tokens": 98,
+          "cache_creation_input_tokens": 3651,
+          "cache_read_input_tokens": 32965,
+          "output_tokens": 2435,
+          "output_tokens_details": {
+            "thinking_tokens": 192
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 3651,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 32,
+              "output_tokens": 391,
+              "cache_read_input_tokens": 9141,
+              "cache_creation_input_tokens": 1768,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1768
+              },
+              "type": "message",
+              "model": null
+            }
+          ],
+          "speed": "standard"
+        },
+        "reported_cost_usd": 0.20517425,
+        "reported_model": "claude-fable-5-1",
+        "errors": [],
+        "event_count": 481
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 59664.76716590114,
+        "first_stdout_ms": 673.9630829542875,
+        "first_stderr_ms": null,
+        "cpu_user_s": 1.053725,
+        "cpu_system_s": 0.655909,
+        "cpu_total_s": 1.7096339999999999,
+        "cpu_percent_one_core": 2.8653996004815863,
+        "cpu_percent_machine": 0.20467140003439901,
+        "sampled_tree_peak_rss_kib": 281328,
+        "rusage_maxrss_kib": 280640,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 156659,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 463
+    },
+    {
+      "id": "project-plan-s42-r0-claude",
+      "harness": "claude",
+      "model": "claude-fable-5-1",
+      "task": "project-plan",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "c1639a9309b0d5bad7441176eef6fa5ecb33c1a017253e50596fa195b1f0675f",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "finish_day",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "critical_tasks",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "c_slack",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "deadline_met",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 1671.9047909136862,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 5,
+        "reported_usage": {
+          "input_tokens": 98,
+          "cache_creation_input_tokens": 3373,
+          "cache_read_input_tokens": 32663,
+          "output_tokens": 2222,
+          "output_tokens_details": {
+            "thinking_tokens": 152
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 3373,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 32,
+              "output_tokens": 367,
+              "cache_read_input_tokens": 8914,
+              "cache_creation_input_tokens": 1717,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1717
+              },
+              "type": "message",
+              "model": null
+            }
+          ],
+          "speed": "standard"
+        },
+        "reported_cost_usd": 0.18889475,
+        "reported_model": "claude-fable-5-1",
+        "errors": [],
+        "event_count": 354
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 28141.981082968414,
+        "first_stdout_ms": 717.305124970153,
+        "first_stderr_ms": null,
+        "cpu_user_s": 1.069668,
+        "cpu_system_s": 0.807383,
+        "cpu_total_s": 1.877051,
+        "cpu_percent_one_core": 6.669931994005907,
+        "cpu_percent_machine": 0.47642371385756477,
+        "sampled_tree_peak_rss_kib": 272240,
+        "rusage_maxrss_kib": 268352,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 118448,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 216
+    },
+    {
+      "id": "reconciliation-s42-r0-pablo-astra",
+      "harness": "pablo-astra",
+      "model": "openai/gpt-6-astra",
+      "task": "reconciliation",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "230d29a6dd951a87327be41a4f8c9cac07fcc72b0e14c8010010f6aaf16a22dd",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "north_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "south_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "total_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "excluded",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 4,
+        "reported_usage": {
+          "model_calls": "5",
+          "tool_calls": "4",
+          "usage": {
+            "input_tokens": "9696",
+            "output_tokens": "1557",
+            "cache_read_input_tokens": "6364",
+            "cache_write_input_tokens": "3317"
+          },
+          "cost_microusd": "125828",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.125828,
+        "reported_model": "openai/gpt-6-astra",
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-pablo-astra-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 26762.78558303602,
+        "first_stdout_ms": 26762.54600007087,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.06397499999999999,
+        "cpu_system_s": 0.068838,
+        "cpu_total_s": 0.132813,
+        "cpu_percent_one_core": 0.4962600009925179,
+        "cpu_percent_machine": 0.03544714292803699,
+        "sampled_tree_peak_rss_kib": 19440,
+        "rusage_maxrss_kib": 18544,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 891,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 203
+    },
+    {
+      "id": "policy-review-s42-r0-pablo-astra",
+      "harness": "pablo-astra",
+      "model": "openai/gpt-6-astra",
+      "task": "policy-review",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "17ca4855e7e8a0c5413ca3a32825e39a9d2c583c95695c2cdf9a586a2c324985",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "A",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "B",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "C",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "D",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 5,
+        "reported_usage": {
+          "model_calls": "6",
+          "tool_calls": "5",
+          "usage": {
+            "input_tokens": "10821",
+            "output_tokens": "915",
+            "cache_read_input_tokens": "8154",
+            "cache_write_input_tokens": "2649"
+          },
+          "cost_microusd": "87199",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.087199,
+        "reported_model": "openai/gpt-6-astra",
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-pablo-astra-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 21459.1139589902,
+        "first_stdout_ms": 21458.836333826184,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.047542,
+        "cpu_system_s": 0.036650999999999996,
+        "cpu_total_s": 0.08419299999999999,
+        "cpu_percent_one_core": 0.39234145529446574,
+        "cpu_percent_machine": 0.028024389663890408,
+        "sampled_tree_peak_rss_kib": 18352,
+        "rusage_maxrss_kib": 18608,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 762,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 163
+    },
+    {
+      "id": "vendor-selection-s42-r0-pablo-astra",
+      "harness": "pablo-astra",
+      "model": "openai/gpt-6-astra",
+      "task": "vendor-selection",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "91af333da80febed7638ca1dd32988f72a6ea8c1e96c384a9a46f16c723336b6",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "winner",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "annual_cost",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "savings",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "ineligible",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 3,
+        "reported_usage": {
+          "model_calls": "4",
+          "tool_calls": "3",
+          "usage": {
+            "input_tokens": "6401",
+            "output_tokens": "824",
+            "cache_read_input_tokens": "3918",
+            "cache_write_input_tokens": "2471"
+          },
+          "cost_microusd": "76126",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.076126,
+        "reported_model": "openai/gpt-6-astra",
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-pablo-astra-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 16712.359458208084,
+        "first_stdout_ms": 16711.122375214472,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.09986099999999999,
+        "cpu_system_s": 0.056762,
+        "cpu_total_s": 0.15662299999999998,
+        "cpu_percent_one_core": 0.9371686887878443,
+        "cpu_percent_machine": 0.06694062062770316,
+        "sampled_tree_peak_rss_kib": 23776,
+        "rusage_maxrss_kib": 17600,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 807,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 126
+    },
+    {
+      "id": "incident-brief-s42-r0-pablo-astra",
+      "harness": "pablo-astra",
+      "model": "openai/gpt-6-astra",
+      "task": "incident-brief",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "f2db4196643a42ede95bc9bcc0336a5465842894a00386aa39a67af46cd9a0b6",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "duration_minutes",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "unrecovered_requests",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "root_cause",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "data_loss_confirmed",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 5,
+        "reported_usage": {
+          "model_calls": "6",
+          "tool_calls": "5",
+          "usage": {
+            "input_tokens": "10200",
+            "output_tokens": "759",
+            "cache_read_input_tokens": "7700",
+            "cache_write_input_tokens": "2482"
+          },
+          "cost_microusd": "76857",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.076857,
+        "reported_model": "openai/gpt-6-astra",
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-pablo-astra-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 20473.048833897337,
+        "first_stdout_ms": 20471.850958885625,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.046664,
+        "cpu_system_s": 0.032735,
+        "cpu_total_s": 0.079399,
+        "cpu_percent_one_core": 0.3878220613069542,
+        "cpu_percent_machine": 0.027701575807639583,
+        "sampled_tree_peak_rss_kib": 18368,
+        "rusage_maxrss_kib": 18624,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 988,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 160
+    },
+    {
+      "id": "project-plan-s42-r0-pablo-astra",
+      "harness": "pablo-astra",
+      "model": "openai/gpt-6-astra",
+      "task": "project-plan",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "c1639a9309b0d5bad7441176eef6fa5ecb33c1a017253e50596fa195b1f0675f",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "finish_day",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "critical_tasks",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "c_slack",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "deadline_met",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 4,
+        "reported_usage": {
+          "model_calls": "5",
+          "tool_calls": "4",
+          "usage": {
+            "input_tokens": "10169",
+            "output_tokens": "1760",
+            "cache_read_input_tokens": "6283",
+            "cache_write_input_tokens": "3871"
+          },
+          "cost_microusd": "142822",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.142822,
+        "reported_model": "openai/gpt-6-astra",
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-pablo-astra-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 31118.90645790845,
+        "first_stdout_ms": 31117.659749928862,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.06669699999999999,
+        "cpu_system_s": 0.065883,
+        "cpu_total_s": 0.13257999999999998,
+        "cpu_percent_one_core": 0.4260432485933533,
+        "cpu_percent_machine": 0.03043166061381095,
+        "sampled_tree_peak_rss_kib": 18384,
+        "rusage_maxrss_kib": 18080,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 911,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 243
+    },
+    {
+      "id": "meeting-handoff-s42-r0-pablo-astra",
+      "harness": "pablo-astra",
+      "model": "openai/gpt-6-astra",
+      "task": "meeting-handoff",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "23a2795db06b2d5fd64dbfef31a49560b4278ab5ee85e5533e8f1179f091f19c",
+      "status": "completed",
+      "correctness": {
+        "points": 10,
+        "total": 10,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "launch_date",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "migration_owner",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "legal_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "open_actions",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "finance_due",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 3,
+        "reported_usage": {
+          "model_calls": "4",
+          "tool_calls": "3",
+          "usage": {
+            "input_tokens": "12092",
+            "output_tokens": "926",
+            "cache_read_input_tokens": "6898",
+            "cache_write_input_tokens": "5182"
+          },
+          "cost_microusd": "118094",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.118094,
+        "reported_model": "openai/gpt-6-astra",
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-handoff-v1-1",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 18856.147959129885,
+        "first_stdout_ms": 18855.057999957353,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.098754,
+        "cpu_system_s": 0.06816699999999999,
+        "cpu_total_s": 0.16692099999999999,
+        "cpu_percent_one_core": 0.8852338259213709,
+        "cpu_percent_machine": 0.0632309875658122,
+        "sampled_tree_peak_rss_kib": 20640,
+        "rusage_maxrss_kib": 18528,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 885,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 147
+    },
+    {
+      "id": "meeting-handoff-s42-r0-claude",
+      "harness": "claude",
+      "model": "claude-fable-5-1",
+      "task": "meeting-handoff",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "23a2795db06b2d5fd64dbfef31a49560b4278ab5ee85e5533e8f1179f091f19c",
+      "status": "completed",
+      "correctness": {
+        "points": 9,
+        "total": 10,
+        "factualScore": 1,
+        "citationScore": 0.8,
+        "score": 0.9,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "launch_date",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "migration_owner",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "legal_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "open_actions",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "finance_due",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 1855.2609169855714,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 7,
+        "reported_usage": {
+          "input_tokens": 98,
+          "cache_creation_input_tokens": 7739,
+          "cache_read_input_tokens": 37175,
+          "output_tokens": 2526,
+          "output_tokens_details": {
+            "thinking_tokens": 184
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 7739,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "not_available",
+          "iterations": [
+            {
+              "input_tokens": 32,
+              "output_tokens": 354,
+              "cache_read_input_tokens": 13220,
+              "cache_creation_input_tokens": 1777,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 1777
+              },
+              "type": "message",
+              "model": null
+            }
+          ],
+          "speed": "standard"
+        },
+        "reported_cost_usd": 0.29261075,
+        "reported_model": "claude-fable-5-1",
+        "errors": [],
+        "event_count": 417
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-handoff-v1-1",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 31669.369084062055,
+        "first_stdout_ms": 735.1312499959022,
+        "first_stderr_ms": null,
+        "cpu_user_s": 1.100473,
+        "cpu_system_s": 0.66914,
+        "cpu_total_s": 1.769613,
+        "cpu_percent_one_core": 5.58777472106502,
+        "cpu_percent_machine": 0.39912676579035855,
+        "sampled_tree_peak_rss_kib": 282192,
+        "rusage_maxrss_kib": 282192,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 162737,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 245
+    },
+    {
+      "id": "reconciliation-s42-r0-codex",
+      "harness": "codex",
+      "model": "gpt-6-astra",
+      "task": "reconciliation",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "25aab1ac5ea128360fd52095eafc5f1d3ed0d463e671643424cd4a5b1b561b81",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "north_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "south_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "total_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "excluded",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 4027.6783329900354,
+        "first_assistant_boundary": "completed message event, not first token",
+        "tool_calls": 3,
+        "reported_usage": {
+          "input_tokens": 57299,
+          "cached_input_tokens": 41984,
+          "cache_write_input_tokens": 15303,
+          "output_tokens": 982,
+          "reasoning_output_tokens": 47
+        },
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 11,
+        "estimated_cost_usd": 0.2824915,
+        "cost_estimate_basis": {
+          "model": "gpt-6-astra",
+          "verified": "2026-09-12",
+          "source": "https://developers.openai.com/api/docs/models/gpt-6-astra",
+          "usd_per_million": {
+            "input": 10,
+            "cached_input": 1,
+            "cache_write": 12.5,
+            "output": 50
+          },
+          "long_context_threshold": 272000,
+          "assumptions": "Standard tier, text-only, cache tokens included in total input, output includes reasoning; no hosted tool charges. Estimate, not an account billing receipt."
+        }
+      },
+      "authentication": "openai_api_key",
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-pilot",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 21565.117958001792,
+        "first_stdout_ms": 327.55570812150836,
+        "first_stderr_ms": 89.87749996595085,
+        "cpu_user_s": 1.588507,
+        "cpu_system_s": 1.798499,
+        "cpu_total_s": 3.387006,
+        "cpu_percent_one_core": 15.7059470140447,
+        "cpu_percent_machine": 1.12185335814605,
+        "sampled_tree_peak_rss_kib": 200736,
+        "rusage_maxrss_kib": 100400,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 8733,
+        "stderr_bytes": 39,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 166
+    },
+    {
+      "id": "reconciliation-s42-r0-ori",
+      "harness": "ori",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "reconciliation",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "25aab1ac5ea128360fd52095eafc5f1d3ed0d463e671643424cd4a5b1b561b81",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "north_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "south_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "total_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "excluded",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 7503.9847497828305,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 6,
+        "reported_usage": {
+          "input": 3301,
+          "output": 638,
+          "cacheRead": 6784,
+          "cacheWrite": 0,
+          "reasoning": 46,
+          "totalTokens": 10723
+        },
+        "reported_cost_usd": 0.00101767,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 124
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-pilot",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 8010.358999948949,
+        "first_stdout_ms": 1185.677707893774,
+        "first_stderr_ms": 435.4187499266118,
+        "cpu_user_s": 1.310265,
+        "cpu_system_s": 0.170648,
+        "cpu_total_s": 1.480913,
+        "cpu_percent_one_core": 18.487473532827156,
+        "cpu_percent_machine": 1.3205338237733684,
+        "sampled_tree_peak_rss_kib": 343776,
+        "rusage_maxrss_kib": 344016,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 58987,
+        "stderr_bytes": 82,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 62
+    },
+    {
+      "id": "reconciliation-s42-r0-pi",
+      "harness": "pi",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "reconciliation",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "25aab1ac5ea128360fd52095eafc5f1d3ed0d463e671643424cd4a5b1b561b81",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "north_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "south_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "total_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "excluded",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 6135.6932919006795,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 6,
+        "reported_usage": {
+          "input": 3205,
+          "output": 640,
+          "cacheRead": 8960,
+          "cacheWrite": 0,
+          "reasoning": 46,
+          "totalTokens": 12805
+        },
+        "reported_cost_usd": 0.0005347749999999999,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 149
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-pilot",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 7187.230333918706,
+        "first_stdout_ms": 164.82879198156297,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.266245,
+        "cpu_system_s": 0.039026,
+        "cpu_total_s": 0.305271,
+        "cpu_percent_one_core": 4.247408053131874,
+        "cpu_percent_machine": 0.3033862895094196,
+        "sampled_tree_peak_rss_kib": 162576,
+        "rusage_maxrss_kib": 162576,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 63284,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 55
+    },
+    {
+      "id": "policy-review-s42-r0-codex",
+      "harness": "codex",
+      "model": "gpt-6-astra",
+      "task": "policy-review",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "7c62e343873c86cf8383e379902b917ca9b1a09cbe204330f6fdec1d13f6fe03",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "A",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "B",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "C",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "D",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 2861.4077079109848,
+        "first_assistant_boundary": "completed message event, not first token",
+        "tool_calls": 6,
+        "reported_usage": {
+          "input_tokens": 57371,
+          "cached_input_tokens": 42180,
+          "cache_write_input_tokens": 15179,
+          "output_tokens": 920,
+          "reasoning_output_tokens": 0
+        },
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 17,
+        "estimated_cost_usd": 0.2780375,
+        "cost_estimate_basis": {
+          "model": "gpt-6-astra",
+          "verified": "2026-09-12",
+          "source": "https://developers.openai.com/api/docs/models/gpt-6-astra",
+          "usd_per_million": {
+            "input": 10,
+            "cached_input": 1,
+            "cache_write": 12.5,
+            "output": 50
+          },
+          "long_context_threshold": 272000,
+          "assumptions": "Standard tier, text-only, cache tokens included in total input, output includes reasoning; no hosted tool charges. Estimate, not an account billing receipt."
+        }
+      },
+      "authentication": "openai_api_key",
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 18894.37595801428,
+        "first_stdout_ms": 220.2484579756856,
+        "first_stderr_ms": 95.51137499511242,
+        "cpu_user_s": 0.700927,
+        "cpu_system_s": 0.7275659999999999,
+        "cpu_total_s": 1.428493,
+        "cpu_percent_one_core": 7.5604137610805155,
+        "cpu_percent_machine": 0.540029554362894,
+        "sampled_tree_peak_rss_kib": 169952,
+        "rusage_maxrss_kib": 99072,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 5091,
+        "stderr_bytes": 39,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 144
+    },
+    {
+      "id": "policy-review-s42-r0-ori",
+      "harness": "ori",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "policy-review",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "7c62e343873c86cf8383e379902b917ca9b1a09cbe204330f6fdec1d13f6fe03",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "A",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "B",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "C",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "D",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 9279.858333058655,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 6,
+        "reported_usage": {
+          "input": 3294,
+          "output": 738,
+          "cacheRead": 6464,
+          "cacheWrite": 0,
+          "reasoning": 76,
+          "totalTokens": 10496
+        },
+        "reported_cost_usd": 0.0010570199999999999,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 151
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 16296.033791964874,
+        "first_stdout_ms": 1168.6148329172283,
+        "first_stderr_ms": 490.3592080809176,
+        "cpu_user_s": 1.270861,
+        "cpu_system_s": 0.185951,
+        "cpu_total_s": 1.456812,
+        "cpu_percent_one_core": 8.939672184027465,
+        "cpu_percent_machine": 0.6385480131448189,
+        "sampled_tree_peak_rss_kib": 302176,
+        "rusage_maxrss_kib": 302176,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 64600,
+        "stderr_bytes": 82,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 123
+    },
+    {
+      "id": "policy-review-s42-r0-pi",
+      "harness": "pi",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "policy-review",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "7c62e343873c86cf8383e379902b917ca9b1a09cbe204330f6fdec1d13f6fe03",
+      "status": "completed",
+      "correctness": {
+        "points": 7,
+        "total": 8,
+        "factualScore": 0.75,
+        "citationScore": 1,
+        "score": 0.875,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "A",
+            "value": false,
+            "citations": true
+          },
+          {
+            "id": "B",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "C",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "D",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 33667.28770802729,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 5,
+        "reported_usage": {
+          "input": 2895,
+          "output": 797,
+          "cacheRead": 12224,
+          "cacheWrite": 0,
+          "reasoning": 77,
+          "totalTokens": 15916
+        },
+        "reported_cost_usd": 0.0005997349999999999,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 244
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 34222.200457938015,
+        "first_stdout_ms": 185.04016706719995,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.320534,
+        "cpu_system_s": 0.062214,
+        "cpu_total_s": 0.382748,
+        "cpu_percent_one_core": 1.1184201918004357,
+        "cpu_percent_machine": 0.07988715655717397,
+        "sampled_tree_peak_rss_kib": 142000,
+        "rusage_maxrss_kib": 142000,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 92509,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 262
+    },
+    {
+      "id": "vendor-selection-s42-r0-ori",
+      "harness": "ori",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "vendor-selection",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "427a70128ea3ffc74ea0ab4230094163e4cb80032f87588ca5cc8241da099095",
+      "status": "completed",
+      "correctness": {
+        "points": 7,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 0.75,
+        "score": 0.875,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "winner",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "annual_cost",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "savings",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "ineligible",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 14741.050417069346,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 6,
+        "reported_usage": {
+          "input": 3309,
+          "output": 818,
+          "cacheRead": 6400,
+          "cacheWrite": 0,
+          "reasoning": 73,
+          "totalTokens": 10527
+        },
+        "reported_cost_usd": 0.00109735,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 162
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 16187.970249913633,
+        "first_stdout_ms": 1108.6104579735547,
+        "first_stderr_ms": 471.41341702081263,
+        "cpu_user_s": 1.217693,
+        "cpu_system_s": 0.16695,
+        "cpu_total_s": 1.3846429999999998,
+        "cpu_percent_one_core": 8.553530668907595,
+        "cpu_percent_machine": 0.6109664763505425,
+        "sampled_tree_peak_rss_kib": 285648,
+        "rusage_maxrss_kib": 285648,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 70673,
+        "stderr_bytes": 82,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 123
+    },
+    {
+      "id": "vendor-selection-s42-r0-pi",
+      "harness": "pi",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "vendor-selection",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "427a70128ea3ffc74ea0ab4230094163e4cb80032f87588ca5cc8241da099095",
+      "status": "completed",
+      "correctness": {
+        "points": 5,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 0.25,
+        "score": 0.625,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "winner",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "annual_cost",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "savings",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "ineligible",
+            "value": true,
+            "citations": false
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 8783.038416877389,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 7,
+        "reported_usage": {
+          "input": 3376,
+          "output": 582,
+          "cacheRead": 11200,
+          "cacheWrite": 0,
+          "reasoning": 0,
+          "totalTokens": 15158
+        },
+        "reported_cost_usd": 0.0005667,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 126
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 9179.978291969746,
+        "first_stdout_ms": 174.63270900771022,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.28973099999999996,
+        "cpu_system_s": 0.044489,
+        "cpu_total_s": 0.33421999999999996,
+        "cpu_percent_one_core": 3.6407493500541435,
+        "cpu_percent_machine": 0.2600535250038674,
+        "sampled_tree_peak_rss_kib": 163664,
+        "rusage_maxrss_kib": 163664,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 55783,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 70
+    },
+    {
+      "id": "vendor-selection-s42-r0-codex",
+      "harness": "codex",
+      "model": "gpt-6-astra",
+      "task": "vendor-selection",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "427a70128ea3ffc74ea0ab4230094163e4cb80032f87588ca5cc8241da099095",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "winner",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "annual_cost",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "savings",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "ineligible",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 4610.346958041191,
+        "first_assistant_boundary": "completed message event, not first token",
+        "tool_calls": 3,
+        "reported_usage": {
+          "input_tokens": 56976,
+          "cached_input_tokens": 42007,
+          "cache_write_input_tokens": 14957,
+          "output_tokens": 883,
+          "reasoning_output_tokens": 0
+        },
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 11,
+        "estimated_cost_usd": 0.2732395,
+        "cost_estimate_basis": {
+          "model": "gpt-6-astra",
+          "verified": "2026-09-12",
+          "source": "https://developers.openai.com/api/docs/models/gpt-6-astra",
+          "usd_per_million": {
+            "input": 10,
+            "cached_input": 1,
+            "cache_write": 12.5,
+            "output": 50
+          },
+          "long_context_threshold": 272000,
+          "assumptions": "Standard tier, text-only, cache tokens included in total input, output includes reasoning; no hosted tool charges. Estimate, not an account billing receipt."
+        }
+      },
+      "authentication": "openai_api_key",
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 22213.037375127897,
+        "first_stdout_ms": 118.13516612164676,
+        "first_stderr_ms": 73.03887512534857,
+        "cpu_user_s": 0.552318,
+        "cpu_system_s": 0.48982899999999996,
+        "cpu_total_s": 1.042147,
+        "cpu_percent_one_core": 4.691600623545971,
+        "cpu_percent_machine": 0.33511433025328363,
+        "sampled_tree_peak_rss_kib": 180000,
+        "rusage_maxrss_kib": 107280,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 7504,
+        "stderr_bytes": 39,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 172
+    },
+    {
+      "id": "meeting-handoff-s42-r0-pi",
+      "harness": "pi",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "meeting-handoff",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "23a2795db06b2d5fd64dbfef31a49560b4278ab5ee85e5533e8f1179f091f19c",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 10,
+        "factualScore": 1,
+        "citationScore": 0.6,
+        "score": 0.8,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "launch_date",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "migration_owner",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "legal_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "open_actions",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "finance_due",
+            "value": true,
+            "citations": false
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 8899.696707958356,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 7,
+        "reported_usage": {
+          "input": 6219,
+          "output": 940,
+          "cacheRead": 9344,
+          "cacheWrite": 0,
+          "reasoning": 0,
+          "totalTokens": 16503
+        },
+        "reported_cost_usd": 0.0008415850000000001,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 143
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 11481.476499931887,
+        "first_stdout_ms": 191.71150005422533,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.267458,
+        "cpu_system_s": 0.044208,
+        "cpu_total_s": 0.311666,
+        "cpu_percent_one_core": 2.7145115003444804,
+        "cpu_percent_machine": 0.19389367859603432,
+        "sampled_tree_peak_rss_kib": 161248,
+        "rusage_maxrss_kib": 161248,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 126285,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 88
+    },
+    {
+      "id": "meeting-handoff-s42-r0-codex",
+      "harness": "codex",
+      "model": "gpt-6-astra",
+      "task": "meeting-handoff",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "23a2795db06b2d5fd64dbfef31a49560b4278ab5ee85e5533e8f1179f091f19c",
+      "status": "completed",
+      "correctness": {
+        "points": 10,
+        "total": 10,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "launch_date",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "migration_owner",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "legal_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "open_actions",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "finance_due",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 3375.9059589356184,
+        "first_assistant_boundary": "completed message event, not first token",
+        "tool_calls": 7,
+        "reported_usage": {
+          "input_tokens": 63130,
+          "cached_input_tokens": 45104,
+          "cache_write_input_tokens": 18014,
+          "output_tokens": 963,
+          "reasoning_output_tokens": 0
+        },
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 19,
+        "estimated_cost_usd": 0.318549,
+        "cost_estimate_basis": {
+          "model": "gpt-6-astra",
+          "verified": "2026-09-12",
+          "source": "https://developers.openai.com/api/docs/models/gpt-6-astra",
+          "usd_per_million": {
+            "input": 10,
+            "cached_input": 1,
+            "cache_write": 12.5,
+            "output": 50
+          },
+          "long_context_threshold": 272000,
+          "assumptions": "Standard tier, text-only, cache tokens included in total input, output includes reasoning; no hosted tool charges. Estimate, not an account billing receipt."
+        }
+      },
+      "authentication": "openai_api_key",
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 18466.25241707079,
+        "first_stdout_ms": 119.01349993422627,
+        "first_stderr_ms": 73.18037492223084,
+        "cpu_user_s": 0.669522,
+        "cpu_system_s": 0.5451389999999999,
+        "cpu_total_s": 1.214661,
+        "cpu_percent_one_core": 6.577734196231005,
+        "cpu_percent_machine": 0.4698381568736432,
+        "sampled_tree_peak_rss_kib": 182272,
+        "rusage_maxrss_kib": 108288,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 17138,
+        "stderr_bytes": 39,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 143
+    },
+    {
+      "id": "meeting-handoff-s42-r0-ori",
+      "harness": "ori",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "meeting-handoff",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "23a2795db06b2d5fd64dbfef31a49560b4278ab5ee85e5533e8f1179f091f19c",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 10,
+        "factualScore": 1,
+        "citationScore": 0.6,
+        "score": 0.8,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "launch_date",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "migration_owner",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "legal_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "open_actions",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "finance_due",
+            "value": true,
+            "citations": false
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 9550.387917086482,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 7,
+        "reported_usage": {
+          "input": 6124,
+          "output": 850,
+          "cacheRead": 9344,
+          "cacheWrite": 0,
+          "reasoning": 69,
+          "totalTokens": 16318
+        },
+        "reported_cost_usd": 0.00162392,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 166
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 13675.716958008707,
+        "first_stdout_ms": 1097.5732079241425,
+        "first_stderr_ms": 450.32104197889566,
+        "cpu_user_s": 1.228748,
+        "cpu_system_s": 0.164356,
+        "cpu_total_s": 1.393104,
+        "cpu_percent_one_core": 10.186698103489025,
+        "cpu_percent_machine": 0.7276212931063589,
+        "sampled_tree_peak_rss_kib": 301056,
+        "rusage_maxrss_kib": 301056,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 132372,
+        "stderr_bytes": 82,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 104
+    },
+    {
+      "id": "incident-brief-s42-r0-codex",
+      "harness": "codex",
+      "model": "gpt-6-astra",
+      "task": "incident-brief",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "867ba5a1f1ea7533e9350635c9626a1c09227e82f7357cc704cf14a2c3f55c97",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "duration_minutes",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "unrecovered_requests",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "root_cause",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "data_loss_confirmed",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 2929.722375003621,
+        "first_assistant_boundary": "completed message event, not first token",
+        "tool_calls": 6,
+        "reported_usage": {
+          "input_tokens": 57298,
+          "cached_input_tokens": 42153,
+          "cache_write_input_tokens": 15133,
+          "output_tokens": 960,
+          "reasoning_output_tokens": 0
+        },
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 17,
+        "estimated_cost_usd": 0.2794355,
+        "cost_estimate_basis": {
+          "model": "gpt-6-astra",
+          "verified": "2026-09-12",
+          "source": "https://developers.openai.com/api/docs/models/gpt-6-astra",
+          "usd_per_million": {
+            "input": 10,
+            "cached_input": 1,
+            "cache_write": 12.5,
+            "output": 50
+          },
+          "long_context_threshold": 272000,
+          "assumptions": "Standard tier, text-only, cache tokens included in total input, output includes reasoning; no hosted tool charges. Estimate, not an account billing receipt."
+        }
+      },
+      "authentication": "openai_api_key",
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 19647.461999906227,
+        "first_stdout_ms": 115.17791706137359,
+        "first_stderr_ms": 69.28766705095768,
+        "cpu_user_s": 0.652542,
+        "cpu_system_s": 0.5335449999999999,
+        "cpu_total_s": 1.186087,
+        "cpu_percent_one_core": 6.036845878646621,
+        "cpu_percent_machine": 0.4312032770461872,
+        "sampled_tree_peak_rss_kib": 188352,
+        "rusage_maxrss_kib": 110000,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 5430,
+        "stderr_bytes": 39,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 152
+    },
+    {
+      "id": "incident-brief-s42-r0-ori",
+      "harness": "ori",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "incident-brief",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "867ba5a1f1ea7533e9350635c9626a1c09227e82f7357cc704cf14a2c3f55c97",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "duration_minutes",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "unrecovered_requests",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "root_cause",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "data_loss_confirmed",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 7484.8104999400675,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 6,
+        "reported_usage": {
+          "input": 3018,
+          "output": 600,
+          "cacheRead": 6464,
+          "cacheWrite": 0,
+          "reasoning": 26,
+          "totalTokens": 10082
+        },
+        "reported_cost_usd": 0.00094662,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 138
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 10443.084541941062,
+        "first_stdout_ms": 1075.8272088132799,
+        "first_stderr_ms": 424.73937501199543,
+        "cpu_user_s": 1.190143,
+        "cpu_system_s": 0.150427,
+        "cpu_total_s": 1.34057,
+        "cpu_percent_one_core": 12.836916091371867,
+        "cpu_percent_machine": 0.9169225779551333,
+        "sampled_tree_peak_rss_kib": 308464,
+        "rusage_maxrss_kib": 308464,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 61726,
+        "stderr_bytes": 82,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 79
+    },
+    {
+      "id": "incident-brief-s42-r0-pi",
+      "harness": "pi",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "incident-brief",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "867ba5a1f1ea7533e9350635c9626a1c09227e82f7357cc704cf14a2c3f55c97",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "duration_minutes",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "unrecovered_requests",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "root_cause",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "data_loss_confirmed",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 6058.210582938045,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 6,
+        "reported_usage": {
+          "input": 5323,
+          "output": 623,
+          "cacheRead": 4224,
+          "cacheWrite": 0,
+          "reasoning": 31,
+          "totalTokens": 10170
+        },
+        "reported_cost_usd": 0.000618335,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 142
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 6902.259916067123,
+        "first_stdout_ms": 175.76050013303757,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.25781,
+        "cpu_system_s": 0.037021,
+        "cpu_total_s": 0.29483099999999995,
+        "cpu_percent_one_core": 4.271514019831252,
+        "cpu_percent_machine": 0.30510814427366084,
+        "sampled_tree_peak_rss_kib": 164080,
+        "rusage_maxrss_kib": 164080,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 62752,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 53
+    },
+    {
+      "id": "project-plan-s42-r0-ori",
+      "harness": "ori",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "project-plan",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "36947d8fa665d15617076318fb79d94f57cd032c8fe9ceaa16b4c51502df8709",
+      "status": "completed",
+      "correctness": {
+        "points": 6,
+        "total": 8,
+        "factualScore": 0.5,
+        "citationScore": 1,
+        "score": 0.75,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "finish_day",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "critical_tasks",
+            "value": false,
+            "citations": true
+          },
+          {
+            "id": "c_slack",
+            "value": false,
+            "citations": true
+          },
+          {
+            "id": "deadline_met",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 3583.437583874911,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 5,
+        "reported_usage": {
+          "input": 3369,
+          "output": 926,
+          "cacheRead": 6400,
+          "cacheWrite": 0,
+          "reasoning": 135,
+          "totalTokens": 10695
+        },
+        "reported_cost_usd": 0.00116035,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 197
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 14195.343167055398,
+        "first_stdout_ms": 1085.7594169210643,
+        "first_stderr_ms": 428.7364589981735,
+        "cpu_user_s": 1.272825,
+        "cpu_system_s": 0.166396,
+        "cpu_total_s": 1.439221,
+        "cpu_percent_one_core": 10.138684095641654,
+        "cpu_percent_machine": 0.724191721117261,
+        "sampled_tree_peak_rss_kib": 298992,
+        "rusage_maxrss_kib": 298992,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 76403,
+        "stderr_bytes": 82,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 107
+    },
+    {
+      "id": "project-plan-s42-r0-pi",
+      "harness": "pi",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "project-plan",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "36947d8fa665d15617076318fb79d94f57cd032c8fe9ceaa16b4c51502df8709",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "finish_day",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "critical_tasks",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "c_slack",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "deadline_met",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 9746.649416862056,
+        "first_assistant_boundary": "first text event received",
+        "tool_calls": 5,
+        "reported_usage": {
+          "input": 3294,
+          "output": 884,
+          "cacheRead": 6400,
+          "cacheWrite": 0,
+          "reasoning": 160,
+          "totalTokens": 10578
+        },
+        "reported_cost_usd": 0.00056405,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 199
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 11401.594792027026,
+        "first_stdout_ms": 189.03291691094637,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.316895,
+        "cpu_system_s": 0.04713,
+        "cpu_total_s": 0.364025,
+        "cpu_percent_one_core": 3.1927551069834332,
+        "cpu_percent_machine": 0.22805393621310238,
+        "sampled_tree_peak_rss_kib": 163504,
+        "rusage_maxrss_kib": 163504,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 76073,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 87
+    },
+    {
+      "id": "project-plan-s42-r0-codex",
+      "harness": "codex",
+      "model": "gpt-6-astra",
+      "task": "project-plan",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "36947d8fa665d15617076318fb79d94f57cd032c8fe9ceaa16b4c51502df8709",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "finish_day",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "critical_tasks",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "c_slack",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "deadline_met",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": 3592.1378748025745,
+        "first_assistant_boundary": "completed message event, not first token",
+        "tool_calls": 4,
+        "reported_usage": {
+          "input_tokens": 57463,
+          "cached_input_tokens": 42043,
+          "cache_write_input_tokens": 15408,
+          "output_tokens": 1132,
+          "reasoning_output_tokens": 25
+        },
+        "reported_cost_usd": null,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 13,
+        "estimated_cost_usd": 0.291363,
+        "cost_estimate_basis": {
+          "model": "gpt-6-astra",
+          "verified": "2026-09-12",
+          "source": "https://developers.openai.com/api/docs/models/gpt-6-astra",
+          "usd_per_million": {
+            "input": 10,
+            "cached_input": 1,
+            "cache_write": 12.5,
+            "output": 50
+          },
+          "long_context_threshold": 272000,
+          "assumptions": "Standard tier, text-only, cache tokens included in total input, output includes reasoning; no hosted tool charges. Estimate, not an account billing receipt."
+        }
+      },
+      "authentication": "openai_api_key",
+      "sources_unchanged": true,
+      "run": "knowledge-work-authenticated-remaining",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 21080.995082855225,
+        "first_stdout_ms": 152.3067078087479,
+        "first_stderr_ms": 106.09233286231756,
+        "cpu_user_s": 0.591079,
+        "cpu_system_s": 0.528645,
+        "cpu_total_s": 1.1197240000000002,
+        "cpu_percent_one_core": 5.311532949934847,
+        "cpu_percent_machine": 0.37939521070963195,
+        "sampled_tree_peak_rss_kib": 181536,
+        "rusage_maxrss_kib": 109776,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 9053,
+        "stderr_bytes": 39,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 163
+    }
+  ],
+  "summary": {
+    "pablo": {
+      "attempts": 6,
+      "measured": 6,
+      "factual_correct": 25,
+      "factual_total": 25,
+      "factual_accuracy": 1,
+      "mean_factual_score": 1,
+      "mean_citation_score": 0.9249999999999999,
+      "completed_wall_p50_ms": 22184.897207887843,
+      "wall_p50_ms": 22184.897207887843,
+      "wall_p95_ms": 31359.449375187978,
+      "peak_tree_rss_kib": 19568,
+      "cpu_p50_s": 0.08274499999999999,
+      "cpu_one_core_p50_percent": 0.3729789650347354,
+      "estimated_cost_usd": null,
+      "reported_cost_usd": 0.011403,
+      "reported_cost_known_subtotal_usd": 0.011403,
+      "cost_reported_attempts": 6,
+      "failures": []
+    },
+    "claude": {
+      "attempts": 6,
+      "measured": 6,
+      "factual_correct": 25,
+      "factual_total": 25,
+      "factual_accuracy": 1,
+      "mean_factual_score": 1,
+      "mean_citation_score": 0.9666666666666667,
+      "completed_wall_p50_ms": 30124.46775007993,
+      "wall_p50_ms": 30124.46775007993,
+      "wall_p95_ms": 59664.76716590114,
+      "peak_tree_rss_kib": 292960,
+      "cpu_p50_s": 1.7096339999999999,
+      "cpu_one_core_p50_percent": 5.58777472106502,
+      "estimated_cost_usd": null,
+      "reported_cost_usd": 1.2482007499999999,
+      "reported_cost_known_subtotal_usd": 1.2482007499999999,
+      "cost_reported_attempts": 6,
+      "failures": []
+    },
+    "pablo-astra": {
+      "attempts": 6,
+      "measured": 6,
+      "factual_correct": 25,
+      "factual_total": 25,
+      "factual_accuracy": 1,
+      "mean_factual_score": 1,
+      "mean_citation_score": 1,
+      "completed_wall_p50_ms": 20473.048833897337,
+      "wall_p50_ms": 20473.048833897337,
+      "wall_p95_ms": 31118.90645790845,
+      "peak_tree_rss_kib": 23776,
+      "cpu_p50_s": 0.13257999999999998,
+      "cpu_one_core_p50_percent": 0.4260432485933533,
+      "estimated_cost_usd": null,
+      "reported_cost_usd": 0.626926,
+      "reported_cost_known_subtotal_usd": 0.626926,
+      "cost_reported_attempts": 6,
+      "failures": []
+    },
+    "codex": {
+      "attempts": 6,
+      "measured": 6,
+      "factual_correct": 25,
+      "factual_total": 25,
+      "factual_accuracy": 1,
+      "mean_factual_score": 1,
+      "mean_citation_score": 1,
+      "completed_wall_p50_ms": 19647.461999906227,
+      "wall_p50_ms": 19647.461999906227,
+      "wall_p95_ms": 22213.037375127897,
+      "peak_tree_rss_kib": 200736,
+      "cpu_p50_s": 1.186087,
+      "cpu_one_core_p50_percent": 6.036845878646621,
+      "estimated_cost_usd": 1.723116,
+      "reported_cost_usd": null,
+      "reported_cost_known_subtotal_usd": null,
+      "cost_reported_attempts": 0,
+      "failures": []
+    },
+    "ori": {
+      "attempts": 6,
+      "measured": 6,
+      "factual_correct": 23,
+      "factual_total": 25,
+      "factual_accuracy": 0.92,
+      "mean_factual_score": 0.9166666666666666,
+      "mean_citation_score": 0.8916666666666666,
+      "completed_wall_p50_ms": 13675.716958008707,
+      "wall_p50_ms": 13675.716958008707,
+      "wall_p95_ms": 16296.033791964874,
+      "peak_tree_rss_kib": 343776,
+      "cpu_p50_s": 1.393104,
+      "cpu_one_core_p50_percent": 10.138684095641654,
+      "estimated_cost_usd": null,
+      "reported_cost_usd": 0.006902930000000001,
+      "reported_cost_known_subtotal_usd": 0.006902930000000001,
+      "cost_reported_attempts": 6,
+      "failures": []
+    },
+    "pi": {
+      "attempts": 6,
+      "measured": 6,
+      "factual_correct": 24,
+      "factual_total": 25,
+      "factual_accuracy": 0.96,
+      "mean_factual_score": 0.9583333333333334,
+      "mean_citation_score": 0.8083333333333332,
+      "completed_wall_p50_ms": 9179.978291969746,
+      "wall_p50_ms": 9179.978291969746,
+      "wall_p95_ms": 34222.200457938015,
+      "peak_tree_rss_kib": 164080,
+      "cpu_p50_s": 0.311666,
+      "cpu_one_core_p50_percent": 3.1927551069834332,
+      "estimated_cost_usd": null,
+      "reported_cost_usd": 0.00372518,
+      "reported_cost_known_subtotal_usd": 0.00372518,
+      "cost_reported_attempts": 6,
+      "failures": []
+    }
+  },
+  "superseded_pablo_rows": [
+    {
+      "id": "reconciliation-s42-r0-pablo",
+      "harness": "pablo",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "reconciliation",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "230d29a6dd951a87327be41a4f8c9cac07fcc72b0e14c8010010f6aaf16a22dd",
+      "status": "completed",
+      "correctness": {
+        "points": 5,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 0.25,
+        "score": 0.625,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "north_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "south_due",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "total_due",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "excluded",
+            "value": true,
+            "citations": false
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 7,
+        "reported_usage": {
+          "model_calls": "5",
+          "tool_calls": "7",
+          "usage": {
+            "input_tokens": "11041",
+            "output_tokens": "1114",
+            "cache_read_input_tokens": "7552",
+            "cache_write_input_tokens": "0"
+          },
+          "cost_microusd": "1310",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.00131,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 32511.448958190158,
+        "first_stdout_ms": 32510.30808314681,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.035047,
+        "cpu_system_s": 0.021275,
+        "cpu_total_s": 0.056322,
+        "cpu_percent_one_core": 0.17323743421103838,
+        "cpu_percent_machine": 0.012374102443645599,
+        "sampled_tree_peak_rss_kib": 18192,
+        "rusage_maxrss_kib": 18208,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 1378,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 255
+    },
+    {
+      "id": "policy-review-s42-r0-pablo",
+      "harness": "pablo",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "policy-review",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "17ca4855e7e8a0c5413ca3a32825e39a9d2c583c95695c2cdf9a586a2c324985",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "A",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "B",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "C",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "D",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 6,
+        "reported_usage": {
+          "model_calls": "5",
+          "tool_calls": "6",
+          "usage": {
+            "input_tokens": "11747",
+            "output_tokens": "1782",
+            "cache_read_input_tokens": "0",
+            "cache_write_input_tokens": "0"
+          },
+          "cost_microusd": "2485",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.002485,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 23481.173541862518,
+        "first_stdout_ms": 23479.941125027835,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.043400999999999995,
+        "cpu_system_s": 0.034866999999999995,
+        "cpu_total_s": 0.07826799999999999,
+        "cpu_percent_one_core": 0.333322352311152,
+        "cpu_percent_machine": 0.02380873945079657,
+        "sampled_tree_peak_rss_kib": 17344,
+        "rusage_maxrss_kib": 17344,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 1419,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 184
+    },
+    {
+      "id": "vendor-selection-s42-r0-pablo",
+      "harness": "pablo",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "vendor-selection",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "91af333da80febed7638ca1dd32988f72a6ea8c1e96c384a9a46f16c723336b6",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "winner",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "annual_cost",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "savings",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "ineligible",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 7,
+        "reported_usage": {
+          "model_calls": "5",
+          "tool_calls": "7",
+          "usage": {
+            "input_tokens": "11514",
+            "output_tokens": "1525",
+            "cache_read_input_tokens": "0",
+            "cache_write_input_tokens": "0"
+          },
+          "cost_microusd": "2331",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.002331,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 18979.977292008698,
+        "first_stdout_ms": 18978.956749895588,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.046324,
+        "cpu_system_s": 0.040558,
+        "cpu_total_s": 0.08688199999999999,
+        "cpu_percent_one_core": 0.4577560798061685,
+        "cpu_percent_machine": 0.03269686284329775,
+        "sampled_tree_peak_rss_kib": 18192,
+        "rusage_maxrss_kib": 18448,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 1626,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 149
+    },
+    {
+      "id": "incident-brief-s42-r0-pablo",
+      "harness": "pablo",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "incident-brief",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "f2db4196643a42ede95bc9bcc0336a5465842894a00386aa39a67af46cd9a0b6",
+      "status": "completed",
+      "correctness": {
+        "points": 7,
+        "total": 8,
+        "factualScore": 0.75,
+        "citationScore": 1,
+        "score": 0.875,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "duration_minutes",
+            "value": false,
+            "citations": true
+          },
+          {
+            "id": "unrecovered_requests",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "root_cause",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "data_loss_confirmed",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 8,
+        "reported_usage": {
+          "model_calls": "6",
+          "tool_calls": "8",
+          "usage": {
+            "input_tokens": "14251",
+            "output_tokens": "1245",
+            "cache_read_input_tokens": "0",
+            "cache_write_input_tokens": "0"
+          },
+          "cost_microusd": "2582",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.002582,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 25967.98533317633,
+        "first_stdout_ms": 25966.75108303316,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.088986,
+        "cpu_system_s": 0.0544,
+        "cpu_total_s": 0.14338599999999999,
+        "cpu_percent_one_core": 0.5521645139594717,
+        "cpu_percent_machine": 0.039440322425676556,
+        "sampled_tree_peak_rss_kib": 31232,
+        "rusage_maxrss_kib": 18448,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 2351,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 203
+    },
+    {
+      "id": "project-plan-s42-r0-pablo",
+      "harness": "pablo",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "project-plan",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "c1639a9309b0d5bad7441176eef6fa5ecb33c1a017253e50596fa195b1f0675f",
+      "status": "completed",
+      "correctness": {
+        "points": 8,
+        "total": 8,
+        "factualScore": 1,
+        "citationScore": 1,
+        "score": 1,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": true,
+        "checks": [
+          {
+            "id": "finish_day",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "critical_tasks",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "c_slack",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "deadline_met",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 6,
+        "reported_usage": {
+          "model_calls": "6",
+          "tool_calls": "6",
+          "usage": {
+            "input_tokens": "14211",
+            "output_tokens": "1761",
+            "cache_read_input_tokens": "10176",
+            "cache_write_input_tokens": "0"
+          },
+          "cost_microusd": "1793",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.001793,
+        "reported_model": null,
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-six-task-pilot",
+      "suite_version": "knowledge-work-v1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 40188.44670802355,
+        "first_stdout_ms": 40187.297499971464,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.061322999999999996,
+        "cpu_system_s": 0.044101999999999995,
+        "cpu_total_s": 0.10542499999999999,
+        "cpu_percent_one_core": 0.26232663522910454,
+        "cpu_percent_machine": 0.018737616802078895,
+        "sampled_tree_peak_rss_kib": 25616,
+        "rusage_maxrss_kib": 18160,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 1514,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 315
+    },
+    {
+      "id": "meeting-handoff-s42-r0-pablo",
+      "harness": "pablo",
+      "model": "z-ai/glm-5.3-flash",
+      "task": "meeting-handoff",
+      "seed": 42,
+      "repeat": 0,
+      "fingerprint": "23a2795db06b2d5fd64dbfef31a49560b4278ab5ee85e5533e8f1179f091f19c",
+      "status": "completed",
+      "correctness": {
+        "points": 9,
+        "total": 10,
+        "factualScore": 1,
+        "citationScore": 0.8,
+        "score": 0.9,
+        "validShape": true,
+        "reportPresent": true,
+        "pass": false,
+        "checks": [
+          {
+            "id": "launch_date",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "migration_owner",
+            "value": true,
+            "citations": false
+          },
+          {
+            "id": "legal_due",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "open_actions",
+            "value": true,
+            "citations": true
+          },
+          {
+            "id": "finance_due",
+            "value": true,
+            "citations": true
+          }
+        ],
+        "proseQuality": "ungraded; use blind human rubric"
+      },
+      "events": {
+        "completed": true,
+        "first_assistant_observed_ms": null,
+        "first_assistant_boundary": "unavailable from buffered task envelope",
+        "tool_calls": 7,
+        "reported_usage": {
+          "model_calls": "4",
+          "tool_calls": "7",
+          "usage": {
+            "input_tokens": "15376",
+            "output_tokens": "6154",
+            "cache_read_input_tokens": "2304",
+            "cache_write_input_tokens": "0"
+          },
+          "cost_microusd": "4780",
+          "charged_tokens": null,
+          "charged_cost_microusd": null
+        },
+        "reported_cost_usd": 0.00478,
+        "reported_model": "z-ai/glm-5.3-flash",
+        "errors": [],
+        "event_count": 1
+      },
+      "sources_unchanged": true,
+      "run": "knowledge-work-handoff-v1-1",
+      "suite_version": "knowledge-work-v1.1",
+      "resources": {
+        "exit_code": 0,
+        "failure": null,
+        "wall_ms": 101071.61062513478,
+        "first_stdout_ms": 101070.53275010549,
+        "first_stderr_ms": null,
+        "cpu_user_s": 0.105637,
+        "cpu_system_s": 0.10547799999999999,
+        "cpu_total_s": 0.211115,
+        "cpu_percent_one_core": 0.20887665556553356,
+        "cpu_percent_machine": 0.014919761111823826,
+        "sampled_tree_peak_rss_kib": 18032,
+        "rusage_maxrss_kib": 18048,
+        "sample_interval_ms": 100,
+        "stdout_bytes": 1820,
+        "stderr_bytes": 0,
+        "cpu_scope": "wait4 root and descendants whose resource usage was reaped into it; unjoined descendants can be omitted",
+        "memory_scope": "sampled simultaneous RSS sum of process group and descendants; shared pages may double count, short-lived peaks can be missed"
+      },
+      "sample_count": 790
+    }
+  ]
+}
