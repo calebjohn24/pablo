@@ -7,6 +7,8 @@ on:
       - "website/**"
       - "install.sh"
       - "scripts/install.test.mjs"
+      - "scripts/release/**"
+      - "NOTICE"
       - "package.json"
       - ".github/workflows/docs-pages.yml"
   push:
@@ -16,6 +18,8 @@ on:
       - "website/**"
       - "install.sh"
       - "scripts/install.test.mjs"
+      - "scripts/release/**"
+      - "NOTICE"
       - "package.json"
       - ".github/workflows/docs-pages.yml"
   workflow_dispatch:
@@ -48,9 +52,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Test release installer
+      - name: Test release packaging and installer
         working-directory: .
-        run: npm run test:install
+        run: npm run test:release
+
+      - name: Ensure release storage exists
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        working-directory: website
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler r2 bucket info pablo-releases >/dev/null 2>&1 || npx wrangler r2 bucket create pablo-releases
 
       - name: Build and verify site
         run: npm test

@@ -1,0 +1,204 @@
+name: Release candidates
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/release-candidate.yml"
+      - "scripts/release/**"
+      - "scripts/install.test.mjs"
+      - "install.sh"
+      - "NOTICE"
+      - "package.json"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact prerelease tag to package
+        required: true
+        default: v0.1.0-dev.1
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-candidate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package-tests:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm run test:release
+
+  build:
+    if: github.event_name == 'workflow_dispatch'
+    needs: package-tests
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            runner: macos-15
+            machine: arm64
+            deployment_target: "11.0"
+          - target: x86_64-apple-darwin
+            runner: macos-15-intel
+            machine: x86_64
+            deployment_target: "10.15"
+          - target: aarch64-unknown-linux-gnu
+            runner: ubuntu-22.04-arm
+            machine: aarch64
+            deployment_target: ""
+          - target: x86_64-unknown-linux-gnu
+            runner: ubuntu-22.04
+            machine: x86_64
+            deployment_target: ""
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    env:
+      CARGO_TERM_COLOR: never
+      RELEASE_VERSION: ${{ inputs.version }}
+      RELEASE_TARGET: ${{ matrix.target }}
+      MACOSX_DEPLOYMENT_TARGET: ${{ matrix.deployment_target }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Verify version, runner, and pinned tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = "${{ matrix.machine }}"
+          test "$(rustc -Vv | sed -n 's/^host: //p')" = "$RELEASE_TARGET"
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const cargo = readFileSync('Cargo.toml', 'utf8');
+          const version = cargo.match(/\[workspace\.package\]([\s\S]*?)(?:\n\[|$)/)?.[1]
+            ?.match(/^version\s*=\s*"([^"]+)"/m)?.[1];
+          if (process.env.RELEASE_VERSION !== `v${version}`) {
+            throw new Error(`version must be exactly v${version}`);
+          }
+          NODE
+          rustc -Vv
+          cargo -V
+          node -v
+      - name: Build locked native release binary
+        run: cargo build --release --locked --target "$RELEASE_TARGET" -p pablo --bin pablo
+      - name: Record dynamic dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          binary="$PWD/target/$RELEASE_TARGET/release/pablo"
+          file "$binary"
+          if [ "$(uname -s)" = Darwin ]; then
+            {
+              sw_vers -productVersion | sed 's/^/build-macos: /'
+              otool -L "$binary" | tail -n +2 | sed 's/^[[:space:]]*//'
+            } > "$RUNNER_TEMP/pablo-dynamic-libraries.txt"
+          else
+            {
+              ldd --version | head -n 1 | sed 's/^/build-libc: /'
+              ldd "$binary" | sed 's/^[[:space:]]*//'
+            } > "$RUNNER_TEMP/pablo-dynamic-libraries.txt"
+          fi
+      - name: Package and verify candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          binary="$PWD/target/$RELEASE_TARGET/release/pablo"
+          revision="$(git rev-parse HEAD)"
+          tree="$(git rev-parse 'HEAD^{tree}')"
+          epoch="$(git show -s --format=%ct HEAD)"
+          runner_identity="${{ matrix.runner }}; ${ImageOS:-unknown}; ${ImageVersion:-unknown}"
+          node scripts/release/package.mjs \
+            --version "$RELEASE_VERSION" \
+            --target "$RELEASE_TARGET" \
+            --binary "$binary" \
+            --out-dir "$PWD/dist/release" \
+            --source-revision "$revision" \
+            --source-tree "$tree" \
+            --source-epoch "$epoch" \
+            --runner "$runner_identity" \
+            --dynamic-libraries "$RUNNER_TEMP/pablo-dynamic-libraries.txt" \
+            --native \
+            > "$PWD/dist/release/package-report.json"
+          archive="pablo-$RELEASE_VERSION-$RELEASE_TARGET.tar.gz"
+          node scripts/release/verify.mjs \
+            --version "$RELEASE_VERSION" \
+            --target "$RELEASE_TARGET" \
+            --archive "$PWD/dist/release/$archive" \
+            --checksum "$PWD/dist/release/$archive.sha256" \
+            --run \
+            > "$PWD/dist/release/verify-report.json"
+      - name: Install and run without development dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="pablo-$RELEASE_VERSION-$RELEASE_TARGET.tar.gz"
+          prefix="$RUNNER_TEMP/pablo-prefix"
+          mkdir -p "$prefix/share/keep"
+          printf 'unrelated\n' > "$prefix/share/keep/value"
+          env -i PATH=/usr/bin:/bin TMPDIR="$RUNNER_TEMP" sh "$PWD/install.sh" \
+            --version "$RELEASE_VERSION" \
+            --prefix "$prefix" \
+            --archive "$PWD/dist/release/$archive" \
+            --checksum "$PWD/dist/release/$archive.sha256"
+          env -i PATH=/usr/bin:/bin "$prefix/bin/pablo" --version
+          env -i PATH=/usr/bin:/bin "$prefix/bin/pablo" demo | grep -Fx 'Hello from pablo.'
+          env -i PATH=/usr/bin:/bin TMPDIR="$RUNNER_TEMP" sh "$PWD/install.sh" \
+            --prefix "$prefix" --remove
+          test -f "$prefix/share/keep/value"
+          test ! -e "$prefix/bin/pablo"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: pablo-${{ inputs.version }}-${{ matrix.target }}
+          path: dist/release/*
+          if-no-files-found: error
+          retention-days: 30
+
+  index:
+    if: github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-22.04
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: pablo-${{ inputs.version }}-*
+          path: candidates
+      - name: Build and verify the four-target index
+        run: |
+          node scripts/release/index.mjs \
+            --version "$RELEASE_VERSION" \
+            --input-dir "$PWD/candidates" \
+            --out-dir "$PWD/release"
+          cd release
+          sha256sum -c SHA256SUMS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: pablo-${{ inputs.version }}-release-set
+          path: release/*
+          if-no-files-found: error
+          retention-days: 30

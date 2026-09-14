@@ -56,6 +56,7 @@ export default defineConfig({
         items: [
           { text: "Introduction", link: "/introduction" },
           { text: "Getting started", link: "/getting-started" },
+          { text: "Installation", link: "/installation" },
           { text: "CLI and TUI", link: "/cli" },
         ],
       },

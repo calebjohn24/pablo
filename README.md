@@ -13,7 +13,7 @@ Read the [public documentation](https://runpablo.pages.dev), or start in the rep
 - Use Pablo through the [CLI and TUI](docs/guide/cli.md), [ACP](docs/guide/acp.md), or [Rust embedding](docs/guide/embedding.md).
 - Configure [deployments](docs/guide/configuration.md), [providers and model routes](docs/guide/providers.md), and [tools and policy](docs/guide/tools-and-policy.md).
 - Add [MCP, Skills and supervised agents](docs/guide/extensibility.md), [structured output](docs/guide/structured-output.md), and [observability](docs/guide/observability.md).
-- Consult the [resource benchmark](docs/guide/benchmarks.md), [limits and outcomes](docs/guide/reference.md), [troubleshooting](docs/guide/troubleshooting.md), and the current [release status](docs/guide/release-status.md).
+- Consult [installation and release files](docs/guide/installation.md), the [resource benchmark](docs/guide/benchmarks.md), [limits and outcomes](docs/guide/reference.md), [troubleshooting](docs/guide/troubleshooting.md), and the current [release status](docs/guide/release-status.md).
 
 ## What it does
 
@@ -63,13 +63,22 @@ sh /tmp/pablo-install.sh \
   --prefix "$HOME/.local"
 ```
 
-The installer detects macOS/Linux and arm64/x86_64, downloads the matching archive and checksum, verifies SHA-256 before extraction, and checks the binary’s reported version before installation. It never invokes `sudo`, package managers, Node or Python. An existing `pablo` command or `$PREFIX/bin/pablo` causes a failure; `--replace` opts into replacing the selected regular file. Remove an unchanged receipt-backed installation with:
+The installer detects macOS/Linux and arm64/x86_64, downloads the matching archive and checksum from the Cloudflare R2-backed release route, verifies SHA-256 before extraction, and checks the binary’s reported version before installation. It never invokes `sudo`, package managers, Node or Python. Upgrade an unchanged receipt-backed installation to another exact version with `--update`; `--replace` explicitly overwrites another regular file at the selected path. Remove an unchanged receipt-backed installation with:
+
+```sh
+sh /tmp/pablo-install.sh \
+  --version v0.1.0-dev.2 \
+  --prefix "$HOME/.local" \
+  --update
+```
+
+Remove it with:
 
 ```sh
 sh /tmp/pablo-install.sh --prefix "$HOME/.local" --remove
 ```
 
-Review the [installer source](install.sh) before running it. Release publication and four-platform artifact acceptance remain pending.
+Review the [installer source](install.sh) and [archive layout, platform requirements, manifests and signing limits](docs/guide/installation.md) before running it. Release publication and four-platform artifact acceptance remain pending.
 
 For a real task, supply a gateway credential in your environment or an ignored `.env` in the directory where you invoke Pablo:
 
@@ -200,6 +209,6 @@ node scripts/project.mjs check
 
 These development checks use offline fixtures. Live provider checks are separate, explicit commands documented in the [gateway guide](docs/gateway.md#explicit-verification). The [knowledge-work benchmark](scripts/knowledge-work/README.md) covers factual scoring, latency, memory, CPU and cost comparisons; `npm run bench:knowledge` previews its matrix without model calls.
 
-Release preparation still includes archives and installation checks, native acceptance on macOS arm64/x86_64 and Linux x86_64/arm64, matched release measurements, and prerelease distribution. Minimum OS/libc requirements and signing/notarization limits belong to that pending work. The full 0.1 contract also retains the deferred Otto integration proof. See the [release plan](docs/project/cycles/003-extensibility-and-release.md#c334-release-archives-and-installation) and [product design](docs/context.md#291-focused-release-contract).
+Release preparation now includes a deterministic four-target candidate pipeline, verified archive layout, checksums, dependency notices, source/build/target manifests and explicit-prefix installation policy. The remaining gates are native acceptance of those exact candidates on macOS arm64/x86_64 and Linux x86_64/arm64, matched release measurements, and prerelease publication. The full 0.1 contract also retains the deferred Otto integration proof. See the [release plan](docs/project/cycles/003-extensibility-and-release.md#c334-release-archives-and-installation) and [product design](docs/context.md#291-focused-release-contract).
 
 For current progress and the next handoff, run `node scripts/project.mjs context`. Contributors should read [AGENTS.md](AGENTS.md); [project decisions](docs/project/brain.md) and the [backlog](docs/project/backlog.md) retain design rationale and deferred work.
