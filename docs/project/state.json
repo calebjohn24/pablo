@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-14T19:42:51Z",
-  "active_checkpoint": null,
-  "next_checkpoint": "C3.35",
-  "next_action": "Begin C3.35 native macOS arm64 acceptance against the exact v0.0.1 aarch64-apple-darwin archive from Actions run 34886849213; preserve its recorded archive and binary hashes.",
-  "latest_log_entry": "LOG-0190",
+  "updated_at": "2026-09-14T20:14:27Z",
+  "active_checkpoint": "C3.36",
+  "next_checkpoint": null,
+  "next_action": "Resume C3.36 against the exact v0.0.1 Linux x86_64 candidate: run the complete offline suite, installed ACP/TUI and real Collector paths, then the explicitly authorized bounded Vercel/OpenRouter CLI/ACP matrix; preserve the E2B artifact hashes and do not publish it.",
+  "latest_log_entry": "LOG-0191",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -821,7 +821,7 @@
       "depends_on": [
         "C3.34"
       ],
-      "status": "pending",
+      "status": "in_progress",
       "blockers": [],
       "verification": []
     },
