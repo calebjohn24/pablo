@@ -7,6 +7,7 @@ const source = path.resolve(siteRoot, "../docs/guide");
 const target = path.resolve(siteRoot, ".content");
 const publicSource = path.resolve(siteRoot, "public");
 const publicTarget = path.resolve(siteRoot, ".public");
+const installerSource = path.resolve(siteRoot, "../install.sh");
 
 if (!target.startsWith(`${siteRoot}${path.sep}`)) {
   throw new Error("Refusing to write generated content outside the website");
@@ -41,3 +42,4 @@ fs.cpSync(publicSource, publicTarget, { recursive: true });
 fs.cpSync(path.join(source, "examples"), path.join(publicTarget, "examples"), {
   recursive: true,
 });
+fs.copyFileSync(installerSource, path.join(publicTarget, "install.sh"));

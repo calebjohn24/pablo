@@ -23,6 +23,22 @@ Read the [public documentation](https://runpablo.pages.dev), or start in the rep
 - **Return usable results:** streaming text or a JSON task envelope with outcome and accounting; validate final answers against a supported JSON Schema subset, with configurable single-attempt repair.
 - **Operate and inspect:** composable TOML deployments, static tool and filesystem policy, offline diagnostics, native JSONL traces and OpenTelemetry export.
 
+## Integrations
+
+Pablo keeps each integration boundary explicit: application hosts drive Pablo through ACP or Rust, Pablo connects to tools through MCP, and Pablo delegates selected work to remote agents through A2A.
+
+| Integration | Implemented surface | Guide |
+| --- | --- | --- |
+| **ACP** | Stable ACP v1 over stdio for editors and application hosts, with streaming updates, cancellation, independent sessions and negotiated typed outcomes | [ACP integration](docs/guide/acp.md) |
+| **Rust** | Embed `pablo-core::Runtime`, supply host-owned tools, policy, telemetry and cancellation, or use the configured reference host | [Rust embedding](docs/guide/embedding.md) |
+| **MCP** | Client support for configured tool servers over stdio and Streamable HTTP, with qualified tool identity, schema validation, policy and bounded cleanup | [MCP tools](docs/guide/extensibility.md#mcp-tools) |
+| **A2A** | Client-side A2A 1.0 JSON-RPC/SSE delegation using exact Agent Cards and endpoints, streamed task/status updates, one Artifact result and bounded cancellation | [Remote A2A tasks](docs/guide/extensibility.md#remote-a2a-tasks) |
+| **Agent Skills** | Discover portable local `SKILL.md` packages from configured roots, explicitly activate instructions and read selected resources under host authority | [Portable Agent Skills](docs/guide/extensibility.md#portable-agent-skills) |
+| **Model providers** | Vercel AI Gateway, OpenRouter and explicitly configured Open Responses endpoints, with named profiles and ordered fallback | [Models and providers](docs/guide/providers.md) |
+| **OpenTelemetry** | Native traces and OTLP/HTTP export with W3C Trace Context across runs, models, tools, MCP and remote A2A work | [Observability](docs/guide/observability.md) |
+
+Pablo does not currently expose an A2A server or durable agent endpoint. Remote A2A peers remain untrusted client-side dependencies, while the application host retains sandboxing, credentials, policy and business state.
+
 ## Build and run
 
 Use the pinned Rust **1.98.1** toolchain and a native build toolchain on macOS or Linux. Node is needed only for the TypeScript client and development tooling.
@@ -35,6 +51,25 @@ cargo build --release --locked -p pablo --bin pablo
 ```
 
 The offline demo prints `Hello from pablo.` without a provider credential. Commands below run from the checkout and use the built executable directly.
+
+### Installer preview
+
+The checked-in installer is ready for versioned release archives, but no installable release asset is published yet. Build from source until the release candidate is available. Once a tag and its four platform archives are published, install that exact version to an explicit prefix:
+
+```sh
+curl -fsSLo /tmp/pablo-install.sh https://runpablo.pages.dev/install.sh
+sh /tmp/pablo-install.sh \
+  --version v0.1.0-dev.1 \
+  --prefix "$HOME/.local"
+```
+
+The installer detects macOS/Linux and arm64/x86_64, downloads the matching archive and checksum, verifies SHA-256 before extraction, and checks the binary’s reported version before installation. It never invokes `sudo`, package managers, Node or Python. An existing `pablo` command or `$PREFIX/bin/pablo` causes a failure; `--replace` opts into replacing the selected regular file. Remove an unchanged receipt-backed installation with:
+
+```sh
+sh /tmp/pablo-install.sh --prefix "$HOME/.local" --remove
+```
+
+Review the [installer source](install.sh) before running it. Release publication and four-platform artifact acceptance remain pending.
 
 For a real task, supply a gateway credential in your environment or an ignored `.env` in the directory where you invoke Pablo:
 
@@ -108,9 +143,10 @@ These commands inspect configuration without model calls or service startup. The
 | Context compaction | [Compaction](docs/project/contracts/c3-compaction.md) |
 | Open Responses endpoint and capabilities | [Provider example](docs/gateway.md#open-responses) |
 | MCP tools and explicit local Skills | [MCP](docs/project/contracts/c3-mcp.md), [Skills](docs/project/contracts/c3-skills.md) |
-| Supervised children and validated handoffs | [Local children](docs/project/contracts/c3-children.md), [remote A2A](docs/project/contracts/c3-a2a.md) |
+| Supervised children and validated handoffs | [Local children](docs/project/contracts/c3-children.md) |
+| Remote agent delegation | [A2A 1.0 client](docs/project/contracts/c3-a2a.md) |
 
-## Integrate with an application
+## ACP and Rust embedding
 
 An ACP host launches the executable over stdio:
 

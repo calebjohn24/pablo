@@ -37,7 +37,7 @@ Cross-compilation may prepare an archive but does not count as native acceptance
 
 ## Current limitations
 
-- There is no published installer or package-manager formula.
+- The checksum-verifying install script is available for review, but no matching release archives or package-manager formula are published yet.
 - The source packages are not published to crates.io.
 - Each direct CLI invocation and ACP session is one fresh task; durable chat/job state belongs to the host.
 - The workspace is not an OS sandbox. Shell commands execute with the host account’s permissions.
