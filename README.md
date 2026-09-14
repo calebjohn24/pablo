@@ -12,7 +12,7 @@ Read the [public documentation](https://runpablo.pages.dev), or start in the rep
 
 - Embed Pablo through [ACP](docs/guide/acp.md) or [Rust](docs/guide/embedding.md), or use the [CLI and TUI](docs/guide/cli.md) for evaluation and operations.
 - Configure [deployments](docs/guide/configuration.md), [providers and model routes](docs/guide/providers.md), and [tools and policy](docs/guide/tools-and-policy.md).
-- Add [MCP, Skills and supervised agents](docs/guide/extensibility.md), [structured output](docs/guide/structured-output.md), and [observability](docs/guide/observability.md).
+- Add [subagents](docs/guide/subagents.md), [MCP, Skills and A2A](docs/guide/extensibility.md), [structured output](docs/guide/structured-output.md), and [observability](docs/guide/observability.md).
 - Consult [installation and release files](docs/guide/installation.md), the [resource benchmark](docs/guide/benchmarks.md), [limits and outcomes](docs/guide/reference.md), [troubleshooting](docs/guide/troubleshooting.md), and the current [release status](docs/guide/release-status.md).
 
 ## What it does
@@ -31,6 +31,7 @@ Pablo keeps each integration boundary explicit: application hosts drive Pablo th
 | --- | --- | --- |
 | **ACP** | Stable ACP v1 over stdio for editors and application hosts, with streaming updates, cancellation, independent sessions and negotiated typed outcomes | [ACP integration](docs/guide/acp.md) |
 | **Rust** | Embed `pablo-core::Runtime`, supply host-owned tools, policy, telemetry and cancellation, or use the configured reference host | [Rust embedding](docs/guide/embedding.md) |
+| **Subagents** | Up to two concurrent depth-one local children with narrowed capabilities, shared root budgets, typed outcomes, independent cancellation and validated handoffs | [Subagents](docs/guide/subagents.md) |
 | **MCP** | Client support for configured tool servers over stdio and Streamable HTTP, with qualified tool identity, schema validation, policy and bounded cleanup | [MCP tools](docs/guide/extensibility.md#mcp-tools) |
 | **A2A** | Client-side A2A 1.0 JSON-RPC/SSE delegation using exact Agent Cards and endpoints, streamed task/status updates, one Artifact result and bounded cancellation | [Remote A2A tasks](docs/guide/extensibility.md#remote-a2a-tasks) |
 | **Agent Skills** | Discover portable local `SKILL.md` packages from configured roots, explicitly activate instructions and read selected resources under host authority | [Portable Agent Skills](docs/guide/extensibility.md#portable-agent-skills) |
@@ -54,28 +55,22 @@ The offline demo prints `Hello from pablo.` without a provider credential. Comma
 
 ### Installer preview
 
-The checked-in installer is ready for versioned release archives, but no installable release asset is published yet. Build from source until the release candidate is available. Once a tag and its four platform archives are published, install that exact version to an explicit prefix:
+The checked-in installer is ready for versioned release archives, but no installable release asset is published yet. Build from source until the release candidate is available. Once `v0.0.1` and its four platform archives are published, install the native Mac or Linux binary with one command:
 
 ```sh
-curl -fsSLo /tmp/pablo-install.sh https://runpablo.pages.dev/install.sh
-sh /tmp/pablo-install.sh \
-  --version v0.0.1 \
-  --prefix "$HOME/.local"
+curl -fsSL https://runpablo.pages.dev/install.sh | sh
 ```
 
-The installer detects macOS/Linux and arm64/x86_64, downloads the matching archive and checksum from the Cloudflare R2-backed release route, verifies SHA-256 before extraction, and checks the binary’s reported version before installation. It never invokes `sudo`, package managers, Node or Python. Upgrade an unchanged receipt-backed installation to another exact version with `--update`; `--replace` explicitly overwrites another regular file at the selected path. Remove an unchanged receipt-backed installation with:
+The script pins `v0.0.1` and installs to `$HOME/.local/bin/pablo`; add that directory to `PATH` if needed. The installer detects macOS/Linux and arm64/x86_64, downloads the matching archive and checksum from the Cloudflare R2-backed release route, verifies SHA-256 before extraction, and checks the binary’s reported version before installation. It never invokes `sudo`, package managers, Node or Python. Upgrade an unchanged receipt-backed installation to another exact version with `--update`; `--replace` explicitly overwrites another regular file at the selected path.
 
 ```sh
-sh /tmp/pablo-install.sh \
-  --version v0.0.2 \
-  --prefix "$HOME/.local" \
-  --update
+curl -fsSL https://runpablo.pages.dev/install.sh | sh -s -- --version v0.0.2 --update
 ```
 
 Remove it with:
 
 ```sh
-sh /tmp/pablo-install.sh --prefix "$HOME/.local" --remove
+curl -fsSL https://runpablo.pages.dev/install.sh | sh -s -- --remove
 ```
 
 Review the [installer source](install.sh) and [archive layout, platform requirements, manifests and signing limits](docs/guide/installation.md) before running it. Release publication and four-platform artifact acceptance remain pending.

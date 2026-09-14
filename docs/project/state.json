@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-14T20:59:36Z",
+  "updated_at": "2026-09-14T21:20:24Z",
   "active_checkpoint": "C3.36",
   "next_checkpoint": null,
-  "next_action": "Resume C3.36 with the exact recorded Linux candidate. The embedder-first installation and integration docs are complete; run the remaining offline, installed ACP/TUI, Collector and bounded live CLI/ACP cases without rebuilding or publishing the artifact.",
-  "latest_log_entry": "LOG-0193",
+  "next_action": "Resume C3.36 with the exact recorded Linux candidate. The one-line installer, mobile alignment and subagent docs are complete; run the remaining offline, installed ACP/TUI, Collector and bounded live CLI/ACP cases without rebuilding or publishing the artifact.",
+  "latest_log_entry": "LOG-0195",
   "checkpoints": [
     {
       "id": "C1.0",

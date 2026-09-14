@@ -76,6 +76,7 @@ export default defineConfig({
           { text: "Choose an interface", link: "/getting-started#choose-an-integration-boundary" },
           { text: "ACP", link: "/acp" },
           { text: "Embed in Rust", link: "/embedding" },
+          { text: "Subagents", link: "/subagents" },
           { text: "MCP, Skills and agents", link: "/extensibility" },
         ],
       },

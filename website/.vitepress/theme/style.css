@@ -155,6 +155,7 @@ body {
   box-shadow: 0 36px 90px rgba(0, 0, 0, 0.48), 0 0 0 1px rgba(255, 107, 53, 0.05);
   color: #ecede9;
   font-family: var(--vp-font-family-mono);
+  text-align: left;
   transform: perspective(1000px) rotateY(-2deg) rotateX(1deg);
 }
 
@@ -580,6 +581,11 @@ body {
   .hero-benchmark-copy { grid-template-columns: 1fr; gap: 14px; margin-bottom: 24px; }
   .hero-benchmark-copy > span { margin-bottom: 0; }
   .VPHome .vp-doc { padding: 0 20px 70px; }
+  .VPHomeHero .main { text-align: left; }
+  .VPHomeHero .name,
+  .VPHomeHero .text,
+  .VPHomeHero .tagline { margin-right: 0 !important; margin-left: 0 !important; text-align: left; }
+  .VPHomeHero .actions { justify-content: flex-start !important; }
   .VPHomeHero .text { font-size: 43px !important; }
   .VPHomeHero .tagline { font-size: 15px !important; }
   .terminal-body { min-height: 280px; padding: 18px; }

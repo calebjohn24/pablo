@@ -24,7 +24,7 @@ import mobileChart from "../../.content/assets/resource-usage-mobile.svg";
         />
       </picture>
       <figcaption>
-        Exploratory single-seed pilot on macOS arm64. Models, provider routes,
+        Six-task local comparison on macOS arm64. Models, provider routes,
         tools, reasoning settings and collection times differ.
       </figcaption>
     </figure>

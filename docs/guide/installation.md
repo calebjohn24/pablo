@@ -24,17 +24,21 @@ The macOS deployment targets are set explicitly during compilation. Linux candid
 
 ## Install an exact version
 
-Download the small POSIX shell installer from the documentation site and inspect it before execution:
+Install the native Mac or Linux binary with one command:
 
 ```sh
-curl -fsSLo /tmp/pablo-install.sh https://runpablo.pages.dev/install.sh
-less /tmp/pablo-install.sh
-sh /tmp/pablo-install.sh \
-  --version v0.0.1 \
-  --prefix "$HOME/.local"
+curl -fsSL https://runpablo.pages.dev/install.sh | sh
 ```
 
-The version is required; there is no moving `latest` channel. The prefix must be absolute. The installer downloads the matching archive and `.sha256` file from `https://runpablo.pages.dev/releases/<version>/`, backed by a private Cloudflare R2 bucket through a read-only Pages Function.
+The published script pins `v0.0.1`, installs to `$HOME/.local/bin/pablo`, and never resolves a moving `latest` version. Add `$HOME/.local/bin` to your shell's `PATH` when needed. To review the installer before running it, open [the published script](https://runpablo.pages.dev/install.sh) or [its repository source](https://github.com/calebjohn24/pablo/blob/main/install.sh).
+
+Override either default while keeping a one-line command:
+
+```sh
+curl -fsSL https://runpablo.pages.dev/install.sh | sh -s -- --version v0.0.1 --prefix "$HOME/.local"
+```
+
+The prefix must be absolute. The installer downloads the matching archive and `.sha256` file from `https://runpablo.pages.dev/releases/<version>/`, backed by a private Cloudflare R2 bucket through a read-only Pages Function.
 
 Installation fails before changing the prefix when:
 
@@ -52,10 +56,7 @@ Pablo never invokes `sudo`, a package manager, Node, or Python. Add `$HOME/.loca
 Update to another exact version with the same inspected installer:
 
 ```sh
-sh /tmp/pablo-install.sh \
-  --version v0.0.2 \
-  --prefix "$HOME/.local" \
-  --update
+curl -fsSL https://runpablo.pages.dev/install.sh | sh -s -- --version v0.0.2 --update
 ```
 
 `--update` requires an existing receipt from this installer, checks the installed binary hash and target, and refuses the same version or a locally changed executable. The new archive still passes download, checksum and candidate-version validation before replacement. If receipt installation fails, the previous binary is restored.
@@ -65,7 +66,7 @@ Use `--replace` for the broader explicit policy that replaces any regular, non-s
 An installation receipt at `$PREFIX/share/pablo/install-receipt` records the version, target, binary path, and binary SHA-256. Removal checks that receipt and refuses to delete a binary whose bytes changed:
 
 ```sh
-sh /tmp/pablo-install.sh --prefix "$HOME/.local" --remove
+curl -fsSL https://runpablo.pages.dev/install.sh | sh -s -- --remove
 ```
 
 Removal leaves unrelated files and directories beneath the prefix in place.

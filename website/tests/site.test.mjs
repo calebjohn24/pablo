@@ -46,11 +46,13 @@ test("landing page carries product copy and no starter metadata", () => {
   assert.match(html, /resource-usage/);
   assert.match(html, /ACP application host/);
   assert.match(html, /Install and integrate/);
+  assert.doesNotMatch(html, /exploratory single-seed pilot/i);
   assert.doesNotMatch(html, /codex-preview|Starter Project|Your site is taking shape/);
 });
 
 test("getting started leads application hosts from installation to embedding", () => {
   const html = fs.readFileSync(path.join(dist, "getting-started.html"), "utf8");
+  const source = fs.readFileSync(path.join(guideRoot, "getting-started.md"), "utf8");
   assert.match(html, /Choose an integration boundary/);
   assert.match(html, /Install Pablo/);
   assert.match(html, /runpablo\.pages\.dev\/install\.sh/);
@@ -58,16 +60,39 @@ test("getting started leads application hosts from installation to embedding", (
   assert.match(html, /PABLO_BINARY/);
   assert.match(html, /pablo-core/);
   assert.match(html, /Define production authority/);
+  assert.match(source, /curl -fsSL https:\/\/runpablo\.pages\.dev\/install\.sh \| sh/);
   assert(html.indexOf("Install Pablo") < html.indexOf("Verify the installation offline"));
+});
+
+test("subagent guide documents bounded local and remote delegation", () => {
+  const html = fs.readFileSync(path.join(dist, "subagents.html"), "utf8");
+  const source = fs.readFileSync(path.join(guideRoot, "subagents.md"), "utf8");
+  assert.match(html, /Enable local subagents/);
+  assert.match(html, /Validated handoffs/);
+  assert.match(source, /options\.children/);
+  assert.match(source, /spawn_remote/);
+  assert.match(source, /two active children/i);
+  assert.match(source, /depth one/i);
+  assert.match(source, /A2A client/);
 });
 
 test("resource benchmark publishes measured values and its graphic", () => {
   const html = fs.readFileSync(path.join(dist, "benchmarks.html"), "utf8");
+  const desktopGraphic = fs.readFileSync(
+    path.join(guideRoot, "assets", "resource-usage.svg"),
+    "utf8",
+  );
+  const mobileGraphic = fs.readFileSync(
+    path.join(guideRoot, "assets", "resource-usage-mobile.svg"),
+    "utf8",
+  );
   assert.match(html, /Resource benchmark/);
   assert.match(html, /19\.11 MiB/);
   assert.match(html, /286\.09 MiB/);
   assert.match(html, /CPU utilization p50/);
   assert.match(html, /one seed and one attempt/i);
+  assert.doesNotMatch(desktopGraphic, /exploratory single-seed pilot/i);
+  assert.doesNotMatch(mobileGraphic, /exploratory single-seed pilot/i);
   assert(
     fs.readdirSync(path.join(dist, "assets")).some((file) =>
       /^resource-usage\..+\.svg$/.test(file),

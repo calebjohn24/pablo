@@ -3,7 +3,8 @@
 set -eu
 
 PROGRAM="pablo"
-VERSION=""
+DEFAULT_VERSION="v0.0.1"
+VERSION="$DEFAULT_VERSION"
 PREFIX=""
 ARCHIVE_PATH=""
 CHECKSUM_PATH=""
@@ -21,15 +22,16 @@ usage() {
 Install or remove a pinned Pablo release.
 
 Usage:
-  install.sh --version TAG --prefix ABSOLUTE_PATH [--replace]
-  install.sh --version TAG --prefix ABSOLUTE_PATH --update
-  install.sh --version TAG --prefix ABSOLUTE_PATH \
+  curl -fsSL https://runpablo.pages.dev/install.sh | sh
+  install.sh [--version TAG] [--prefix ABSOLUTE_PATH] [--replace]
+  install.sh [--version TAG] [--prefix ABSOLUTE_PATH] --update
+  install.sh [--version TAG] [--prefix ABSOLUTE_PATH] \
     --archive FILE --checksum FILE [--replace]
-  install.sh --prefix ABSOLUTE_PATH --remove
+  install.sh [--prefix ABSOLUTE_PATH] --remove
 
 Options:
-  --version TAG         Exact release tag, for example v0.0.1.
-  --prefix PATH         Absolute installation prefix. The binary goes in PATH/bin.
+  --version TAG         Exact release tag. Defaults to v0.0.1.
+  --prefix PATH         Absolute prefix. Defaults to $HOME/.local.
   --archive FILE        Install a local release archive instead of downloading it.
   --checksum FILE       SHA-256 file for --archive; required with --archive.
   --download-base URL   Alternate HTTPS release root containing TAG/archive files.
@@ -118,7 +120,10 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
-[ -n "$PREFIX" ] || die "--prefix is required"
+if [ -z "$PREFIX" ]; then
+  [ -n "${HOME:-}" ] || die "HOME is required when --prefix is omitted"
+  PREFIX="$HOME/.local"
+fi
 case "$PREFIX" in
   /*) ;;
   *) die "--prefix must be an absolute path" ;;

@@ -42,6 +42,15 @@ function run(args, options = {}) {
   });
 }
 
+function runPiped(args, options = {}) {
+  return spawnSync("sh", ["-s", "--", ...args], {
+    cwd: repository,
+    encoding: "utf8",
+    env: { ...process.env, ...options.env },
+    input: fs.readFileSync(installer),
+  });
+}
+
 function installArgs(item, prefix, extra = []) {
   return [
     "--version",
@@ -55,6 +64,32 @@ function installArgs(item, prefix, extra = []) {
     ...extra,
   ];
 }
+
+test("piped installer uses the pinned version and home prefix defaults", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "pablo-installer-pipe-"));
+  try {
+    const item = fixture(root, "0.0.1", "piped");
+    const home = path.join(root, "home");
+    fs.mkdirSync(home);
+    const installed = runPiped([
+      "--archive",
+      item.archive,
+      "--checksum",
+      item.checksum,
+    ], { env: { HOME: home, PATH: "/usr/bin:/bin" } });
+    assert.equal(installed.status, 0, installed.stderr);
+    const binary = path.join(home, ".local", "bin", "pablo");
+    assert.equal(execFileSync(binary, [], { encoding: "utf8" }).trim(), "piped");
+
+    const removed = runPiped(["--remove"], {
+      env: { HOME: home, PATH: "/usr/bin:/bin" },
+    });
+    assert.equal(removed.status, 0, removed.stderr);
+    assert.equal(fs.existsSync(binary), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test("installs, receipt-verifies updates, explicitly replaces, and removes", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "pablo-installer-happy-"));

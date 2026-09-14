@@ -106,6 +106,8 @@ Root/package/SKILL.md symlinks reject. Pablo does not automatically scan a home 
 
 ## Supervised local children
 
+See the dedicated [Subagents guide](./subagents.md) for enablement, lifecycle operations, capability narrowing, shared budgets, validated fan-in and application-host observability.
+
 Configured child tools can dispatch bounded sub-tasks through the same typed ACP handlers used by the process protocol. Root policy narrows every child’s model route, tools, Skills, MCP catalog, workspace and limits.
 
 Children are depth one in the current release line. A root can run two admitted children concurrently when configured capacity allows; excess work queues FIFO under the root deadline. Model/tool/token/cost/event/trace capacity is shared with the root rather than reset per child.
