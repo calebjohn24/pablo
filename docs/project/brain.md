@@ -189,12 +189,12 @@ C3.32 ships portable base/production/development sources, external credential re
 
 ### D060 — Negotiate C3 metadata independently of frozen C2
 C3.33 assigns pablo/v2 and task-v2 to C3 metadata and c3.33 native events/task results. Frozen C2 v1 remains available for unconfigured tasks; configured C3 requests require explicit migration before work. Versioned custom methods and project-controlled schema URIs prevent incompatible wire reuse. See [ACP contract](../acp.md) and [registry](../acp-extensions.json).
-
 ### D061 — Retained terminal history and changed-row painting
 C3.33a keeps bounded visible prompts, answers and tool lifecycle entries across independent tasks, with live-tail/history navigation and basic Markdown. Revision-based layout and changed-row synchronized painting eliminate idle output and full-screen redraw flicker. Input context remains fresh per task. See [TUI contract](contracts/c3-tui.md).
 
 ### D062 — Separate factual knowledge-work scores from system performance
 C3.33b adds seeded local-source office tasks and a serial native-client comparison using the requested GLM/Astra/Fable models. Score factual answers and source selection deterministically; leave prose quality to blinded review, preserve failures and unknown metrics, and report model/provider differences. Ori wraps Pi. Explicit credential flags privately reuse the user-authorized OpenRouter/OpenAI keys; headline results use facts and distinguish reported from estimated costs. See [benchmark method](../../scripts/knowledge-work/README.md).
-
 ### D063 — Explicit reasoning intent and measured latency changes
 C3.33c carries provider-independent effort or token budgets through calls, routes, compaction and repair; adapters validate their own protocol and declared model capabilities without clamping. Defaults stay provider-controlled unless quality, speed and cost gates justify a profile change. Content-free monotonic phases distinguish preparation, waiting and streaming, without calling combined provider wait pure network latency. See [reasoning contract](contracts/c3-reasoning-latency.md).
+### D064 — Improve filesystem search from a frozen baseline
+The user selected the [filesystem search proposal](proposals/004-filesystem-search.md) for implementation. Preserve default literal results and safety while sequencing an oracle/baseline, streaming scanner, explicit selection, richer retrieval and compatibility proof. C3.34 packaging is blocked by its standing hold while independent C3.34a–e proceed one checkpoint per implementation session. This prevents optimization claims without matched evidence and keeps new result modes behind explicit project-owned compatibility.

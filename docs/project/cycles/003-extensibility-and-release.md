@@ -524,6 +524,66 @@ Acceptance:
 - Test archive layout, checksum failure, installation to a temporary prefix, executable-name collision, replacement policy and removal. An installed binary runs without Node, Python, a source checkout or implicit package downloads.
 - Make offline CI and artifacts reproducible without provider secrets. Cross-compilation can prepare an archive but cannot pass a native execution gate; publishing uses the exact artifacts accepted in C3.35–C3.38.
 
+## C3.34a: Filesystem search baseline and oracle
+
+Prerequisites: C3.33c.
+
+Adopt S1 from the [filesystem search proposal](../proposals/004-filesystem-search.md#s1--freeze-behavior-and-establish-a-useful-baseline). Freeze current results and failure semantics before changing the scanner.
+
+Acceptance:
+
+- Add an independent reference oracle and deterministic adversarial fixtures for UTF-8/chunk boundaries, line endings, dense/sparse/no matches, invalid content after apparent matches, result truncation, long lines, deep/wide traversal, policy, symlinks and work/output limits.
+- Extend the offline measurement path with large-file and selective-tree corpora. Verify actual results before timing; record source/executable/harness identities, timing boundaries, CPU, peak RSS and known traversal work without publishing paths or content.
+- Capture an optimized native baseline without provider secrets or paid calls. Proposed targets remain proposals until this checkpoint freezes them against observed baseline evidence.
+
+## C3.34b: Streaming literal filesystem search
+
+Prerequisites: C3.34a.
+
+Implement S2 from the [filesystem search proposal](../proposals/004-filesystem-search.md#s2--stream-literal-search-without-changing-its-answers), preserving legacy results and failure precedence while bounding retained scanner memory.
+
+Acceptance:
+
+- Stream and validate candidate files with bounded line/query state, including chunk-spanning UTF-8 and matches, long lines, binary rollback, N+1 truncation and complete result accounting.
+- Pass the C3.34a oracle, cancellation, quota, policy and path-race fixtures unchanged.
+- Publish matched large-file CPU, memory and latency comparisons; retain only optimizations justified by evidence.
+
+## C3.34c: Filesystem search selection controls
+
+Prerequisites: C3.34b.
+
+Implement S3 from the [filesystem search proposal](../proposals/004-filesystem-search.md#s3--let-callers-avoid-irrelevant-files): bounded include/exclude globs, hidden-entry selection and explicit local ignore-file behavior.
+
+Acceptance:
+
+- Preserve old results when options are omitted; prove pattern semantics, precedence, subtree pruning and no-follow/policy behavior for ignore control files.
+- Generated-tree evidence retains every expected match while reducing content bytes read by at least 90%.
+- Update typed schemas, configuration/resource limits, provider catalogs and interface fixtures together.
+
+## C3.34d: Richer filesystem search retrieval
+
+Prerequisites: C3.34c.
+
+Implement the accepted S4 subset from the [filesystem search proposal](../proposals/004-filesystem-search.md#s4--improve-matching-and-evidence-returned-to-the-model), subject to its regex/case-folding go/no-go gate.
+
+Acceptance:
+
+- Add compatible file-only results and bounded surrounding context; add case-insensitive and regex matching only if chunked execution preserves prior long-line and cancellation guarantees.
+- Prove exact Unicode, regex, empty-match, line-ending, context/deduplication, output-limit and truncation behavior.
+- Frozen retrieval tasks return their required evidence; file-only mode reduces serialized result bytes by at least 80% on the dense fixture.
+
+## C3.34e: Filesystem search compatibility and measured acceptance
+
+Prerequisites: C3.34d.
+
+Complete S5 from the [filesystem search proposal](../proposals/004-filesystem-search.md#s5--prove-compatibility-and-measured-improvement).
+
+Acceptance:
+
+- Freeze project-owned native/ACP version mapping and prove CLI, ACP, TUI, provider, telemetry, policy and deployment compatibility without changing upstream protocol pins.
+- Run locked workspace verification and matched release measurements on native macOS arm64 and Linux x86_64, retaining failures and reporting binary/startup/unrelated-tool costs.
+- Evaluate the frozen memory, selective-workload latency and default-regression targets without turning provisional measurements into universal CI ceilings.
+
 ## C3.35: Native macOS arm64 acceptance
 
 Prerequisites: C3.34.

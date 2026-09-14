@@ -1,0 +1,87 @@
+{
+  "checkpoint": "C3.34a",
+  "timestamp": "2026-09-14T17:04:40.704Z",
+  "scope": "Frozen optimized native fs.search baseline through ACP with deterministic offline corpora; raw samples remain ignored.",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "kernel": "25.5.0",
+    "cpu": "Apple M4 Pro",
+    "logical_cpus": 14,
+    "memory_bytes": 25769803776
+  },
+  "source_sha256": "c1968e73e6a7a2c5f1cb1741371a6e056c639f91b03899332e4e9130d867ae6e",
+  "binary_sha256": "b549d9eee623313cd26bf71712b48d2feff87006bfdc1011afe0f0e48c820fe2",
+  "binary_bytes": 15108832,
+  "harness_sha256": "f00cca52e232b3abc1189ac588843cf4ff9698aa102462489ee6db12ec8ba173",
+  "method": {
+    "measured_samples": 30,
+    "warmups": 5,
+    "cache": "warm filesystem; no forced eviction",
+    "task": "one fresh ACP process and session per sample; two loopback HTTP/SSE model calls and one actual fs.search",
+    "timing": "client session/prompt request through negotiated terminal response; native tool start-to-finish timestamps; fixture creation and session/new excluded",
+    "cpu": "target process ps CPU delta around each prompt; platform ps resolution is 10 ms",
+    "memory": "separate validated probe sampled target-process RSS approximately every 20 ms; incremental peak subtracts pre-probe RSS",
+    "descriptors": "same probe using lsof on macOS",
+    "validation": "the loopback provider checked the exact expected search payload before every final response",
+    "privacy": "aggregate fixture sizes and counts only; no provider credentials, temporary paths or file content"
+  },
+  "measurements": {
+    "many_small_1m_late_match": {
+      "prompt_ms": { "n": 30, "min": 14.452167000000372, "p50": 15.57858299999998, "p95": 18.71333400000003, "max": 23.901292000000012 },
+      "tool_ms": { "n": 30, "min": 11.32, "p50": 12.216, "p95": 15.253, "max": 20.104 },
+      "process_cpu_ms": { "n": 30, "min": 10, "p50": 20, "p95": 20, "max": 20 },
+      "serialized_tool_result_bytes": 294,
+      "resources": { "idle_rss_kib": 8864, "peak_rss_kib": 15568, "incremental_peak_rss_kib": 6704, "descriptor_high_water": 20, "samples": 2 },
+      "traversal": { "entries": 512, "directories": 1, "regular_files": 512, "content_bytes": 1048583, "largest_file_bytes": 2055 }
+    },
+    "large_short_lines_256m_no_match": {
+      "prompt_ms": { "n": 30, "min": 489.55791699999827, "p50": 504.3477079999975, "p95": 617.239458, "max": 618.7792499999996 },
+      "tool_ms": { "n": 30, "min": 485.895, "p50": 500.768, "p95": 613.523, "max": 615.08 },
+      "process_cpu_ms": { "n": 30, "min": 490, "p50": 510, "p95": 540, "max": 600 },
+      "serialized_tool_result_bytes": 229,
+      "resources": { "idle_rss_kib": 8912, "peak_rss_kib": 279552, "incremental_peak_rss_kib": 270640, "descriptor_high_water": 22, "samples": 4 },
+      "traversal": { "entries": 1, "directories": 1, "regular_files": 1, "content_bytes": 268435456, "largest_file_bytes": 268435456 }
+    },
+    "long_line_32m_no_match": {
+      "prompt_ms": { "n": 30, "min": 12.176457999994454, "p50": 13.851666999998997, "p95": 35.681375000000116, "max": 42.013499999993655 },
+      "tool_ms": { "n": 30, "min": 8.791, "p50": 10.56, "p95": 31.807, "max": 38.366 },
+      "process_cpu_ms": { "n": 30, "min": 10, "p50": 20, "p95": 30, "max": 30 },
+      "serialized_tool_result_bytes": 221,
+      "resources": { "idle_rss_kib": 8864, "peak_rss_kib": 50048, "incremental_peak_rss_kib": 41184, "descriptor_high_water": 20, "samples": 2 },
+      "traversal": { "entries": 1, "directories": 1, "regular_files": 1, "content_bytes": 33554432, "largest_file_bytes": 33554432 }
+    },
+    "dense_100_matches_one_file": {
+      "prompt_ms": { "n": 30, "min": 3.089749999999185, "p50": 3.46112500000163, "p95": 3.6934999999939464, "max": 3.869582999999693 },
+      "tool_ms": { "n": 30, "min": 0.145, "p50": 0.168, "p95": 0.201, "max": 0.237 },
+      "process_cpu_ms": { "n": 30, "min": 10, "p50": 10, "p95": 10, "max": 10 },
+      "serialized_tool_result_bytes": 9004,
+      "resources": { "idle_rss_kib": 8896, "peak_rss_kib": 15792, "incremental_peak_rss_kib": 6896, "descriptor_high_water": 20, "samples": 2 },
+      "traversal": { "entries": 1, "directories": 1, "regular_files": 1, "content_bytes": 3390, "largest_file_bytes": 3390 }
+    },
+    "selective_tree_12m_late_match": {
+      "prompt_ms": { "n": 30, "min": 20.015874999997322, "p50": 21.373790999998164, "p95": 23.285083000002487, "max": 23.761292000002868 },
+      "tool_ms": { "n": 30, "min": 17.101, "p50": 18.126, "p95": 19.81, "max": 19.925 },
+      "process_cpu_ms": { "n": 30, "min": 20, "p50": 20, "p95": 30, "max": 30 },
+      "serialized_tool_result_bytes": 305,
+      "resources": { "idle_rss_kib": 8912, "peak_rss_kib": 15648, "incremental_peak_rss_kib": 6736, "descriptor_high_water": 20, "samples": 2 },
+      "traversal": { "entries": 102, "directories": 3, "regular_files": 100, "content_bytes": 13107200, "largest_file_bytes": 131072 },
+      "future_selected_content_bytes": 1310720
+    },
+    "deep_40_wide_256_late_match": {
+      "prompt_ms": { "n": 30, "min": 17.836167000001296, "p50": 18.7934580000001, "p95": 20.122709000002942, "max": 20.54491599999892 },
+      "tool_ms": { "n": 30, "min": 14.934, "p50": 15.533, "p95": 16.671, "max": 17.494 },
+      "process_cpu_ms": { "n": 30, "min": 20, "p50": 20, "p95": 20, "max": 20 },
+      "serialized_tool_result_bytes": 373,
+      "resources": { "idle_rss_kib": 8880, "peak_rss_kib": 15616, "incremental_peak_rss_kib": 6736, "descriptor_high_water": 20, "samples": 2 },
+      "traversal": { "entries": 297, "directories": 41, "regular_files": 257, "content_bytes": 2328, "largest_file_bytes": 24 }
+    }
+  },
+  "frozen_targets": {
+    "streaming_256m_incremental_peak_rss_kib_max": 54128,
+    "selective_tree_selected_content_bytes_max": 1310720,
+    "selective_tree_native_tool_p50_ms_max": 13.595,
+    "dense_file_mode_serialized_result_bytes_max": 1800,
+    "default_regression_review": "investigate when both relative regression exceeds 10% and absolute regression exceeds 0.5 ms for p50 or p95 on any frozen workload"
+  }
+}

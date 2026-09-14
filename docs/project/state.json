@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-13T00:28:01.455Z",
+  "updated_at": "2026-09-14T17:11:22Z",
   "active_checkpoint": null,
-  "next_checkpoint": "C3.34",
-  "next_action": "Pablo GLM-only benchmark rerun and updated six-harness graphic are complete. C3.34 release packaging remains held by the user; do not start it.",
-  "latest_log_entry": "LOG-0177",
+  "next_checkpoint": "C3.34b",
+  "next_action": "Implement C3.34b bounded streaming literal filesystem search against the frozen oracle and baseline. C3.34 packaging remains blocked by its standing hold; B01 is not accepted.",
+  "latest_log_entry": "LOG-0180",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -739,6 +739,65 @@
         "C3.33",
         "C3.33a",
         "C3.33c"
+      ],
+      "status": "blocked",
+      "blockers": [
+        "Packaging execution remains held by the user; unblock when the user explicitly resumes archive and installation work."
+      ],
+      "verification": []
+    },
+    {
+      "id": "C3.34a",
+      "title": "Filesystem search baseline and oracle",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c334a-filesystem-search-baseline-and-oracle",
+      "depends_on": [
+        "C3.33c"
+      ],
+      "status": "done",
+      "blockers": [],
+      "verification": [
+        "LOG-0179"
+      ]
+    },
+    {
+      "id": "C3.34b",
+      "title": "Streaming literal filesystem search",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c334b-streaming-literal-filesystem-search",
+      "depends_on": [
+        "C3.34a"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.34c",
+      "title": "Filesystem search selection controls",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c334c-filesystem-search-selection-controls",
+      "depends_on": [
+        "C3.34b"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.34d",
+      "title": "Richer filesystem search retrieval",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c334d-richer-filesystem-search-retrieval",
+      "depends_on": [
+        "C3.34c"
+      ],
+      "status": "pending",
+      "blockers": [],
+      "verification": []
+    },
+    {
+      "id": "C3.34e",
+      "title": "Filesystem search compatibility and measured acceptance",
+      "spec": "docs/project/cycles/003-extensibility-and-release.md#c334e-filesystem-search-compatibility-and-measured-acceptance",
+      "depends_on": [
+        "C3.34d"
       ],
       "status": "pending",
       "blockers": [],
