@@ -5,11 +5,16 @@ description: Host Pablo over stable ACP v1 with independent sessions, streaming 
 
 # ACP integration
 
-The Agent Client Protocol (ACP) is Pablo’s process boundary for editors and application hosts. The executable reads/writes newline-delimited protocol frames over stdio while all provider and tool work stays inside the same native runtime lifecycle.
+The Agent Client Protocol (ACP) is Pablo’s recommended process boundary for application hosts in any language. Your application owns the child process and reads/writes newline-delimited protocol frames over stdio while all provider and tool work stays inside the same native runtime lifecycle.
+
+::: tip Use ACP for most application integrations
+Choose ACP when you want to upgrade Pablo independently, isolate its process, consume streamed updates and cancellation, or host it outside a Rust process. [Install and verify Pablo](./getting-started.md#install-pablo) before wiring the client lifecycle below.
+:::
 
 ## Start the agent
 
 ```sh
+pablo --version
 pablo acp --stdio --no-shell
 ```
 
@@ -47,13 +52,12 @@ The repository includes a client built on the pinned official stable ACP SDK:
 ```sh
 nvm use
 npm ci
-cargo build --locked -p pablo --bin pablo
-node examples/acp-client.ts \
+PABLO_BINARY="$(command -v pablo)" node examples/acp-client.ts \
   "Read README.md and summarize it." \
   "$PWD"
 ```
 
-By default the example starts `target/debug/pablo`. It negotiates the Pablo extension, streams agent text/tool updates, prints the terminal outcome and sends cancellation when interrupted.
+`PABLO_BINARY` selects the installed executable. An explicit `binary` option takes precedence when importing `withPablo`; without either setting, the repository example starts `target/debug/pablo`. It negotiates the Pablo extension, streams agent text/tool updates, prints the terminal outcome and sends cancellation when interrupted.
 
 The module also exports helpers:
 

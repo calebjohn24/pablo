@@ -1,53 +1,83 @@
 ---
 title: Getting started
-description: Build Pablo, run its offline demo, configure a provider, and execute a first workspace task.
+description: Install Pablo, verify it locally, and connect the runtime to your application through ACP or the Rust core.
 ---
 
 # Getting started
 
-This guide builds Pablo from source, verifies the binary without a network request, and then runs one real task.
+Pablo is an agent runtime for applications. Your application owns users, business state, workspaces, sandboxing and approvals; Pablo owns the bounded model-and-tool lifecycle and returns streamed events plus one typed outcome.
 
-## Prerequisites
+This guide installs the runtime, verifies it without a model call, runs one workspace task and then connects it to your application.
 
-- macOS or Linux with a native C build toolchain
-- Rust `1.98.1` (pinned by `rust-toolchain.toml`)
-- Git
-- A Vercel AI Gateway or OpenRouter key for live tasks
+## Choose an integration boundary
 
-Node is not required to run the binary. It is used by the TypeScript ACP example, repository checks and the docs site.
+<div class="integration-choices">
+  <a class="integration-choice" href="#embed-pablo-as-a-child-process">
+    <span class="integration-choice-label">Most application hosts</span>
+    <strong>ACP child process</strong>
+    <span>Use from JavaScript, TypeScript, Python, Go, Java or another language. Keep Pablo isolated and independently upgradeable while receiving streamed updates, cancellation and typed outcomes over stdio.</span>
+  </a>
+  <a class="integration-choice" href="#embed-pablo-in-a-rust-process">
+    <span class="integration-choice-label">Rust applications</span>
+    <strong><code>pablo-core</code></strong>
+    <span>Construct the runtime in process and inject the exact provider, tools, event sink, telemetry and cancellation behavior your host needs.</span>
+  </a>
+  <a class="integration-choice" href="#run-a-first-workspace-task">
+    <span class="integration-choice-label">Prototypes and jobs</span>
+    <strong><code>pablo run --json</code></strong>
+    <span>Exercise the same runtime lifecycle through one machine-readable command before adopting a persistent integration.</span>
+  </a>
+</div>
 
-## Build from source
+Most application teams should begin with ACP. It gives the host a stable process boundary and lets the Pablo executable move independently from the application. Choose the Rust core when in-process integration is a deliberate requirement.
+
+## Install Pablo
+
+Pablo targets macOS and Linux on arm64 and x86_64. The installer selects the native archive, verifies its SHA-256 checksum and reported version, and writes the executable plus an ownership receipt beneath the prefix you choose. It does not use `sudo`, a package manager, Node or Python.
+
+::: warning v0.0.1 prerelease
+The installer is live, but the `v0.0.1` archives remain private until all four native acceptance gates pass. Use the source build below today. The versioned installer command becomes the recommended path when [release status](./release-status.md) lists `v0.0.1` as published.
+:::
+
+### Versioned installer
+
+Download and inspect the script, then install an exact version:
+
+```sh
+curl -fsSLo /tmp/pablo-install.sh https://runpablo.pages.dev/install.sh
+less /tmp/pablo-install.sh
+sh /tmp/pablo-install.sh \
+  --version v0.0.1 \
+  --prefix "$HOME/.local"
+
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+There is no moving `latest` channel. A later exact version can replace an unchanged receipt-backed installation with `--update`. See [Installation and release files](./installation.md) for supported platforms, manual verification, archive contents, upgrades and removal.
+
+### Build from source today
+
+A source build requires Git, a native C build toolchain and Rust `1.98.1`, pinned by `rust-toolchain.toml`:
 
 ```sh
 git clone https://github.com/calebjohn24/pablo.git
 cd pablo
 cargo build --release --locked -p pablo --bin pablo
+
+mkdir -p "$HOME/.local/bin"
+install -m 755 target/release/pablo "$HOME/.local/bin/pablo"
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
-The executable is `target/release/pablo`. `--locked` ensures Cargo uses the checked-in dependency graph. Pablo is prerelease software and does not yet publish installation archives, so keep the executable with the checkout or copy it into a location you manage.
+`--locked` uses the repository’s checked-in dependency graph. Node is only needed for the TypeScript ACP reference client and repository tooling.
 
-## Installer preview
+This source-built copy has no installer receipt. Remove it or pass `--replace` deliberately when you later switch the same prefix to a versioned archive.
 
-The repository includes a checksum-verifying installer for the upcoming versioned archives. It is published for review at <https://runpablo.pages.dev/install.sh>, but it cannot install until a matching accepted archive set exists on the site’s Cloudflare R2-backed release route.
-
-Once release assets are available, download and inspect the script, then choose an exact version and absolute prefix:
+## Verify the installation offline
 
 ```sh
-curl -fsSLo /tmp/pablo-install.sh https://runpablo.pages.dev/install.sh
-sh /tmp/pablo-install.sh \
-  --version v0.0.1 \
-  --prefix "$HOME/.local"
-```
-
-The installer refuses checksum failures and existing commands. Pass `--update` with another exact version to upgrade an unchanged receipt-backed installation. `--replace` is the broader explicit replacement policy for a regular `pablo` file at the selected prefix. `--remove` removes an unchanged installation after checking its receipt and leaves unrelated prefix files in place.
-
-See [Installation and release files](./installation.md) for supported targets, minimum OS and libc versions, archive manifests, manual verification, and signing limits.
-
-## Verify offline
-
-```sh
-./target/release/pablo --version
-./target/release/pablo demo
+pablo --version
+pablo demo
 ```
 
 The demo uses an in-memory scripted provider and prints:
@@ -56,11 +86,9 @@ The demo uses an in-memory scripted provider and prints:
 Hello from pablo.
 ```
 
-It does not read provider credentials or make a network request.
+It does not read provider credentials or make a network request. Run `pablo doctor` for a credential and configuration check that also stays offline unless you explicitly add a probe.
 
-## Add a provider credential
-
-Pablo can read legacy CLI credentials from the process environment or a `.env` file in the directory where it is invoked. Environment variables take precedence.
+## Configure a model provider
 
 For Vercel AI Gateway:
 
@@ -74,86 +102,107 @@ export AI_GATEWAY_API_KEY="your-key"
 export OPENROUTER_API_KEY="your-key"
 ```
 
-You can instead create an ignored `.env`:
+For local evaluation, Pablo can instead read an ignored `.env` in the invocation directory:
 
 ```dotenv
 AI_GATEWAY_API_KEY=your-key
 # OPENROUTER_API_KEY=your-key
 ```
 
-Pablo parses this file as data. It does not source shell code or export values into the process. `--env-file PATH` selects another file. Never commit live credentials.
+Pablo parses the file as data and never sources it as shell code. In an application host, pass only the selected credential to the Pablo child process or inject it into your provider object. Keep credentials out of tasks, deployment files, ACP frames and traces.
 
-Configured deployments use explicit credential references and do not automatically inherit this `.env` behavior.
+Configured deployments use explicit credential references instead of automatically reading `.env`. See [Models and providers](./providers.md) for model selection, reasoning controls, Open Responses and fallback.
 
-## Run a first task
+## Run a first workspace task
 
-The default provider is Vercel and the default model is `zai/glm-5.3-flash`:
+Give Pablo a workspace owned by your application and remove shell authority for this first run:
 
 ```sh
-./target/release/pablo run \
-  "Read README.md and explain the project in five bullets." \
+mkdir -p /tmp/pablo-quickstart
+printf '%s\n' 'Quarterly review is due Friday.' > /tmp/pablo-quickstart/brief.txt
+
+pablo run \
+  "Read brief.txt and return the deadline in one sentence." \
+  --workspace /tmp/pablo-quickstart \
   --no-shell
 ```
 
-Filesystem read/list/search tools remain available. `--no-shell` prevents shell execution for this task.
+The default provider is Vercel and the default model is `zai/glm-5.3-flash`. Filesystem read, list and search remain available; `--no-shell` prevents shell execution. Add `--provider openrouter` to use OpenRouter’s default `z-ai/glm-5.3-flash` model.
 
-To use OpenRouter:
-
-```sh
-./target/release/pablo run \
-  "Read README.md and explain the project in five bullets." \
-  --provider openrouter \
-  --no-shell
-```
-
-OpenRouter defaults to `z-ai/glm-5.3-flash`. `--model ID` chooses a different compatible model.
-
-## Work in another directory
+For a machine-readable result:
 
 ```sh
-./target/release/pablo run \
-  "List the top-level files and explain how this project is organized." \
-  --workspace /absolute/path/to/project \
-  --no-shell
-```
-
-The workspace must already exist. It controls the built-in filesystem tools and becomes the shell working directory. It does not change where an implicit `.env` is loaded.
-
-## Choose tool authority deliberately
-
-| Goal | Options |
-| --- | --- |
-| Read files without shell | `--no-shell` |
-| Text-only model call | `--no-shell --no-filesystem` |
-| Revision-checked file edits | `--allow-write --no-shell` |
-| Shell and read-only filesystem | defaults; omit the flags above |
-| Static host rules | `--policy /path/to/policy.json` |
-
-Shell access is powerful: a permitted command runs as your user and can write independently of `--allow-write`. Use process/container isolation when a task must not reach the rest of the host.
-
-## Bound a task
-
-```sh
-./target/release/pablo run "Explain the module boundaries." \
+pablo run \
+  "Read brief.txt and return the deadline in one sentence." \
+  --workspace /tmp/pablo-quickstart \
   --no-shell \
-  --timeout 120 \
-  --max-model-calls 3 \
-  --max-tool-calls 5
+  --json > result.json
 ```
 
-Omitted model/tool call limits mean unlimited counts; zero disables the corresponding calls. Payload, context, event and deadline limits remain active either way.
+Standard output contains one task envelope plus a newline. The envelope carries the typed outcome, identifiers and exact decimal-string accounting. The answer remains a string; add `--output-schema` when your application requires locally validated JSON.
 
-## Machine-readable output
+## Connect your application
+
+### Embed Pablo as a child process
+
+Start one Pablo process for each provider, tool and telemetry configuration that your application wants to keep warm:
 
 ```sh
-./target/release/pablo run "Summarize README.md." --json --no-shell > result.json
+pablo acp --stdio --no-shell
 ```
 
-Standard output contains exactly one task envelope plus a newline. Progress is kept off stdout. The model’s answer remains a string inside the envelope; use `--output-schema` when you need locally validated JSON.
+The process speaks stable Agent Client Protocol v1 over newline-delimited stdio. A host should:
+
+1. Spawn `pablo acp --stdio` with the selected credentials and process-level options.
+2. Negotiate Pablo’s current extension metadata during ACP initialization.
+3. Create an independent session with an absolute application-owned workspace.
+4. Continuously consume streamed agent and tool updates.
+5. Send one task prompt and parse the terminal Pablo task object, not only the generic ACP stop reason.
+6. On user cancellation, send `session/cancel` and keep reading until Pablo settles cleanup or closes the connection.
+7. Restart the process when provider, tool, policy or exporter configuration changes.
+
+The repository includes a complete TypeScript host using the pinned official ACP SDK. Run it against the installed executable:
+
+```sh
+git clone https://github.com/calebjohn24/pablo.git
+cd pablo
+nvm use
+npm ci
+
+PABLO_BINARY="$(command -v pablo)" node examples/acp-client.ts \
+  "Read brief.txt and return the deadline." \
+  /tmp/pablo-quickstart \
+  --no-shell
+```
+
+The example shows initialization, session creation, update streaming, cancellation, outcome validation and exact accounting. Use [ACP integration](./acp.md) to adapt that lifecycle to your application.
+
+### Embed Pablo in a Rust process
+
+Use `pablo-core` when your Rust host needs to construct the runtime directly. The host injects a `Provider`, `EventSink`, `ToolRegistry`, cancellation token and OpenTelemetry tracer, then awaits the returned typed outcome.
+
+The crate is not published to crates.io during the prerelease. Pin this repository to an exact reviewed revision in your application and start with the offline `ScriptedProvider` example in [Embed in Rust](./embedding.md). The core discovers no credentials and grants no tools unless your host supplies them.
+
+## Define production authority
+
+Before connecting user work, decide these host-owned boundaries:
+
+| Decision | Pablo integration point |
+| --- | --- |
+| Which files a task may see | Bind an absolute workspace and configure filesystem roots. |
+| Whether commands may execute | Omit shell capability or apply explicit launcher and tool policy. |
+| Which external tools are trusted | Configure exact MCP servers, transports, schemas and credential bindings. |
+| Whether work may be delegated | Configure supervised local children or admitted remote A2A peers. |
+| How long and how much work may run | Set deadlines, output bounds and optional model/tool call limits. |
+| How results enter product state | Validate the terminal outcome and optional output schema before committing changes. |
+| How operators observe tasks | Consume native events and configure metadata-only OpenTelemetry export. |
+
+The workspace is a filesystem boundary inside Pablo’s built-in tools, not an operating-system sandbox. A permitted shell command has the child process account’s ordinary authority. Run Pablo in your own container or process sandbox when the task must be isolated from the rest of the host.
 
 ## Next steps
 
-- Learn all commands in [CLI and TUI](./cli.md).
-- Build a repeatable host in [Deployments](./configuration.md).
-- Connect an application through [ACP](./acp.md).
-- Call the runtime directly with [Rust embedding](./embedding.md).
+- Follow the [ACP host guide](./acp.md) for language-neutral process integration.
+- Follow [Rust embedding](./embedding.md) for direct runtime construction.
+- Turn flags into a reviewable [deployment](./configuration.md).
+- Configure [tools and policy](./tools-and-policy.md), then add [MCP, Agent Skills and A2A](./extensibility.md).
+- Validate [structured output](./structured-output.md) and wire [observability](./observability.md) before writing results into application state.

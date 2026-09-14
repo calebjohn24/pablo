@@ -44,7 +44,21 @@ test("landing page carries product copy and no starter metadata", () => {
   assert.match(html, /non-coding knowledge work/i);
   assert.match(html, /Local runtime overhead, measured/);
   assert.match(html, /resource-usage/);
+  assert.match(html, /ACP application host/);
+  assert.match(html, /Install and integrate/);
   assert.doesNotMatch(html, /codex-preview|Starter Project|Your site is taking shape/);
+});
+
+test("getting started leads application hosts from installation to embedding", () => {
+  const html = fs.readFileSync(path.join(dist, "getting-started.html"), "utf8");
+  assert.match(html, /Choose an integration boundary/);
+  assert.match(html, /Install Pablo/);
+  assert.match(html, /runpablo\.pages\.dev\/install\.sh/);
+  assert.match(html, /pablo acp --stdio/);
+  assert.match(html, /PABLO_BINARY/);
+  assert.match(html, /pablo-core/);
+  assert.match(html, /Define production authority/);
+  assert(html.indexOf("Install Pablo") < html.indexOf("Verify the installation offline"));
 });
 
 test("resource benchmark publishes measured values and its graphic", () => {

@@ -9,6 +9,18 @@ Pablo is a small headless Rust runtime for applications that use agents for non-
 
 That split is the central design choice. A desktop editor can host Pablo through ACP, a terminal can run one task directly, and a Rust service can call the core API. All three use the same outcome, accounting, cancellation and telemetry model.
 
+## Start from your application
+
+Pablo is infrastructure inside your product rather than a complete end-user agent application. Choose the boundary that matches how your application is built:
+
+| Need | Integration |
+| --- | --- |
+| A language-neutral, independently upgradeable child process | [ACP over stdio](./acp.md) |
+| Direct in-process control from Rust | [`pablo-core`](./embedding.md) |
+| A one-task command for evaluation, jobs or scripts | [CLI JSON output](./cli.md#json-mode) |
+
+For most applications, install the native executable and begin with ACP. Your host creates the workspace, passes the selected credentials, consumes updates, handles approvals and commits validated results into product state. The [getting-started guide](./getting-started.md) walks through that path.
+
 ## Ownership boundary
 
 | Pablo owns | Your host owns |

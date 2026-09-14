@@ -47,7 +47,7 @@ export default defineConfig({
     nav: [
       { text: "Docs", link: "/getting-started" },
       { text: "Configuration", link: "/configuration" },
-      { text: "Integrate", link: "/acp" },
+      { text: "Integrate", link: "/getting-started#choose-an-integration-boundary" },
       { text: "v0.0.1", link: "/release-status" },
     ],
     sidebar: [
@@ -73,6 +73,7 @@ export default defineConfig({
       {
         text: "Integrate",
         items: [
+          { text: "Choose an interface", link: "/getting-started#choose-an-integration-boundary" },
           { text: "ACP", link: "/acp" },
           { text: "Embed in Rust", link: "/embedding" },
           { text: "MCP, Skills and agents", link: "/extensibility" },
