@@ -92,7 +92,7 @@ Cross-compilation can prepare an artifact but cannot satisfy a native execution 
 
 Several independent versions appear in integrations:
 
-- Cargo/executable version: currently `0.1.0-dev.1`
+- Cargo/executable version: `0.0.1` for the first release candidate
 - native event/task contract revision: currently `c3.33`
 - deployment document schema: `1`
 - deployment contract revision: advances with implemented option semantics

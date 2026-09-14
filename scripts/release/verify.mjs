@@ -79,6 +79,7 @@ export function verifyRelease({ version, target, archive, checksum, run = false 
     const files = inspectTree(root);
     const required = [
       'bin/pablo',
+      'LICENSE',
       'NOTICE',
       'THIRD_PARTY_NOTICES.json',
       'manifest/source.json',

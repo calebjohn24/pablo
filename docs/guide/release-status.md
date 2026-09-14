@@ -5,7 +5,7 @@ description: What is implemented, what remains before release, and which claims 
 
 # Release status
 
-Pablo is currently prerelease development software at `0.1.0-dev.1`. The source tree contains a broad working runtime plus deterministic packaging and installation tooling, but the four exact artifacts have not passed the full native release matrix or been published. Build from source for evaluation.
+Pablo `v0.0.1` is being prepared as the first release. The source tree contains a broad working runtime plus deterministic packaging and installation tooling, but the four exact artifacts have not passed the full native release matrix or been published. Build from source for evaluation.
 
 ## Implemented today
 

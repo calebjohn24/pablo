@@ -7,14 +7,15 @@ on:
       - "scripts/release/**"
       - "scripts/install.test.mjs"
       - "install.sh"
+      - "LICENSE"
       - "NOTICE"
       - "package.json"
   workflow_dispatch:
     inputs:
       version:
-        description: Exact prerelease tag to package
+        description: Exact release tag to package
         required: true
-        default: v0.1.0-dev.1
+        default: v0.0.1
         type: string
 
 permissions:

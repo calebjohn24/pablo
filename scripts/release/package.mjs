@@ -278,6 +278,7 @@ export async function packageRelease(options) {
   ]));
   const files = thirdPartyFiles(metadata);
   files.set('bin/pablo', { bytes: binary, mode: 0o755 });
+  files.set('LICENSE', readFileSync(join(REPOSITORY_ROOT, 'LICENSE')));
   files.set('NOTICE', readFileSync(join(REPOSITORY_ROOT, 'NOTICE')));
 
   const cargoLock = readFileSync(join(REPOSITORY_ROOT, 'Cargo.lock'));

@@ -115,15 +115,15 @@ test("release downloads are restricted to immutable versioned R2 objects", async
       },
     },
   });
-  const filename = "pablo-v0.1.0-dev.1-aarch64-apple-darwin.tar.gz";
-  const response = await request(`v0.1.0-dev.1/${filename}`);
+  const filename = "pablo-v0.0.1-aarch64-apple-darwin.tar.gz";
+  const response = await request(`v0.0.1/${filename}`);
   assert.equal(await response.text(), "archive bytes");
-  assert.deepEqual(calls, [`v0.1.0-dev.1/${filename}`]);
+  assert.deepEqual(calls, [`v0.0.1/${filename}`]);
   assert.equal(response.headers.get("cache-control"), "public, max-age=31536000, immutable");
   assert.equal(response.headers.get("content-type"), "application/gzip");
-  assert.equal((await request(`v0.1.0-dev.2/${filename}`)).status, 404);
+  assert.equal((await request(`v0.0.2/${filename}`)).status, 404);
   assert.equal((await request("../secret")).status, 404);
-  assert.equal((await request(`v0.1.0-dev.1/${filename}`, "POST")).status, 405);
-  const head = await request(`v0.1.0-dev.1/${filename}`, "HEAD");
+  assert.equal((await request(`v0.0.1/${filename}`, "POST")).status, 405);
+  const head = await request(`v0.0.1/${filename}`, "HEAD");
   assert.equal(await head.text(), "");
 });
