@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-14T19:19:09Z",
-  "active_checkpoint": "C3.34",
-  "next_checkpoint": null,
-  "next_action": "Merge the MIT license and v0.0.1 identity into main, dispatch Release candidates for v0.0.1 on that commit, verify its four native-built archives and common index, and confirm the production R2-backed Pages route before completing C3.34.",
-  "latest_log_entry": "LOG-0188",
+  "updated_at": "2026-09-14T19:42:51Z",
+  "active_checkpoint": null,
+  "next_checkpoint": "C3.35",
+  "next_action": "Begin C3.35 native macOS arm64 acceptance against the exact v0.0.1 aarch64-apple-darwin archive from Actions run 34886849213; preserve its recorded archive and binary hashes.",
+  "latest_log_entry": "LOG-0190",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -740,9 +740,11 @@
         "C3.33a",
         "C3.33c"
       ],
-      "status": "in_progress",
+      "status": "done",
       "blockers": [],
-      "verification": []
+      "verification": [
+        "LOG-0190"
+      ]
     },
     {
       "id": "C3.34a",
