@@ -56,7 +56,7 @@ function installArgs(item, prefix, extra = []) {
   ];
 }
 
-test("installs, explicitly replaces, and receipt-verifies removal", () => {
+test("installs, receipt-verifies updates, explicitly replaces, and removes", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "pablo-installer-happy-"));
   try {
     const prefix = path.join(root, "prefix");
@@ -76,9 +76,18 @@ test("installs, explicitly replaces, and receipt-verifies removal", () => {
     assert.equal(execFileSync(binary, [], { encoding: "utf8" }).trim(), "first");
 
     const second = fixture(root, "0.1.0-dev.2", "second");
-    const replaced = run(installArgs(second, prefix, ["--replace"]));
-    assert.equal(replaced.status, 0, replaced.stderr);
+    const updated = run(installArgs(second, prefix, ["--update"]));
+    assert.equal(updated.status, 0, updated.stderr);
     assert.equal(execFileSync(binary, [], { encoding: "utf8" }).trim(), "second");
+
+    const sameVersion = run(installArgs(second, prefix, ["--update"]));
+    assert.notEqual(sameVersion.status, 0);
+    assert.match(sameVersion.stderr, /already installed/);
+
+    const third = fixture(root, "0.1.0-dev.3", "third");
+    const replaced = run(installArgs(third, prefix, ["--replace"]));
+    assert.equal(replaced.status, 0, replaced.stderr);
+    assert.equal(execFileSync(binary, [], { encoding: "utf8" }).trim(), "third");
 
     const removed = run(["--prefix", prefix, "--remove"]);
     assert.equal(removed.status, 0, removed.stderr);
@@ -135,6 +144,11 @@ test("refuses removal when the installed binary changed", () => {
     assert.equal(installed.status, 0, installed.stderr);
     const binary = path.join(prefix, "bin", "pablo");
     fs.appendFileSync(binary, "# changed\n");
+    const next = fixture(root, "0.1.0-dev.2");
+    const updated = run(installArgs(next, prefix, ["--update"]));
+    assert.notEqual(updated.status, 0);
+    assert.match(updated.stderr, /changed; refusing to update/);
+    assert.equal(fs.existsSync(binary), true);
     const removed = run(["--prefix", prefix, "--remove"]);
     assert.notEqual(removed.status, 0);
     assert.match(removed.stderr, /changed; refusing to remove/);

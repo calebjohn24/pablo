@@ -47,16 +47,20 @@ Installation fails before changing the prefix when:
 
 Pablo never invokes `sudo`, a package manager, Node, or Python. Add `$HOME/.local/bin` to `PATH` yourself when that is your chosen prefix.
 
-## Replacement and removal
+## Update, replacement and removal
 
-Replacement requires an explicit flag and only applies to a regular, non-symlink file at the selected path:
+Update to another exact version with the same inspected installer:
 
 ```sh
 sh /tmp/pablo-install.sh \
-  --version v0.1.0-dev.1 \
+  --version v0.1.0-dev.2 \
   --prefix "$HOME/.local" \
-  --replace
+  --update
 ```
+
+`--update` requires an existing receipt from this installer, checks the installed binary hash and target, and refuses the same version or a locally changed executable. The new archive still passes download, checksum and candidate-version validation before replacement. If receipt installation fails, the previous binary is restored.
+
+Use `--replace` for the broader explicit policy that replaces any regular, non-symlink `pablo` file at the selected path. It does not require an earlier receipt, so inspect the target yourself before choosing it.
 
 An installation receipt at `$PREFIX/share/pablo/install-receipt` records the version, target, binary path, and binary SHA-256. Removal checks that receipt and refuses to delete a binary whose bytes changed:
 

@@ -9,6 +9,7 @@ ARCHIVE_PATH=""
 CHECKSUM_PATH=""
 DOWNLOAD_BASE="https://runpablo.pages.dev/releases"
 REPLACE=0
+UPDATE=0
 REMOVE=0
 WORKDIR=""
 STAGED_BINARY=""
@@ -21,6 +22,7 @@ Install or remove a pinned Pablo release.
 
 Usage:
   install.sh --version TAG --prefix ABSOLUTE_PATH [--replace]
+  install.sh --version TAG --prefix ABSOLUTE_PATH --update
   install.sh --version TAG --prefix ABSOLUTE_PATH \
     --archive FILE --checksum FILE [--replace]
   install.sh --prefix ABSOLUTE_PATH --remove
@@ -32,6 +34,7 @@ Options:
   --checksum FILE       SHA-256 file for --archive; required with --archive.
   --download-base URL   Alternate HTTPS release root containing TAG/archive files.
   --replace             Explicitly replace PATH/bin/pablo if it is a regular file.
+  --update              Upgrade an unchanged, receipt-backed Pablo installation.
   --remove              Remove an unchanged, receipt-backed installation.
   -h, --help            Show this help.
 
@@ -97,6 +100,10 @@ while [ "$#" -gt 0 ]; do
       REPLACE=1
       shift
       ;;
+    --update)
+      UPDATE=1
+      shift
+      ;;
     --remove)
       REMOVE=1
       shift
@@ -147,25 +154,36 @@ receipt_value() {
   sed -n "s/^$1=//p" "$RECEIPT_PATH"
 }
 
-if [ "$REMOVE" -eq 1 ]; then
-  [ "$REPLACE" -eq 0 ] || die "--remove cannot be combined with --replace"
-  [ -z "$ARCHIVE_PATH" ] || die "--remove cannot be combined with --archive"
-  [ -z "$CHECKSUM_PATH" ] || die "--remove cannot be combined with --checksum"
+verify_owned_install() {
+  ACTION=$1
   [ ! -L "$RECEIPT_PATH" ] && [ -f "$RECEIPT_PATH" ] || die "no valid install receipt at $RECEIPT_PATH"
   [ ! -L "$TARGET_PATH" ] && [ -f "$TARGET_PATH" ] || die "no regular installed binary at $TARGET_PATH"
 
   RECEIPT_FORMAT=$(receipt_value format)
+  RECEIPT_VERSION=$(receipt_value version)
+  RECEIPT_TARGET=$(receipt_value target)
   RECEIPT_BINARY=$(receipt_value binary)
   RECEIPT_HASH=$(receipt_value sha256 | tr 'A-F' 'a-f')
   [ "$RECEIPT_FORMAT" = "1" ] || die "unsupported install receipt at $RECEIPT_PATH"
   [ "$RECEIPT_BINARY" = "bin/pablo" ] || die "install receipt does not own $TARGET_PATH"
+  [ -n "$RECEIPT_VERSION" ] && [ -n "$RECEIPT_TARGET" ] || die "incomplete install receipt at $RECEIPT_PATH"
   [ "${#RECEIPT_HASH}" -eq 64 ] || die "invalid binary hash in install receipt"
   case "$RECEIPT_HASH" in
     *[!0-9a-f]*) die "invalid binary hash in install receipt" ;;
   esac
 
   ACTUAL_HASH=$(sha256_file "$TARGET_PATH" | tr 'A-F' 'a-f')
-  [ "$ACTUAL_HASH" = "$RECEIPT_HASH" ] || die "installed binary changed; refusing to remove it"
+  [ "$ACTUAL_HASH" = "$RECEIPT_HASH" ] || die "installed binary changed; refusing to $ACTION it"
+}
+
+[ "$REPLACE" -eq 0 ] || [ "$UPDATE" -eq 0 ] || die "--replace and --update cannot be combined"
+
+if [ "$REMOVE" -eq 1 ]; then
+  [ "$REPLACE" -eq 0 ] || die "--remove cannot be combined with --replace"
+  [ "$UPDATE" -eq 0 ] || die "--remove cannot be combined with --update"
+  [ -z "$ARCHIVE_PATH" ] || die "--remove cannot be combined with --archive"
+  [ -z "$CHECKSUM_PATH" ] || die "--remove cannot be combined with --checksum"
+  verify_owned_install remove
 
   rm -f "$TARGET_PATH"
   rm -f "$RECEIPT_PATH"
@@ -208,6 +226,13 @@ ARCHIVE_ROOT="pablo-${VERSION}-${TARGET}"
 VISIBLE_COMMAND=$(command -v "$PROGRAM" 2>/dev/null || :)
 if [ -n "$VISIBLE_COMMAND" ] && [ "$VISIBLE_COMMAND" != "$TARGET_PATH" ]; then
   die "an existing pablo command resolves outside the selected prefix: $VISIBLE_COMMAND"
+fi
+
+if [ "$UPDATE" -eq 1 ]; then
+  verify_owned_install update
+  [ "$RECEIPT_TARGET" = "$TARGET" ] || die "installed target $RECEIPT_TARGET does not match this host ($TARGET)"
+  [ "$RECEIPT_VERSION" != "$VERSION" ] || die "pablo $VERSION_NUMBER is already installed at $TARGET_PATH"
+  REPLACE=1
 fi
 
 TARGET_EXISTS=0

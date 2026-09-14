@@ -63,7 +63,16 @@ sh /tmp/pablo-install.sh \
   --prefix "$HOME/.local"
 ```
 
-The installer detects macOS/Linux and arm64/x86_64, downloads the matching archive and checksum from the Cloudflare R2-backed release route, verifies SHA-256 before extraction, and checks the binary’s reported version before installation. It never invokes `sudo`, package managers, Node or Python. An existing `pablo` command or `$PREFIX/bin/pablo` causes a failure; `--replace` opts into replacing the selected regular file. Remove an unchanged receipt-backed installation with:
+The installer detects macOS/Linux and arm64/x86_64, downloads the matching archive and checksum from the Cloudflare R2-backed release route, verifies SHA-256 before extraction, and checks the binary’s reported version before installation. It never invokes `sudo`, package managers, Node or Python. Upgrade an unchanged receipt-backed installation to another exact version with `--update`; `--replace` explicitly overwrites another regular file at the selected path. Remove an unchanged receipt-backed installation with:
+
+```sh
+sh /tmp/pablo-install.sh \
+  --version v0.1.0-dev.2 \
+  --prefix "$HOME/.local" \
+  --update
+```
+
+Remove it with:
 
 ```sh
 sh /tmp/pablo-install.sh --prefix "$HOME/.local" --remove
