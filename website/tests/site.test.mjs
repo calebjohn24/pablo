@@ -82,6 +82,12 @@ test("Cloudflare Pages assets and headers are emitted", () => {
   assert(fs.existsSync(path.join(dist, "examples/vercel.toml")));
   assert(fs.existsSync(path.join(dist, "examples/open-responses.toml")));
   assert(fs.existsSync(path.join(dist, "examples/review.schema.json")));
+  assert(fs.existsSync(path.join(dist, "install.sh")));
+  assert.equal(
+    fs.readFileSync(path.join(dist, "install.sh"), "utf8"),
+    fs.readFileSync(path.resolve("../install.sh"), "utf8"),
+    "published installer differs from the repository source",
+  );
   assert.doesNotThrow(() =>
     JSON.parse(fs.readFileSync(path.join(guideRoot, "examples/review.schema.json"), "utf8")),
   );

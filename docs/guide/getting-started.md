@@ -26,6 +26,21 @@ cargo build --release --locked -p pablo --bin pablo
 
 The executable is `target/release/pablo`. `--locked` ensures Cargo uses the checked-in dependency graph. Pablo is prerelease software and does not yet publish installation archives, so keep the executable with the checkout or copy it into a location you manage.
 
+## Installer preview
+
+The repository includes a checksum-verifying installer for the upcoming versioned archives. It is published for review at <https://runpablo.pages.dev/install.sh>, but it cannot install until a matching release tag and archive set exist.
+
+Once release assets are available, download and inspect the script, then choose an exact version and absolute prefix:
+
+```sh
+curl -fsSLo /tmp/pablo-install.sh https://runpablo.pages.dev/install.sh
+sh /tmp/pablo-install.sh \
+  --version v0.1.0-dev.1 \
+  --prefix "$HOME/.local"
+```
+
+The installer refuses checksum failures and existing commands. Pass `--replace` only to replace the selected prefix’s regular `pablo` executable. `--remove` removes an unchanged installation after checking its receipt and leaves unrelated prefix files in place.
+
 ## Verify offline
 
 ```sh
