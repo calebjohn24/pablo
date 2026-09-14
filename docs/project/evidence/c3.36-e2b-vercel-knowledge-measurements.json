@@ -1,0 +1,207 @@
+{
+  "format": 1,
+  "checkpoint": "C3.36",
+  "measured_at": "2026-09-14T20:38:58.778Z",
+  "suite_version": "knowledge-work-v1.1",
+  "source_revision": "9564dcb4ce396666169afa2b09535fd348274102",
+  "target": "x86_64-unknown-linux-gnu",
+  "archive_sha256": "2fc82bdd63eb15c96e24b7792e92a458432e0cb3ab64cc399cf8b75d32fa1b93",
+  "binary": {
+    "version": "pablo 0.0.1 (OTel mapping c1.2; GenAI fee465db333bdd6a7d2faa320edab5cf3101a4f4)",
+    "sha256": "b31d3674cedec9dc0f99d3058570754bd253528d66171cc8737862453391070a",
+    "bytes": 18229208
+  },
+  "harness": {
+    "profile": "pablo-vercel",
+    "gateway": "vercel",
+    "requested_model": "zai/glm-5.3-flash",
+    "reasoning": "provider default",
+    "source_sha256": {
+      "tasks.mjs": "029c3431c0cf7fcffcf89567ab430f07945044359525f7d771bed6656b2bb927",
+      "adapters.mjs": "b3d79f91155728d4da1ef2c63a06ac2fa0f93097107e36509f7c80f5e72a7a81",
+      "run.mjs": "162638f999a7328a1794330b25977d9941c92ee40a1a643980f8965d132e3485",
+      "monitor.py": "06db0819007441b8c858dc653a04b2332200e3abdd07a30f37bfc43af99b48ba",
+      "credentials.mjs": "d822ff08fc5536a886d56aaf890220dff865ae72799fa7567ff0a3fb421fc894",
+      "cost.mjs": "8c83305043cec8d99a18f07b7e9d0a4ace7feb7198c603e9c3a00bbd58bfa0af",
+      "latency.mjs": "a43f7c13f6b93ee4756d00a3cae31bd85badb9d444899811291865b57f05c3bd"
+    }
+  },
+  "platform": {
+    "e2b_sandbox_id": "ita2ytwmkubl0gt0f5wei",
+    "template_id": "rki5dems9wqfm4r03t7g",
+    "cpu_count": 2,
+    "memory_mb": 512,
+    "os": "linux",
+    "arch": "x64",
+    "kernel": "6.1.158+",
+    "cpu": "Intel(R) Xeon(R) Processor @ 2.60GHz",
+    "logical_cpus": 2,
+    "memory_bytes": 501293056,
+    "node": "v24.20.0",
+    "python": "Python 3.11.6",
+    "distribution": "Debian GNU/Linux 12 (bookworm)",
+    "libc": "glibc 2.36",
+    "user": "user",
+    "uid": 1000,
+    "gid": 1000
+  },
+  "workload": {
+    "seed": 42,
+    "repeats": 1,
+    "timeout_seconds": 180,
+    "execution": "six serial fresh-process and fresh-workspace attempts; no warmup, retries, builds or tests overlapped",
+    "tasks": [
+      {
+        "id": "reconciliation",
+        "seed": 42,
+        "fingerprint": "25aab1ac5ea128360fd52095eafc5f1d3ed0d463e671643424cd4a5b1b561b81"
+      },
+      {
+        "id": "policy-review",
+        "seed": 42,
+        "fingerprint": "7c62e343873c86cf8383e379902b917ca9b1a09cbe204330f6fdec1d13f6fe03"
+      },
+      {
+        "id": "vendor-selection",
+        "seed": 42,
+        "fingerprint": "427a70128ea3ffc74ea0ab4230094163e4cb80032f87588ca5cc8241da099095"
+      },
+      {
+        "id": "meeting-handoff",
+        "seed": 42,
+        "fingerprint": "23a2795db06b2d5fd64dbfef31a49560b4278ab5ee85e5533e8f1179f091f19c"
+      },
+      {
+        "id": "incident-brief",
+        "seed": 42,
+        "fingerprint": "867ba5a1f1ea7533e9350635c9626a1c09227e82f7357cc704cf14a2c3f55c97"
+      },
+      {
+        "id": "project-plan",
+        "seed": 42,
+        "fingerprint": "36947d8fa665d15617076318fb79d94f57cd032c8fe9ceaa16b4c51502df8709"
+      }
+    ]
+  },
+  "summary": {
+    "attempts": 6,
+    "measured": 6,
+    "passed": 4,
+    "pass_rate": 0.6666666666666666,
+    "factual_correct": 25,
+    "factual_total": 25,
+    "factual_accuracy": 1,
+    "mean_factual_score": 1,
+    "mean_citation_score": 0.7666666666666666,
+    "completed_wall_p50_ms": 27967.27893,
+    "successful_wall_p50_ms": 27967.27893,
+    "wall_p50_ms": 27967.27893,
+    "wall_p95_ms": 36138.59382800001,
+    "peak_tree_rss_kib": 16240,
+    "cpu_p50_s": 0.057804,
+    "cpu_one_core_p50_percent": 0.19574917700641192,
+    "estimated_cost_usd": null,
+    "reported_cost_usd": null,
+    "reported_cost_known_subtotal_usd": null,
+    "cost_reported_attempts": 0,
+    "failures": []
+  },
+  "rows": [
+    {
+      "task": "reconciliation",
+      "status": "completed",
+      "reported_model": "zai/glm-5.3-flash",
+      "factual_score": 1,
+      "citation_score": 1,
+      "wall_ms": 23349.555340000003,
+      "sampled_tree_peak_rss_kib": 15340,
+      "cpu_total_s": 0.045824,
+      "cpu_percent_one_core": 0.1962521312836272,
+      "tool_calls": 6,
+      "reported_cost_usd": null,
+      "errors": []
+    },
+    {
+      "task": "policy-review",
+      "status": "completed",
+      "reported_model": "zai/glm-5.3-flash",
+      "factual_score": 1,
+      "citation_score": 1,
+      "wall_ms": 27967.27893,
+      "sampled_tree_peak_rss_kib": 15492,
+      "cpu_total_s": 0.048821,
+      "cpu_percent_one_core": 0.17456471229180107,
+      "tool_calls": 6,
+      "reported_cost_usd": null,
+      "errors": []
+    },
+    {
+      "task": "vendor-selection",
+      "status": "completed",
+      "reported_model": "zai/glm-5.3-flash",
+      "factual_score": 1,
+      "citation_score": 0,
+      "wall_ms": 27631.835906999997,
+      "sampled_tree_peak_rss_kib": 16240,
+      "cpu_total_s": 0.062776,
+      "cpu_percent_one_core": 0.22718722060772265,
+      "tool_calls": 7,
+      "reported_cost_usd": null,
+      "errors": []
+    },
+    {
+      "task": "meeting-handoff",
+      "status": "completed",
+      "reported_model": "zai/glm-5.3-flash",
+      "factual_score": 1,
+      "citation_score": 0.6,
+      "wall_ms": 36138.59382800001,
+      "sampled_tree_peak_rss_kib": 15608,
+      "cpu_total_s": 0.070741,
+      "cpu_percent_one_core": 0.19574917700641192,
+      "tool_calls": 7,
+      "reported_cost_usd": null,
+      "errors": []
+    },
+    {
+      "task": "incident-brief",
+      "status": "completed",
+      "reported_model": "zai/glm-5.3-flash",
+      "factual_score": 1,
+      "citation_score": 1,
+      "wall_ms": 33040.28315299999,
+      "sampled_tree_peak_rss_kib": 15872,
+      "cpu_total_s": 0.057804,
+      "cpu_percent_one_core": 0.1749500745266813,
+      "tool_calls": 6,
+      "reported_cost_usd": null,
+      "errors": []
+    },
+    {
+      "task": "project-plan",
+      "status": "completed",
+      "reported_model": "zai/glm-5.3-flash",
+      "factual_score": 1,
+      "citation_score": 1,
+      "wall_ms": 29631.096318999993,
+      "sampled_tree_peak_rss_kib": 15896,
+      "cpu_total_s": 0.062018000000000004,
+      "cpu_percent_one_core": 0.20930038947034485,
+      "tool_calls": 5,
+      "reported_cost_usd": null,
+      "errors": []
+    }
+  ],
+  "privacy": {
+    "credential_delivery": "per-command environment only; omitted from argv, captured output and downloaded report",
+    "credential_in_argv": false,
+    "credential_in_downloaded_report": false,
+    "raw_streams_checked_in": false
+  },
+  "cleanup": {
+    "benchmark_interrupted": false,
+    "sandbox_killed": true,
+    "running_pablo_sandboxes_after_cleanup": 0
+  },
+  "limitations": "Single seed and one attempt per task; exact factual and filename-set scoring does not grade prose quality. Wall time includes startup, network, inference and tools. CPU and RSS cover sampled local processes only, not the remote provider. Cost was unreported and remains unknown."
+}

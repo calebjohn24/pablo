@@ -32,8 +32,9 @@ test('array ordering does not affect score; unknown/extraneous fields rejected',
 });
 test('adapters preserve model identities, use argv and disable reuse',()=>{
   const opts={root:'/repo',workspace:'/workspace',prompt:'literal `pwd` $(whoami)',timeout:30};
-  for(const h of ['pablo','pablo-astra','codex','claude','pi','ori']) {const c=command(h,opts);assert(c.includes(opts.prompt));assert(!c.includes('--continue'));}
+  for(const h of ['pablo','pablo-vercel','pablo-astra','codex','claude','pi','ori']) {const c=command(h,opts);assert(c.includes(opts.prompt));assert(!c.includes('--continue'));}
   assert(command('pablo-astra',opts).includes('openai/gpt-6-astra'));assert(command('pablo-astra',opts)[0].endsWith('/pablo'));assert(command('ori',opts).includes('pi')); assert(command('pablo',opts).includes('z-ai/glm-5.3-flash'));
+  const vercel=command('pablo-vercel',opts);assert(vercel.includes('vercel'));assert(vercel.includes('zai/glm-5.3-flash'));assert(vercel[0].endsWith('/pablo'));
 });
 test('event metrics distinguish completed message from streaming; errors retained',()=>{
   const c=normalize('codex','{"type":"item.completed","item":{"type":"agent_message","text":"hello"}}\n{"type":"turn.failed"}\n',[{stream:'stdout',end_byte:1000,ms:17}]);
@@ -60,7 +61,7 @@ test('timeout kills process group and returns bounded failure',async()=>{
 });
 test('full runner retains artifacts and report without reading provider credentials',async()=>{
   const dir=await mkdtemp(join(tmpdir(),'knowledge-runner-test-'));
-  const bin=join(dir,'fake-pablo'),output=join(dir,'results');
+  const bin=join(dir,'fake-pablo'),output=join(dir,'nested','results');
   const fixture=answer(tasks()[0]);
   const source=`#!/usr/bin/env node\nimport fs from 'node:fs';\nif(process.argv.includes('--version')){console.log('fixture 1');process.exit(0);}\nfs.writeFileSync('answer.json',${JSON.stringify(JSON.stringify(fixture))});\nfs.writeFileSync('report.md',${JSON.stringify(report)});\nconsole.log(JSON.stringify({outcome:{status:'completed'},accounting:{tool_calls:'1',cost_microusd:'2'}}));\n`;
   await writeFile(bin,source,{mode:0o755});

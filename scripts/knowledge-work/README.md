@@ -1,6 +1,6 @@
 # Knowledge-work comparison
 
-This synthetic suite compares **complete model + harness systems** on local-source office work. Pablo, Pi and Ori + Pi use `z-ai/glm-5.3-flash` through OpenRouter. The additional `pablo-astra` entry uses `openai/gpt-6-astra` through OpenRouter. Codex uses `gpt-6-astra`; Claude Code uses `claude-fable-5-1` through their native authentication. Scores across those model families cannot isolate harness quality.
+This synthetic suite compares **complete model + harness systems** on local-source non-coding knowledge work. Pablo, Pi and Ori + Pi use `z-ai/glm-5.3-flash` through OpenRouter. The optional `pablo-vercel` profile runs Vercel AI Gateway's `zai/glm-5.3-flash`, while `pablo-astra` uses `openai/gpt-6-astra` through OpenRouter. Codex uses `gpt-6-astra`; Claude Code uses `claude-fable-5-1` through their native authentication. Scores across those model families cannot isolate harness quality.
 
 The six tasks cover invoice reconciliation, date-sensitive expense policy, constrained procurement, conflicting meeting handoffs, incident evidence/uncertainty, and critical-path planning. Seeded numeric variants change several tasks; meeting and incident answers include fixed facts, so repeated seeds are not six entirely independent new problems. Each fresh workspace contains only synthetic source documents. The controller keeps answer keys outside it. This prevents accidental exposure, not deliberate access by an unsandboxed agent. No benchmark skill, external search, delegated agents, or prior conversation is requested. Local shell calculations are allowed; these are business tasks, not code-generation tasks.
 
@@ -23,6 +23,10 @@ node scripts/knowledge-work/run.mjs --live --seeds 41,42,43 --repeats 3 \
 # Pablo with Astra (same six tasks, OpenRouter native Pablo credentials).
 node scripts/knowledge-work/run.mjs --live --harnesses pablo-astra \
   --output .pablo/measurements/knowledge-pablo-astra
+
+# Pablo through Vercel AI Gateway (same six tasks, Vercel native credentials).
+node scripts/knowledge-work/run.mjs --live --harnesses pablo-vercel \
+  --output .pablo/measurements/knowledge-pablo-vercel
 
 # A single system; useful while other providers are not authenticated.
 node scripts/knowledge-work/run.mjs --live --harnesses pablo \
