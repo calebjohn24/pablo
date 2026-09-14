@@ -7,7 +7,20 @@ description: Call pablo-core directly with an injected provider, tracer, event s
 
 `pablo-core` contains the runtime contracts and execution lifecycle. The `pablo` crate owns executable concerns such as CLI parsing, credential files, process protocols and its standalone OTel SDK.
 
-The workspace packages are currently marked `publish = false`; consume them from this repository while the API is prerelease.
+Choose this boundary when your Rust application needs direct, in-process ownership of providers, tools, events, telemetry and cancellation. For an independently upgradeable process boundary, use [ACP](./acp.md) instead.
+
+## Add the prerelease source dependency
+
+The workspace packages are currently marked `publish = false`. Pin a full reviewed Git revision while the API is prerelease:
+
+```toml
+[dependencies]
+pablo-core = { git = "https://github.com/calebjohn24/pablo.git", rev = "REPLACE_WITH_FULL_COMMIT_SHA" }
+opentelemetry_sdk = { version = "=0.32.1", default-features = false, features = ["trace"] }
+tokio = { version = "=1.53.1", features = ["rt", "macros"] }
+```
+
+Do not track `main` implicitly in a production application. Review and update the pinned revision deliberately, and validate the constructors and event variants against that source revision.
 
 ## Smallest offline run
 
@@ -51,7 +64,7 @@ spec.limits.max_tool_calls = Some(8);
 spec.reasoning = ReasoningConfig::Effort(ReasoningEffort::Low);
 ```
 
-Validate current constructors against the checked-in crate when integrating; the public surface is still prerelease. The [runtime contract](https://github.com/calebjohn24/pablo/blob/main/docs/runtime.md) is authoritative for semantics and defaults.
+Validate current constructors against your pinned crate revision when integrating; the public surface is still prerelease. The [runtime contract](https://github.com/calebjohn24/pablo/blob/main/docs/runtime.md) is authoritative for semantics and defaults.
 
 ## Inject a provider
 

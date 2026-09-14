@@ -120,7 +120,7 @@ export interface ClientOptions {
 
 /** The callback uses ACP methods directly; this is not a second language SDK. */
 export async function withPablo<T>(options: ClientOptions, operation: (context: ClientContext) => Promise<T>): Promise<T> {
-  const binary = options.binary ?? fileURLToPath(new URL('../target/debug/pablo', import.meta.url));
+  const binary = options.binary ?? process.env.PABLO_BINARY ?? fileURLToPath(new URL('../target/debug/pablo', import.meta.url));
   const child = spawn(binary, ['acp', '--stdio', ...(options.args ?? [])], {
     env: options.env ?? process.env, stdio: ['pipe', 'pipe', 'pipe'],
   });

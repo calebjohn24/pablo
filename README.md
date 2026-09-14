@@ -8,9 +8,9 @@ Pablo gives your application a model-and-tool loop with streaming output, cancel
 
 ## Documentation
 
-Read the [public documentation](https://runpablo.pages.dev), or start in the repository with the [introduction](docs/guide/introduction.md) and [getting-started guide](docs/guide/getting-started.md). The same Markdown powers both views, so examples remain reviewable in GitHub.
+Read the [public documentation](https://runpablo.pages.dev), or start in the repository with the [introduction](docs/guide/introduction.md) and [getting-started guide](docs/guide/getting-started.md). If you are adding Pablo to an application, the getting-started guide covers installation first, then helps you choose between an ACP child process and direct Rust embedding. The same Markdown powers both views, so examples remain reviewable in GitHub.
 
-- Use Pablo through the [CLI and TUI](docs/guide/cli.md), [ACP](docs/guide/acp.md), or [Rust embedding](docs/guide/embedding.md).
+- Embed Pablo through [ACP](docs/guide/acp.md) or [Rust](docs/guide/embedding.md), or use the [CLI and TUI](docs/guide/cli.md) for evaluation and operations.
 - Configure [deployments](docs/guide/configuration.md), [providers and model routes](docs/guide/providers.md), and [tools and policy](docs/guide/tools-and-policy.md).
 - Add [MCP, Skills and supervised agents](docs/guide/extensibility.md), [structured output](docs/guide/structured-output.md), and [observability](docs/guide/observability.md).
 - Consult [installation and release files](docs/guide/installation.md), the [resource benchmark](docs/guide/benchmarks.md), [limits and outcomes](docs/guide/reference.md), [troubleshooting](docs/guide/troubleshooting.md), and the current [release status](docs/guide/release-status.md).
@@ -170,11 +170,12 @@ To try the included TypeScript client, use the Node version pinned in `.nvmrc`:
 ```sh
 nvm use
 npm ci
-cargo build --locked -p pablo --bin pablo
-node examples/acp-client.ts "Read README.md and summarize it." "$PWD"
+PABLO_BINARY="$PWD/target/release/pablo" node examples/acp-client.ts \
+  "Read README.md and summarize it." \
+  "$PWD"
 ```
 
-The client uses `target/debug/pablo` and makes a real provider request. Rust applications can call `pablo-core::Runtime` directly; see [embedding contracts](docs/runtime.md) and the [configured reference host](crates/pablo/examples/preset_host.rs).
+The client uses `PABLO_BINARY` when set, otherwise it falls back to `target/debug/pablo`, and it makes a real provider request. Rust applications can call `pablo-core::Runtime` directly; see the [Rust embedding guide](docs/guide/embedding.md), [runtime contracts](docs/runtime.md) and [configured reference host](crates/pablo/examples/preset_host.rs).
 
 ## Diagnostics and traces
 

@@ -6,10 +6,10 @@ description: A small, bounded Rust agent runtime for applications doing non-codi
 hero:
   name: Pablo
   text: The agent runtime your application can own.
-  tagline: One bounded lifecycle for models, tools, policy, streaming, cancellation and traces—across a CLI, terminal, ACP and your Rust host.
+  tagline: Embed one bounded lifecycle for models, tools, policy, streaming, cancellation and traces through ACP or directly in your Rust host.
   actions:
     - theme: brand
-      text: Start building
+      text: Install and integrate
       link: /getting-started
     - theme: alt
       text: Read the architecture
@@ -20,7 +20,7 @@ features:
   - title: Host-owned authority
     details: Your application chooses the workspace, tools, credentials, policy, limits and approval experience.
   - title: Open interfaces
-    details: Run from a terminal, speak stable ACP over stdio, attach MCP tools, load Agent Skills or embed the Rust core.
+    details: Host stable ACP over stdio or embed the Rust core, then attach MCP tools, Agent Skills and A2A peers under application-owned authority.
 ---
 
 <section class="signal-strip" aria-label="Pablo status">
@@ -35,23 +35,23 @@ features:
 Pablo is the execution layer between your application and a model. It streams a task through a typed provider, exposes only the tools your host admits, and returns one native outcome with exact accounting. It does not take over your product’s state or permission model.
 
 <div class="interface-grid">
-  <a class="interface-card" href="/cli">
-    <span class="card-index">01</span>
-    <h3>CLI + TUI</h3>
-    <p>Run one task, emit a machine envelope, or work from a compact interactive terminal.</p>
-    <strong>Explore the terminal →</strong>
-  </a>
   <a class="interface-card" href="/acp">
-    <span class="card-index">02</span>
-    <h3>ACP host</h3>
-    <p>Connect an editor or application over the stable Agent Client Protocol with streamed updates.</p>
+    <span class="card-index">01</span>
+    <h3>ACP application host</h3>
+    <p>Run Pablo as an independently upgradeable child process with streamed updates, cancellation and typed outcomes.</p>
     <strong>Integrate over stdio →</strong>
   </a>
   <a class="interface-card" href="/embedding">
-    <span class="card-index">03</span>
+    <span class="card-index">02</span>
     <h3>Rust core</h3>
-    <p>Inject a provider, tracer, event sink and cancellation token into the runtime directly.</p>
-    <strong>Embed the runtime →</strong>
+    <p>Inject a provider, event sink, tools, tracer and cancellation token directly into your application.</p>
+    <strong>Embed in process →</strong>
+  </a>
+  <a class="interface-card" href="/cli">
+    <span class="card-index">03</span>
+    <h3>CLI + TUI</h3>
+    <p>Evaluate one task, emit a machine envelope for a job, or inspect the runtime from a compact terminal.</p>
+    <strong>Explore the terminal →</strong>
   </a>
   <a class="interface-card" href="/configuration">
     <span class="card-index">04</span>
@@ -90,7 +90,7 @@ Pablo `v0.0.1` is being prepared and must currently be built from source. Releas
 :::
 
 <div class="final-cta">
-  <span>READY TO TRACE A REAL TASK?</span>
-  <h2>Build the binary. Run the offline demo. Add a provider when you’re ready.</h2>
-  <a href="/getting-started">Get started in five minutes →</a>
+  <span>READY TO ADD AGENT EXECUTION?</span>
+  <h2>Install Pablo, verify it offline, then connect your application through ACP or Rust.</h2>
+  <a href="/getting-started">Open the integration guide →</a>
 </div>
