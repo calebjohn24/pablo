@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 720" role="img" aria-labelledby="title description">
+  <title id="title">Pablo local resource use compared with Claude Code, Codex, and Pi</title>
+  <desc id="description">Two horizontal bar charts compare peak process-tree memory and median CPU utilization. Pablo measured 19.11 MiB and 0.37 percent of one core, below Claude Code at 286.09 MiB and 5.59 percent, Codex at 196.03 MiB and 6.04 percent, and Pi at 160.23 MiB and 3.19 percent.</desc>
+  <defs>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#141820" />
+      <stop offset="1" stop-color="#0f1217" />
+    </linearGradient>
+    <linearGradient id="pablo" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff6b35" />
+      <stop offset="1" stop-color="#ff986f" />
+    </linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#ffffff" stroke-opacity=".018" />
+    </pattern>
+    <filter id="glow" x="-30%" y="-100%" width="160%" height="300%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1400" height="720" rx="18" fill="#0b0d10" />
+  <rect width="1400" height="720" rx="18" fill="url(#grid)" />
+  <rect x="1" y="1" width="1398" height="718" rx="17" fill="none" stroke="#ffffff" stroke-opacity=".12" />
+
+  <rect x="58" y="55" width="10" height="10" rx="2" fill="#ff6b35" filter="url(#glow)" />
+  <text x="84" y="66" fill="#ff8b61" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" font-weight="600" letter-spacing="2.4">PABLO / LOCAL RESOURCE USE</text>
+  <text x="58" y="124" fill="#f4f2ed" font-family="Manrope, Inter, system-ui, sans-serif" font-size="34" font-weight="700" letter-spacing="-1">A smaller runtime footprint on the measured workload.</text>
+  <text x="58" y="160" fill="#8f97a3" font-family="Manrope, Inter, system-ui, sans-serif" font-size="16">6 synthetic non-coding knowledge-work tasks · macOS arm64 · lower is better</text>
+
+  <g aria-label="Peak process-tree memory in mebibytes">
+    <rect x="50" y="200" width="650" height="420" rx="12" fill="url(#panel)" stroke="#ffffff" stroke-opacity=".10" />
+    <text x="86" y="246" fill="#f4f2ed" font-family="Manrope, Inter, system-ui, sans-serif" font-size="21" font-weight="700">Peak process-tree memory</text>
+    <text x="664" y="246" text-anchor="end" fill="#737c88" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">MiB</text>
+
+    <text x="86" y="294" fill="#f4f2ed" font-family="Manrope, Inter, system-ui, sans-serif" font-size="16" font-weight="700">Pablo</text>
+    <text x="664" y="294" text-anchor="end" fill="#ff8b61" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" font-weight="600">19.11</text>
+    <rect x="86" y="310" width="578" height="12" rx="6" fill="#1d232c" />
+    <rect x="86" y="310" width="39" height="12" rx="6" fill="url(#pablo)" />
+
+    <text x="86" y="374" fill="#c8ccd2" font-family="Manrope, Inter, system-ui, sans-serif" font-size="16">Claude Code</text>
+    <text x="664" y="374" text-anchor="end" fill="#a9b0ba" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">286.09</text>
+    <rect x="86" y="390" width="578" height="12" rx="6" fill="#1d232c" />
+    <rect x="86" y="390" width="578" height="12" rx="6" fill="#626d7b" />
+
+    <text x="86" y="454" fill="#c8ccd2" font-family="Manrope, Inter, system-ui, sans-serif" font-size="16">Codex</text>
+    <text x="664" y="454" text-anchor="end" fill="#a9b0ba" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">196.03</text>
+    <rect x="86" y="470" width="578" height="12" rx="6" fill="#1d232c" />
+    <rect x="86" y="470" width="396" height="12" rx="6" fill="#626d7b" />
+
+    <text x="86" y="534" fill="#c8ccd2" font-family="Manrope, Inter, system-ui, sans-serif" font-size="16">Pi</text>
+    <text x="664" y="534" text-anchor="end" fill="#a9b0ba" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">160.23</text>
+    <rect x="86" y="550" width="578" height="12" rx="6" fill="#1d232c" />
+    <rect x="86" y="550" width="324" height="12" rx="6" fill="#626d7b" />
+  </g>
+
+  <g aria-label="Median CPU utilization as a percentage of one core">
+    <rect x="720" y="200" width="630" height="420" rx="12" fill="url(#panel)" stroke="#ffffff" stroke-opacity=".10" />
+    <text x="756" y="246" fill="#f4f2ed" font-family="Manrope, Inter, system-ui, sans-serif" font-size="21" font-weight="700">Median CPU utilization</text>
+    <text x="1314" y="246" text-anchor="end" fill="#737c88" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">% of one core</text>
+
+    <text x="756" y="294" fill="#f4f2ed" font-family="Manrope, Inter, system-ui, sans-serif" font-size="16" font-weight="700">Pablo</text>
+    <text x="1314" y="294" text-anchor="end" fill="#ff8b61" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" font-weight="600">0.37%</text>
+    <rect x="756" y="310" width="558" height="12" rx="6" fill="#1d232c" />
+    <rect x="756" y="310" width="34" height="12" rx="6" fill="url(#pablo)" />
+
+    <text x="756" y="374" fill="#c8ccd2" font-family="Manrope, Inter, system-ui, sans-serif" font-size="16">Claude Code</text>
+    <text x="1314" y="374" text-anchor="end" fill="#a9b0ba" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">5.59%</text>
+    <rect x="756" y="390" width="558" height="12" rx="6" fill="#1d232c" />
+    <rect x="756" y="390" width="517" height="12" rx="6" fill="#626d7b" />
+
+    <text x="756" y="454" fill="#c8ccd2" font-family="Manrope, Inter, system-ui, sans-serif" font-size="16">Codex</text>
+    <text x="1314" y="454" text-anchor="end" fill="#a9b0ba" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">6.04%</text>
+    <rect x="756" y="470" width="558" height="12" rx="6" fill="#1d232c" />
+    <rect x="756" y="470" width="558" height="12" rx="6" fill="#626d7b" />
+
+    <text x="756" y="534" fill="#c8ccd2" font-family="Manrope, Inter, system-ui, sans-serif" font-size="16">Pi</text>
+    <text x="1314" y="534" text-anchor="end" fill="#a9b0ba" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">3.19%</text>
+    <rect x="756" y="550" width="558" height="12" rx="6" fill="#1d232c" />
+    <rect x="756" y="550" width="295" height="12" rx="6" fill="#626d7b" />
+  </g>
+
+  <text x="58" y="665" fill="#7e8793" font-family="Manrope, Inter, system-ui, sans-serif" font-size="14">Peak RSS is the maximum observed process-tree memory. CPU utilization is p50 CPU time divided by task wall time.</text>
+  <text x="58" y="692" fill="#626b77" font-family="Manrope, Inter, system-ui, sans-serif" font-size="13">Exploratory single-seed pilot · Pablo rerun later · models, provider routes, native tools and reasoning settings differ</text>
+</svg>

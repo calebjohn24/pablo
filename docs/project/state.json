@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-14T17:11:22Z",
+  "updated_at": "2026-09-14T17:33:54Z",
   "active_checkpoint": null,
   "next_checkpoint": "C3.34b",
-  "next_action": "Implement C3.34b bounded streaming literal filesystem search against the frozen oracle and baseline. C3.34 packaging remains blocked by its standing hold; B01 is not accepted.",
-  "latest_log_entry": "LOG-0180",
+  "next_action": "Review the live release documentation and brand assets at https://runpablo.pages.dev, then implement C3.34b bounded streaming literal filesystem search against the frozen oracle and baseline. C3.34 packaging remains blocked by its standing hold; B01 is not accepted.",
+  "latest_log_entry": "LOG-0182",
   "checkpoints": [
     {
       "id": "C1.0",

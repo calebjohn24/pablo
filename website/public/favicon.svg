@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Pablo</title>
+  <defs>
+    <linearGradient id="mark" x1="12" y1="10" x2="54" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ff8254" />
+      <stop offset="1" stop-color="#ff5c2b" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="#0b0d10" />
+  <rect x="9" y="9" width="46" height="46" rx="11" fill="url(#mark)" />
+  <path d="M24 45V20h11.5c7.3 0 11.5 3.7 11.5 10s-4.2 10-11.5 10H30" fill="none" stroke="#0b0d10" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+</svg>
