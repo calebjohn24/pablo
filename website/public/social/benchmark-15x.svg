@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title description">
+  <title id="title">Claude Code and Codex used 15 times more CPU than Pablo</title>
+  <desc id="description">Pablo used 0.37 percent median CPU utilization, compared with 5.59 percent for Claude Code and 6.04 percent for Codex on a six-task benchmark.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#070a0d" />
+      <stop offset="0.62" stop-color="#0b0e12" />
+      <stop offset="1" stop-color="#1b100c" />
+    </linearGradient>
+    <linearGradient id="orange" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#ff8a5b" />
+      <stop offset="1" stop-color="#ff5d2b" />
+    </linearGradient>
+    <linearGradient id="competitor" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#5a6370" />
+      <stop offset="1" stop-color="#8893a2" />
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(1040 200) rotate(145) scale(500 430)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ff642f" stop-opacity="0.22" />
+      <stop offset="1" stop-color="#ff642f" stop-opacity="0" />
+    </radialGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#ffffff" stroke-opacity="0.032" />
+    </pattern>
+    <filter id="orangeGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="12" />
+    </filter>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)" />
+  <rect width="1200" height="630" fill="url(#grid)" />
+  <rect width="1200" height="630" fill="url(#glow)" />
+
+  <g transform="translate(66 52)">
+    <rect x="0" y="1" width="18" height="18" rx="5" fill="#ff6b3a" opacity="0.7" filter="url(#orangeGlow)" />
+    <rect x="0" y="1" width="18" height="18" rx="5" fill="url(#orange)" />
+    <text x="36" y="19" fill="#f5f2ed" font-family="Manrope, Inter, Helvetica Neue, Arial, sans-serif" font-size="21" font-weight="700" letter-spacing="6.5">PABLO</text>
+    <line x1="185" y1="10" x2="843" y2="10" stroke="#ffffff" stroke-opacity="0.13" />
+    <text x="1068" y="17" text-anchor="end" fill="#7d8794" font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="12" letter-spacing="1.1">RUNTIME BENCHMARK · LOWER IS BETTER</text>
+  </g>
+
+  <g transform="translate(66 126)">
+    <text fill="#ff7948" font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="14" font-weight="500" letter-spacing="2.1">CLAUDE CODE + CODEX</text>
+    <text x="-5" y="133" fill="#ff7442" font-family="Manrope, Inter, Helvetica Neue, Arial, sans-serif" font-size="132" font-weight="750" letter-spacing="-8">15×+</text>
+    <text x="5" y="201" fill="#f7f5f1" font-family="Manrope, Inter, Helvetica Neue, Arial, sans-serif" font-size="56" font-weight="650" letter-spacing="-2.3">MORE CPU</text>
+    <text x="4" y="246" fill="#a7aeb8" font-family="Manrope, Inter, Helvetica Neue, Arial, sans-serif" font-size="20">than Pablo on the same six-task workload.</text>
+    <text x="4" y="282" fill="#697381" font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="12" letter-spacing="1">MEDIAN UTILIZATION · % OF ONE CORE</text>
+  </g>
+
+  <g transform="translate(605 108)">
+    <rect width="529" height="351" rx="22" fill="#0e1217" stroke="#333a44" stroke-width="2" />
+    <rect x="1" y="1" width="527" height="65" rx="21" fill="#12171d" />
+    <path d="M1 44h527v22H1z" fill="#12171d" />
+    <circle cx="30" cy="32" r="6" fill="#ff6b3a" />
+    <text x="51" y="38" fill="#a4adb8" font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="13" letter-spacing="1.2">MEDIAN CPU UTILIZATION</text>
+    <text x="498" y="38" text-anchor="end" fill="#687280" font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="11">% OF ONE CORE</text>
+
+    <g font-family="Manrope, Inter, Helvetica Neue, Arial, sans-serif">
+      <image href="logos/pablo.svg" x="30" y="85" width="24" height="24" />
+      <text x="66" y="105" fill="#f0ede8" font-size="16" font-weight="650">Pablo</text>
+      <text x="498" y="105" text-anchor="end" fill="#ff8053" font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="18" font-weight="600">0.37%</text>
+      <rect x="30" y="120" width="468" height="17" rx="8.5" fill="#1b222b" />
+      <rect x="30" y="120" width="29" height="17" rx="8.5" fill="url(#orange)" />
+
+      <image href="logos/claude.svg" x="30" y="168" width="24" height="24" />
+      <text x="66" y="188" fill="#b8bec7" font-size="16" font-weight="600">Claude Code</text>
+      <text x="498" y="188" text-anchor="end" fill="#d3d7dd" font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="18">5.59%</text>
+      <rect x="30" y="203" width="468" height="17" rx="8.5" fill="#1b222b" />
+      <rect x="30" y="203" width="433" height="17" rx="8.5" fill="url(#competitor)" />
+      <rect x="330" y="163" width="99" height="28" rx="14" fill="#251812" stroke="#66301d" />
+      <text x="379.5" y="182" text-anchor="middle" fill="#ff8153" font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="12" font-weight="600">15.1× CPU</text>
+
+      <image href="logos/codex.svg" x="30" y="251" width="24" height="24" />
+      <text x="66" y="271" fill="#b8bec7" font-size="16" font-weight="600">Codex</text>
+      <text x="498" y="271" text-anchor="end" fill="#d3d7dd" font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="18">6.04%</text>
+      <rect x="30" y="286" width="468" height="17" rx="8.5" fill="#1b222b" />
+      <rect x="30" y="286" width="468" height="17" rx="8.5" fill="url(#competitor)" />
+      <rect x="330" y="246" width="99" height="28" rx="14" fill="#251812" stroke="#66301d" />
+      <text x="379.5" y="265" text-anchor="middle" fill="#ff8153" font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="12" font-weight="600">16.3× CPU</text>
+    </g>
+  </g>
+
+  <g transform="translate(66 485)">
+    <rect width="1068" height="92" rx="15" fill="#0d1116" stroke="#2c333c" />
+    <text x="24" y="31" fill="#707a87" font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="11" letter-spacing="1.1">PEAK PROCESS-TREE MEMORY</text>
+    <image href="logos/pablo.svg" x="24" y="45" width="22" height="22" />
+    <text x="56" y="63" fill="#f0ede8" font-family="Manrope, Inter, Helvetica Neue, Arial, sans-serif" font-size="14" font-weight="650">Pablo</text>
+    <text x="111" y="63" fill="#ff8053" font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="16" font-weight="600">19 MiB</text>
+
+    <line x1="224" y1="20" x2="224" y2="72" stroke="#ffffff" stroke-opacity="0.09" />
+    <image href="logos/codex.svg" x="252" y="24" width="22" height="22" />
+    <text x="284" y="42" fill="#aab1bb" font-family="Manrope, Inter, Helvetica Neue, Arial, sans-serif" font-size="14">Codex</text>
+    <text x="252" y="68" fill="#eef0f2" font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="16">196 MiB</text>
+    <text x="378" y="68" fill="#ff8053" font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="12">10.3×</text>
+
+    <line x1="504" y1="20" x2="504" y2="72" stroke="#ffffff" stroke-opacity="0.09" />
+    <image href="logos/claude.svg" x="532" y="24" width="22" height="22" />
+    <text x="564" y="42" fill="#aab1bb" font-family="Manrope, Inter, Helvetica Neue, Arial, sans-serif" font-size="14">Claude Code</text>
+    <text x="532" y="68" fill="#eef0f2" font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="16">286 MiB</text>
+    <text x="658" y="68" fill="#ff8053" font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="12">15.0×</text>
+
+    <line x1="782" y1="20" x2="782" y2="72" stroke="#ffffff" stroke-opacity="0.09" />
+    <text x="810" y="39" fill="#f0ede8" font-family="Manrope, Inter, Helvetica Neue, Arial, sans-serif" font-size="14" font-weight="650">A small Rust agent harness</text>
+    <text x="810" y="63" fill="#78828f" font-family="Manrope, Inter, Helvetica Neue, Arial, sans-serif" font-size="12">for non-coding knowledge work</text>
+  </g>
+
+  <text x="66" y="610" fill="#66717e" font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="10" letter-spacing="0.35">6 SYNTHETIC TASKS · MACOS ARM64 · ONE SEED / ONE ATTEMPT · MODELS, PROVIDER ROUTES, TOOLS AND SETTINGS DIFFER</text>
+  <text x="1134" y="610" text-anchor="end" fill="#ff7849" font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="12" font-weight="600" letter-spacing="1">RUNPABLO.PAGES.DEV</text>
+  <rect y="626" width="1200" height="4" fill="url(#orange)" />
+</svg>
