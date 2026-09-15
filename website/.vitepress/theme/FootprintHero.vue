@@ -1,8 +1,8 @@
 <template>
-  <div class="footprint-shell" aria-label="Measured local memory and CPU comparison">
+  <div class="footprint-shell" aria-label="Measured runtime memory and CPU comparison">
     <div class="footprint-bar">
       <span class="status-light" />
-      <b>LOCAL RESOURCE USE</b>
+      <b>RUNTIME RESOURCE USE</b>
       <small>LOWER IS BETTER</small>
     </div>
 

@@ -7,7 +7,7 @@ import mobileChart from "../../.content/assets/resource-usage-mobile.svg";
   <section class="hero-benchmark" aria-labelledby="hero-benchmark-title">
     <div class="hero-benchmark-copy">
       <span>PERFORMANCE / RUNTIME FOOTPRINT</span>
-      <h2 id="hero-benchmark-title">Local runtime overhead, measured</h2>
+      <h2 id="hero-benchmark-title">Runtime overhead, measured</h2>
       <p>
         On six synthetic non-coding knowledge-work tasks, Pablo had the lowest
         measured CPU utilization and peak process-tree memory of Pablo, Claude Code,
@@ -24,7 +24,7 @@ import mobileChart from "../../.content/assets/resource-usage-mobile.svg";
         />
       </picture>
       <figcaption>
-        Six-task local comparison on macOS arm64. Models, provider routes,
+        Six-task host-side comparison on macOS arm64. Models, provider routes,
         tools, reasoning settings and collection times differ.
       </figcaption>
     </figure>

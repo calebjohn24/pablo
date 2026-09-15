@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-15T01:08:36.731Z",
+  "updated_at": "2026-09-15T01:21:15.659Z",
   "active_checkpoint": "C3.36",
   "next_checkpoint": null,
-  "next_action": "Resume C3.36 with the exact frozen Linux candidate. The deployed one-line installer is verified but its public archive is still 404; complete the remaining offline, installed ACP/TUI, Collector and bounded live CLI/ACP cases before publication.",
-  "latest_log_entry": "LOG-0196",
+  "next_action": "Resume C3.36 with the exact frozen Linux candidate. The cloud-harness hero is complete, but the public installer archive is still 404; complete the remaining offline, installed ACP/TUI, Collector and bounded live CLI/ACP cases before publication.",
+  "latest_log_entry": "LOG-0197",
   "checkpoints": [
     {
       "id": "C1.0",
