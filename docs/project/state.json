@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-15T01:32:12.204Z",
+  "updated_at": "2026-09-15T01:37:07.358Z",
   "active_checkpoint": "C3.36",
   "next_checkpoint": null,
-  "next_action": "Resume C3.36 with the same frozen Linux candidate now available through the public preview route. Complete the remaining offline, installed ACP/TUI, Collector and bounded live CLI/ACP cases; the formal tag still waits on all native gates and matched measurements.",
-  "latest_log_entry": "LOG-0198",
+  "next_action": "Merge and deploy the idempotent installer, verify the exact public curl-to-sh command against the existing Mac installation, then resume the remaining C3.36 offline, ACP/TUI, Collector and live gateway acceptance.",
+  "latest_log_entry": "LOG-0199",
   "checkpoints": [
     {
       "id": "C1.0",

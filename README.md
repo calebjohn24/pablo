@@ -61,7 +61,7 @@ Install the public `v0.0.1` preview for native Mac or Linux with one command:
 curl -fsSL https://runpablo.pages.dev/install.sh | sh
 ```
 
-The script pins `v0.0.1` and installs to `$HOME/.local/bin/pablo`; add that directory to `PATH` if needed. The installer detects macOS/Linux and arm64/x86_64, downloads the matching archive and checksum from the Cloudflare R2-backed release route, verifies SHA-256 before extraction, and checks the binary’s reported version before installation. It never invokes `sudo`, package managers, Node or Python. Upgrade an unchanged receipt-backed installation to another exact version with `--update`; `--replace` explicitly overwrites another regular file at the selected path.
+The script pins `v0.0.1` and installs to `$HOME/.local/bin/pablo`; add that directory to `PATH` if needed. Repeating the command succeeds without changing an identical receipt-backed installation. The installer detects macOS/Linux and arm64/x86_64, downloads the matching archive and checksum from the Cloudflare R2-backed release route, verifies SHA-256 before extraction, and checks the binary’s reported version before installation. It never invokes `sudo`, package managers, Node or Python. Upgrade an unchanged receipt-backed installation to another exact version with `--update`; `--replace` explicitly overwrites another regular file at the selected path.
 
 ```sh
 curl -fsSL https://runpablo.pages.dev/install.sh | sh -s -- --version v0.0.2 --update

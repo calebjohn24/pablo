@@ -240,6 +240,16 @@ if [ "$UPDATE" -eq 1 ]; then
   REPLACE=1
 fi
 
+if [ "$REPLACE" -eq 0 ] && [ "$UPDATE" -eq 0 ] && [ -z "$ARCHIVE_PATH" ] \
+  && [ ! -L "$RECEIPT_PATH" ] && [ -f "$RECEIPT_PATH" ] \
+  && [ ! -L "$TARGET_PATH" ] && [ -f "$TARGET_PATH" ]; then
+  verify_owned_install reinstall
+  if [ "$RECEIPT_TARGET" = "$TARGET" ] && [ "$RECEIPT_VERSION" = "$VERSION" ]; then
+    printf 'pablo %s is already installed at %s\n' "$VERSION_NUMBER" "$TARGET_PATH"
+    exit 0
+  fi
+fi
+
 TARGET_EXISTS=0
 if [ -e "$TARGET_PATH" ] || [ -L "$TARGET_PATH" ]; then
   TARGET_EXISTS=1
