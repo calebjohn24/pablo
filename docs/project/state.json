@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-14T21:20:24Z",
+  "updated_at": "2026-09-15T01:08:36.731Z",
   "active_checkpoint": "C3.36",
   "next_checkpoint": null,
-  "next_action": "Resume C3.36 with the exact recorded Linux candidate. The one-line installer, mobile alignment and subagent docs are complete; run the remaining offline, installed ACP/TUI, Collector and bounded live CLI/ACP cases without rebuilding or publishing the artifact.",
-  "latest_log_entry": "LOG-0195",
+  "next_action": "Resume C3.36 with the exact frozen Linux candidate. The deployed one-line installer is verified but its public archive is still 404; complete the remaining offline, installed ACP/TUI, Collector and bounded live CLI/ACP cases before publication.",
+  "latest_log_entry": "LOG-0196",
   "checkpoints": [
     {
       "id": "C1.0",
