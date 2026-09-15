@@ -30,7 +30,7 @@ Install the native Mac or Linux binary with one command:
 curl -fsSL https://runpablo.pages.dev/install.sh | sh
 ```
 
-The published script pins `v0.0.1`, installs to `$HOME/.local/bin/pablo`, and never resolves a moving `latest` version. Add `$HOME/.local/bin` to your shell's `PATH` when needed. To review the installer before running it, open [the published script](https://runpablo.pages.dev/install.sh) or [its repository source](https://github.com/calebjohn24/pablo/blob/main/install.sh).
+The published script pins `v0.0.1`, installs to `$HOME/.local/bin/pablo`, and never resolves a moving `latest` version. Repeating the command is a successful no-op only when the same version, target, receipt and binary hash still match. Add `$HOME/.local/bin` to your shell's `PATH` when needed. To review the installer before running it, open [the published script](https://runpablo.pages.dev/install.sh) or [its repository source](https://github.com/calebjohn24/pablo/blob/main/install.sh).
 
 Override either default while keeping a one-line command:
 

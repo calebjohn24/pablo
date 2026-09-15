@@ -47,7 +47,7 @@ Install the native Mac or Linux preview binary with one command:
 curl -fsSL https://runpablo.pages.dev/install.sh | sh
 ```
 
-The script pins `v0.0.1` and installs to `$HOME/.local/bin/pablo`. It never resolves a moving `latest` version. Add that directory to the current shell if needed:
+The script pins `v0.0.1` and installs to `$HOME/.local/bin/pablo`. It never resolves a moving `latest` version. Repeating the command succeeds without changing an identical receipt-backed installation. Add that directory to the current shell if needed:
 
 ```sh
 export PATH="$HOME/.local/bin:$PATH"

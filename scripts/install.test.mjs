@@ -82,6 +82,13 @@ test("piped installer uses the pinned version and home prefix defaults", () => {
     const binary = path.join(home, ".local", "bin", "pablo");
     assert.equal(execFileSync(binary, [], { encoding: "utf8" }).trim(), "piped");
 
+    const repeated = runPiped([], {
+      env: { HOME: home, PATH: systemPath },
+    });
+    assert.equal(repeated.status, 0, repeated.stderr);
+    assert.match(repeated.stdout, /already installed/);
+    assert.equal(execFileSync(binary, [], { encoding: "utf8" }).trim(), "piped");
+
     const removed = runPiped(["--remove"], {
       env: { HOME: home, PATH: "/usr/bin:/bin" },
     });
