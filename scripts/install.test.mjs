@@ -8,6 +8,7 @@ import test from "node:test";
 
 const repository = path.resolve(import.meta.dirname, "..");
 const installer = path.join(repository, "install.sh");
+const systemPath = "/usr/bin:/bin";
 
 function targetTriple() {
   if (process.platform === "darwin" && process.arch === "arm64") return "aarch64-apple-darwin";
@@ -38,7 +39,7 @@ function run(args, options = {}) {
   return spawnSync("sh", [installer, ...args], {
     cwd: repository,
     encoding: "utf8",
-    env: { ...process.env, ...options.env },
+    env: { ...process.env, PATH: systemPath, ...options.env },
   });
 }
 
@@ -46,7 +47,7 @@ function runPiped(args, options = {}) {
   return spawnSync("sh", ["-s", "--", ...args], {
     cwd: repository,
     encoding: "utf8",
-    env: { ...process.env, ...options.env },
+    env: { ...process.env, PATH: systemPath, ...options.env },
     input: fs.readFileSync(installer),
   });
 }
@@ -159,7 +160,7 @@ test("refuses a pablo command outside the selected prefix", () => {
     fs.chmodSync(existing, 0o755);
     const prefix = path.join(root, "prefix");
     const result = run(installArgs(item, prefix), {
-      env: { PATH: `${commands}${path.delimiter}${process.env.PATH}` },
+      env: { PATH: `${commands}${path.delimiter}${systemPath}` },
     });
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /outside the selected prefix/);

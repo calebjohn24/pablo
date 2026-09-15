@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-15T01:21:15.659Z",
+  "updated_at": "2026-09-15T01:32:12.204Z",
   "active_checkpoint": "C3.36",
   "next_checkpoint": null,
-  "next_action": "Resume C3.36 with the exact frozen Linux candidate. The cloud-harness hero is complete, but the public installer archive is still 404; complete the remaining offline, installed ACP/TUI, Collector and bounded live CLI/ACP cases before publication.",
-  "latest_log_entry": "LOG-0197",
+  "next_action": "Resume C3.36 with the same frozen Linux candidate now available through the public preview route. Complete the remaining offline, installed ACP/TUI, Collector and bounded live CLI/ACP cases; the formal tag still waits on all native gates and matched measurements.",
+  "latest_log_entry": "LOG-0198",
   "checkpoints": [
     {
       "id": "C1.0",

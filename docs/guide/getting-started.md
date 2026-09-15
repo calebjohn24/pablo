@@ -36,12 +36,12 @@ Most application teams should begin with ACP. It gives the host a stable process
 Pablo targets macOS and Linux on arm64 and x86_64. The installer selects the native archive, verifies its SHA-256 checksum and reported version, and writes the executable plus an ownership receipt beneath the prefix you choose. It does not use `sudo`, a package manager, Node or Python.
 
 ::: warning v0.0.1 prerelease
-The installer is live, but the `v0.0.1` archives remain private until all four native acceptance gates pass. Use the source build below today. The versioned installer command becomes the recommended path when [release status](./release-status.md) lists `v0.0.1` as published.
+The `v0.0.1` archives are available as a public preview while the full four-platform acceptance matrix remains in progress. The macOS binaries are unsigned and not notarized. Pin this exact version and review [release status](./release-status.md) before production use.
 :::
 
 ### Versioned installer
 
-When `v0.0.1` is published, install the native Mac or Linux binary with one command:
+Install the native Mac or Linux preview binary with one command:
 
 ```sh
 curl -fsSL https://runpablo.pages.dev/install.sh | sh
@@ -55,7 +55,7 @@ export PATH="$HOME/.local/bin:$PATH"
 
 A later exact version can replace an unchanged receipt-backed installation with `--update`. See [Installation and release files](./installation.md) for inspection, version and prefix overrides, supported platforms, manual verification, upgrades and removal.
 
-### Build from source today
+### Build from source
 
 A source build requires Git, a native C build toolchain and Rust `1.98.1`, pinned by `rust-toolchain.toml`:
 

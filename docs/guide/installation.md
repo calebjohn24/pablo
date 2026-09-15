@@ -8,7 +8,7 @@ description: Install an exact Pablo release, inspect its checksums and manifests
 Pablo releases use four versioned archives, one for each supported operating-system and architecture pair. The installer chooses the target from `uname`, verifies the archive before extraction, executes the candidate’s `--version`, and writes only the executable and an ownership receipt beneath an absolute prefix.
 
 ::: warning Prerelease delivery
-The installer and release-candidate pipeline are implemented, but the four candidates still need their full native acceptance gates before they can be published. Until a version appears in [release status](./release-status.md), build from source.
+The exact `v0.0.1` candidate archives are publicly available for preview, but their full native acceptance gates and formal tagged release remain incomplete. The macOS candidates are unsigned and not notarized. Review [release status](./release-status.md) before production use.
 :::
 
 ## Supported targets

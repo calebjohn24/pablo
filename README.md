@@ -4,7 +4,7 @@ A small Rust agent runtime for applications doing non-coding knowledge work.
 
 Pablo gives your application a model-and-tool loop with streaming output, cancellation, policy enforcement and tracing. Run tasks from the CLI, use the interactive terminal, connect an editor through the Agent Client Protocol (ACP), or embed `pablo-core` in a Rust application. Each interface uses the same runtime; your host owns the sandbox, approvals and application state.
 
-**Status:** preparing the first `v0.0.1` release. Build from source until the four native archives pass acceptance and are published.
+**Status:** public `v0.0.1` preview archives are available through the installer. Full four-platform acceptance and the formal release tag remain in progress.
 
 ## Documentation
 
@@ -55,7 +55,7 @@ The offline demo prints `Hello from pablo.` without a provider credential. Comma
 
 ### Installer preview
 
-The checked-in installer is ready for versioned release archives, but no installable release asset is published yet. Build from source until the release candidate is available. Once `v0.0.1` and its four platform archives are published, install the native Mac or Linux binary with one command:
+Install the public `v0.0.1` preview for native Mac or Linux with one command:
 
 ```sh
 curl -fsSL https://runpablo.pages.dev/install.sh | sh
@@ -73,7 +73,7 @@ Remove it with:
 curl -fsSL https://runpablo.pages.dev/install.sh | sh -s -- --remove
 ```
 
-Review the [installer source](install.sh) and [archive layout, platform requirements, manifests and signing limits](docs/guide/installation.md) before running it. Release publication and four-platform artifact acceptance remain pending.
+Review the [installer source](install.sh) and [archive layout, platform requirements, manifests and signing limits](docs/guide/installation.md) before running it. The preview archives are unsigned, the macOS builds are not notarized, and four-platform artifact acceptance remains pending.
 
 For a real task, supply a gateway credential in your environment or an ignored `.env` in the directory where you invoke Pablo:
 
@@ -205,7 +205,7 @@ node scripts/project.mjs check
 
 These development checks use offline fixtures. Live provider checks are separate, explicit commands documented in the [gateway guide](docs/gateway.md#explicit-verification). The [knowledge-work benchmark](scripts/knowledge-work/README.md) covers factual scoring, latency, memory, CPU and cost comparisons; `npm run bench:knowledge` previews its matrix without model calls.
 
-Release preparation now includes a deterministic four-target candidate pipeline, verified archive layout, checksums, dependency notices, source/build/target manifests and explicit-prefix installation policy. The remaining gates are native acceptance of those exact candidates on macOS arm64/x86_64 and Linux x86_64/arm64, matched release measurements, and prerelease publication. The full 0.1 contract also retains the deferred Otto integration proof. See the [release plan](docs/project/cycles/003-extensibility-and-release.md#c334-release-archives-and-installation) and [product design](docs/context.md#291-focused-release-contract).
+Release preparation now includes a deterministic four-target candidate pipeline, verified archive layout, checksums, dependency notices, source/build/target manifests, explicit-prefix installation policy and public R2-backed preview delivery. The remaining gates are native acceptance of those exact candidates on macOS arm64/x86_64 and Linux x86_64/arm64, matched release measurements, and the formal tagged release. The full 0.1 contract also retains the deferred Otto integration proof. See the [release plan](docs/project/cycles/003-extensibility-and-release.md#c334-release-archives-and-installation) and [product design](docs/context.md#291-focused-release-contract).
 
 For current progress and the next handoff, run `node scripts/project.mjs context`. Contributors should read [AGENTS.md](AGENTS.md); [project decisions](docs/project/brain.md) and the [backlog](docs/project/backlog.md) retain design rationale and deferred work.
 
