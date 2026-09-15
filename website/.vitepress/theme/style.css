@@ -753,6 +753,10 @@ body {
   letter-spacing: -0.025em;
 }
 
+.vp-doc h2 .header-anchor {
+  top: 8px;
+}
+
 .vp-doc p,
 .vp-doc li {
   line-height: 1.75;

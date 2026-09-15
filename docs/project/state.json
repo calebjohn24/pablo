@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-15T16:43:20.966Z",
+  "updated_at": "2026-09-15T20:02:09.018Z",
   "active_checkpoint": "C3.36",
   "next_checkpoint": null,
-  "next_action": "Resume C3.36 with the exact frozen Linux x86_64 candidate: complete the offline suite, installed ACP/TUI, real Collector and bounded live Vercel AI Gateway acceptance, then record cleanup and privacy evidence.",
-  "latest_log_entry": "LOG-0207",
+  "next_action": "Merge and deploy the hero-label and anchor-alignment correction, verify the production Pages site, then resume native Linux x86_64 acceptance.",
+  "latest_log_entry": "LOG-0208",
   "checkpoints": [
     {
       "id": "C1.0",
