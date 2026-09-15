@@ -1,7 +1,7 @@
 <script setup>
 import DefaultTheme from "vitepress/theme";
 import FootprintHero from "./FootprintHero.vue";
-import HeroBenchmark from "./HeroBenchmark.vue";
+import InteropHero from "./InteropHero.vue";
 import RuntimeHero from "./RuntimeHero.vue";
 
 const { Layout } = DefaultTheme;
@@ -16,7 +16,7 @@ const { Layout } = DefaultTheme;
       <RuntimeHero />
     </template>
     <template #home-features-after>
-      <HeroBenchmark />
+      <InteropHero />
     </template>
   </Layout>
 </template>

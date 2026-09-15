@@ -1,8 +1,8 @@
 ---
 layout: home
-title: Pablo — Rust agent runtime
+title: Pablo — A 15× smaller harness for your agents
 titleTemplate: false
-description: A small, bounded Rust agent runtime for applications doing non-coding knowledge work.
+description: A lightweight agentic harness for non-coding knowledge work, built in Rust.
 hero:
   name: Pablo / measured footprint
   text: A 15× smaller harness for your agents.
@@ -85,12 +85,7 @@ Every admitted task ends as `completed`, `cancelled`, `timed_out`, `policy_denie
   <div><b>Operations</b><span>Offline config inspection, focused diagnostics, bounded JSONL traces and OTLP export.</span></div>
 </div>
 
-::: warning Prerelease status
-Pablo `v0.0.1` preview archives are available through the installer. They are unsigned, the macOS builds are not notarized, and the full four-platform acceptance matrix is still in progress. The runtime contract is versioned and may change before 0.1.
-:::
-
 <div class="final-cta">
-  <span>READY TO ADD AGENT EXECUTION?</span>
-  <h2>Install Pablo, verify it offline, then connect your application through ACP or Rust.</h2>
+  <h2>Try Pablo today</h2>
   <a href="/getting-started">Open the integration guide →</a>
 </div>

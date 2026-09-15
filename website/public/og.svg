@@ -1,22 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title description">
-  <title id="title">Pablo — the agent runtime your application can own</title>
-  <desc id="description">Dark technical social card for the Pablo Rust agent runtime.</desc>
+  <title id="title">Pablo — A 15× smaller harness for your agents</title>
+  <desc id="description">Dark technical social card showing Pablo's 15 times smaller process-tree memory footprint against Claude Code.</desc>
   <defs>
     <linearGradient id="background" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#090c0f" />
-      <stop offset="0.58" stop-color="#0b0d10" />
+      <stop stop-color="#080b0e" />
+      <stop offset="0.6" stop-color="#0b0e12" />
       <stop offset="1" stop-color="#17100d" />
     </linearGradient>
     <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
-      <stop stop-color="#ff8254" />
-      <stop offset="1" stop-color="#ff5c2b" />
+      <stop stop-color="#ff8557" />
+      <stop offset="1" stop-color="#ff5f2e" />
     </linearGradient>
     <linearGradient id="trace" x1="0" y1="0" x2="1" y2="0">
       <stop stop-color="#ff6b3a" />
       <stop offset="1" stop-color="#ff6b3a" stop-opacity="0.08" />
     </linearGradient>
-    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(1008 256) rotate(139.7) scale(405 382)" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#ff652f" stop-opacity="0.22" />
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(1010 210) rotate(136) scale(420 390)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ff652f" stop-opacity="0.2" />
       <stop offset="1" stop-color="#ff652f" stop-opacity="0" />
     </radialGradient>
     <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -25,70 +25,71 @@
     <filter id="soft-glow" x="-80%" y="-80%" width="260%" height="260%">
       <feGaussianBlur stdDeviation="10" />
     </filter>
-    <clipPath id="frame-clip">
-      <rect x="770" y="118" width="500" height="394" rx="22" />
-    </clipPath>
   </defs>
 
   <rect width="1200" height="630" fill="url(#background)" />
   <rect width="1200" height="630" fill="url(#grid)" />
   <rect width="1200" height="630" fill="url(#glow)" />
-  <circle cx="1006" cy="254" r="250" fill="none" stroke="#ff652f" stroke-opacity="0.17" stroke-width="2" />
 
-  <g transform="translate(68 66)">
+  <g transform="translate(68 58)">
     <rect x="0" y="2" width="18" height="18" rx="5" fill="#ff6b3a" filter="url(#soft-glow)" opacity="0.62" />
     <rect x="0" y="2" width="18" height="18" rx="5" fill="url(#accent)" />
     <text x="36" y="20" fill="#f4f2ed" font-family="Manrope, Inter, Helvetica Neue, Arial, sans-serif" font-size="22" font-weight="700" letter-spacing="7">PABLO</text>
-    <line x1="186" y1="11" x2="632" y2="11" stroke="#ffffff" stroke-opacity="0.13" />
+    <line x1="186" y1="11" x2="1064" y2="11" stroke="#ffffff" stroke-opacity="0.13" />
   </g>
 
-  <g transform="translate(68 180)">
-    <text fill="#f7f5f1" font-family="Manrope, Inter, Helvetica Neue, Arial, sans-serif" font-size="60" font-weight="600" letter-spacing="-2.2">
-      <tspan x="0" y="0">The agent runtime</tspan>
-      <tspan x="0" y="74">your application can own.</tspan>
+  <g transform="translate(68 177)">
+    <text fill="#f7f5f1" font-family="Manrope, Inter, Helvetica Neue, Arial, sans-serif" font-size="66" font-weight="600" letter-spacing="-2.7">
+      <tspan x="0" y="0">A 15× smaller</tspan>
+      <tspan x="0" y="76">harness for</tspan>
+      <tspan x="0" y="152">your agents.</tspan>
     </text>
-    <text x="2" y="168" fill="#a2a9b3" font-family="Manrope, Inter, Helvetica Neue, Arial, sans-serif" font-size="23" font-weight="400">A small Rust runtime for non-coding knowledge work.</text>
+    <text x="2" y="208" fill="#a7adb6" font-family="Manrope, Inter, Helvetica Neue, Arial, sans-serif" font-size="21" font-weight="400">
+      <tspan x="2" y="208">Pablo is a lightweight agentic harness for</tspan>
+      <tspan x="2" y="239">non-coding knowledge work, built in Rust.</tspan>
+    </text>
   </g>
 
-  <g transform="translate(68 512)">
+  <g transform="translate(68 520)">
     <rect width="344" height="46" rx="23" fill="#11161c" stroke="#2a313a" />
     <circle cx="25" cy="23" r="5" fill="#52d18a" />
     <text x="43" y="29" fill="#c8ced6" font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="15" letter-spacing="1.3">RUST · ACP · MCP · A2A · OTEL</text>
     <text x="0" y="83" fill="#ff7a4a" font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="16" font-weight="500" letter-spacing="2.1">RUNPABLO.PAGES.DEV</text>
   </g>
 
-  <g clip-path="url(#frame-clip)">
-    <rect x="770" y="118" width="500" height="394" rx="22" fill="#0c1014" stroke="#ff6b3a" stroke-opacity="0.48" stroke-width="2" />
-    <rect x="770" y="118" width="500" height="62" fill="#10151b" />
-    <circle cx="804" cy="149" r="7" fill="#ff6b3a" />
-    <circle cx="829" cy="149" r="7" fill="#3d444d" />
-    <circle cx="854" cy="149" r="7" fill="#3d444d" />
-    <text x="1033" y="155" fill="#717b88" font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="13">pablo · ~/project</text>
+  <g transform="translate(747 119)">
+    <rect width="387" height="411" rx="22" fill="#0d1116" stroke="#323941" stroke-width="2" />
+    <rect x="1" y="1" width="385" height="66" rx="21" fill="#11161c" />
+    <path d="M1 47h385v20H1z" fill="#11161c" />
+    <circle cx="31" cy="33" r="6" fill="#ff6b3a" />
+    <text x="52" y="39" fill="#9da6b2" font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="14" letter-spacing="1.4">RUNTIME RESOURCE USE</text>
 
-    <g font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="15">
-      <text x="805" y="221" fill="#66717e">01</text>
-      <text x="850" y="221" fill="#d6d9dd">run.started</text>
-      <text x="1080" y="221" fill="#697482">trace 7a93…</text>
-      <line x1="805" y1="242" x2="1232" y2="242" stroke="#ffffff" stroke-opacity="0.07" />
+    <text x="30" y="124" fill="#ff7849" font-family="Manrope, Inter, Helvetica Neue, Arial, sans-serif" font-size="68" font-weight="700" letter-spacing="-3">15×</text>
+    <text x="166" y="104" fill="#f2f0ec" font-family="Manrope, Inter, Helvetica Neue, Arial, sans-serif" font-size="20" font-weight="600">less memory</text>
+    <text x="166" y="132" fill="#858e9a" font-family="Manrope, Inter, Helvetica Neue, Arial, sans-serif" font-size="16">than Claude Code</text>
 
-      <text x="805" y="280" fill="#66717e">02</text>
-      <text x="850" y="280" fill="#d6d9dd">tool.started</text>
-      <text x="1080" y="280" fill="#89929c">fs.list</text>
-      <line x1="805" y1="301" x2="1232" y2="301" stroke="#ffffff" stroke-opacity="0.07" />
+    <text x="30" y="179" fill="#737d89" font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="12" letter-spacing="1.2">PEAK PROCESS-TREE MEMORY</text>
 
-      <text x="805" y="339" fill="#66717e">03</text>
-      <text x="850" y="339" fill="#d6d9dd">tool.finished</text>
-      <text x="1060" y="339" fill="#89929c">42 entries · 3.1ms</text>
-      <line x1="805" y1="360" x2="1232" y2="360" stroke="#ffffff" stroke-opacity="0.07" />
+    <g font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="13">
+      <text x="30" y="217" fill="#e6e3df">PABLO</text>
+      <rect x="125" y="204" width="20" height="14" rx="4" fill="#ff6b3a" />
+      <text x="355" y="217" text-anchor="end" fill="#ff8a60">19 MiB</text>
 
-      <rect x="805" y="394" width="8" height="8" rx="2" fill="#ff6b3a" />
-      <text x="828" y="404" fill="#ff8052">model.delta</text>
-      <text x="965" y="404" fill="#d6d9dd">I found two runtime crates…</text>
+      <text x="30" y="260" fill="#8c95a0">PI</text>
+      <rect x="125" y="247" width="168" height="14" rx="4" fill="#4a515b" />
+      <text x="355" y="260" text-anchor="end" fill="#8c95a0">160 MiB</text>
 
-      <circle cx="809" cy="458" r="5" fill="#52d18a" />
-      <text x="828" y="463" fill="#52d18a">completed</text>
-      <text x="1070" y="463" fill="#697482">2 calls · 1 tool</text>
+      <text x="30" y="303" fill="#8c95a0">CODEX</text>
+      <rect x="125" y="290" width="205" height="14" rx="4" fill="#4a515b" />
+      <text x="355" y="303" text-anchor="end" fill="#8c95a0">196 MiB</text>
+
+      <text x="30" y="346" fill="#8c95a0">CLAUDE CODE</text>
+      <rect x="125" y="333" width="230" height="14" rx="4" fill="#4a515b" />
+      <text x="355" y="346" text-anchor="end" fill="#8c95a0">286 MiB</text>
     </g>
+
+    <line x1="30" y1="370" x2="357" y2="370" stroke="#ffffff" stroke-opacity="0.08" />
+    <text x="30" y="397" fill="#697482" font-family="DM Mono, SFMono-Regular, Consolas, monospace" font-size="11" letter-spacing="0.8">HOST-SIDE SIX-TASK BENCHMARK</text>
   </g>
 
   <rect x="0" y="626" width="1200" height="4" fill="url(#trace)" />
