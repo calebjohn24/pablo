@@ -127,18 +127,27 @@ test("Cloudflare Pages assets and headers are emitted", () => {
   assert(fs.existsSync(path.join(dist, "apple-touch-icon.png")));
   assert(fs.existsSync(path.join(dist, "og.png")));
   assert(fs.existsSync(path.join(dist, "social/benchmark-15x.png")));
+  assert(fs.existsSync(path.join(dist, "social/benchmark-15x-footprint.png")));
   assert(fs.existsSync(path.join(dist, "social/logos/pablo.svg")));
   assert(fs.existsSync(path.join(dist, "social/logos/claude.svg")));
   assert(fs.existsSync(path.join(dist, "social/logos/codex.svg")));
   const og = fs.readFileSync(path.join(dist, "og.png"));
   assert.equal(og.readUInt32BE(16), 1200, "OG image width must be 1200 pixels");
   assert.equal(og.readUInt32BE(20), 630, "OG image height must be 630 pixels");
-  const social = fs.readFileSync(path.join(dist, "social/benchmark-15x.png"));
+  const social = fs.readFileSync(path.join(dist, "social/benchmark-15x-footprint.png"));
   assert.equal(social.readUInt32BE(16), 1200, "social benchmark width must be 1200 pixels");
   assert.equal(social.readUInt32BE(20), 630, "social benchmark height must be 630 pixels");
-  const socialSource = fs.readFileSync(path.resolve("public/social/benchmark-15x.svg"), "utf8");
+  assert.deepEqual(
+    fs.readFileSync(path.join(dist, "social/benchmark-15x.png")),
+    social,
+    "original social URL must serve the corrected footprint card",
+  );
+  const socialSource = fs.readFileSync(path.resolve("public/social/benchmark-15x-footprint.svg"), "utf8");
   assert.match(socialSource, /CLAUDE CODE \+ CODEX/);
-  assert.match(socialSource, /15×\+.*MORE CPU/s);
+  assert.match(socialSource, /15×.*SMALLER.*FOOTPRINT/s);
+  assert.doesNotMatch(socialSource, /MORE CPU/);
+  assert.doesNotMatch(socialSource, /six-task workload/i);
+  assert.doesNotMatch(socialSource, /6 SYNTHETIC TASKS/);
   assert.match(socialSource, /15\.1× CPU/);
   assert.match(socialSource, /16\.3× CPU/);
   assert.match(socialSource, /logos\/pablo\.svg/);
