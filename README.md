@@ -4,7 +4,7 @@ A small Rust agent runtime for applications doing non-coding knowledge work.
 
 Pablo gives your application a model-and-tool loop with streaming output, cancellation, policy enforcement and tracing. Run tasks from the CLI, use the interactive terminal, connect an editor through the Agent Client Protocol (ACP), or embed `pablo-core` in a Rust application. Each interface uses the same runtime; your host owns the sandbox, approvals and application state.
 
-**Status:** public `v0.0.1` preview archives are available through the installer. Full four-platform acceptance and the formal release tag remain in progress.
+**Current version:** `v0.0.1` is available through the checksum-verifying installer for macOS and Linux on arm64 and x86_64.
 
 ## Documentation
 
@@ -13,7 +13,7 @@ Read the [public documentation](https://runpablo.pages.dev), or start in the rep
 - Embed Pablo through [ACP](docs/guide/acp.md) or [Rust](docs/guide/embedding.md), or use the [CLI and TUI](docs/guide/cli.md) for evaluation and operations.
 - Configure [deployments](docs/guide/configuration.md), [providers and model routes](docs/guide/providers.md), and [tools and policy](docs/guide/tools-and-policy.md).
 - Add [subagents](docs/guide/subagents.md), [MCP, Skills and A2A](docs/guide/extensibility.md), [structured output](docs/guide/structured-output.md), and [observability](docs/guide/observability.md).
-- Consult [installation and release files](docs/guide/installation.md), the [resource benchmark](docs/guide/benchmarks.md), [limits and outcomes](docs/guide/reference.md), [troubleshooting](docs/guide/troubleshooting.md), and the current [release status](docs/guide/release-status.md).
+- Consult [installation and release files](docs/guide/installation.md), the [resource benchmark](docs/guide/benchmarks.md), [limits and outcomes](docs/guide/reference.md), [troubleshooting](docs/guide/troubleshooting.md), and [version and support](docs/guide/release-status.md).
 
 ## What it does
 
@@ -53,9 +53,9 @@ cargo build --release --locked -p pablo --bin pablo
 
 The offline demo prints `Hello from pablo.` without a provider credential. Commands below run from the checkout and use the built executable directly.
 
-### Installer preview
+### Install Pablo
 
-Install the public `v0.0.1` preview for native Mac or Linux with one command:
+Install `v0.0.1` for native Mac or Linux with one command:
 
 ```sh
 curl -fsSL https://runpablo.pages.dev/install.sh | sh
@@ -73,7 +73,7 @@ Remove it with:
 curl -fsSL https://runpablo.pages.dev/install.sh | sh -s -- --remove
 ```
 
-Review the [installer source](install.sh) and [archive layout, platform requirements, manifests and signing limits](docs/guide/installation.md) before running it. The preview archives are unsigned, the macOS builds are not notarized, and four-platform artifact acceptance remains pending.
+Review the [installer source](install.sh) and [archive layout, platform requirements, manifests and signing limits](docs/guide/installation.md) before running it. The archives are unsigned, and the macOS builds are not notarized.
 
 For a real task, supply a gateway credential in your environment or an ignored `.env` in the directory where you invoke Pablo:
 
@@ -190,7 +190,7 @@ mkdir -p .pablo/traces
 
 Native traces record metadata by default and preserve existing files. `--capture-content` explicitly includes task content in native traces. Network telemetry is off by default; [OpenTelemetry configuration](docs/telemetry.md) covers OTLP/HTTP export, incoming W3C context and privacy behavior.
 
-## Development and release status
+## Development
 
 ```sh
 cargo fmt --all --check
@@ -205,7 +205,7 @@ node scripts/project.mjs check
 
 These development checks use offline fixtures. Live provider checks are separate, explicit commands documented in the [gateway guide](docs/gateway.md#explicit-verification). The [knowledge-work benchmark](scripts/knowledge-work/README.md) covers factual scoring, latency, memory, CPU and cost comparisons; `npm run bench:knowledge` previews its matrix without model calls.
 
-Release preparation now includes a deterministic four-target candidate pipeline, verified archive layout, checksums, dependency notices, source/build/target manifests, explicit-prefix installation policy and public R2-backed preview delivery. The remaining gates are native acceptance of those exact candidates on macOS arm64/x86_64 and Linux x86_64/arm64, matched release measurements, and the formal tagged release. The full 0.1 contract also retains the deferred Otto integration proof. See the [release plan](docs/project/cycles/003-extensibility-and-release.md#c334-release-archives-and-installation) and [product design](docs/context.md#291-focused-release-contract).
+Release packaging produces deterministic four-target archives with verified layout, checksums, dependency notices, source/build/target manifests and explicit-prefix installation through the R2-backed download route. See the [release plan](docs/project/cycles/003-extensibility-and-release.md#c334-release-archives-and-installation) and [product design](docs/context.md#291-focused-release-contract).
 
 For current progress and the next handoff, run `node scripts/project.mjs context`. Contributors should read [AGENTS.md](AGENTS.md); [project decisions](docs/project/brain.md) and the [backlog](docs/project/backlog.md) retain design rationale and deferred work.
 

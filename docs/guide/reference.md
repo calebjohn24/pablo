@@ -79,20 +79,20 @@ The machine envelope represents u64 values as decimal strings. The completed out
 
 ## Platform scope
 
-Pablo targets macOS and Linux. Shell process-group cleanup has platform-specific implementations for those systems. The prerelease plan requires native acceptance on:
+Pablo targets macOS and Linux. Shell process-group cleanup has platform-specific implementations for these supported targets:
 
 - macOS arm64
 - macOS x86_64
 - Linux x86_64
 - Linux arm64
 
-Cross-compilation can prepare an artifact but cannot satisfy a native execution gate. Release archives and the full native matrix remain pending.
+Cross-compilation can prepare an archive, but native builds are used to validate platform behavior.
 
 ## Version spaces
 
 Several independent versions appear in integrations:
 
-- Cargo/executable version: `0.0.1` for the first release candidate
+- Cargo/executable version: `0.0.1`
 - native event/task contract revision: currently `c3.33`
 - deployment document schema: `1`
 - deployment contract revision: advances with implemented option semantics

@@ -35,13 +35,11 @@ Most application teams should begin with ACP. It gives the host a stable process
 
 Pablo targets macOS and Linux on arm64 and x86_64. The installer selects the native archive, verifies its SHA-256 checksum and reported version, and writes the executable plus an ownership receipt beneath the prefix you choose. It does not use `sudo`, a package manager, Node or Python.
 
-::: warning v0.0.1 prerelease
-The `v0.0.1` archives are available as a public preview while the full four-platform acceptance matrix remains in progress. The macOS binaries are unsigned and not notarized. Pin this exact version and review [release status](./release-status.md) before production use.
-:::
+The macOS binaries are unsigned and not notarized. Pin the exact installed version and review [Version and support](./release-status.md) before production use.
 
 ### Versioned installer
 
-Install the native Mac or Linux preview binary with one command:
+Install the native Mac or Linux binary with one command:
 
 ```sh
 curl -fsSL https://runpablo.pages.dev/install.sh | sh
@@ -181,7 +179,7 @@ The example shows initialization, session creation, update streaming, cancellati
 
 Use `pablo-core` when your Rust host needs to construct the runtime directly. The host injects a `Provider`, `EventSink`, `ToolRegistry`, cancellation token and OpenTelemetry tracer, then awaits the returned typed outcome.
 
-The crate is not published to crates.io during the prerelease. Pin this repository to an exact reviewed revision in your application and start with the offline `ScriptedProvider` example in [Embed in Rust](./embedding.md). The core discovers no credentials and grants no tools unless your host supplies them.
+The crate is not published to crates.io. Pin this repository to an exact reviewed revision in your application and start with the offline `ScriptedProvider` example in [Embed in Rust](./embedding.md). The core discovers no credentials and grants no tools unless your host supplies them.
 
 ## Define production authority
 

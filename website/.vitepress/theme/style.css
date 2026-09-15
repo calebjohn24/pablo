@@ -369,7 +369,7 @@ body {
 
 .runtime-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(420px, 520px);
+  grid-template-columns: minmax(420px, 520px) minmax(0, 1fr);
   align-items: center;
   gap: clamp(52px, 7vw, 100px);
   max-width: 1180px;
@@ -377,6 +377,11 @@ body {
   padding: 76px 32px;
   border-top: 1px solid var(--vp-c-divider);
   border-bottom: 1px solid var(--vp-c-divider);
+}
+
+.runtime-hero-copy {
+  grid-column: 2;
+  grid-row: 1;
 }
 
 .runtime-hero-copy > span {
@@ -427,6 +432,8 @@ body {
 .runtime-button.alt:hover { background: rgba(255, 255, 255, .06); color: var(--vp-c-text-1); }
 
 .runtime-hero .terminal-shell {
+  grid-column: 1;
+  grid-row: 1;
   width: 100%;
 }
 
@@ -836,6 +843,11 @@ body {
   .terminal-shell,
   .footprint-shell { width: 100%; }
   .runtime-hero { grid-template-columns: 1fr; }
+  .runtime-hero-copy,
+  .runtime-hero .terminal-shell {
+    grid-column: auto;
+    grid-row: auto;
+  }
   .interop-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .interop-grid > a:nth-child(2) { border-right: 0; }
   .interop-grid > a:nth-child(-n+2) { border-bottom: 1px solid var(--vp-c-divider); }

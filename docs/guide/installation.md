@@ -5,11 +5,7 @@ description: Install an exact Pablo release, inspect its checksums and manifests
 
 # Installation and release files
 
-Pablo releases use four versioned archives, one for each supported operating-system and architecture pair. The installer chooses the target from `uname`, verifies the archive before extraction, executes the candidate’s `--version`, and writes only the executable and an ownership receipt beneath an absolute prefix.
-
-::: warning Prerelease delivery
-The exact `v0.0.1` candidate archives are publicly available for preview, but their full native acceptance gates and formal tagged release remain incomplete. The macOS candidates are unsigned and not notarized. Review [release status](./release-status.md) before production use.
-:::
+Pablo releases use four versioned archives, one for each supported operating-system and architecture pair. The installer chooses the target from `uname`, verifies the archive before extraction, executes the binary’s `--version`, and writes only the executable and an ownership receipt beneath an absolute prefix.
 
 ## Supported targets
 
@@ -20,7 +16,7 @@ The exact `v0.0.1` candidate archives are publicly available for preview, but th
 | `aarch64-unknown-linux-gnu` | 64-bit Linux with glibc 2.35 or newer | GNU libc build; musl is not supported |
 | `x86_64-unknown-linux-gnu` | 64-bit Linux with glibc 2.35 or newer | GNU libc build; musl is not supported |
 
-The macOS deployment targets are set explicitly during compilation. Linux candidates are built natively on Ubuntu 22.04 runners and declare glibc 2.35 as the minimum. Each target manifest records the build runner, dynamic-library report, runtime requirements, signing state, binary hash, and the checkpoint that owns full native acceptance.
+The macOS deployment targets are set explicitly during compilation. Linux archives are built natively on Ubuntu 22.04 runners and declare glibc 2.35 as the minimum. Each target manifest records the build runner, dynamic-library report, runtime requirements, signing state and binary hash.
 
 ## Install an exact version
 
@@ -45,7 +41,7 @@ Installation fails before changing the prefix when:
 - the archive or checksum cannot be downloaded over HTTPS;
 - the checksum is malformed or does not match;
 - the archive does not contain the exact versioned `bin/pablo` member;
-- the candidate does not execute or reports another version;
+- the binary does not execute or reports another version;
 - another `pablo` command is visible outside the selected prefix; or
 - `$PREFIX/bin/pablo` already exists.
 
@@ -59,7 +55,7 @@ Update to another exact version with the same inspected installer:
 curl -fsSL https://runpablo.pages.dev/install.sh | sh -s -- --version v0.0.2 --update
 ```
 
-`--update` requires an existing receipt from this installer, checks the installed binary hash and target, and refuses the same version or a locally changed executable. The new archive still passes download, checksum and candidate-version validation before replacement. If receipt installation fails, the previous binary is restored.
+`--update` requires an existing receipt from this installer, checks the installed binary hash and target, and refuses the same version or a locally changed executable. The new archive still passes download, checksum and version validation before replacement. If receipt installation fails, the previous binary is restored.
 
 Use `--replace` for the broader explicit policy that replaces any regular, non-symlink `pablo` file at the selected path. It does not require an earlier receipt, so inspect the target yourself before choosing it.
 
@@ -121,4 +117,4 @@ cargo build --release --locked -p pablo --bin pablo
 ./target/release/pablo --version
 ```
 
-The release profile enables thin LTO, uses one codegen unit, and strips symbols. Source builds are distinct from official release candidates because they do not carry the candidate archive’s source, build, target, and native-acceptance identities.
+The release profile enables thin LTO, uses one codegen unit, and strips symbols. Source builds are distinct from the published archives because they do not carry the archive’s source, build and target identities.

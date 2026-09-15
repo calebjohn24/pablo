@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-15T20:05:25.959Z",
+  "updated_at": "2026-09-15T22:47:02.085Z",
   "active_checkpoint": "C3.36",
   "next_checkpoint": null,
-  "next_action": "Resume C3.36 with the exact frozen Linux x86_64 candidate: complete the offline suite, installed ACP/TUI, real Collector and bounded live Vercel AI Gateway acceptance, then record cleanup and privacy evidence.",
-  "latest_log_entry": "LOG-0209",
+  "next_action": "Merge and deploy the landing-layout and public-copy update, verify the production Pages site, then resume native Linux x86_64 acceptance.",
+  "latest_log_entry": "LOG-0210",
   "checkpoints": [
     {
       "id": "C1.0",

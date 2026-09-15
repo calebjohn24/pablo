@@ -9,9 +9,9 @@ description: Call pablo-core directly with an injected provider, tracer, event s
 
 Choose this boundary when your Rust application needs direct, in-process ownership of providers, tools, events, telemetry and cancellation. For an independently upgradeable process boundary, use [ACP](./acp.md) instead.
 
-## Add the prerelease source dependency
+## Add the source dependency
 
-The workspace packages are currently marked `publish = false`. Pin a full reviewed Git revision while the API is prerelease:
+The workspace packages are marked `publish = false`. Pin a full reviewed Git revision:
 
 ```toml
 [dependencies]
@@ -64,7 +64,7 @@ spec.limits.max_tool_calls = Some(8);
 spec.reasoning = ReasoningConfig::Effort(ReasoningEffort::Low);
 ```
 
-Validate current constructors against your pinned crate revision when integrating; the public surface is still prerelease. The [runtime contract](https://github.com/calebjohn24/pablo/blob/main/docs/runtime.md) is authoritative for semantics and defaults.
+Validate current constructors against your pinned crate revision when integrating. The [runtime contract](https://github.com/calebjohn24/pablo/blob/main/docs/runtime.md) is authoritative for semantics and defaults.
 
 ## Inject a provider
 
@@ -132,7 +132,7 @@ let outcome = runtime
     .await?;
 ```
 
-Exact builder signatures vary across the configured registry paths; use the source and examples for the current prerelease revision. Filesystem writes and shell execution require explicit constructors. An empty catalog grants nothing.
+Exact builder signatures vary across the configured registry paths; use the source and examples for your pinned revision. Filesystem writes and shell execution require explicit constructors. An empty catalog grants nothing.
 
 Configured MCP tools use the asynchronous `PreparedRun::tools_with_mcp` path and must be explicitly closed/joined by the owner when unused or after the task.
 
