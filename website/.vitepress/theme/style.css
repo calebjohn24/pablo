@@ -604,13 +604,13 @@ body {
 
 .benchmark-link:hover { color: var(--vp-c-brand-1) !important; }
 
-.hero-benchmark {
+.interop-section {
   max-width: 1180px;
   margin: 8px auto 82px;
   padding: 0 32px;
 }
 
-.hero-benchmark-copy {
+.interop-copy {
   display: grid;
   grid-template-columns: 1.15fr 1fr;
   column-gap: 64px;
@@ -618,7 +618,7 @@ body {
   margin-bottom: 30px;
 }
 
-.hero-benchmark-copy > span {
+.interop-copy > span {
   grid-column: 1 / -1;
   margin-bottom: 14px;
   color: var(--vp-c-brand-1);
@@ -627,7 +627,7 @@ body {
   letter-spacing: .14em;
 }
 
-.hero-benchmark-copy h2 {
+.interop-copy h2 {
   margin: 0;
   font-size: clamp(30px, 4vw, 47px);
   font-weight: 650;
@@ -635,12 +635,91 @@ body {
   line-height: 1.08;
 }
 
-.hero-benchmark-copy p {
+.interop-copy p {
   margin: 0;
   color: var(--vp-c-text-2);
   font-size: 15px;
   line-height: 1.7;
 }
+
+.interop-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 9px 9px 0 0;
+  overflow: hidden;
+  background: var(--vp-c-bg-soft);
+}
+
+.interop-grid > a {
+  display: flex;
+  min-width: 0;
+  min-height: 270px;
+  flex-direction: column;
+  padding: 26px 24px;
+  border-right: 1px solid var(--vp-c-divider);
+  color: var(--vp-c-text-1) !important;
+  text-decoration: none !important;
+  transition: background-color .18s ease;
+}
+
+.interop-grid > a:last-child { border-right: 0; }
+.interop-grid > a:hover { background: var(--vp-c-bg-alt); }
+
+.interop-grid small {
+  color: var(--vp-c-brand-1);
+  font-family: var(--vp-font-family-mono);
+  font-size: 9px;
+  letter-spacing: .13em;
+}
+
+.interop-grid strong {
+  margin-top: 38px;
+  font-size: 24px;
+  letter-spacing: -.03em;
+}
+
+.interop-grid p {
+  margin: 14px 0 24px;
+  color: var(--vp-c-text-2);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.interop-grid a > span {
+  margin-top: auto;
+  color: var(--vp-c-text-1);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.interop-binary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 24px;
+  border: 1px solid var(--vp-c-divider);
+  border-top: 0;
+  border-radius: 0 0 9px 9px;
+  color: var(--vp-c-text-2);
+  font-family: var(--vp-font-family-mono);
+  font-size: 11px;
+}
+
+.interop-binary strong {
+  color: var(--vp-c-text-1);
+  font-family: var(--vp-font-family-base);
+  font-size: 13px;
+}
+
+.interop-binary code {
+  padding: 4px 8px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 4px;
+  color: var(--vp-c-brand-1);
+}
+
+.interop-binary > span:last-child { margin-left: auto; }
 
 .benchmark-page .VPDoc .content-container {
   max-width: 1056px;
@@ -659,8 +738,7 @@ body {
   background: linear-gradient(135deg, rgba(255, 107, 53, .12), rgba(255, 107, 53, .02));
 }
 
-.final-cta span { color: var(--vp-c-brand-1); font-family: var(--vp-font-family-mono); font-size: 9px; letter-spacing: .14em; }
-.final-cta h2 { max-width: 780px; margin: 14px 0 28px !important; font-size: clamp(28px, 4vw, 43px) !important; }
+.final-cta h2 { max-width: 780px; margin: 0 0 28px !important; font-size: clamp(28px, 4vw, 43px) !important; }
 .final-cta a { display: inline-block; color: var(--vp-c-text-1) !important; font-size: 13px; font-weight: 700; text-decoration: none !important; }
 
 .vp-doc h1 {
@@ -754,6 +832,9 @@ body {
   .terminal-shell,
   .footprint-shell { width: 100%; }
   .runtime-hero { grid-template-columns: 1fr; }
+  .interop-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .interop-grid > a:nth-child(2) { border-right: 0; }
+  .interop-grid > a:nth-child(-n+2) { border-bottom: 1px solid var(--vp-c-divider); }
 }
 
 @media (min-width: 961px) {
@@ -765,9 +846,15 @@ body {
 }
 
 @media (max-width: 720px) {
-  .hero-benchmark { margin: 0 auto 64px; padding: 0 20px; }
-  .hero-benchmark-copy { grid-template-columns: 1fr; gap: 14px; margin-bottom: 24px; }
-  .hero-benchmark-copy > span { margin-bottom: 0; }
+  .interop-section { margin: 0 auto 64px; padding: 0 20px; }
+  .interop-copy { grid-template-columns: 1fr; gap: 14px; margin-bottom: 24px; }
+  .interop-copy > span { margin-bottom: 0; }
+  .interop-grid { grid-template-columns: 1fr; }
+  .interop-grid > a,
+  .interop-grid > a:nth-child(2) { min-height: 220px; border-right: 0; border-bottom: 1px solid var(--vp-c-divider); }
+  .interop-grid > a:last-child { border-bottom: 0; }
+  .interop-binary { align-items: flex-start; flex-wrap: wrap; }
+  .interop-binary > span:last-child { width: 100%; margin-left: 29px; }
   .VPHome .vp-doc { padding: 0 20px 70px; }
   .VPHomeHero .main { text-align: left; }
   .VPHomeHero .name,
