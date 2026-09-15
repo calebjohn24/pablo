@@ -4,16 +4,16 @@ title: Pablo — Rust agent runtime
 titleTemplate: false
 description: A small, bounded Rust agent runtime for applications doing non-coding knowledge work.
 hero:
-  name: Pablo
-  text: The agent runtime your application can own.
-  tagline: Embed one bounded lifecycle for models, tools, policy, streaming, cancellation and traces through ACP or directly in your Rust host.
+  name: Pablo / measured footprint
+  text: A 10–20× smaller local footprint.
+  tagline: In our six-task comparison, Claude Code and Codex used 10–16× more local memory and CPU than Pablo. Pi used about 8× more. Pablo measured 19.11 MiB peak memory and 0.37% median CPU utilization.
   actions:
     - theme: brand
       text: Install and integrate
       link: /getting-started
     - theme: alt
-      text: Read the architecture
-      link: /introduction
+      text: See the benchmark
+      link: /benchmarks
 features:
   - title: One runtime lifecycle
     details: Model calls, tools, child work, native events and OpenTelemetry settle together. Cancellation waits for owned cleanup.

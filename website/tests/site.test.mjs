@@ -39,10 +39,12 @@ test("generated docs exactly match GitHub source and local links resolve", () =>
 
 test("landing page carries product copy and no starter metadata", () => {
   const html = fs.readFileSync(path.join(dist, "index.html"), "utf8");
+  assert.match(html, /A 10–20× smaller local footprint/);
   assert.match(html, /The agent runtime your application can own/);
   assert.match(html, /Pablo — Rust agent runtime/);
   assert.match(html, /non-coding knowledge work/i);
   assert.match(html, /Local runtime overhead, measured/);
+  assert.match(html, /LOCAL RESOURCE USE/);
   assert.match(html, /resource-usage/);
   assert.match(html, /ACP application host/);
   assert.match(html, /Install and integrate/);
