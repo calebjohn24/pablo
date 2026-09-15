@@ -5,8 +5,8 @@ titleTemplate: false
 description: A small, bounded Rust agent runtime for applications doing non-coding knowledge work.
 hero:
   name: Pablo / measured footprint
-  text: A 10–20× smaller local footprint.
-  tagline: In our six-task comparison, Claude Code and Codex used 10–16× more local memory and CPU than Pablo. Pi used about 8× more. Pablo measured 19.11 MiB peak memory and 0.37% median CPU utilization.
+  text: A 15× smaller harness for your agents.
+  tagline: Pablo is a lightweight agentic harness for non-coding knowledge work, built in Rust.
   actions:
     - theme: brand
       text: Install and integrate
