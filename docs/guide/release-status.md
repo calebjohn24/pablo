@@ -5,7 +5,7 @@ description: What is implemented, what remains before release, and which claims 
 
 # Release status
 
-Pablo `v0.0.1` is being prepared as the first release. The source tree contains a broad working runtime plus deterministic packaging and installation tooling, but the four exact artifacts have not passed the full native release matrix or been published. Build from source for evaluation.
+Pablo `v0.0.1` is being prepared as the first formal release. The four exact candidate archives are publicly available as an installable preview through `runpablo.pages.dev`, but they have not completed the full native release matrix and no release tag has been cut.
 
 ## Implemented today
 
@@ -24,17 +24,16 @@ Pablo `v0.0.1` is being prepared as the first release. The source tree contains 
 
 The selected release cycle still requires:
 
-1. Produce the four candidates through the native-runner workflow and freeze their identities.
-2. Pass native acceptance of those exact artifacts on all four targets, including CLI, Rust embedding, ACP, TUI, Collector and bounded live-provider proofs.
-3. Record matched release measurements across accepted targets.
-4. Publish the accepted prerelease set through the R2-backed release route and verify clean downloads and installs.
-5. Complete the cycle handoff.
+1. Pass native acceptance of the exact preview artifacts on all four targets, including CLI, Rust embedding, ACP, TUI, Collector and bounded live-provider proofs.
+2. Record matched release measurements across accepted targets.
+3. Cut the formal tag and verify clean downloads and installs across every advertised target.
+4. Complete the cycle handoff.
 
 Cross-compilation may prepare an archive but does not count as native acceptance. Published artifacts must be the exact artifacts exercised by the platform gates.
 
 ## Current limitations
 
-- The deterministic candidate builder, verifier, four-runner workflow and checksum-verifying install script are available for review, but no accepted release archive or package-manager formula is published yet.
+- The checksum-verifying preview archives are public, but they are not yet an accepted tagged release and no package-manager formula is published.
 - The source packages are not published to crates.io.
 - Each direct CLI invocation and ACP session is one fresh task; durable chat/job state belongs to the host.
 - The workspace is not an OS sandbox. Shell commands execute with the host account’s permissions.
