@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-15T16:40:30.473Z",
+  "updated_at": "2026-09-15T16:43:20.966Z",
   "active_checkpoint": "C3.36",
   "next_checkpoint": null,
-  "next_action": "Merge and deploy the simplified social footprint card, verify the cache-busted public PNG, then resume the remaining C3.36 Linux x86_64 acceptance matrix.",
-  "latest_log_entry": "LOG-0206",
+  "next_action": "Resume C3.36 with the exact frozen Linux x86_64 candidate: complete the offline suite, installed ACP/TUI, real Collector and bounded live Vercel AI Gateway acceptance, then record cleanup and privacy evidence.",
+  "latest_log_entry": "LOG-0207",
   "checkpoints": [
     {
       "id": "C1.0",
