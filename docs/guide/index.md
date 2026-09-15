@@ -24,7 +24,7 @@ features:
 ---
 
 <section class="signal-strip" aria-label="Pablo status">
-  <span><i class="signal-live"></i> prerelease development</span>
+  <span><i class="signal-live"></i> open source · MIT</span>
   <span>Rust 1.98.1</span>
   <span>ACP · MCP · A2A · OTel</span>
   <span>macOS + Linux</span>

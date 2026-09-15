@@ -37,6 +37,23 @@ test("generated docs exactly match GitHub source and local links resolve", () =>
   }
 });
 
+test("public documentation avoids prerelease framing", () => {
+  const publicSources = [
+    path.resolve("../README.md"),
+    path.resolve(".vitepress/config.mjs"),
+    ...fs.readdirSync(guideRoot)
+      .filter((file) => file.endsWith(".md"))
+      .map((file) => path.join(guideRoot, file)),
+  ];
+  for (const sourcePath of publicSources) {
+    assert.doesNotMatch(
+      fs.readFileSync(sourcePath, "utf8"),
+      /\bpre[- ]?release\b/i,
+      `${path.relative(path.resolve(".."), sourcePath)} contains prerelease framing`,
+    );
+  }
+});
+
 test("landing page carries product copy and no starter metadata", () => {
   const html = fs.readFileSync(path.join(dist, "index.html"), "utf8");
   assert.match(html, /A 15× smaller harness for your agents/);
@@ -59,7 +76,7 @@ test("landing page carries product copy and no starter metadata", () => {
   assert.match(html, /ACP application host/);
   assert.match(html, /Install and integrate/);
   assert.match(html, /Try Pablo today/);
-  assert.doesNotMatch(html, /Prerelease status/);
+  assert.doesNotMatch(html, /pre-?release/i);
   assert.doesNotMatch(html, /Ready to add agent execution/i);
   assert.doesNotMatch(html, /exploratory single-seed pilot/i);
   assert.doesNotMatch(html, /codex-preview|Starter Project|Your site is taking shape/);

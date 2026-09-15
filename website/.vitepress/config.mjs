@@ -95,7 +95,7 @@ export default defineConfig({
           { text: "Limits and outcomes", link: "/reference" },
           { text: "Resource benchmark", link: "/benchmarks" },
           { text: "Troubleshooting", link: "/troubleshooting" },
-          { text: "Release status", link: "/release-status" },
+          { text: "Version and support", link: "/release-status" },
         ],
       },
     ],
@@ -109,7 +109,7 @@ export default defineConfig({
       { icon: "github", link: "https://github.com/calebjohn24/pablo" },
     ],
     footer: {
-      message: "Pablo is prerelease software. Hosts own sandboxing, approvals and application state.",
+      message: "Hosts own sandboxing, approvals and application state.",
       copyright: "Built for applications that need a small, inspectable agent runtime.",
     },
     docFooter: { prev: "Previous", next: "Next" },
