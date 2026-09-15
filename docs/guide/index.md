@@ -4,7 +4,7 @@ title: Pablo — A 15× smaller harness for your agents
 titleTemplate: false
 description: A lightweight agentic harness for non-coding knowledge work, built in Rust.
 hero:
-  name: Pablo / measured footprint
+  name: Pablo
   text: A 15× smaller harness for your agents.
   tagline: Pablo is a lightweight agentic harness for non-coding knowledge work, built in Rust.
   actions:

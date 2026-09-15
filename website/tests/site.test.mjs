@@ -40,6 +40,7 @@ test("generated docs exactly match GitHub source and local links resolve", () =>
 test("landing page carries product copy and no starter metadata", () => {
   const html = fs.readFileSync(path.join(dist, "index.html"), "utf8");
   assert.match(html, /A 15× smaller harness for your agents/);
+  assert.doesNotMatch(html, /measured footprint/i);
   assert.match(html, /The agent runtime your application can own/);
   assert.match(html, /<title>Pablo — A 15× smaller harness for your agents<\/title>/);
   assert.match(html, /property="og:title" content="Pablo — A 15× smaller harness for your agents"/);
