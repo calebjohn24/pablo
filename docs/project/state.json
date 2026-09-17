@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-17T07:56:31.911Z",
+  "updated_at": "2026-09-17T18:17:24.817Z",
   "active_checkpoint": "C3.36",
   "next_checkpoint": null,
-  "next_action": "Review the Jev router PR. Resume C3.36 with its exact frozen Linux x86_64 candidate: finish offline, installed ACP/TUI, real Collector, bounded live Vercel and cleanup/privacy evidence; do not infer release acceptance from this feature.",
-  "latest_log_entry": "LOG-0214",
+  "next_action": "Review PR #68 and the recorded gateway failures in LOG-0217/LOG-0218; a clean full-suite result requires a separately identified run after gateway recovery. Resume C3.36 with its exact frozen Linux x86_64 candidate and outstanding native acceptance gates. No more live benchmark retries are running.",
+  "latest_log_entry": "LOG-0219",
   "checkpoints": [
     {
       "id": "C1.0",
@@ -882,7 +882,8 @@
       "status": "done",
       "blockers": [],
       "verification": [
-        "LOG-0214"
+        "LOG-0214",
+        "LOG-0219"
       ]
     }
   ]
