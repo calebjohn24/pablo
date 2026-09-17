@@ -667,3 +667,14 @@ Only completed checks with checked-in, sanitized evidence can satisfy a checkpoi
 ## Deferred boundary
 
 Otto integration is excluded at the user's request and remains a full-release gate in the unchanged brief. Durable root sessions, persistent/recursive children, generic graph scheduling, external ACP children, A2A serving, broad MCP beyond the selected tool subset, automatic Skill matching/installation, adaptive model routing, advanced cache tuning, AG-UI/Vercel AI SDK/OpenAPI add-ons, Python/Graphline, Windows and interactive shell PTYs remain in the [backlog](../backlog.md). Ordered configured fallback is now selected; adaptive routing and general retry orchestration remain deferred. The TUI's PTY test harness does not introduce interactive shell tools. Nix evaluation, package/OS provisioning and hot-reloading active runs are outside the selected deployment-config design.
+
+## C3.41: Jev task complexity routing
+
+Prerequisites: C3.12. User-requested independent feature; C3.36 native acceptance resumes afterward.
+
+Acceptance:
+
+- Opt-in deployment route configuration maps described complexity categories to approved Vercel model profiles; offline validation, rendering, authority and credential scoping include the classifier.
+- Evaluate original task input once with typesafe-ai/jev through Vercel AI Gateway, within task cancellation, deadlines, model-call accounting and telemetry.
+- Keep the selected profile for every subsequent tool turn, compaction and output repair; never fall back to another model on an error. Each new task selects independently.
+- Prove configuration rejection, gateway wire protocol, multiple complexity selections, task-local pinning, failure, limits and cancellation with offline tests. Document configuration and limitations, record checks and open a PR.

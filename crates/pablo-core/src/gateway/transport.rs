@@ -78,6 +78,46 @@ impl Transport {
             .timeout(deadline.saturating_duration_since(tokio::time::Instant::now()))
             .body(body)
     }
+    /// The Gateway evaluation protocol is JSON, with a small bounded response.
+    pub(super) async fn evaluate(
+        &self,
+        body: Vec<u8>,
+        deadline: tokio::time::Instant,
+    ) -> Result<serde_json::Value, ProviderError> {
+        let mut response = self
+            .request(body, deadline)
+            .header(header::ACCEPT, "application/json")
+            .header("ai-gateway-protocol-version", "0.0.1")
+            .header("ai-gateway-auth-method", "api-key")
+            .header("ai-evaluation-model-specification-version", "4")
+            .header("ai-model-id", super::JEV_MODEL)
+            .send()
+            .await
+            .map_err(|error| ProviderError {
+                code: FailureCode::ProviderTransport,
+                delivery: if error.is_connect() || error.is_builder() {
+                    DeliveryCertainty::NotSent
+                } else {
+                    DeliveryCertainty::MayHaveBeenSent
+                },
+                retry_class: None,
+            })?;
+        if !response.status().is_success() {
+            return Err(ProviderError {
+                code: FailureCode::ProviderRejected,
+                delivery: DeliveryCertainty::ResponseReceived,
+                retry_class: None,
+            });
+        }
+        let mut bytes = Vec::new();
+        while let Some(chunk) = response.chunk().await.map_err(|_| malformed())? {
+            if chunk.len() > 65_536usize.saturating_sub(bytes.len()) {
+                return Err(malformed());
+            }
+            bytes.extend_from_slice(&chunk);
+        }
+        serde_json::from_slice(&bytes).map_err(|_| malformed())
+    }
     pub(super) async fn probe(
         &self,
         body: Vec<u8>,

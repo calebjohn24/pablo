@@ -869,7 +869,8 @@
           "enum": [
             "initial",
             "sticky",
-            "fallback"
+            "fallback",
+            "complexity"
           ]
         },
         "phase": {

@@ -30,6 +30,7 @@ struct ProviderSecret {
     profile: pablo_core::gateway::ModelProfile,
 }
 pub struct Secrets {
+    router: Option<deployment::ScopedCredential>,
     providers: Vec<ProviderSecret>,
     route: Option<deployment::ResolvedRoute>,
     pub headers: Option<deployment::ScopedCredential>,
@@ -82,6 +83,13 @@ impl Secrets {
             None
         };
         Ok(Self {
+            router: if bootstrap.fixture_endpoint.is_some() {
+                None
+            } else {
+                prepared
+                    .router_credential(&deployment::ProcessCredentials)
+                    .map_err(|e| e.to_string())?
+            },
             providers,
             route,
             headers,
@@ -110,6 +118,31 @@ impl Secrets {
             providers.push(Box::new(adapter));
         }
         if let Some(route) = &self.route {
+            if let Some(config) = route.router() {
+                let router = if let Some(endpoint) = &bootstrap.fixture_endpoint {
+                    pablo_core::gateway::JevProvider::local_fixture(config.clone(), endpoint)
+                } else {
+                    let key = self
+                        .router
+                        .as_ref()
+                        .ok_or("config_credential_missing at /model_route/router")?
+                        .expose_for(
+                            deployment::CredentialConsumer::Vercel,
+                            pablo_core::gateway::JEV_ENDPOINT,
+                        )
+                        .map_err(|e| e.to_string())?;
+                    pablo_core::gateway::JevProvider::new(config.clone(), key)
+                }
+                .map_err(|_| "config_invalid_value at /model_route/router")?;
+                return Ok(Box::new(
+                    pablo_core::provider::ProviderRoute::with_router(
+                        route.clone(),
+                        providers,
+                        router,
+                    )
+                    .map_err(|_| "config_invalid_value at /model_route/router")?,
+                ));
+            }
             Ok(Box::new(
                 pablo_core::provider::ProviderRoute::new(route.clone(), providers)
                     .map_err(|_| "config_invalid_value at /model_route")?,
@@ -126,6 +159,7 @@ impl Secrets {
             _ => false,
         };
         self.route == other.route
+            && same(&self.router, &other.router)
             && self.providers.len() == other.providers.len()
             && self
                 .providers

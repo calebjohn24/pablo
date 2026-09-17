@@ -2672,6 +2672,9 @@
               "structured_output"
             ]
           }
+        },
+        "router": {
+          "$ref": "#/$defs/JevRouter"
         }
       }
     },
@@ -2755,6 +2758,9 @@
               "structured_output"
             ]
           }
+        },
+        "router": {
+          "$ref": "#/$defs/JevRouter"
         }
       },
       "required": [
@@ -3271,6 +3277,65 @@
           "type": "boolean"
         }
       }
+    },
+    "JevRouter": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "const": "vercel"
+        },
+        "model": {
+          "const": "typesafe-ai/jev"
+        },
+        "credential": {
+          "$ref": "#/$defs/name"
+        },
+        "instructions": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60000
+        },
+        "categories": {
+          "type": "object",
+          "minProperties": 2,
+          "maxProperties": 10,
+          "propertyNames": {
+            "$ref": "#/$defs/name"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              },
+              "model": {
+                "$ref": "#/$defs/name"
+              }
+            },
+            "required": [
+              "description",
+              "model"
+            ]
+          }
+        }
+      },
+      "required": [
+        "provider",
+        "model",
+        "credential",
+        "instructions",
+        "timeout_ms",
+        "categories"
+      ]
     }
   }
 }

@@ -1,8 +1,25 @@
 //! Offline route composition and immutable inherited profile selection.
 use super::*;
 use crate::gateway::{GatewayKind, ModelProfile};
+use serde::Deserialize;
 use serde_json::json;
 use std::collections::HashSet;
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct JevCategory {
+    pub description: String,
+    pub model: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct JevRouter {
+    pub provider: String,
+    pub model: String,
+    pub credential: String,
+    pub instructions: String,
+    pub timeout_ms: u64,
+    pub categories: BTreeMap<String, JevCategory>,
+}
 
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 pub struct RouteEntry {
@@ -38,15 +55,20 @@ pub struct RoutePolicy {
 }
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 pub struct ResolvedRoute {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    router: Option<JevRouter>,
     name: String,
     entries: Vec<RouteEntry>,
     policy: RoutePolicy,
-    selected_entry: String,
+    selected_entry: Option<String>,
     selection_reason: &'static str,
     execution_available: bool,
     fallback_owner: &'static str,
 }
 impl ResolvedRoute {
+    pub fn router(&self) -> Option<&JevRouter> {
+        self.router.as_ref()
+    }
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -76,10 +98,21 @@ impl ResolvedRoute {
             entries.push(self.entries[start - 1].clone());
         }
         let mut route = self.clone();
-        route.selected_entry = entries[0].name.clone();
+        route.selected_entry = route.router.is_none().then(|| entries[0].name.clone());
         route.policy.max_attempts = route.policy.max_attempts.min(entries.len());
         route.execution_available = true;
         route.entries = entries;
+        // A narrowed child route must not retain choices outside its authority.
+        if route.router.as_ref().is_some_and(|router| {
+            router.categories.values().any(|category| {
+                !route
+                    .entries
+                    .iter()
+                    .any(|entry| entry.name == category.model)
+            })
+        }) {
+            return Err(error("config_authority_violation", "/model_route/router"));
+        }
         route.selection_reason = "inherited_ordered_subsequence";
         Ok(route)
     }
@@ -145,7 +178,8 @@ pub(super) fn complete(config: &mut Value) -> Result<(), ConfigError> {
         .keys()
     {
         let entries = expand(&routes, name)?;
-        let defaults = json!({"max_attempts":entries.len(),"per_attempt_timeout_ms":duration,"eligible_errors":["not_sent","rate_limited","service_unavailable"],
+        let routed = routes[name].get("router").is_some();
+        let defaults = json!({"max_attempts":if routed {1} else {entries.len()},"per_attempt_timeout_ms":duration,"eligible_errors":if routed {vec![]} else {vec!["not_sent","rate_limited","service_unavailable"]},
             "retry_uncertain_delivery":false,"retry_owner":"pablo","sticky":true,
             "required_capabilities":if tools {vec!["text_streaming","tool_calls"]} else {vec!["text_streaming"]}});
         let target = config["options"]["routes"][name].as_object_mut().unwrap();
@@ -171,6 +205,9 @@ fn expand(routes: &Value, name: &str) -> Result<Vec<String>, ConfigError> {
             return Err(invalid("/options/routes"));
         }
         let route = routes.get(name).ok_or_else(|| invalid("/options/routes"))?;
+        if !active.is_empty() && route.get("router").is_some() {
+            return Err(invalid("/options/routes/router"));
+        }
         active.push(name.into());
         for entry in route["entries"]
             .as_array()
@@ -337,10 +374,49 @@ pub(super) fn resolve(config: &Value) -> Result<Option<ResolvedRoute>, ConfigErr
                 }
             }
         }
+        let router: Option<JevRouter> = route
+            .get("router")
+            .map(|value| serde_json::from_value(value.clone()))
+            .transpose()
+            .map_err(|_| invalid("/options/routes/router"))?;
+        if let Some(router) = &router {
+            if maximum != 1
+                || !errors.is_empty()
+                || uncertain
+                || entries.iter().any(|entry| {
+                    entry.profile.provider != GatewayKind::Vercel
+                        || entry.profile.model == crate::gateway::JEV_MODEL
+                })
+                || config["credentials"][&router.credential]["consumer"] != "provider.vercel"
+                || router
+                    .categories
+                    .values()
+                    .any(|category| !entries.iter().any(|entry| entry.name == category.model))
+            {
+                return Err(invalid("/options/routes/router"));
+            }
+            for ceiling in config["authority"].as_array().unwrap() {
+                for (field, value) in [
+                    ("model_ids", router.model.as_str()),
+                    ("provider_endpoints", crate::gateway::JEV_ENDPOINT),
+                    ("credential_ids", router.credential.as_str()),
+                ] {
+                    if ceiling[field].as_array().is_some_and(|allowed| {
+                        !allowed.iter().any(|item| item.as_str() == Some(value))
+                    }) {
+                        let mut e =
+                            error("config_authority_violation", &format!("/authority/{field}"));
+                        e.authority_id = Some(ceiling["id"].as_str().unwrap().into());
+                        return Err(e);
+                    }
+                }
+            }
+        }
         if options["model_route"].as_str() == Some(name) {
             selected = Some(ResolvedRoute {
+                router: router.clone(),
                 name: name.clone(),
-                selected_entry: entries[0].name.clone(),
+                selected_entry: router.is_none().then(|| entries[0].name.clone()),
                 execution_available: true,
                 entries,
                 policy: RoutePolicy {
@@ -352,7 +428,11 @@ pub(super) fn resolve(config: &Value) -> Result<Option<ResolvedRoute>, ConfigErr
                     sticky: true,
                     required_capabilities: requirements,
                 },
-                selection_reason: "first_declared_compatible_entry",
+                selection_reason: if router.is_some() {
+                    "task_start_classification"
+                } else {
+                    "first_declared_compatible_entry"
+                },
                 fallback_owner: "C3.11",
             });
         }

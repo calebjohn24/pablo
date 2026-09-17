@@ -222,6 +222,21 @@ impl PreparedRun {
             ),
         }
     }
+    /// Resolve the configured classifier credential for its exact evaluation endpoint.
+    pub fn router_credential(
+        &self,
+        inputs: &dyn CredentialInputs,
+    ) -> Result<Option<ScopedCredential>, ConfigError> {
+        let Some(router) = self.model_route().and_then(|route| route.router()) else {
+            return Ok(None);
+        };
+        self.resolve_credential(
+            CredentialConsumer::Vercel,
+            &Value::String(router.credential.clone()),
+            crate::gateway::JEV_ENDPOINT,
+            inputs,
+        )
+    }
     /// Select only an entry of this prepared deployment's authorized route.
     pub fn route_credential(
         &self,
@@ -326,23 +341,15 @@ impl PreparedRun {
             .ok_or_else(|| error("config_credential_scope", "/credentials"))?;
         let diagnostic = || error("config_credential_invalid", &format!("/credentials/{id}"));
         let record = &config["credentials"][id];
-        if record["consumer"] != consumer.name()
-            || matches!(
-                consumer,
-                CredentialConsumer::Vercel | CredentialConsumer::OpenRouter
-            ) && destination
-                != match consumer {
-                    CredentialConsumer::Vercel => crate::gateway::VERCEL_ENDPOINT,
-                    CredentialConsumer::OpenRouter => crate::gateway::OPENROUTER_ENDPOINT,
-                    CredentialConsumer::OtelHeaders
-                    | CredentialConsumer::McpEnvironment
-                    | CredentialConsumer::McpHeaders
-                    | CredentialConsumer::A2aBearer => {
-                        unreachable!()
-                    }
-                    CredentialConsumer::OpenResponses => unreachable!(),
-                }
-        {
+        let endpoint_allowed = match consumer {
+            CredentialConsumer::Vercel => matches!(
+                destination,
+                crate::gateway::VERCEL_ENDPOINT | crate::gateway::JEV_ENDPOINT
+            ),
+            CredentialConsumer::OpenRouter => destination == crate::gateway::OPENROUTER_ENDPOINT,
+            _ => true,
+        };
+        if record["consumer"] != consumer.name() || !endpoint_allowed {
             return Err(error("config_credential_scope", "/credentials"));
         }
         for source in record["sources"].as_array().unwrap() {

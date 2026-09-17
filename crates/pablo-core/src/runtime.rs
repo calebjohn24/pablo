@@ -69,6 +69,7 @@ struct Execution<'a> {
     child_catalog: Option<Vec<crate::tool::ToolDescriptor>>,
     accounting_scope: Option<&'a AccountingScope>,
     attempts: Vec<Attempt<'a>>,
+    router: Option<&'a crate::gateway::JevProvider>,
     route_policy: Option<&'a crate::deployment::RoutePolicy>,
     route: Option<&'a crate::deployment::ResolvedRoute>,
     spec: &'a RunSpec,
@@ -92,6 +93,10 @@ fn attempts<'a>(
 ) -> Result<Vec<Attempt<'a>>, RunError> {
     validate(spec, provider)?;
     if let Some(route) = provider.route() {
+        if let Some(router) = &route.router {
+            crate::task::Ledger::for_model(spec, router, crate::gateway::JEV_MODEL, 1)
+                .map_err(RunError::InvalidSpec)?;
+        }
         if spec.model != route.resolved.entries()[0].profile().model {
             return Err(RunError::InvalidSpec(
                 "run model must match the first route entry",
@@ -504,6 +509,7 @@ where
             child_catalog,
             accounting_scope: self.accounting_scope.as_ref(),
             attempts,
+            router: provider.route().and_then(|r| r.router.as_ref()),
             route_policy: provider.route().map(|r| r.resolved.policy()),
             route: provider.route().map(|r| &r.resolved),
             spec,
@@ -647,6 +653,13 @@ where
             }
         }
 
+        if let Err(outcome) = self
+            .select_task_model(execution, lifecycle, &mut state)
+            .await
+        {
+            return outcome;
+        }
+
         'generation: loop {
             if let Some(outcome) = execution.stop() {
                 return outcome;
@@ -727,7 +740,7 @@ where
                         .min(execution.deadline)
                 });
                 let input = ModelInput {
-                    summary: false,
+                    purpose: ModelPurpose::Generation,
                     max_output_bytes: state.remaining_output,
                     parent: execution.root,
                     attempt,
@@ -776,13 +789,14 @@ where
                         if state.recovering || state.repairing {
                             return outcome;
                         }
-                        let eligible = execution.route_policy.is_some_and(|policy| {
-                            progress.retry_class.is_some_and(|class| {
-                                policy.eligible_errors.iter().any(|e| e == class)
-                                    && (class != "transport_uncertain"
-                                        || policy.retry_uncertain_delivery)
-                            }) && attempts_used < policy.max_attempts
-                        });
+                        let eligible = execution.router.is_none()
+                            && execution.route_policy.is_some_and(|policy| {
+                                progress.retry_class.is_some_and(|class| {
+                                    policy.eligible_errors.iter().any(|e| e == class)
+                                        && (class != "transport_uncertain"
+                                            || policy.retry_uncertain_delivery)
+                                }) && attempts_used < policy.max_attempts
+                            });
                         if !eligible
                             || progress.chunks != 0
                             || !progress.pending.is_empty()
@@ -997,18 +1011,32 @@ where
         let model = input.parent.with_span(
             telemetry::agent_span(
                 self.tracer
-                    .span_builder(format!("chat {}", input.attempt.model))
+                    .span_builder(format!(
+                        "{} {}",
+                        if input.purpose == ModelPurpose::Routing {
+                            "evaluate"
+                        } else {
+                            "chat"
+                        },
+                        input.attempt.model
+                    ))
                     .with_kind(SpanKind::Client)
                     .with_start_time(started)
                     .with_attributes([
-                        KeyValue::new("gen_ai.operation.name", "chat"),
+                        KeyValue::new(
+                            "gen_ai.operation.name",
+                            if input.purpose == ModelPurpose::Routing {
+                                "evaluate"
+                            } else {
+                                "chat"
+                            },
+                        ),
                         KeyValue::new("gen_ai.provider.name", input.attempt.provider.name()),
                         KeyValue::new("gen_ai.request.model", input.attempt.model.to_owned()),
                         KeyValue::new(
-                            "gen_ai.request.max_tokens",
-                            i64::from(input.attempt.max_output_tokens),
+                            "gen_ai.request.stream",
+                            input.purpose != ModelPurpose::Routing,
                         ),
-                        KeyValue::new("gen_ai.request.stream", true),
                         KeyValue::new("gen_ai.conversation.id", lifecycle.session_id.clone()),
                         KeyValue::new("pablo.run.id", lifecycle.run_id.clone()),
                     ]),
@@ -1017,6 +1045,12 @@ where
             .start_with_context(&self.tracer, input.parent),
         );
         let model = model.with_value(diagnostics.clone());
+        if input.purpose != ModelPurpose::Routing {
+            model.span().set_attribute(KeyValue::new(
+                "gen_ai.request.max_tokens",
+                i64::from(input.attempt.max_output_tokens),
+            ));
+        }
         let parent = input.parent.span().span_context().span_id().to_string();
         if let Some(profile) = &lifecycle.model_profile {
             model.span().set_attribute(KeyValue::new(
@@ -1040,7 +1074,9 @@ where
                 .is_some_and(|r| r.status == "pending")
             {
                 "output_repair"
-            } else if input.summary {
+            } else if input.purpose == ModelPurpose::Routing {
+                "routing"
+            } else if input.purpose == ModelPurpose::Compaction {
                 "compaction"
             } else {
                 "generation"
@@ -1391,8 +1427,15 @@ struct PendingCall {
     arguments: String,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ModelPurpose {
+    Generation,
+    Compaction,
+    Routing,
+}
+
 struct ModelInput<'a> {
-    summary: bool,
+    purpose: ModelPurpose,
     max_output_bytes: usize,
     parent: &'a Context,
     attempt: &'a Attempt<'a>,
@@ -1437,7 +1480,7 @@ async fn consume(
     }
     if let Some(resident) = &execution.resident {
         let bytes = context_bytes(execution, input.history, input.continuations);
-        if input.summary {
+        if input.purpose != ModelPurpose::Generation {
             // Keep old retained history covered while admitting the summary request.
             resident.cover(bytes)?;
         } else {
@@ -1564,7 +1607,7 @@ async fn consume(
                     let encoded = serde_json::to_vec(&text).expect("serializable text").len();
                     execution.grow_context(encoded.saturating_sub(2))?;
                 }
-                if !input.summary {
+                if input.purpose == ModelPurpose::Generation {
                     lifecycle.emit(
                         EventKind::TextDelta { text: text.clone() },
                         model,
@@ -1580,7 +1623,7 @@ async fn consume(
                 if let Some(d) = diagnostics {
                     d.mark(Phase::FirstTool);
                 }
-                if input.summary {
+                if input.purpose != ModelPurpose::Generation {
                     if let Some(record) = &mut lifecycle.compaction {
                         record.reason = Some("tool_call_during_summary".into());
                     }
@@ -1646,10 +1689,11 @@ async fn consume(
                 progress.usage = usage;
                 progress.finish_reason = Some(reason);
                 if reason == FinishReason::Length
-                    || progress
-                        .usage
-                        .output_tokens
-                        .is_some_and(|n| n > u64::from(input.attempt.max_output_tokens))
+                    || input.purpose != ModelPurpose::Routing
+                        && progress
+                            .usage
+                            .output_tokens
+                            .is_some_and(|n| n > u64::from(input.attempt.max_output_tokens))
                 {
                     return Err(limit(LimitKind::OutputTokens));
                 }

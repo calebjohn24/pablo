@@ -228,6 +228,20 @@ async fn diagnose(
                 Err(_) => presence::<()>(report, "provider", Err("credential".into())),
             };
         }
+        if let Some(router) = prepared.model_route().and_then(|route| route.router()) {
+            let credential = presence(
+                report,
+                "router",
+                prepared
+                    .router_credential(&pablo_core::deployment::ProcessCredentials)
+                    .map_err(|e| e.to_string()),
+            );
+            report["models"].as_array_mut().unwrap().push(json!({
+                "name": "task_classifier", "provider": "vercel", "model": router.model,
+                "endpoint_host": "ai-gateway.vercel.sh", "credential": credential,
+                "purpose": "task_start_classification"
+            }));
+        }
         let otel = prepared.credential(
             CredentialConsumer::OtelHeaders,
             &pablo_core::deployment::ProcessCredentials,

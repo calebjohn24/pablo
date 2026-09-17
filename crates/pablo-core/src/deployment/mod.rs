@@ -25,7 +25,7 @@ pub use credentials::{
     CredentialConsumer, CredentialInputs, CredentialReadError, ProcessCredentials, ScopedCredential,
 };
 pub use resolve::{LoadedDeployment, load, resolve};
-pub use routes::{ResolvedRoute, RouteEntry, RoutePolicy};
+pub use routes::{JevCategory, JevRouter, ResolvedRoute, RouteEntry, RoutePolicy};
 
 pub const CONTRACT_REVISION: &str = "c3.26";
 pub const DOCUMENT_SCHEMA: &str =
