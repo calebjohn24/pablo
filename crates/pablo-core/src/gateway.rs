@@ -11,7 +11,9 @@ use crate::{
     provider::{ModelRequest, ProviderError, ProviderEvent, ProviderStream},
 };
 
+mod jev;
 mod openrouter;
+pub use jev::{JEV_ENDPOINT, JEV_MODEL, JevProvider};
 mod profile;
 mod responses;
 pub use responses::{

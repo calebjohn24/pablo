@@ -339,7 +339,10 @@
           ]
         },
         "selected_entry": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "minLength": 1,
           "maxLength": 64,
           "pattern": "^[a-z][a-z0-9_-]{0,63}$"
@@ -347,7 +350,8 @@
         "selection_reason": {
           "enum": [
             "first_declared_compatible_entry",
-            "inherited_ordered_subsequence"
+            "inherited_ordered_subsequence",
+            "task_start_classification"
           ]
         },
         "execution_available": {
@@ -355,6 +359,9 @@
         },
         "fallback_owner": {
           "const": "C3.11"
+        },
+        "router": {
+          "$ref": "urn:pablo:deployment:1:c3.26#/$defs/JevRouter"
         }
       },
       "required": [

@@ -47,11 +47,8 @@ C2 follows the verified C1.7 foundation and selects filesystem tools, one-task J
 ### D022 — Make filesystem behavior explicit and bounded
 Use no-follow workspace-relative operations, bounded UTF-8 snapshots, deterministic listing/literal search and explicit read/write capabilities. Mutations require revision preconditions and atomic replacement; hosts own isolation from independent writers. This prevents accidental traversal and silent truncation while avoiding a false filesystem compare-and-swap or sandbox promise. [The filesystem contract](contracts/c2-single-agent.md#shared-filesystem-contract) defines limits, errors, cancellation and trace privacy; implementation starts at C2.1.
 ### D023 — Separate actual usage from conservative budget charges
-
 Return accounting on every admitted outcome and keep missing provider usage/cost unknown. Optional aggregate ceilings require an attested per-call upper bound reserved before delivery; unsupported profiles fail before sending. Retain the reservation after uncertain delivery instead of inventing zero cost. This makes budget claims reviewable while preserving D015's unlimited default counts. [The accounting contract](contracts/c2-single-agent.md#accounting-admission-and-settlement) defines settlement and explicitly defers unevidenced live ceiling profiles.
-
 ### D024 — Reserve enough filesystem result capacity for truthful errors
-
 C2.1 requires requested filesystem results to have at least 1,024 bytes, matching the existing host minimum. Smaller requests cannot hold bounded failure metadata and are rejected before I/O; the 8 MiB default is unchanged. Workers retain bounded data, may read one extra byte to detect growth, and are joined before settlement. [Read evidence](evidence/c2.1.md) records actual path-race, cancellation, privacy and transport proof and the macOS invalid-filename limitation.
 
 ### D025 — Preserve committed mutation truth through cancellation
@@ -198,3 +195,6 @@ C3.34 packages each native binary into deterministic ustar+gzip with a versioned
 The user selected the MIT License for Pablo. Declare it in both workspace crates and ship the exact root LICENSE in every candidate archive alongside NOTICE and target-specific third-party license evidence.
 ### D068 — Cut the first release as v0.0.1
 The user selected `v0.0.1` as Pablo's first release identity. Cargo, the executable, archives, installer examples, site navigation and the release workflow must agree on that exact stable tag; keep the broader 0.1 product contract as the roadmap boundary.
+
+### D069 — Classify once and pin the task model
+C3.41 adds opt-in Jev complexity routes through Vercel AI Gateway. Classify the original task once, select only an approved named profile and keep it through tools, compaction, repair and failures so model switching cannot invalidate its cache. Count classification in the task ledger, preserve unknown usage/cost and stop on classifier errors. Other providers and mid-task rerouting remain outside this slice. See [routing configuration](../guide/providers.md#task-complexity-routing-with-jev).

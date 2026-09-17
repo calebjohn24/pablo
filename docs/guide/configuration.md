@@ -5,6 +5,8 @@ description: Compose and inspect versioned TOML deployments for providers, polic
 
 # Deployments
 
+For task-start complexity classification with a model pinned for the entire task, see [Jev routing](providers.md#task-complexity-routing-with-jev).
+
 A deployment is a versioned TOML document that turns Pablo’s host settings into a reviewable artifact. It can select providers and routes, bind a workspace, constrain tools, activate Skills, attach MCP/A2A peers, validate output and configure traces.
 
 Use deployments for repeatable application behavior. The direct CLI flags remain convenient for local tasks.

@@ -435,7 +435,7 @@ where
             continuations: &continuations,
             remaining_context: execution.context_capacity().saturating_sub(bytes),
             allow_tool_calls: false,
-            summary: true,
+            purpose: ModelPurpose::Compaction,
             max_output_bytes: settings.max_summary_bytes.min(spec.limits.max_output_bytes),
             parent: span,
         };
@@ -618,6 +618,7 @@ mod tests {
                 child_catalog: None,
                 accounting_scope: None,
                 attempts: attempts(&spec, &provider).unwrap(),
+                router: None,
                 route_policy: None,
                 route: None,
                 spec: &spec,

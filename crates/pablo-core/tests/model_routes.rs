@@ -269,3 +269,64 @@ fn typed_overrides_refresh_derived_defaults_without_widening_explicit_profile_ca
         "https://openrouter.ai/api/v1/chat/completions"
     );
 }
+
+#[test]
+fn jev_credentials_are_scoped_and_child_narrowing_cannot_escape_categories() {
+    struct Inputs;
+    impl deployment::CredentialInputs for Inputs {
+        fn environment(
+            &self,
+            name: &str,
+        ) -> Result<Option<Vec<u8>>, deployment::CredentialReadError> {
+            assert_eq!(name, "AI_GATEWAY_API_KEY");
+            Ok(Some(b"synthetic-jev-key".to_vec()))
+        }
+    }
+    let f = Fixture::new();
+    let value: Value =
+        toml::from_str(include_str!("../../../docs/guide/examples/jev-router.toml")).unwrap();
+    let resolved = f.resolve(value).unwrap();
+    let route = resolved.model_route().unwrap();
+    assert!(route.subsequence(&["fast"]).is_err());
+    assert!(route.subsequence(&["fast", "deep"]).is_ok());
+    let prepared = resolved
+        .prepare_run(RunInput {
+            input: "task".into(),
+            session_id: None,
+            workspace: None,
+        })
+        .unwrap();
+    let secret = prepared.router_credential(&Inputs).unwrap().unwrap();
+    assert!(
+        secret
+            .expose_for(
+                deployment::CredentialConsumer::Vercel,
+                pablo_core::gateway::JEV_ENDPOINT
+            )
+            .is_ok()
+    );
+    assert!(
+        secret
+            .expose_for(
+                deployment::CredentialConsumer::Vercel,
+                pablo_core::gateway::VERCEL_ENDPOINT
+            )
+            .is_err()
+    );
+    assert!(
+        secret
+            .expose_for(
+                deployment::CredentialConsumer::OpenRouter,
+                pablo_core::gateway::JEV_ENDPOINT
+            )
+            .is_err()
+    );
+    let chat = prepared.route_credential(0, &Inputs).unwrap();
+    assert!(
+        chat.expose_for(
+            deployment::CredentialConsumer::Vercel,
+            pablo_core::gateway::JEV_ENDPOINT
+        )
+        .is_err()
+    );
+}

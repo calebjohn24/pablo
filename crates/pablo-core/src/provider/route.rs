@@ -5,6 +5,7 @@ use crate::deployment::ResolvedRoute;
 pub struct ProviderRoute {
     pub(crate) resolved: ResolvedRoute,
     pub(crate) providers: Vec<Box<dyn Provider>>,
+    pub(crate) router: Option<crate::gateway::JevProvider>,
 }
 impl ProviderRoute {
     /// Hosts bind one adapter to each previously authorized entry, in order.
@@ -13,6 +14,23 @@ impl ProviderRoute {
         resolved: ResolvedRoute,
         providers: Vec<Box<dyn Provider>>,
     ) -> Result<Self, &'static str> {
+        Self::build(resolved, providers, None)
+    }
+    pub fn with_router(
+        resolved: ResolvedRoute,
+        providers: Vec<Box<dyn Provider>>,
+        router: crate::gateway::JevProvider,
+    ) -> Result<Self, &'static str> {
+        Self::build(resolved, providers, Some(router))
+    }
+    fn build(
+        resolved: ResolvedRoute,
+        providers: Vec<Box<dyn Provider>>,
+        router: Option<crate::gateway::JevProvider>,
+    ) -> Result<Self, &'static str> {
+        if resolved.router() != router.as_ref().map(|r| &r.config) {
+            return Err("route requires its configured Jev classifier");
+        }
         if providers.len() != resolved.entries().len()
             || providers.iter().any(|p| p.route().is_some())
         {
@@ -28,6 +46,7 @@ impl ProviderRoute {
         Ok(Self {
             resolved,
             providers,
+            router,
         })
     }
 }
