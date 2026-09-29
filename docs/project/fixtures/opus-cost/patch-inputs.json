@@ -9,7 +9,7 @@
   },
   "legalbench/runner.py": {
     "before_sha256": "6da9fd02e5fac45cb628cc7b2383abb73b52eb9faa0e83f0552b893c5b142aa2",
-    "after_sha256": "7c963b6010de8ed65f5bac57b1a56697247c5e788b71013065b987df33e62778"
+    "after_sha256": "ef156e7b4759c79e8318f5aca23b6d0361ce7b280fb15798185e784aefbfaeec"
   },
   "legalbench/report.py": {
     "before_sha256": "fdb2110d44f8232ea8ecb87f7129e84a86912241888f7c7ee5ba05f67e3c273c",
@@ -33,7 +33,7 @@
   },
   "tests/test_billing.py": {
     "before_sha256": null,
-    "after_sha256": "26850f0e504f367d66075aeeb0853686cad9d411df579c5fe9f2c78f1b70d4fb"
+    "after_sha256": "9fde52ed03bf63ed20fe1a20487a4ff78f6298bd7539d83d8f347694f6d36685"
   },
   "scripts/opus_cost_report.py": {
     "before_sha256": null,

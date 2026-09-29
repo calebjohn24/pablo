@@ -5,15 +5,15 @@
  from dataclasses import dataclass
  from pathlib import Path
 +from .billing import counter, estimate, amount
- 
- 
+
+
  @dataclass(frozen=True)
 @@ -16,6 +17,7 @@
      requested_model: str
      reasoning: str
      provider: str | None = None
 +    prompt_caching: str = "provider_default"
- 
+
      def child_env(self) -> dict[str, str]:
          env = os.environ.copy()
 @@ -64,6 +66,7 @@
@@ -118,8 +118,8 @@
      run.add_argument("--pablo-binary")
 +    run.add_argument("--prompt-caching", choices=["provider_default", "auto"], default="provider_default")
      return parser
- 
- 
+
+
 @@ -71,6 +72,7 @@
          args.pablo_opus5_model,
          args.claude_effort,
@@ -130,19 +130,32 @@
      unknown_systems = sorted(set(system_names) - set(registry))
 --- a/legalbench/runner.py
 +++ b/legalbench/runner.py
-@@ -168,6 +168,16 @@
+@@ -39,6 +39,17 @@
+         digest.update(b"\0")
+         digest.update(file.read_bytes())
+     return digest.hexdigest()
++
++
++def _enrich_gateway_billing(results: list[dict], attempts_dir: Path, key: str) -> None:
++    from .billing import enrich
++    for result in results:
++        if result["provider"] != "vercel":
++            continue
++        trace = attempts_dir / result["attempt"] / "raw" / "pablo-trace.jsonl"
++        if trace.is_file():
++            enrich(result["events"], trace.read_text(), key)
++            (attempts_dir / result["attempt"] / "result.json").write_text(json.dumps(result, indent=2) + "\n")
+
+
+ def run_suite(
+@@ -168,6 +179,11 @@
              (attempt_dir / "result.json").write_text(json.dumps(result, indent=2) + "\n")
              results.append(result)
- 
+
 +    # All attempts have ended; billing polling never enters measured task time.
-+    from .billing import enrich
 +    key = os.environ.get("AI_GATEWAY_API_KEY") or os.environ.get("VERCEL_AI_GATEWAY")
 +    if key:
-+        for result in results:
-+            trace = attempts_dir / result["attempt"] / "raw" / "pablo-trace.jsonl"
-+            if trace.is_file():
-+                enrich(result["events"], trace.read_text(), key)
-+                (attempts_dir / result["attempt"] / "result.json").write_text(json.dumps(result, indent=2) + "\n")
++        _enrich_gateway_billing(results, attempts_dir, key)
 +
      metadata = {
          "suite_version": manifest["version"],
@@ -274,7 +287,7 @@
 +++ b/scripts/run_e2b.py
 @@ -4,6 +4,8 @@
  from __future__ import annotations
- 
+
  import argparse
 +import hashlib
 +import shlex
@@ -313,7 +326,7 @@
 +            install = sandbox.commands.run(config["install"], timeout=None)
          if install.exit_code != 0:
              raise RuntimeError(f"harness installation failed: {install.stderr}")
- 
+
          command = (
              "export PATH=\"$HOME/.local/bin:$PATH\"; "
              "python3 -m legalbench run "
@@ -354,8 +367,8 @@
              except Exception as exc:
 -                log(system, f"warning: sandbox cleanup failed: {exc}")
 +                log(system, f"warning: sandbox cleanup failed: {type(exc).__name__}")
- 
- 
+
+
  def main() -> int:
 @@ -230,7 +263,21 @@
      parser.add_argument("--output", type=Path, required=True)
@@ -378,7 +391,7 @@
 +        raise SystemExit("repeats must be positive")
      if args.output.exists():
          raise SystemExit(f"output already exists: {args.output}")
- 
+
 @@ -244,7 +291,7 @@
      unknown = sorted(set(selected_systems) - set(SYSTEMS))
      if unknown:
@@ -404,7 +417,7 @@
 -                errors[system] = f"{type(exc).__name__}: {exc}"
 +                errors[system] = type(exc).__name__
                  log(system, errors[system])
- 
+
      reports = {}
 @@ -273,13 +322,23 @@
          with tarfile.open(fileobj=io.BytesIO(result.pop("results_archive")), mode="r:gz") as archive_file:
@@ -417,7 +430,7 @@
 +            reports[system] = json.loads((system_dir / "report.json").read_text())
 +        else:
 +            errors[system] = "report unavailable"
- 
+
      manifest = {
          "created_at": datetime.now(timezone.utc).isoformat(),
 -        "concurrent": True,
@@ -539,7 +552,7 @@
 +            normalized["estimated_cost_source"],
 +            "vercel_catalog_2026-09-16:zai/glm-5.3-flash",
          )
- 
+
      def test_pablo_opus5_profile_and_cost(self):
 @@ -137,7 +138,7 @@
              },
@@ -547,14 +560,16 @@
          normalized = profile.normalize(json.dumps(event) + "\n", [])
 -        self.assertAlmostEqual(normalized["reported_cost_usd"], 0.006725)
 +        self.assertAlmostEqual(normalized["estimated_cost_usd"], 0.006725)
- 
+
      def test_monitor_captures_resources(self):
          with tempfile.TemporaryDirectory() as tmp:
 --- /dev/null
 +++ b/tests/test_billing.py
-@@ -0,0 +1,86 @@
+@@ -0,0 +1,116 @@
 +import json
 +import unittest
++import tempfile
++from pathlib import Path
 +from unittest.mock import patch
 +from legalbench.billing import counter, estimate, lookup, enrich, generation_ids
 +from legalbench.adapters import adapters
@@ -562,6 +577,34 @@
 +ID = 'gen_01ARZ3NDEKTSV4RRFFQ69G5FAV'
 +
 +class BillingTests(unittest.TestCase):
++    def test_gateway_enrichment_preserves_other_provider_costs(self):
++        from legalbench.runner import _enrich_gateway_billing
++        results = [
++            {'attempt':'router', 'provider':'openrouter', 'events':{
++                'reported_cost_usd':.3, 'reported_cost_source':'provider_reported'}},
++            {'attempt':'gateway', 'provider':'vercel', 'events':{'reported_cost_usd':None}},
++        ]
++        trace = json.dumps({'type':'model.finished','diagnostics':{'generation_id':ID}})
++        def enrich(events, content, key):
++            self.assertEqual(content, trace)
++            self.assertEqual(key, 'private-test-key')
++            events.update(reported_cost_usd=.2, reported_cost_source='vercel_generation_lookup')
++        with tempfile.TemporaryDirectory() as temp:
++            root=Path(temp)
++            for result in results:
++                raw=root/result['attempt']/'raw'
++                raw.mkdir(parents=True)
++                (raw/'pablo-trace.jsonl').write_text(trace)
++            with patch('legalbench.billing.enrich', side_effect=enrich) as mocked:
++                _enrich_gateway_billing(results, root, 'private-test-key')
++            mocked.assert_called_once()
++            self.assertEqual(results[0]['events'], {
++                'reported_cost_usd':.3, 'reported_cost_source':'provider_reported'})
++            self.assertFalse((root/'router/result.json').exists())
++            saved=json.loads((root/'gateway/result.json').read_text())
++            self.assertEqual(saved['events']['reported_cost_usd'], .2)
++            self.assertEqual(saved['events']['reported_cost_source'], 'vercel_generation_lookup')
++
 +    def test_counters_missing_zero_decimal_and_invalid(self):
 +        for value in [None, True, -1, 1.2, '1.0', '+1', ' 1', '01', str(2**64)]:
 +            self.assertIsNone(counter(value))
