@@ -15,11 +15,11 @@
     "backlog": "docs/project/backlog.md",
     "instructions": "AGENTS.md"
   },
-  "updated_at": "2026-09-29T19:19:25.677Z",
+  "updated_at": "2026-09-29T19:22:16.217Z",
   "active_checkpoint": "C3.36",
   "next_checkpoint": null,
-  "next_action": "Create draft PR, build exact native Linux candidate, run pilot and expand only after observability/cache gate passes.",
-  "latest_log_entry": "LOG-0213",
+  "next_action": "Build latest PR-commit candidate, verify archive/binary hashes, run serial pilot and gated main experiment.",
+  "latest_log_entry": "LOG-0214",
   "checkpoints": [
     {
       "id": "C1.0",

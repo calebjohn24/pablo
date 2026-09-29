@@ -2498,13 +2498,6 @@
             },
             "reasoning": {
               "$ref": "#/$defs/reasoningCapabilities"
-            },
-            "prompt_caching": {
-              "type": "string",
-              "enum": [
-                "provider_default",
-                "auto"
-              ]
             }
           }
         },
@@ -2598,13 +2591,6 @@
             },
             "reasoning": {
               "$ref": "#/$defs/reasoningCapabilities"
-            },
-            "prompt_caching": {
-              "type": "string",
-              "enum": [
-                "provider_default",
-                "auto"
-              ]
             }
           },
           "required": [

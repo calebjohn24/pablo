@@ -223,8 +223,11 @@ impl Provider for GatewayProvider {
         request: ModelRequest<'a>,
     ) -> BoxFuture<'a, Result<ProviderStream<'a>, ProviderError>> {
         if self
-            .validate_reasoning(request.reasoning, request.max_output_tokens)
+            .validate_prompt_caching(request.prompt_caching)
             .is_err()
+            || self
+                .validate_reasoning(request.reasoning, request.max_output_tokens)
+                .is_err()
         {
             return Box::pin(async { Err(not_sent()) });
         }

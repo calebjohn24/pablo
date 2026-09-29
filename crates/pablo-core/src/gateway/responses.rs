@@ -338,6 +338,10 @@ fn request_body(
             request.max_output_tokens,
         )
         .map_err(|_| not_sent())?;
+    request
+        .prompt_caching
+        .validate_gateway(super::GatewayKind::OpenResponses)
+        .map_err(|_| not_sent())?;
     let mut body = json!({"model":request.model,"instructions":request.instructions,"input":input,
         "tools":tools,"tool_choice":if request.allow_tool_calls {"auto"} else {"none"},"parallel_tool_calls":false,
         "stream":true,"store":false,"background":false,"truncation":"disabled","include":["reasoning.encrypted_content"],

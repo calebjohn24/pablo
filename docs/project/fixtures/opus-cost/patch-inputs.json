@@ -1,7 +1,7 @@
 {
   "legalbench/adapters.py": {
     "before_sha256": "f1e365993c1fe17f18532bfd5587c2f714cda9a40572ee9873113740e8fa5356",
-    "after_sha256": "aa3f5fd16acb4b0cfac0730ed70b837a9211c1586b00400d42d6ce9732dc88aa"
+    "after_sha256": "ee0b282ea6e6d68c254d208842682c4fb8ced34d2a7424249c598e7fdb933fcf"
   },
   "legalbench/cli.py": {
     "before_sha256": "adf28bcad9e645f238e32eefb54e51ef34b796805b30105f9fa200b2dd5ed809",
@@ -17,7 +17,7 @@
   },
   "legalbench/billing.py": {
     "before_sha256": null,
-    "after_sha256": "12f12d1963384ae004bd675749bd845223e264883023bc120dfe1e241d254be8"
+    "after_sha256": "f008190f030413d995233babb640a39966ab3b66476770479dc90db0b6f2fddf"
   },
   "scripts/run_e2b.py": {
     "before_sha256": "fd6d5d5815019038e5528e31842fd4bcc8beed6e8692bb1dd9f3af8c807e6ad1",
@@ -25,7 +25,7 @@
   },
   "scripts/opus_caching_experiment.py": {
     "before_sha256": null,
-    "after_sha256": "3a3d3cc1a32a5fd6c95b149ffcc93ea4aff95ff4c95015bb2917ff8aaef00074"
+    "after_sha256": "751ca1ddb06860c8fba024e6b948b3cf468789586f01ecb836921cf9c0697618"
   },
   "tests/test_benchmark.py": {
     "before_sha256": "4f44eeea6bca03e56b8b27c8104c13d1d5e644b218987d8d1a503234be7b8339",
@@ -33,6 +33,10 @@
   },
   "tests/test_billing.py": {
     "before_sha256": null,
-    "after_sha256": "94c37b4552bbf9c69b66630d0c6ae1bcdb9f5b099d491880b7abb3caed119537"
+    "after_sha256": "26850f0e504f367d66075aeeb0853686cad9d411df579c5fe9f2c78f1b70d4fb"
+  },
+  "scripts/opus_cost_report.py": {
+    "before_sha256": null,
+    "after_sha256": "14e4e9cd16706385fd82ce3265bd6a8ac4a1e12f7addbd68cb91e848db1e6a44"
   }
 }

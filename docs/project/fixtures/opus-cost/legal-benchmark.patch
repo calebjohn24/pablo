@@ -4,7 +4,7 @@
  import shutil
  from dataclasses import dataclass
  from pathlib import Path
-+from .billing import counter, estimate
++from .billing import counter, estimate, amount
  
  
  @dataclass(frozen=True)
@@ -32,7 +32,21 @@
          resolved_model = None
          errors: list[str] = []
          byte_offset = 0
-@@ -174,35 +178,12 @@
+@@ -162,9 +166,10 @@
+                 if event.get("type") == "result":
+                     completed = not event.get("is_error", False)
+                     usage = event.get("usage")
+-                    cost = event.get("total_cost_usd")
+-                    if isinstance(cost, (int, float)):
+-                        cost_source = "provider_reported"
++                    reported = amount(event.get("total_cost_usd"))
++                    cost = float(reported) if reported is not None else None
++                    if cost is not None:
++                        cost_source = "client_reported"
+                     if not completed:
+                         errors.append(event.get("subtype", "result_error"))
+             else:
+@@ -174,35 +179,12 @@
                  if accounting is not None:
                      usage = accounting
                      tool_calls = accounting.get("tool_calls")
@@ -72,7 +86,7 @@
                  outcome = event.get("outcome") or {}
                  if outcome.get("status"):
                      completed = outcome["status"] == "completed"
-@@ -222,6 +203,8 @@
+@@ -222,6 +204,8 @@
              "tool_calls": tool_calls,
              "reported_usage": usage,
              "reported_cost_usd": cost,
@@ -81,7 +95,7 @@
              "reported_cost_source": cost_source,
              "reported_model": resolved_model,
              "errors": errors,
-@@ -254,6 +237,7 @@
+@@ -254,6 +238,7 @@
      opus5_model: str = "anthropic/claude-opus-5",
      claude_effort: str = "medium",
      pablo_reasoning: str = "provider_default",
@@ -89,7 +103,7 @@
  ) -> dict[str, Adapter]:
      return {
          "claude-opus": Adapter("claude-opus", "claude", claude_model, claude_effort),
-@@ -263,5 +247,5 @@
+@@ -263,5 +248,5 @@
          "pablo-glm": Adapter("pablo-glm", "pablo", pablo_model, pablo_reasoning, "openrouter"),
          "pablo-glm-openrouter": Adapter("pablo-glm-openrouter", "pablo", pablo_model, pablo_reasoning, "openrouter"),
          "pablo-glm-vercel": Adapter("pablo-glm-vercel", "pablo", vercel_model, pablo_reasoning, "vercel"),
@@ -145,10 +159,11 @@
          "cost_sources": cost_sources,
 --- /dev/null
 +++ b/legalbench/billing.py
-@@ -0,0 +1,109 @@
+@@ -0,0 +1,110 @@
 +"""Strict accounting and bounded, content-free Vercel generation lookups."""
 +from decimal import Decimal, InvalidOperation
 +import json
++import math
 +import re
 +import time
 +from urllib.request import Request, urlopen
@@ -173,7 +188,7 @@
 +        return None
 +    try:
 +        number = Decimal(str(value))
-+        return number if number.is_finite() and number >= 0 else None
++        return number if number.is_finite() and number >= 0 and math.isfinite(float(number)) else None
 +    except InvalidOperation:
 +        return None
 +
@@ -435,7 +450,7 @@
              "execution": "one system per E2B sandbox, started concurrently; serial attempts within each sandbox",
 --- /dev/null
 +++ b/scripts/opus_caching_experiment.py
-@@ -0,0 +1,61 @@
+@@ -0,0 +1,68 @@
 +#!/usr/bin/env python3
 +"""Frozen 10-attempt pilot; expand only with cache hits and full billing coverage."""
 +import argparse
@@ -478,7 +493,14 @@
 +        if result.returncode:
 +            raise SystemExit('experiment stopped; preserve partial results in '+str(out))
 +        return json.loads((out/'report.json').read_text())
-+    identity = {'source_revision':args.source_revision,'archive_sha256':args.archive_sha256,
++    def fingerprint(paths):
++        digest = hashlib.sha256()
++        for path in sorted(paths):
++            digest.update(str(path.relative_to(ROOT)).encode()+b"\0"+path.read_bytes())
++        return digest.hexdigest()
++    identity = {'suite_sha256':fingerprint(p for p in (ROOT/'tasks').rglob('*') if p.is_file()),
++                'harness_sha256':fingerprint(list((ROOT/'legalbench').glob('*.py'))+list((ROOT/'scripts').glob('*.py'))),
++                'source_revision':args.source_revision,'archive_sha256':args.archive_sha256,
 +                'binary_sha256':args.binary_sha256,'task_manifest_sha256':hashlib.sha256((ROOT/'tasks/manifest.json').read_bytes()).hexdigest()}
 +    (args.output/'identity.json').write_text(json.dumps(identity,indent=2)+'\n')
 +    off = run('pilot-off','pablo-opus5-vercel',PILOT,'provider_default',41)
@@ -530,7 +552,7 @@
          with tempfile.TemporaryDirectory() as tmp:
 --- /dev/null
 +++ b/tests/test_billing.py
-@@ -0,0 +1,75 @@
+@@ -0,0 +1,86 @@
 +import json
 +import unittest
 +from unittest.mock import patch
@@ -606,3 +628,90 @@
 +        self.assertEqual(result['failures'], 1)
 +        self.assertEqual(result['reported_cost_usd_per_attempted_task'], .2)
 +        self.assertIsNone(_summary([row('completed',.1),row('failed',None)])['reported_cost_usd_per_attempted_task'])
++
++
++class SummaryTests(unittest.TestCase):
++    def test_summary_counts_failures_and_family_findings(self):
++        from scripts.opus_cost_report import summarize
++        row = {'status':'failed','family':'notice','events':{'reported_cost_usd':None},
++               'resources':{'wall_ms':10},'score':{'factual_accuracy':0,'citation_score':0,'checks':[]}}
++        summary = summarize([row])
++        self.assertEqual(summary['failures'], 1)
++        self.assertIsNone(summary['mean_cost_per_attempt'])
++        self.assertEqual(summary['correct_findings_per_family'], {'notice':0})
+--- /dev/null
++++ b/scripts/opus_cost_report.py
+@@ -0,0 +1,73 @@
++#!/usr/bin/env python3
++"""Sanitized aggregate gates; never copy task content, keys or raw provider records."""
++import argparse
++from collections import Counter, defaultdict
++import hashlib
++import json
++from pathlib import Path
++import random
++import statistics
++
++
++def summarize(rows):
++    costs = [a['events'].get('reported_cost_usd') for a in rows]
++    complete = bool(rows) and all(v is not None for v in costs)
++    routes = Counter(r['provider'] for a in rows for r in a['events'].get('generation_records',[]) if r and r.get('provider'))
++    families = defaultdict(int)
++    for a in rows:
++        families[a['family']] += sum(bool(c['factual']) for c in a['score']['checks'])
++    latencies = [a['resources']['wall_ms'] for a in rows]
++    return {'attempts':len(rows),'failures':sum(a['status']!='completed' for a in rows),
++            'cost_coverage':sum(v is not None for v in costs)/len(rows) if rows else 0,
++            'mean_cost_per_attempt':statistics.fmean(costs) if complete else None,
++            'mean_factual':statistics.fmean(a['score']['factual_accuracy'] for a in rows) if rows else None,
++            'mean_citation':statistics.fmean(a['score']['citation_score'] for a in rows) if rows else None,
++            'mean_wall_ms':statistics.fmean(latencies) if rows else None,
++            'provider_routes':dict(routes),'correct_findings_per_family':dict(families)}
++
++
++def report(root):
++    groups = defaultdict(list)
++    hashes = {}
++    for path in sorted(root.glob('*/report.json')):
++        data = json.loads(path.read_text())
++        hashes[str(path.relative_to(root))] = hashlib.sha256(path.read_bytes()).hexdigest()
++        label = path.parent.name
++        if label.startswith('pilot'):continue
++        for a in data['attempts']:
++            setting = 'on' if label.endswith('-auto') else 'off'
++            key = setting if a['system']=='pablo-opus5-vercel' else a['system']
++            groups[key].append(a)
++    summaries = {k:summarize(v) for k,v in groups.items()}
++    off,on = summaries.get('off'),summaries.get('on')
++    gates = {'complete_400_attempts':sum(s['attempts'] for s in summaries.values())==400}
++    interval = None
++    if off and on:
++        full_cost = off['cost_coverage']==on['cost_coverage']==1
++        savings = 1-on['mean_cost_per_attempt']/off['mean_cost_per_attempt'] if full_cost and off['mean_cost_per_attempt'] else None
++        lost = {f:off['correct_findings_per_family'][f]-on['correct_findings_per_family'].get(f,0) for f in off['correct_findings_per_family']}
++        gates.update({'cost_coverage':full_cost,'saving_at_least_20_percent':savings is not None and savings>=.2,
++                      'no_additional_execution_failures':on['failures']<=off['failures'],
++                      'factual_decline_at_most_one_pp':on['mean_factual']>=off['mean_factual']-.01,
++                      'citation_decline_at_most_one_pp':on['mean_citation']>=off['mean_citation']-.01,
++                      'lost_findings_per_family_at_most_one':all(v<=1 for v in lost.values())})
++        summaries['comparison']={'relative_mean_savings':savings,'lost_findings_per_family':lost}
++        if full_cost:
++            # Cluster by task to retain correlation across the three repetitions.
++            clusters = defaultdict(lambda: {'off':[],'on':[]})
++            for setting in ['off','on']:
++                for a in groups[setting]:clusters[a['task_id']][setting].append(a['events']['reported_cost_usd'])
++            ids=sorted(clusters); rng=random.Random(41);samples=[]
++            for _ in range(2000):
++                selected=rng.choices(ids,k=len(ids))
++                x=statistics.fmean(c for i in selected for c in clusters[i]['off'])
++                y=statistics.fmean(c for i in selected for c in clusters[i]['on'])
++                if x:samples.append(1-y/x)
++            samples.sort();interval=[samples[int(len(samples)*.025)],samples[int(len(samples)*.975)]]
++    return {'summaries':summaries,'gates':gates,'all_passed':bool(off and on) and all(gates.values()),
++            'relative_savings_task_cluster_bootstrap_95_percent':interval,'report_sha256':hashes,
++            'uncertainty':'Three repetitions; serial blocks and opaque provider routing can confound causal savings. Unchanged scorer has known enum/key defects; exact-task costs are diagnostic.'}
++
++if __name__=='__main__':
++    p=argparse.ArgumentParser();p.add_argument('root',type=Path);p.add_argument('output',type=Path);a=p.parse_args()
++    a.output.write_text(json.dumps(report(a.root),indent=2)+'\n')
