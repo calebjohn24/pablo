@@ -2382,3 +2382,36 @@ fn a2a_credentials_resolve_only_for_configured_rpc_consumer_and_destination() {
         Some("no-remote-secret")
     );
 }
+
+#[test]
+fn prompt_caching_configuration_fingerprints_locks_and_admission() {
+    use pablo_core::PromptCaching;
+    let f = Fixture::new();
+    let base = f.resolve(json!({}));
+    let auto = f.resolve(json!({"options":{"model":{"prompt_caching":"auto"}}}));
+    assert_eq!(
+        base.model_profile().unwrap().prompt_caching,
+        PromptCaching::ProviderDefault
+    );
+    assert_eq!(
+        auto.model_profile().unwrap().prompt_caching,
+        PromptCaching::Auto
+    );
+    assert_ne!(base.fingerprint(), auto.fingerprint());
+    for value in ["unknown", "AUTO"] {
+        assert!(
+            deployment::resolve(f.document(json!({"options":{"model":{"prompt_caching":value}}})))
+                .is_err()
+        );
+    }
+    let mut request = f.document(
+        json!({"deployment":{"locked":true},"options":{"model":{"prompt_caching":"auto"}}}),
+    );
+    request
+        .overrides
+        .insert("model.prompt_caching".into(), json!("provider_default"));
+    assert_eq!(
+        deployment::resolve(request).unwrap_err().code,
+        "config_override_forbidden"
+    );
+}

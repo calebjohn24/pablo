@@ -22,6 +22,7 @@ impl ProviderRoute {
             if provider.name() != entry.profile().provider.name() {
                 return Err("route adapter provider identity mismatch");
             }
+            provider.validate_prompt_caching(entry.profile().prompt_caching)?;
             provider.validate_model(&entry.profile().model, entry.max_output_tokens())?;
             provider.validate_reasoning(entry.profile().reasoning, entry.max_output_tokens())?;
         }

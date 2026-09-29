@@ -62,6 +62,7 @@ impl GatewayProvider {
             text: "Reply OK.".into(),
         }];
         let request = ModelRequest {
+            prompt_caching: crate::PromptCaching::default(),
             reasoning: crate::ReasoningConfig::default(),
             model,
             input: "Reply OK.",
@@ -166,6 +167,12 @@ impl GatewayProvider {
 }
 
 impl Provider for GatewayProvider {
+    fn validate_prompt_caching(&self, caching: crate::PromptCaching) -> Result<(), &'static str> {
+        caching.validate_gateway(match &self.backend {
+            Backend::Chat(p) => p.kind,
+            Backend::Responses(_) => GatewayKind::OpenResponses,
+        })
+    }
     fn validate_reasoning(
         &self,
         reasoning: crate::ReasoningConfig,
@@ -216,8 +223,11 @@ impl Provider for GatewayProvider {
         request: ModelRequest<'a>,
     ) -> BoxFuture<'a, Result<ProviderStream<'a>, ProviderError>> {
         if self
-            .validate_reasoning(request.reasoning, request.max_output_tokens)
+            .validate_prompt_caching(request.prompt_caching)
             .is_err()
+            || self
+                .validate_reasoning(request.reasoning, request.max_output_tokens)
+                .is_err()
         {
             return Box::pin(async { Err(not_sent()) });
         }
@@ -319,6 +329,10 @@ fn request_body(request: &ModelRequest<'_>, kind: GatewayKind) -> Result<Vec<u8>
             delivery: DeliveryCertainty::NotSent,
         });
     }
+    request
+        .prompt_caching
+        .validate_gateway(kind)
+        .map_err(|_| not_sent())?;
     let mut messages = Vec::new();
     if !request.instructions.is_empty() {
         messages.push(json!({"role":"system", "content":request.instructions}));
@@ -354,6 +368,9 @@ fn request_body(request: &ModelRequest<'_>, kind: GatewayKind) -> Result<Vec<u8>
         .map_err(|_| not_sent())?;
     if let Some(reasoning) = request.reasoning.wire() {
         body["reasoning"] = reasoning;
+    }
+    if request.prompt_caching == crate::PromptCaching::Auto {
+        body["providerOptions"] = json!({"gateway":{"caching":"auto"}});
     }
     if kind == GatewayKind::Vercel {
         body["stream_options"] = json!({"include_usage":true});
@@ -484,6 +501,12 @@ impl Completion {
                 },
                 delivery: DeliveryCertainty::ResponseReceived,
             });
+        }
+        if self.kind == GatewayKind::Vercel
+            && let Some(d) = &self.diagnostics
+            && let Some(id) = value.get("id").and_then(Value::as_str)
+        {
+            d.generation_id(id);
         }
         let accounting = value.get("usage").filter(|v| !v.is_null());
         if let Some(usage) = accounting {
@@ -650,6 +673,82 @@ fn counter(value: Option<&Value>) -> Result<Option<u64>, ProviderError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn explicit_caching_wire_and_unsupported_adapters() {
+        let mut r = ModelRequest {
+            prompt_caching: crate::PromptCaching::ProviderDefault,
+            reasoning: crate::ReasoningConfig::default(),
+            model: "anthropic/claude-opus-5",
+            input: "task",
+            instructions: "",
+            messages: &[],
+            continuations: &[],
+            max_continuation_bytes: 1024,
+            max_context_bytes: 4096,
+            max_tool_input_bytes: 1024,
+            max_output_bytes: 1024,
+            tools: &[],
+            allow_tool_calls: false,
+            max_output_tokens: 16,
+            deadline: tokio::time::Instant::now(),
+            context: opentelemetry::Context::new(),
+            cancellation: crate::CancellationToken::new(),
+        };
+        let body: Value =
+            serde_json::from_slice(&request_body(&r, GatewayKind::Vercel).unwrap()).unwrap();
+        assert!(body.get("providerOptions").is_none());
+        r.prompt_caching = crate::PromptCaching::Auto;
+        let auto: Value =
+            serde_json::from_slice(&request_body(&r, GatewayKind::Vercel).unwrap()).unwrap();
+        assert_eq!(
+            auto["providerOptions"],
+            json!({"gateway":{"caching":"auto"}})
+        );
+        let mut original = auto;
+        original.as_object_mut().unwrap().remove("providerOptions");
+        assert_eq!(original, body);
+        assert!(request_body(&r, GatewayKind::Openrouter).is_err());
+        assert!(request_body(&r, GatewayKind::OpenResponses).is_err());
+    }
+
+    #[test]
+    fn generation_ids_are_bounded_validated_and_local_only() {
+        let d = CallDiagnostics::new(crate::ReasoningConfig::default());
+        let mut c = Completion {
+            diagnostics: Some(d.clone()),
+            ..Completion::default()
+        };
+        for id in [
+            "private task",
+            "gen_../../secret",
+            "gen_81ARZ3NDEKTSV4RRFFQ69G5FAV",
+            "gen_01ARZ3NDEKTSV4RRFFQ69G5FAI",
+        ] {
+            c.frame(
+                serde_json::to_string(&json!({"id":id,"choices":[]}))
+                    .unwrap()
+                    .as_bytes(),
+            )
+            .unwrap();
+            assert!(d.snapshot().generation_id.is_none());
+        }
+        c.frame(br#"{"id":"gen_01ARZ3NDEKTSV4RRFFQ69G5FAV","choices":[]}"#)
+            .unwrap();
+        assert_eq!(
+            d.snapshot().generation_id.as_deref(),
+            Some("gen_01ARZ3NDEKTSV4RRFFQ69G5FAV")
+        );
+        let other = CallDiagnostics::new(crate::ReasoningConfig::default());
+        let mut c = Completion {
+            kind: GatewayKind::Openrouter,
+            diagnostics: Some(other.clone()),
+            ..Completion::default()
+        };
+        c.frame(br#"{"id":"gen_01ARZ3NDEKTSV4RRFFQ69G5FAV","choices":[]}"#)
+            .unwrap();
+        assert!(other.snapshot().generation_id.is_none());
+    }
 
     #[test]
     fn usage_is_reported_once_after_finish_and_missing_fields_stay_unknown() {

@@ -82,6 +82,7 @@ struct Attempt<'a> {
     provider: &'a dyn Provider,
     model: &'a str,
     max_output_tokens: u32,
+    prompt_caching: crate::PromptCaching,
     reasoning: crate::ReasoningConfig,
     ledger: crate::task::Ledger,
     window_tokens: Option<u64>,
@@ -112,7 +113,11 @@ fn attempts<'a>(
                 provider
                     .validate_reasoning(entry.profile().reasoning, max_output_tokens)
                     .map_err(RunError::InvalidSpec)?;
+                provider
+                    .validate_prompt_caching(entry.profile().prompt_caching)
+                    .map_err(RunError::InvalidSpec)?;
                 Ok(Attempt {
+                    prompt_caching: entry.profile().prompt_caching,
                     reasoning: entry.profile().reasoning,
                     window_tokens: entry.profile().context_window_tokens,
                     provider: provider.as_ref(),
@@ -130,6 +135,7 @@ fn attempts<'a>(
             .collect()
     } else {
         Ok(vec![Attempt {
+            prompt_caching: spec.prompt_caching,
             reasoning: spec.reasoning,
             window_tokens: spec.context.window_tokens,
             provider,
@@ -1416,6 +1422,7 @@ async fn consume(
     let parent = input.parent.span().span_context().span_id().to_string();
     let request = ModelRequest {
         model: input.attempt.model,
+        prompt_caching: input.attempt.prompt_caching,
         reasoning: input.attempt.reasoning,
         input: &spec.input,
         instructions: &spec.instructions,
@@ -1739,6 +1746,9 @@ fn attempt_timeout(execution: &Execution<'_>, progress: &mut ModelProgress) -> R
 fn validate(spec: &RunSpec, provider: &dyn Provider) -> Result<(), RunError> {
     spec.context.validate().map_err(RunError::InvalidSpec)?;
     if provider.route().is_none() {
+        provider
+            .validate_prompt_caching(spec.prompt_caching)
+            .map_err(RunError::InvalidSpec)?;
         provider
             .validate_reasoning(spec.reasoning, spec.limits.max_output_tokens)
             .map_err(RunError::InvalidSpec)?;

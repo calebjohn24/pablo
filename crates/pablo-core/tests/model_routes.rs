@@ -269,3 +269,23 @@ fn typed_overrides_refresh_derived_defaults_without_widening_explicit_profile_ca
         "https://openrouter.ai/api/v1/chat/completions"
     );
 }
+
+#[test]
+fn caching_profiles_survive_route_and_child_selection() {
+    let f = Fixture::new();
+    let mut value = preset();
+    value["options"]["models"]["primary"]["model_options"] = json!({"prompt_caching":"auto"});
+    let resolved = f.resolve(value.clone()).unwrap();
+    let route = resolved.model_route().unwrap();
+    let child = route.subsequence(&["primary"]).unwrap();
+    assert_eq!(
+        child.entries()[0].profile().prompt_caching,
+        pablo_core::PromptCaching::Auto
+    );
+    assert_eq!(
+        route.entries()[1].profile().prompt_caching,
+        pablo_core::PromptCaching::ProviderDefault
+    );
+    value["options"]["models"]["secondary"]["model_options"]["prompt_caching"] = json!("auto");
+    assert!(f.resolve(value).is_err());
+}

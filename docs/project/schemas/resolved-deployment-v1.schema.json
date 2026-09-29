@@ -244,6 +244,13 @@
                   },
                   "reasoning_capabilities": {
                     "$ref": "urn:pablo:deployment:1:c3.26#/$defs/reasoningCapabilities"
+                  },
+                  "prompt_caching": {
+                    "type": "string",
+                    "enum": [
+                      "provider_default",
+                      "auto"
+                    ]
                   }
                 },
                 "required": [

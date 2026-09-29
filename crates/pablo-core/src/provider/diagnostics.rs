@@ -6,6 +6,8 @@ use std::sync::{Arc, Mutex};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ModelDiagnostics {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub generation_id: Option<String>,
     pub requested_reasoning: ReasoningConfig,
     pub reported_reasoning_effort: Option<ReasoningEffort>,
     pub reasoning_tokens: Option<u64>,
@@ -76,6 +78,22 @@ impl CallDiagnostics {
                 *value = Some(self.started.elapsed().as_micros().min(u128::from(u64::MAX)) as u64);
             }
         });
+    }
+    pub(crate) fn generation_id(&self, value: &str) {
+        // Vercel documents gen_<ULID>. Exclude path/query/control and content payloads.
+        if value.len() == 30
+            && value.starts_with("gen_")
+            && value.as_bytes()[4..]
+                .iter()
+                .all(|b| b"0123456789ABCDEFGHJKMNPQRSTVWXYZ".contains(b))
+            && value.as_bytes()[4] <= b'7'
+        {
+            self.update(|d| {
+                if d.generation_id.is_none() {
+                    d.generation_id = Some(value.into());
+                }
+            });
+        }
     }
     pub(crate) fn http(&self, version: reqwest::Version) {
         self.update(|d| {

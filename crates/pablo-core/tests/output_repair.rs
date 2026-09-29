@@ -14,6 +14,9 @@ struct Fixture {
     seen: Mutex<Vec<(Vec<Message>, String, usize)>>,
 }
 impl Provider for Fixture {
+    fn validate_prompt_caching(&self, _: PromptCaching) -> Result<(), &'static str> {
+        Ok(())
+    }
     fn name(&self) -> &'static str {
         "repair-fixture"
     }
@@ -28,6 +31,9 @@ impl Provider for Fixture {
         r: ModelRequest<'a>,
     ) -> BoxFuture<'a, Result<ProviderStream<'a>, ProviderError>> {
         Box::pin(async move {
+            if r.input == "private original task" {
+                assert_eq!(r.prompt_caching, PromptCaching::Auto);
+            }
             let n = {
                 let mut seen = self.seen.lock().unwrap();
                 seen.push((
@@ -125,6 +131,7 @@ async fn repair_reuses_history_and_accounting_and_never_dispatches_a_third_call(
             std::env::current_dir().unwrap(),
             "repair-fixture",
         );
+        spec.prompt_caching = PromptCaching::Auto;
         spec.instructions = "stable private prefix".into();
         let mut output = OutputSettings::new(
             json!({"type":"object","properties":{"answer":{"type":"integer","minimum":1}},"required":["answer"]}),

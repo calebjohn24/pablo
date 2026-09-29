@@ -1,0 +1,948 @@
+{
+  "identity": {
+    "suite_sha256": "003730e8620e10d0c31acb714b94a1b8c3cf8efe63bdf4af9af478d054da50dc",
+    "harness_sha256": "96ed2925944de285424bbea846286a6cda58a2ef71c974cd1b89bd674268f1cd",
+    "source_revision": "46483cfb22e26eb0abc1a0c4367063e291abd3e9",
+    "archive_sha256": "3c192e86c2ce24848ebe6fa11775a19ac0ba4df83ac758c19404dd2cdd410ce9",
+    "binary_sha256": "88eeb92739913b08d4a24d648bf271697966088206c8a60d74f7ec446821ce4c",
+    "task_manifest_sha256": "681cd84f1204fb77517cea941f109a4272078d3958a7ada638f69cb244421529"
+  },
+  "pilot": {
+    "pilot-off": {
+      "attempts": 4,
+      "failures": 0,
+      "cost_coverage": 1.0,
+      "mean_cost_per_attempt": 0.1552725,
+      "mean_factual": 0.8333333333333334,
+      "mean_citation": 0.9273809523809524,
+      "mean_wall_ms": 31813.660726000002,
+      "provider_routes": {
+        "vertexAnthropic": 18
+      },
+      "correct_findings_per_family": {
+        "incident_notification": 5,
+        "notice_and_cure": 6,
+        "corporate_approvals": 5,
+        "privilege_review": 4
+      },
+      "report_sha256": "5555cb639d62ee25346babdbac9576cee24b51acdfbb1bdc45f1c5d8a4344179",
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "systems": {
+        "pablo-opus5-vercel": {
+          "harness": "pablo",
+          "provider": "vercel",
+          "requested_model": "anthropic/claude-opus-5",
+          "requested_reasoning": "provider_default",
+          "version": "pablo 0.0.1 (OTel mapping c1.2; GenAI fee465db333bdd6a7d2faa320edab5cf3101a4f4)"
+        }
+      }
+    },
+    "pilot-on": {
+      "attempts": 4,
+      "failures": 0,
+      "cost_coverage": 1.0,
+      "mean_cost_per_attempt": 0.1386358125,
+      "mean_factual": 0.75,
+      "mean_citation": 0.9277777777777778,
+      "mean_wall_ms": 34102.1818125,
+      "provider_routes": {
+        "vertexAnthropic": 19
+      },
+      "correct_findings_per_family": {
+        "incident_notification": 2,
+        "notice_and_cure": 6,
+        "corporate_approvals": 5,
+        "privilege_review": 5
+      },
+      "report_sha256": "f0d0cea7b34a2bc6902cdeb9786b45fe62a6eb3a1bcf6123c6358aa8414e2ae9",
+      "cache_read_tokens": 35144,
+      "cache_write_tokens": 42709,
+      "systems": {
+        "pablo-opus5-vercel": {
+          "harness": "pablo",
+          "provider": "vercel",
+          "requested_model": "anthropic/claude-opus-5",
+          "requested_reasoning": "provider_default",
+          "version": "pablo 0.0.1 (OTel mapping c1.2; GenAI fee465db333bdd6a7d2faa320edab5cf3101a4f4)"
+        }
+      }
+    }
+  },
+  "release_workflow": "https://github.com/calebjohn24/pablo/actions/runs/36618799078",
+  "candidate_manifests": {
+    "source": {
+      "format": 1,
+      "repository": "https://github.com/calebjohn24/pablo",
+      "version": "v0.0.1",
+      "revision": "46483cfb22e26eb0abc1a0c4367063e291abd3e9",
+      "git_tree": "6179c912f0321afde1f9bc372c3cc55efe78e90f",
+      "source_date_epoch": 1790709736,
+      "source_fingerprint_sha256": "8e9618e279bfa5d72aaf22403ca0d74b5a559f0bc967f5a54a7fcdb94f4fa863",
+      "cargo_lock_sha256": "5bffc857f4d6c2431029920c809ba99529c647ad78dbe313cdbcac9a7527cafe"
+    },
+    "build": {
+      "format": 1,
+      "profile": "release",
+      "locked_dependencies": true,
+      "command": "cargo build --release --locked --target x86_64-unknown-linux-gnu -p pablo --bin pablo",
+      "rustc": [
+        "rustc 1.98.1 (48a229cea 2026-09-01)",
+        "binary: rustc",
+        "commit-hash: 48a229ceaefd4985c50990b14116b6d856af0985",
+        "commit-date: 2026-09-01",
+        "host: x86_64-unknown-linux-gnu",
+        "release: 1.98.1",
+        "LLVM version: 22.1.8"
+      ],
+      "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+      "node": "v24.20.0",
+      "runner": "ubuntu-22.04; ubuntu22; 20260920.303.1",
+      "native_build": true,
+      "binary_sha256": "88eeb92739913b08d4a24d648bf271697966088206c8a60d74f7ec446821ce4c",
+      "archive": {
+        "format": "ustar+gzip",
+        "owner": "root:root",
+        "mtime": 1790709736,
+        "gzip_mtime": 0
+      }
+    },
+    "target": {
+      "format": 1,
+      "triple": "x86_64-unknown-linux-gnu",
+      "architecture": "x86_64",
+      "operating_system": "Linux",
+      "binary_format": "ELF",
+      "runtime_requirements": [
+        "64-bit Linux",
+        "glibc 2.35 or newer"
+      ],
+      "signing": "Unsigned",
+      "dynamic_libraries": [
+        "build-libc: ldd (Ubuntu GLIBC 2.35-0ubuntu3.15) 2.35",
+        "linux-vdso.so.1 (0x00007ffdf39a6000)",
+        "libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007fc529df4000)",
+        "libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007fc528b19000)",
+        "libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fc528800000)",
+        "/lib64/ld-linux-x86-64.so.2 (0x00007fc529e22000)"
+      ],
+      "native_execution_accepted": false,
+      "native_acceptance_checkpoint": "C3.36"
+    }
+  },
+  "main": {
+    "summaries": {
+      "on": {
+        "attempts": 150,
+        "failures": 0,
+        "cost_coverage": 1.0,
+        "mean_cost_per_attempt": 0.11606773,
+        "mean_factual": 0.9066666666666666,
+        "mean_citation": 0.9316455026455026,
+        "mean_wall_ms": 34995.48996584667,
+        "provider_routes": {
+          "vertexAnthropic": 374,
+          "anthropic": 331
+        },
+        "correct_findings_per_family": {
+          "privilege_review": 78,
+          "discovery_responses": 80,
+          "nda_obligations": 90,
+          "licensing_eligibility": 87,
+          "incident_notification": 69,
+          "litigation_deadlines": 87,
+          "worker_classification": 90,
+          "corporate_approvals": 75,
+          "procurement_redlines": 78,
+          "notice_and_cure": 82
+        }
+      },
+      "off": {
+        "attempts": 150,
+        "failures": 0,
+        "cost_coverage": 1.0,
+        "mean_cost_per_attempt": 0.16476016666666665,
+        "mean_factual": 0.8822222222222222,
+        "mean_citation": 0.9292645502645501,
+        "mean_wall_ms": 34783.37173329333,
+        "provider_routes": {
+          "vertexAnthropic": 232,
+          "anthropic": 465
+        },
+        "correct_findings_per_family": {
+          "privilege_review": 60,
+          "discovery_responses": 79,
+          "nda_obligations": 90,
+          "licensing_eligibility": 87,
+          "incident_notification": 67,
+          "litigation_deadlines": 87,
+          "worker_classification": 90,
+          "corporate_approvals": 75,
+          "procurement_redlines": 78,
+          "notice_and_cure": 81
+        }
+      },
+      "claude-opus": {
+        "attempts": 50,
+        "failures": 0,
+        "cost_coverage": 1.0,
+        "mean_cost_per_attempt": 0.110512345,
+        "mean_factual": 0.9166666666666667,
+        "mean_citation": 0.9276507936507936,
+        "mean_wall_ms": 33731.246539260006,
+        "provider_routes": {},
+        "correct_findings_per_family": {
+          "incident_notification": 25,
+          "worker_classification": 30,
+          "privilege_review": 28,
+          "litigation_deadlines": 29,
+          "notice_and_cure": 27,
+          "licensing_eligibility": 29,
+          "nda_obligations": 30,
+          "procurement_redlines": 26,
+          "corporate_approvals": 25,
+          "discovery_responses": 26
+        }
+      },
+      "claude-sdk-opus": {
+        "attempts": 50,
+        "failures": 0,
+        "cost_coverage": 1.0,
+        "mean_cost_per_attempt": 0.09278107000000001,
+        "mean_factual": 0.9166666666666667,
+        "mean_citation": 0.9251111111111111,
+        "mean_wall_ms": 28877.61078231998,
+        "provider_routes": {},
+        "correct_findings_per_family": {
+          "incident_notification": 26,
+          "worker_classification": 30,
+          "privilege_review": 26,
+          "litigation_deadlines": 29,
+          "notice_and_cure": 27,
+          "licensing_eligibility": 29,
+          "nda_obligations": 30,
+          "procurement_redlines": 26,
+          "corporate_approvals": 25,
+          "discovery_responses": 27
+        }
+      },
+      "comparison": {
+        "relative_mean_savings": 0.2955352476984222,
+        "lost_findings_per_family": {
+          "privilege_review": -18,
+          "discovery_responses": -1,
+          "nda_obligations": 0,
+          "licensing_eligibility": 0,
+          "incident_notification": -2,
+          "litigation_deadlines": 0,
+          "worker_classification": 0,
+          "corporate_approvals": 0,
+          "procurement_redlines": 0,
+          "notice_and_cure": -1
+        }
+      }
+    },
+    "gates": {
+      "complete_400_attempts": true,
+      "cost_coverage": true,
+      "saving_at_least_20_percent": true,
+      "no_additional_execution_failures": true,
+      "factual_decline_at_most_one_pp": true,
+      "citation_decline_at_most_one_pp": true,
+      "lost_findings_per_family_at_most_one": true
+    },
+    "all_passed": true,
+    "relative_savings_task_cluster_bootstrap_95_percent": [
+      0.26885466701518457,
+      0.31822944440833734
+    ],
+    "report_sha256": {
+      "main-41-auto/report.json": "7d80a0a3923fe7288067b2a9a0cdeeb7c2d4ee67ba80a44cafb7a8cbd9e220a3",
+      "main-41-provider_default/report.json": "df56eedec3945a8ca4507f8979b6b97790911cb6925db93d4aec87c2702105af",
+      "main-42-auto/report.json": "d41fc705e3644d3f807649b26ad279b4e49dce97b10cca83c3cdbf94f6ebe765",
+      "main-42-provider_default/report.json": "a066f32fe16ae0596ddfa3afb58f246c7b660b0e9b7da1cfbd24f2e256f9b547",
+      "main-43-auto/report.json": "35b3183908ef34f4bdb31911bbbde3845f5be5c558790319afded6679503246c",
+      "main-43-provider_default/report.json": "6cf4d1107f921e202e5bd733fb67b4b6852116dd7e38a2ac21e211cb3751a687",
+      "main-competitors/report.json": "cb6572470817efb7c41e9e0e7c37ab6344d3b44e55e2230f5a67dbc128d1784d",
+      "pilot-competitors/report.json": "c50df7f9e99bbdd16d9065c0650a18fa39f45de71c86d00ea2a7df9b3d579205",
+      "pilot-off/report.json": "5555cb639d62ee25346babdbac9576cee24b51acdfbb1bdc45f1c5d8a4344179",
+      "pilot-on/report.json": "f0d0cea7b34a2bc6902cdeb9786b45fe62a6eb3a1bcf6123c6358aa8414e2ae9"
+    },
+    "uncertainty": "Three repetitions; serial blocks and opaque provider routing can confound causal savings. Unchanged scorer has known enum/key defects; exact-task costs are diagnostic."
+  },
+  "pilot_gate": {
+    "passed": true,
+    "requires": "8 attempted tasks; every generation has gateway cost, provider, cache reads/writes; auto has cache reads"
+  },
+  "batches": {
+    "main-41-auto": {
+      "seed": 41,
+      "suite_version": "legal-synthetic-v1.0",
+      "systems": {
+        "pablo-opus5-vercel": {
+          "harness": "pablo",
+          "provider": "vercel",
+          "requested_model": "anthropic/claude-opus-5",
+          "requested_reasoning": "provider_default",
+          "version": "pablo 0.0.1 (OTel mapping c1.2; GenAI fee465db333bdd6a7d2faa320edab5cf3101a4f4)"
+        }
+      },
+      "summary": {
+        "attempts": 50,
+        "failures": 0,
+        "cost_coverage": 1.0,
+        "mean_cost_per_attempt": 0.126666745,
+        "mean_factual": 0.9033333333333333,
+        "mean_citation": 0.9346190476190476,
+        "mean_wall_ms": 34159.03845492001,
+        "provider_routes": {
+          "vertexAnthropic": 234
+        },
+        "correct_findings_per_family": {
+          "privilege_review": 26,
+          "discovery_responses": 26,
+          "nda_obligations": 30,
+          "licensing_eligibility": 29,
+          "incident_notification": 23,
+          "litigation_deadlines": 29,
+          "worker_classification": 30,
+          "corporate_approvals": 25,
+          "procurement_redlines": 26,
+          "notice_and_cure": 27
+        }
+      },
+      "report_sha256": "7d80a0a3923fe7288067b2a9a0cdeeb7c2d4ee67ba80a44cafb7a8cbd9e220a3"
+    },
+    "main-41-provider_default": {
+      "seed": 41,
+      "suite_version": "legal-synthetic-v1.0",
+      "systems": {
+        "pablo-opus5-vercel": {
+          "harness": "pablo",
+          "provider": "vercel",
+          "requested_model": "anthropic/claude-opus-5",
+          "requested_reasoning": "provider_default",
+          "version": "pablo 0.0.1 (OTel mapping c1.2; GenAI fee465db333bdd6a7d2faa320edab5cf3101a4f4)"
+        }
+      },
+      "summary": {
+        "attempts": 50,
+        "failures": 0,
+        "cost_coverage": 1.0,
+        "mean_cost_per_attempt": 0.16502490000000003,
+        "mean_factual": 0.8966666666666667,
+        "mean_citation": 0.9290952380952381,
+        "mean_wall_ms": 34422.866950120006,
+        "provider_routes": {
+          "vertexAnthropic": 232
+        },
+        "correct_findings_per_family": {
+          "privilege_review": 23,
+          "discovery_responses": 27,
+          "nda_obligations": 30,
+          "licensing_eligibility": 29,
+          "incident_notification": 23,
+          "litigation_deadlines": 29,
+          "worker_classification": 30,
+          "corporate_approvals": 25,
+          "procurement_redlines": 26,
+          "notice_and_cure": 27
+        }
+      },
+      "report_sha256": "df56eedec3945a8ca4507f8979b6b97790911cb6925db93d4aec87c2702105af"
+    },
+    "main-42-auto": {
+      "seed": 42,
+      "suite_version": "legal-synthetic-v1.0",
+      "systems": {
+        "pablo-opus5-vercel": {
+          "harness": "pablo",
+          "provider": "vercel",
+          "requested_model": "anthropic/claude-opus-5",
+          "requested_reasoning": "provider_default",
+          "version": "pablo 0.0.1 (OTel mapping c1.2; GenAI fee465db333bdd6a7d2faa320edab5cf3101a4f4)"
+        }
+      },
+      "summary": {
+        "attempts": 50,
+        "failures": 0,
+        "cost_coverage": 1.0,
+        "mean_cost_per_attempt": 0.11464366999999999,
+        "mean_factual": 0.92,
+        "mean_citation": 0.9305555555555556,
+        "mean_wall_ms": 34640.35491513999,
+        "provider_routes": {
+          "vertexAnthropic": 140,
+          "anthropic": 92
+        },
+        "correct_findings_per_family": {
+          "incident_notification": 25,
+          "worker_classification": 30,
+          "privilege_review": 27,
+          "litigation_deadlines": 29,
+          "notice_and_cure": 28,
+          "licensing_eligibility": 29,
+          "nda_obligations": 30,
+          "procurement_redlines": 26,
+          "corporate_approvals": 25,
+          "discovery_responses": 27
+        }
+      },
+      "report_sha256": "d41fc705e3644d3f807649b26ad279b4e49dce97b10cca83c3cdbf94f6ebe765"
+    },
+    "main-42-provider_default": {
+      "seed": 42,
+      "suite_version": "legal-synthetic-v1.0",
+      "systems": {
+        "pablo-opus5-vercel": {
+          "harness": "pablo",
+          "provider": "vercel",
+          "requested_model": "anthropic/claude-opus-5",
+          "requested_reasoning": "provider_default",
+          "version": "pablo 0.0.1 (OTel mapping c1.2; GenAI fee465db333bdd6a7d2faa320edab5cf3101a4f4)"
+        }
+      },
+      "summary": {
+        "attempts": 50,
+        "failures": 0,
+        "cost_coverage": 1.0,
+        "mean_cost_per_attempt": 0.16575320000000002,
+        "mean_factual": 0.8733333333333333,
+        "mean_citation": 0.9328730158730159,
+        "mean_wall_ms": 35810.899577799995,
+        "provider_routes": {
+          "anthropic": 233
+        },
+        "correct_findings_per_family": {
+          "incident_notification": 20,
+          "worker_classification": 30,
+          "privilege_review": 19,
+          "litigation_deadlines": 29,
+          "notice_and_cure": 27,
+          "licensing_eligibility": 29,
+          "nda_obligations": 30,
+          "procurement_redlines": 26,
+          "corporate_approvals": 25,
+          "discovery_responses": 27
+        }
+      },
+      "report_sha256": "a066f32fe16ae0596ddfa3afb58f246c7b660b0e9b7da1cfbd24f2e256f9b547"
+    },
+    "main-43-auto": {
+      "seed": 43,
+      "suite_version": "legal-synthetic-v1.0",
+      "systems": {
+        "pablo-opus5-vercel": {
+          "harness": "pablo",
+          "provider": "vercel",
+          "requested_model": "anthropic/claude-opus-5",
+          "requested_reasoning": "provider_default",
+          "version": "pablo 0.0.1 (OTel mapping c1.2; GenAI fee465db333bdd6a7d2faa320edab5cf3101a4f4)"
+        }
+      },
+      "summary": {
+        "attempts": 50,
+        "failures": 0,
+        "cost_coverage": 1.0,
+        "mean_cost_per_attempt": 0.106892775,
+        "mean_factual": 0.8966666666666667,
+        "mean_citation": 0.9297619047619047,
+        "mean_wall_ms": 36187.07652747999,
+        "provider_routes": {
+          "anthropic": 239
+        },
+        "correct_findings_per_family": {
+          "litigation_deadlines": 29,
+          "procurement_redlines": 26,
+          "worker_classification": 30,
+          "privilege_review": 25,
+          "nda_obligations": 30,
+          "corporate_approvals": 25,
+          "licensing_eligibility": 29,
+          "notice_and_cure": 27,
+          "discovery_responses": 27,
+          "incident_notification": 21
+        }
+      },
+      "report_sha256": "35b3183908ef34f4bdb31911bbbde3845f5be5c558790319afded6679503246c"
+    },
+    "main-43-provider_default": {
+      "seed": 43,
+      "suite_version": "legal-synthetic-v1.0",
+      "systems": {
+        "pablo-opus5-vercel": {
+          "harness": "pablo",
+          "provider": "vercel",
+          "requested_model": "anthropic/claude-opus-5",
+          "requested_reasoning": "provider_default",
+          "version": "pablo 0.0.1 (OTel mapping c1.2; GenAI fee465db333bdd6a7d2faa320edab5cf3101a4f4)"
+        }
+      },
+      "summary": {
+        "attempts": 50,
+        "failures": 0,
+        "cost_coverage": 1.0,
+        "mean_cost_per_attempt": 0.1635024,
+        "mean_factual": 0.8766666666666667,
+        "mean_citation": 0.9258253968253968,
+        "mean_wall_ms": 34116.34867195999,
+        "provider_routes": {
+          "anthropic": 232
+        },
+        "correct_findings_per_family": {
+          "litigation_deadlines": 29,
+          "procurement_redlines": 26,
+          "worker_classification": 30,
+          "privilege_review": 18,
+          "nda_obligations": 30,
+          "corporate_approvals": 25,
+          "licensing_eligibility": 29,
+          "notice_and_cure": 27,
+          "discovery_responses": 25,
+          "incident_notification": 24
+        }
+      },
+      "report_sha256": "6cf4d1107f921e202e5bd733fb67b4b6852116dd7e38a2ac21e211cb3751a687"
+    },
+    "main-competitors": {
+      "seed": 42,
+      "suite_version": "legal-synthetic-v1.0",
+      "systems": {
+        "claude-opus": {
+          "harness": "claude",
+          "provider": null,
+          "requested_model": "opus",
+          "requested_reasoning": "medium",
+          "version": "2.1.263 (Claude Code)"
+        },
+        "claude-sdk-opus": {
+          "harness": "claude-agent-sdk-runner",
+          "provider": null,
+          "requested_model": "opus",
+          "requested_reasoning": "medium",
+          "version": "claude-agent-sdk 0.2.154"
+        }
+      },
+      "summary": {
+        "attempts": 100,
+        "failures": 0,
+        "cost_coverage": 1.0,
+        "mean_cost_per_attempt": 0.1016467075,
+        "mean_factual": 0.9166666666666667,
+        "mean_citation": 0.9263809523809523,
+        "mean_wall_ms": 31304.428660789992,
+        "provider_routes": {},
+        "correct_findings_per_family": {
+          "incident_notification": 51,
+          "worker_classification": 60,
+          "privilege_review": 54,
+          "litigation_deadlines": 58,
+          "notice_and_cure": 54,
+          "licensing_eligibility": 58,
+          "nda_obligations": 60,
+          "procurement_redlines": 52,
+          "corporate_approvals": 50,
+          "discovery_responses": 53
+        }
+      },
+      "report_sha256": "cb6572470817efb7c41e9e0e7c37ab6344d3b44e55e2230f5a67dbc128d1784d"
+    },
+    "pilot-competitors": {
+      "seed": 41,
+      "suite_version": "legal-synthetic-v1.0",
+      "systems": {
+        "claude-opus": {
+          "harness": "claude",
+          "provider": null,
+          "requested_model": "opus",
+          "requested_reasoning": "medium",
+          "version": "2.1.263 (Claude Code)"
+        },
+        "claude-sdk-opus": {
+          "harness": "claude-agent-sdk-runner",
+          "provider": null,
+          "requested_model": "opus",
+          "requested_reasoning": "medium",
+          "version": "claude-agent-sdk 0.2.154"
+        }
+      },
+      "summary": {
+        "attempts": 2,
+        "failures": 0,
+        "cost_coverage": 1.0,
+        "mean_cost_per_attempt": 0.113464375,
+        "mean_factual": 1.0,
+        "mean_citation": 0.8555555555555556,
+        "mean_wall_ms": 32504.347340499997,
+        "provider_routes": {},
+        "correct_findings_per_family": {
+          "notice_and_cure": 12
+        }
+      },
+      "report_sha256": "c50df7f9e99bbdd16d9065c0650a18fa39f45de71c86d00ea2a7df9b3d579205"
+    },
+    "pilot-off": {
+      "seed": 41,
+      "suite_version": "legal-synthetic-v1.0",
+      "systems": {
+        "pablo-opus5-vercel": {
+          "harness": "pablo",
+          "provider": "vercel",
+          "requested_model": "anthropic/claude-opus-5",
+          "requested_reasoning": "provider_default",
+          "version": "pablo 0.0.1 (OTel mapping c1.2; GenAI fee465db333bdd6a7d2faa320edab5cf3101a4f4)"
+        }
+      },
+      "summary": {
+        "attempts": 4,
+        "failures": 0,
+        "cost_coverage": 1.0,
+        "mean_cost_per_attempt": 0.1552725,
+        "mean_factual": 0.8333333333333334,
+        "mean_citation": 0.9273809523809524,
+        "mean_wall_ms": 31813.660726000002,
+        "provider_routes": {
+          "vertexAnthropic": 18
+        },
+        "correct_findings_per_family": {
+          "incident_notification": 5,
+          "notice_and_cure": 6,
+          "corporate_approvals": 5,
+          "privilege_review": 4
+        }
+      },
+      "report_sha256": "5555cb639d62ee25346babdbac9576cee24b51acdfbb1bdc45f1c5d8a4344179"
+    },
+    "pilot-on": {
+      "seed": 41,
+      "suite_version": "legal-synthetic-v1.0",
+      "systems": {
+        "pablo-opus5-vercel": {
+          "harness": "pablo",
+          "provider": "vercel",
+          "requested_model": "anthropic/claude-opus-5",
+          "requested_reasoning": "provider_default",
+          "version": "pablo 0.0.1 (OTel mapping c1.2; GenAI fee465db333bdd6a7d2faa320edab5cf3101a4f4)"
+        }
+      },
+      "summary": {
+        "attempts": 4,
+        "failures": 0,
+        "cost_coverage": 1.0,
+        "mean_cost_per_attempt": 0.1386358125,
+        "mean_factual": 0.75,
+        "mean_citation": 0.9277777777777778,
+        "mean_wall_ms": 34102.1818125,
+        "provider_routes": {
+          "vertexAnthropic": 19
+        },
+        "correct_findings_per_family": {
+          "incident_notification": 2,
+          "notice_and_cure": 6,
+          "corporate_approvals": 5,
+          "privilege_review": 5
+        }
+      },
+      "report_sha256": "f0d0cea7b34a2bc6902cdeb9786b45fe62a6eb3a1bcf6123c6358aa8414e2ae9"
+    }
+  },
+  "details": {
+    "auto": {
+      "p50_wall_ms": 33619.826323500034,
+      "p95_wall_ms": 51361.911293099976,
+      "reported_cost_usd_total": 17.4101595,
+      "exact_tasks_diagnostic": 85,
+      "cost_per_exact_task_diagnostic": 0.20482540588235293,
+      "cost_sources": {
+        "vercel_generation_lookup": 150
+      },
+      "client_resolved_models": {
+        "null": 150
+      },
+      "gateway_reported_models": {
+        "anthropic/claude-opus-5": 705
+      },
+      "generation_cache_source": "vercel_generation_lookup",
+      "billing_complete_attempts": 150,
+      "cache_read_input_tokens_coverage": 1.0,
+      "cache_read_input_tokens_total": 1988294,
+      "cache_write_input_tokens_coverage": 1.0,
+      "cache_write_input_tokens_total": 944750
+    },
+    "provider_default": {
+      "p50_wall_ms": 33995.28781250004,
+      "p95_wall_ms": 44242.17889524996,
+      "reported_cost_usd_total": 24.714025,
+      "exact_tasks_diagnostic": 78,
+      "cost_per_exact_task_diagnostic": 0.31684647435897434,
+      "cost_sources": {
+        "vercel_generation_lookup": 150
+      },
+      "client_resolved_models": {
+        "null": 150
+      },
+      "gateway_reported_models": {
+        "anthropic/claude-opus-5": 697
+      },
+      "generation_cache_source": "vercel_generation_lookup",
+      "billing_complete_attempts": 150,
+      "cache_read_input_tokens_coverage": 1.0,
+      "cache_read_input_tokens_total": 0,
+      "cache_write_input_tokens_coverage": 1.0,
+      "cache_write_input_tokens_total": 0
+    },
+    "claude-opus": {
+      "p50_wall_ms": 33718.654165,
+      "p95_wall_ms": 41232.83895589998,
+      "reported_cost_usd_total": 5.52561725,
+      "exact_tasks_diagnostic": 28,
+      "cost_per_exact_task_diagnostic": 0.19734347321428572,
+      "cost_sources": {
+        "client_reported": 50
+      },
+      "client_resolved_models": {
+        "claude-opus-5": 50
+      },
+      "gateway_reported_models": {},
+      "generation_cache_source": null,
+      "billing_complete_attempts": 0,
+      "cache_read_input_tokens_coverage": 0.0,
+      "cache_read_input_tokens_total": null,
+      "cache_write_input_tokens_coverage": 0.0,
+      "cache_write_input_tokens_total": null
+    },
+    "claude-sdk-opus": {
+      "p50_wall_ms": 28036.054079499874,
+      "p95_wall_ms": 34320.81637529995,
+      "reported_cost_usd_total": 4.6390535,
+      "exact_tasks_diagnostic": 28,
+      "cost_per_exact_task_diagnostic": 0.16568048214285716,
+      "cost_sources": {
+        "client_reported": 50
+      },
+      "client_resolved_models": {
+        "claude-opus-5": 50
+      },
+      "gateway_reported_models": {},
+      "generation_cache_source": null,
+      "billing_complete_attempts": 0,
+      "cache_read_input_tokens_coverage": 0.0,
+      "cache_read_input_tokens_total": null,
+      "cache_write_input_tokens_coverage": 0.0,
+      "cache_write_input_tokens_total": null
+    }
+  },
+  "task_source_fingerprints": {
+    "corporate-approval-01": "7ce087bfd0a637f7bf2e7af1ed07b0f6bca910e0402560e207246233a9817074",
+    "corporate-approval-02": "8eda1987b64c9f4c5445832db7b8d705c0817666afb36840ba46237538b1abfc",
+    "corporate-approval-03": "7c2ebf5863b6ff3aa3441d52adb2fec64ecd67035615f7e3e4f668f2dbc85f97",
+    "corporate-approval-04": "5b8bdee526e90af65beebebd2497d885c39c77af8f075c94d48fe9d3d391bd07",
+    "corporate-approval-05": "de8314422622ee18db9418989c5e20e72feacc685e316bb54e372928b478de19",
+    "discovery-response-01": "d0687d50e0ae3fbd1142b6be722efa92080c8569358dbbb38f7afff2e4e62892",
+    "discovery-response-02": "a7f5d86745d4944bf4ba0cb9dba7d353343dd67fbfa6e7a5389bf822f9e2ca3a",
+    "discovery-response-03": "e85f9079b495d776768d4d0d3a552598e0789d76a0d2367d5d1cdacc1ad1c844",
+    "discovery-response-04": "c92d3faa8056186ec968637e86e1cd5f92b40d7d4ab36a5b9eb2e5ff3ecb2395",
+    "discovery-response-05": "93cde2f931111c0fac77dfdff866539ac3429d5de8d041b7c73b472841211af2",
+    "incident-notification-01": "670bcd591d88eab059f732d0e9e37f269a1334df2760797e178101053373eefa",
+    "incident-notification-02": "1bd3c03f4ad3359f6fa5c33e5df420df95a4ebd079c65c8d36863424dcec5028",
+    "incident-notification-03": "fa77dfb06da56ffa1cad9180b6e7cfe10cb184d5a5884b8faafb0a16475bb400",
+    "incident-notification-04": "1d99e554c40aefe905e5572a7966112bfbbcc791dead60ce85c2bdd113e3279c",
+    "incident-notification-05": "ca588978ba77da285da99a51425b35e3112066a8c7fb6b96f6f3859a06af2041",
+    "licensing-eligibility-01": "dac60c3c059609385ee999d13c921ca965e6ef09613b56f863c68ea05bb30714",
+    "licensing-eligibility-02": "ef1da1935236d18b1a8e0ec3f7dd676890b00ada5825d2a7a91b550869efbf8a",
+    "licensing-eligibility-03": "e78a62364455075a84696d2e921a81925d2265b5af18531a7b79a43260214d68",
+    "licensing-eligibility-04": "16025de748bfbc94b65e2358d8fe94d041a5ec464568c82eade164e65a7dc5f7",
+    "licensing-eligibility-05": "fdfbe108a036978e62d0587bf76997f01cd61742c613eaa4e84a2c3e0293c184",
+    "litigation-deadline-01": "31c1c9ac64ab67b2b7ca47649a1d200e3b8fba173c861156b95ecb787470c55f",
+    "litigation-deadline-02": "c91a8b9f7052d3f9eb4a723e15908750e3a88ac275ee40dbc8d5ee98a03faa9c",
+    "litigation-deadline-03": "12c995d12dcccf07ca393244209a296178537e10c32c1cd0dd7957e45bc3f5ac",
+    "litigation-deadline-04": "beb2d04cfdca330c993fe593d462246ca9554df8cbec3fab43134171eb60b537",
+    "litigation-deadline-05": "afce9498b0223edb1efe186491af9314bb89c0b2782b49e52a6324dc11e5baaf",
+    "nda-obligations-01": "0f9ddb79ffbea3e9db0143f7eb28f3f9f6567372baaf52d479e6d5cbb3d3b6ea",
+    "nda-obligations-02": "dd7aaf4e64338b1cfba7a054f27c9315ccc71e400a589d45e560ebf808e6e17b",
+    "nda-obligations-03": "1b06754b29f0e63bd89d7d7d114300b7cca1df2f7eefe8305edb93dc2b1af7a6",
+    "nda-obligations-04": "5003c4be1c855ac7638d59ac32a795e956e61a5c9abb83fdaab2b417e56a483b",
+    "nda-obligations-05": "74c35e6c8c24dbefca1d2af6f393e0c7872c85fb104842b1254f7cfcf4d74fec",
+    "notice-cure-01": "d8954230229ce8ed22b817633bb160d94bb5f563087d924ac75ca1b46ddd167d",
+    "notice-cure-02": "89fb850d287df142a77c1a16329f8efa71ea3b3e601a1f562724cbcfc0c250c3",
+    "notice-cure-03": "9ff130d4bd17d998329e9f288cb1146208cdd4c1e4c1456a2574e955ec3c6340",
+    "notice-cure-04": "d9b65a2e926f31c1dab292a7f0d8a37ee67be437488dc7b571b69258e3b9be7f",
+    "notice-cure-05": "e3f52f4bb2030418a1b57b886f51892cd71d6bb32b362837c4becd1a73c19bbb",
+    "privilege-review-01": "41da08727f05b974d22467e3f2f0b56f781ce3087aee26eb3d39c9cf6c482ba1",
+    "privilege-review-02": "7b470a5c5047bfa73061333717f2cb02e9c1ad3b2fdfaf5ee82982a88c95e0ac",
+    "privilege-review-03": "90a951a33eb7a500d9d52a90407247347245b1dba607df88a33fa11e3d8c844c",
+    "privilege-review-04": "0e4637ecb7796a79293faffde67f7d765b2fe11bf01152e13a1a10ee8a7e928a",
+    "privilege-review-05": "b0f96334b47b81b9867b6e62fd665fa335dfe43f6970ee2511e972e3753ef0da",
+    "procurement-redline-01": "e2ddbb9139d6f7baeb34ad7bc0b573312c780e28681b4b66289dbd3c34c4e6a0",
+    "procurement-redline-02": "d559f3d407651b7c2fbb861638432d8e9625783d242d3f12183fd64419c6459e",
+    "procurement-redline-03": "8bf914244a9a1690caa9a15960de7223fb0e2d90a383ab73935733bb984fecea",
+    "procurement-redline-04": "dab82df11383b92e1faefb25bdbad2ca752f0b0da4f2ee7195c1243571dcab77",
+    "procurement-redline-05": "27cc65dd62412d4ea41e530ed214b7df0d00857d4eea7f7855d9acbf9d89e7f9",
+    "worker-classification-01": "189b33f43b4c145ec292b909a6d6d7e468d303f472aa82595c2083b278d7e41d",
+    "worker-classification-02": "35db470951043235d851abdae4c54efe53e13f15426571486041219039174f9c",
+    "worker-classification-03": "5b6060f2ebdb6d8e36f299c477e52be80192bdd5cc7efcad6c6366944f8e2bb6",
+    "worker-classification-04": "3fd8f9dba27d8aaea565d2b8e2f16498e065ebf35623e83cca9da0c32bed1d23",
+    "worker-classification-05": "5c35600bd2218aa6c749eeb192672ff389f16b134b8d8fcc33cf4831a87cec7a"
+  },
+  "sandbox_installations": [
+    {
+      "batch": "main-41-auto",
+      "system": "pablo-opus5-vercel",
+      "candidate": {
+        "archive_sha256": "3c192e86c2ce24848ebe6fa11775a19ac0ba4df83ac758c19404dd2cdd410ce9",
+        "binary_sha256": "88eeb92739913b08d4a24d648bf271697966088206c8a60d74f7ec446821ce4c"
+      },
+      "prompt_caching": "auto",
+      "template_id": "rki5dems9wqfm4r03t7g",
+      "cpu_count": 2,
+      "memory_mb": 512,
+      "allow_internet_access": true
+    },
+    {
+      "batch": "main-41-provider_default",
+      "system": "pablo-opus5-vercel",
+      "candidate": {
+        "archive_sha256": "3c192e86c2ce24848ebe6fa11775a19ac0ba4df83ac758c19404dd2cdd410ce9",
+        "binary_sha256": "88eeb92739913b08d4a24d648bf271697966088206c8a60d74f7ec446821ce4c"
+      },
+      "prompt_caching": "provider_default",
+      "template_id": "rki5dems9wqfm4r03t7g",
+      "cpu_count": 2,
+      "memory_mb": 512,
+      "allow_internet_access": true
+    },
+    {
+      "batch": "main-42-auto",
+      "system": "pablo-opus5-vercel",
+      "candidate": {
+        "archive_sha256": "3c192e86c2ce24848ebe6fa11775a19ac0ba4df83ac758c19404dd2cdd410ce9",
+        "binary_sha256": "88eeb92739913b08d4a24d648bf271697966088206c8a60d74f7ec446821ce4c"
+      },
+      "prompt_caching": "auto",
+      "template_id": "rki5dems9wqfm4r03t7g",
+      "cpu_count": 2,
+      "memory_mb": 512,
+      "allow_internet_access": true
+    },
+    {
+      "batch": "main-42-provider_default",
+      "system": "pablo-opus5-vercel",
+      "candidate": {
+        "archive_sha256": "3c192e86c2ce24848ebe6fa11775a19ac0ba4df83ac758c19404dd2cdd410ce9",
+        "binary_sha256": "88eeb92739913b08d4a24d648bf271697966088206c8a60d74f7ec446821ce4c"
+      },
+      "prompt_caching": "provider_default",
+      "template_id": "rki5dems9wqfm4r03t7g",
+      "cpu_count": 2,
+      "memory_mb": 512,
+      "allow_internet_access": true
+    },
+    {
+      "batch": "main-43-auto",
+      "system": "pablo-opus5-vercel",
+      "candidate": {
+        "archive_sha256": "3c192e86c2ce24848ebe6fa11775a19ac0ba4df83ac758c19404dd2cdd410ce9",
+        "binary_sha256": "88eeb92739913b08d4a24d648bf271697966088206c8a60d74f7ec446821ce4c"
+      },
+      "prompt_caching": "auto",
+      "template_id": "rki5dems9wqfm4r03t7g",
+      "cpu_count": 2,
+      "memory_mb": 512,
+      "allow_internet_access": true
+    },
+    {
+      "batch": "main-43-provider_default",
+      "system": "pablo-opus5-vercel",
+      "candidate": {
+        "archive_sha256": "3c192e86c2ce24848ebe6fa11775a19ac0ba4df83ac758c19404dd2cdd410ce9",
+        "binary_sha256": "88eeb92739913b08d4a24d648bf271697966088206c8a60d74f7ec446821ce4c"
+      },
+      "prompt_caching": "provider_default",
+      "template_id": "rki5dems9wqfm4r03t7g",
+      "cpu_count": 2,
+      "memory_mb": 512,
+      "allow_internet_access": true
+    },
+    {
+      "batch": "main-competitors",
+      "system": "claude-opus",
+      "candidate": null,
+      "prompt_caching": "provider_default",
+      "template_id": "rki5dems9wqfm4r03t7g",
+      "cpu_count": 2,
+      "memory_mb": 512,
+      "allow_internet_access": true
+    },
+    {
+      "batch": "main-competitors",
+      "system": "claude-sdk-opus",
+      "candidate": null,
+      "prompt_caching": "provider_default",
+      "template_id": "rki5dems9wqfm4r03t7g",
+      "cpu_count": 2,
+      "memory_mb": 512,
+      "allow_internet_access": true
+    },
+    {
+      "batch": "pilot-competitors",
+      "system": "claude-opus",
+      "candidate": null,
+      "prompt_caching": "provider_default",
+      "template_id": "rki5dems9wqfm4r03t7g",
+      "cpu_count": 2,
+      "memory_mb": 512,
+      "allow_internet_access": true
+    },
+    {
+      "batch": "pilot-competitors",
+      "system": "claude-sdk-opus",
+      "candidate": null,
+      "prompt_caching": "provider_default",
+      "template_id": "rki5dems9wqfm4r03t7g",
+      "cpu_count": 2,
+      "memory_mb": 512,
+      "allow_internet_access": true
+    },
+    {
+      "batch": "pilot-off",
+      "system": "pablo-opus5-vercel",
+      "candidate": {
+        "archive_sha256": "3c192e86c2ce24848ebe6fa11775a19ac0ba4df83ac758c19404dd2cdd410ce9",
+        "binary_sha256": "88eeb92739913b08d4a24d648bf271697966088206c8a60d74f7ec446821ce4c"
+      },
+      "prompt_caching": "provider_default",
+      "template_id": "rki5dems9wqfm4r03t7g",
+      "cpu_count": 2,
+      "memory_mb": 512,
+      "allow_internet_access": true
+    },
+    {
+      "batch": "pilot-on",
+      "system": "pablo-opus5-vercel",
+      "candidate": {
+        "archive_sha256": "3c192e86c2ce24848ebe6fa11775a19ac0ba4df83ac758c19404dd2cdd410ce9",
+        "binary_sha256": "88eeb92739913b08d4a24d648bf271697966088206c8a60d74f7ec446821ce4c"
+      },
+      "prompt_caching": "auto",
+      "template_id": "rki5dems9wqfm4r03t7g",
+      "cpu_count": 2,
+      "memory_mb": 512,
+      "allow_internet_access": true
+    }
+  ],
+  "sanitized_attempts": {
+    "path": "c3.36-opus-caching-attempts.jsonl",
+    "count": 410,
+    "sha256": "f4a5672b6adcca59d6fccbc58b5ffee17a7adc8be8710bb30c580e196d075f79"
+  },
+  "cleanup": {
+    "checked_at": "2026-09-29T23:31:53.671930+00:00",
+    "owned_sandboxes": 12,
+    "owned_running_or_paused": 0,
+    "passed": true
+  },
+  "post_measurement_harness": {
+    "sha256": "5a80c6a3985d340c1be14ed4d2c1ba83ea116e42dc5e98085c7c8c6fc7ededed",
+    "changes": "Vercel-only billing enrichment guard and offline regression test. No effect on measured Vercel rows; frozen measured patch remains at source_revision."
+  }
+}

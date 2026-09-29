@@ -139,3 +139,17 @@ Compaction is itself bounded model work and participates in the root ledger. It 
 Reported provider usage is accumulated with checked arithmetic. Missing data remains unknown. OpenRouter’s reported decimal USD charge is normalized once to integer micro-USD; Pablo does not fetch price tables or estimate missing cost.
 
 `--max-total-tokens` and `--max-cost-microusd` require the adapter to attest an enforceable per-call upper bound before sending. The live gateway adapters do not currently make that guarantee, so they reject these hard ceilings before delivery.
+
+Vercel Chat Completions supports opt-in automatic prompt caching with
+`--prompt-caching auto`. The default is `provider_default`, which omits the gateway
+caching option. Deployment root model options and named profiles' `model_options`
+accept `prompt_caching = "auto"`; route entries retain their own policy, including
+repair, compaction and inherited child profiles. Explicit `auto` on other adapters
+fails before credential loading or dispatch. This preserves model and reasoning
+settings. See [Vercel automatic caching](https://vercel.com/docs/ai-gateway/models-and-providers/automatic-caching).
+
+Local model diagnostics retain a validated Vercel `gen_<ULID>` generation ID when
+returned. Cache writes and dollar costs stay unknown when absent; the runtime does
+not perform billing lookups. A benchmark can query the documented
+[generation lookup API](https://vercel.com/docs/ai-gateway/sdks-and-apis/rest-api)
+after task measurement. Generation IDs are local metadata, not exported OTel attributes.
