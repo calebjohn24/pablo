@@ -17,6 +17,7 @@ pub use continuation::{Continuation, ContinuationEntry};
 /// No credentials are serialized or copied into a request. Adapters own them.
 pub struct ModelRequest<'a> {
     pub model: &'a str,
+    pub prompt_caching: crate::PromptCaching,
     pub reasoning: crate::ReasoningConfig,
     pub input: &'a str,
     pub instructions: &'a str,
@@ -129,6 +130,13 @@ pub trait Provider: Send + Sync {
     }
     fn validate_model(&self, _model: &str, _max_output_tokens: u32) -> Result<(), &'static str> {
         Ok(())
+    }
+    fn validate_prompt_caching(&self, caching: crate::PromptCaching) -> Result<(), &'static str> {
+        if caching.is_default() {
+            Ok(())
+        } else {
+            Err("provider does not support automatic prompt caching")
+        }
     }
     fn validate_reasoning(
         &self,

@@ -39,6 +39,7 @@ fn k01_bounded_sse_mutations_never_escape_adapter_limits_or_panic() {
 }
 fn request() -> ModelRequest<'static> {
     ModelRequest {
+        prompt_caching: crate::PromptCaching::default(),
         reasoning: crate::ReasoningConfig::default(),
         model: "fixture-text-tools-v1",
         input: "",

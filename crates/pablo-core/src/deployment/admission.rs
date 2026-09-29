@@ -385,6 +385,7 @@ impl ResolvedDeployment {
         spec.context = serde_json::from_value(options["context"].clone())
             .map_err(|_| error("config_invalid_value", "/options/context"))?;
         spec.context.window_tokens = self.model_profile()?.context_window_tokens;
+        spec.prompt_caching = self.model_profile()?.prompt_caching;
         spec.reasoning = self.model_profile()?.reasoning;
         if let Some(schema) = options["output"]["schema"].as_str() {
             spec.output = Some(crate::output::OutputSettings {

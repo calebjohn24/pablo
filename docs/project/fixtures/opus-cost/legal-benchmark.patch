@@ -1,0 +1,608 @@
+--- a/legalbench/adapters.py
++++ b/legalbench/adapters.py
+@@ -7,6 +7,7 @@
+ import shutil
+ from dataclasses import dataclass
+ from pathlib import Path
++from .billing import counter, estimate
+ 
+ 
+ @dataclass(frozen=True)
+@@ -16,6 +17,7 @@
+     requested_model: str
+     reasoning: str
+     provider: str | None = None
++    prompt_caching: str = "provider_default"
+ 
+     def child_env(self) -> dict[str, str]:
+         env = os.environ.copy()
+@@ -64,6 +66,7 @@
+                 "--trace",
+                 str(workspace.parent / "pablo-trace.jsonl"),
+             ]
++            argv.extend(["--prompt-caching", self.prompt_caching])
+             if timeout_s is not None:
+                 argv.extend(["--timeout", str(timeout_s)])
+             if env_file:
+@@ -115,6 +118,7 @@
+         usage = None
+         cost = None
+         cost_source = None
++        estimated_cost = None
+         resolved_model = None
+         errors: list[str] = []
+         byte_offset = 0
+@@ -174,35 +178,12 @@
+                 if accounting is not None:
+                     usage = accounting
+                     tool_calls = accounting.get("tool_calls")
+-                    micros = accounting.get("cost_microusd")
+-                    cost = micros / 1_000_000 if isinstance(micros, (int, float)) else None
++                    micros = counter(accounting.get("cost_microusd"))
++                    cost = micros / 1_000_000 if micros is not None else None
+                     if cost is not None:
+                         cost_source = "provider_reported"
+-                    elif self.provider == "vercel" and self.requested_model in {
+-                        "zai/glm-5.3-flash",
+-                        "anthropic/claude-opus-5",
+-                    }:
+-                        token_usage = accounting.get("usage") or {}
+-                        try:
+-                            input_tokens = int(token_usage.get("input_tokens") or 0)
+-                            output_tokens = int(token_usage.get("output_tokens") or 0)
+-                            cache_read = int(token_usage.get("cache_read_input_tokens") or 0)
+-                            cache_write = int(token_usage.get("cache_write_input_tokens") or 0)
+-                            rates = (
+-                                (0.00000015, 0.0000005, 0.00000003, 0.0)
+-                                if self.requested_model == "zai/glm-5.3-flash"
+-                                else (0.000005, 0.000025, 0.0000005, 0.00000625)
+-                            )
+-                            ordinary_input = max(0, input_tokens - cache_read - cache_write)
+-                            cost = (
+-                                ordinary_input * rates[0]
+-                                + output_tokens * rates[1]
+-                                + cache_read * rates[2]
+-                                + cache_write * rates[3]
+-                            )
+-                            cost_source = f"estimated_vercel_catalog_2026-09-16:{self.requested_model}"
+-                        except (TypeError, ValueError):
+-                            pass
++                    elif self.provider == "vercel":
++                        estimated_cost = estimate(accounting.get("usage") or {}, self.requested_model)
+                 outcome = event.get("outcome") or {}
+                 if outcome.get("status"):
+                     completed = outcome["status"] == "completed"
+@@ -222,6 +203,8 @@
+             "tool_calls": tool_calls,
+             "reported_usage": usage,
+             "reported_cost_usd": cost,
++            "estimated_cost_usd": estimated_cost,
++            "estimated_cost_source": f"vercel_catalog_2026-09-16:{self.requested_model}" if estimated_cost is not None else None,
+             "reported_cost_source": cost_source,
+             "reported_model": resolved_model,
+             "errors": errors,
+@@ -254,6 +237,7 @@
+     opus5_model: str = "anthropic/claude-opus-5",
+     claude_effort: str = "medium",
+     pablo_reasoning: str = "provider_default",
++    prompt_caching: str = "provider_default",
+ ) -> dict[str, Adapter]:
+     return {
+         "claude-opus": Adapter("claude-opus", "claude", claude_model, claude_effort),
+@@ -263,5 +247,5 @@
+         "pablo-glm": Adapter("pablo-glm", "pablo", pablo_model, pablo_reasoning, "openrouter"),
+         "pablo-glm-openrouter": Adapter("pablo-glm-openrouter", "pablo", pablo_model, pablo_reasoning, "openrouter"),
+         "pablo-glm-vercel": Adapter("pablo-glm-vercel", "pablo", vercel_model, pablo_reasoning, "vercel"),
+-        "pablo-opus5-vercel": Adapter("pablo-opus5-vercel", "pablo", opus5_model, pablo_reasoning, "vercel"),
++        "pablo-opus5-vercel": Adapter("pablo-opus5-vercel", "pablo", opus5_model, pablo_reasoning, "vercel", prompt_caching),
+     }
+--- a/legalbench/cli.py
++++ b/legalbench/cli.py
+@@ -48,6 +48,7 @@
+     run.add_argument("--claude-binary")
+     run.add_argument("--claude-sdk-binary")
+     run.add_argument("--pablo-binary")
++    run.add_argument("--prompt-caching", choices=["provider_default", "auto"], default="provider_default")
+     return parser
+ 
+ 
+@@ -71,6 +72,7 @@
+         args.pablo_opus5_model,
+         args.claude_effort,
+         args.pablo_reasoning,
++        args.prompt_caching,
+     )
+     system_names = [name.strip() for name in args.systems.split(",") if name.strip()]
+     unknown_systems = sorted(set(system_names) - set(registry))
+--- a/legalbench/runner.py
++++ b/legalbench/runner.py
+@@ -168,6 +168,16 @@
+             (attempt_dir / "result.json").write_text(json.dumps(result, indent=2) + "\n")
+             results.append(result)
+ 
++    # All attempts have ended; billing polling never enters measured task time.
++    from .billing import enrich
++    key = os.environ.get("AI_GATEWAY_API_KEY") or os.environ.get("VERCEL_AI_GATEWAY")
++    if key:
++        for result in results:
++            trace = attempts_dir / result["attempt"] / "raw" / "pablo-trace.jsonl"
++            if trace.is_file():
++                enrich(result["events"], trace.read_text(), key)
++                (attempts_dir / result["attempt"] / "result.json").write_text(json.dumps(result, indent=2) + "\n")
++
+     metadata = {
+         "suite_version": manifest["version"],
+         "generated_at": datetime.now(timezone.utc).isoformat(),
+--- a/legalbench/report.py
++++ b/legalbench/report.py
+@@ -51,6 +51,7 @@
+         "peak_tree_rss_mib_max_completed": max(rss) / 1024 if rss else None,
+         "reported_cost_coverage": len(reported_costs) / len(rows) if rows else 0,
+         "reported_cost_usd_total": cost_total,
++        "reported_cost_usd_per_attempted_task": cost_total / len(rows) if cost_total is not None and rows else None,
+         "reported_cost_usd_mean_observed": statistics.fmean(reported_costs) if reported_costs else None,
+         "reported_cost_usd_per_accurate_task": cost_total / len(accurate) if cost_total is not None and accurate else None,
+         "cost_sources": cost_sources,
+--- /dev/null
++++ b/legalbench/billing.py
+@@ -0,0 +1,109 @@
++"""Strict accounting and bounded, content-free Vercel generation lookups."""
++from decimal import Decimal, InvalidOperation
++import json
++import re
++import time
++from urllib.request import Request, urlopen
++from urllib.error import HTTPError, URLError
++
++GENERATION_ID = re.compile(r"gen_[0-7][0-9A-HJKMNP-TV-Z]{25}\Z")
++
++
++def counter(value):
++    if isinstance(value, bool):
++        return None
++    if isinstance(value, int) and 0 <= value <= 2**64 - 1:
++        return value
++    if isinstance(value, str) and re.fullmatch(r"0|[1-9][0-9]{0,19}", value):
++        number = int(value)
++        return number if number <= 2**64 - 1 else None
++    return None
++
++
++def amount(value):
++    if isinstance(value, bool) or value is None:
++        return None
++    try:
++        number = Decimal(str(value))
++        return number if number.is_finite() and number >= 0 else None
++    except InvalidOperation:
++        return None
++
++
++def estimate(usage, model):
++    counts = [counter(usage.get(k)) for k in (
++        "input_tokens", "output_tokens", "cache_read_input_tokens", "cache_write_input_tokens")]
++    if any(v is None for v in counts):
++        return None
++    inp, out, read, write = counts
++    if read + write > inp:
++        return None
++    rates = {"zai/glm-5.3-flash": (".15", ".5", ".03", "0"),
++             "anthropic/claude-opus-5": ("5", "25", ".5", "6.25")}.get(model)
++    if rates is None:
++        return None
++    return float(sum(Decimal(n)*Decimal(r) for n, r in
++                     zip((inp-read-write, out, read, write), rates)) / 1_000_000)
++
++
++def generation_ids(trace):
++    ids = []
++    calls = 0
++    for line in trace.splitlines():
++        event = json.loads(line)
++        # Native call diagnostics appear only on model_call_completed records.
++        if (event.get("kind") or event).get("type") == "model.finished":
++            event = event.get("kind") or event
++            calls += 1
++            value = (event.get("diagnostics") or {}).get("generation_id")
++            if isinstance(value, str) and GENERATION_ID.fullmatch(value):
++                ids.append(value)
++    return ids, calls
++
++
++def lookup(generation_id, key, *, fetch=None, sleep=time.sleep):
++    if not GENERATION_ID.fullmatch(generation_id):
++        raise ValueError("invalid generation ID")
++    def request():
++        req = Request("https://ai-gateway.vercel.sh/v1/generation?id=" + generation_id,
++                      headers={"Authorization": "Bearer " + key})
++        with urlopen(req, timeout=20) as response:
++            raw = response.read(65537)
++            if len(raw) > 65536:
++                raise ValueError("oversized generation record")
++            return json.loads(raw)
++    fetch = fetch or request
++    for attempt in range(5):
++        try:
++            record = fetch()
++            data = record.get("data") or {}
++            if data.get("id") == generation_id:
++                provider = data.get("provider_name")
++                return {"id": generation_id, "gateway_cost_usd":
++                        float(amount(data.get("total_cost"))) if amount(data.get("total_cost")) is not None else None,
++                        "provider": provider if isinstance(provider, str) and len(provider) <= 128
++                        and re.fullmatch(r"[a-zA-Z0-9_. -]+", provider) else None,
++                        "model": data.get("model") if isinstance(data.get("model"), str) and len(data["model"]) <= 256 else None,
++                        "cache_read_input_tokens": counter(data.get("native_tokens_cached")),
++                        "cache_write_input_tokens": counter(data.get("native_tokens_cache_creation"))}
++        except HTTPError as exc:
++            if exc.code not in (404, 429, 500, 502, 503, 504):
++                return None
++        except (URLError, TimeoutError, ValueError):
++            pass
++        if attempt < 4:
++            sleep(2 ** attempt)
++    return None
++
++
++def enrich(events, trace, key):
++    ids, calls = generation_ids(trace)
++    records = [lookup(value, key) for value in ids]
++    complete = calls > 0 and len(ids) == calls and len(set(ids)) == calls and all(
++        r is not None and r["gateway_cost_usd"] is not None for r in records)
++    events["generation_records"] = records
++    events["generation_count"] = calls
++    events["billing_complete"] = complete
++    events["reported_cost_usd"] = sum(r["gateway_cost_usd"] for r in records) if complete else None
++    events["reported_cost_source"] = "vercel_generation_lookup" if complete else None
++    return events
+--- a/scripts/run_e2b.py
++++ b/scripts/run_e2b.py
+@@ -4,6 +4,8 @@
+ from __future__ import annotations
+ 
+ import argparse
++import hashlib
++import shlex
+ import io
+ import json
+ import os
+@@ -110,6 +112,11 @@
+     seed: int,
+     sandbox_lifetime: int,
+     api_key: str,
++    candidate: bytes | None = None,
++    candidate_sha256: str | None = None,
++    binary_sha256: str | None = None,
++    caching: str = "provider_default",
++    repeats: int = 1,
+ ) -> dict:
+     config = SYSTEMS[system]
+     credential_name = config["credential"]
+@@ -140,14 +147,27 @@
+         if prep.exit_code != 0:
+             raise RuntimeError(f"workspace preparation failed: {prep.stderr}")
+         log(system, "installing pinned harness")
+-        install = sandbox.commands.run(config["install"], timeout=None)
++        identity = None
++        if system.startswith("pablo-") and candidate is not None:
++            sandbox.files.write("/tmp/pablo-candidate.tar.gz", candidate)
++            install = sandbox.commands.run(
++                "mkdir -p /tmp/pablo-candidate /home/user/.local/bin && "
++                f"echo '{candidate_sha256}  /tmp/pablo-candidate.tar.gz' | sha256sum -c - && "
++                "tar -xzf /tmp/pablo-candidate.tar.gz -C /tmp/pablo-candidate && "
++                "find /tmp/pablo-candidate -type f -name pablo -exec install -m 755 {} /home/user/.local/bin/pablo \\; && "
++                f"echo '{binary_sha256}  /home/user/.local/bin/pablo' | sha256sum -c - && "
++                "/home/user/.local/bin/pablo --version", timeout=None)
++            identity = {"archive_sha256": candidate_sha256, "binary_sha256": binary_sha256}
++        else:
++            install = sandbox.commands.run(config["install"], timeout=None)
+         if install.exit_code != 0:
+             raise RuntimeError(f"harness installation failed: {install.stderr}")
+ 
+         command = (
+             "export PATH=\"$HOME/.local/bin:$PATH\"; "
+             "python3 -m legalbench run "
+-            f"--tasks {tasks} --systems {system} --repeats 1 "
++            f"--tasks {shlex.quote(tasks)} --systems {system} --repeats {repeats} "
++            f"--prompt-caching {caching} "
+             f"--timeout none --seed {seed} --output results/remote"
+         )
+         launch = sandbox.commands.run(
+@@ -208,19 +228,32 @@
+         log(system, "benchmark completed; results downloaded")
+         return {
+             "system": system,
++            "candidate": identity,
++            "prompt_caching": caching,
+             "sandbox_id": sandbox_id,
+             "elapsed_s": time.monotonic() - started,
+             "results_archive": results_archive,
+             "metrics": jsonable(metrics),
+             "sandbox_info": jsonable(info),
+         }
++    except BaseException as exc:
++        if sandbox is not None:
++            try:
++                sandbox.commands.run("mkdir -p /home/user/legal-benchmark/results/remote && tar -czf /tmp/partial-results.tgz -C /home/user/legal-benchmark/results/remote .", timeout=30)
++                partial = sandbox.files.read("/tmp/partial-results.tgz", format="bytes")
++                return {"system":system, "sandbox_id":sandbox.sandbox_id,
++                        "results_archive":partial, "error":type(exc).__name__,
++                        "elapsed_s":time.monotonic()-started}
++            except Exception:
++                pass
++        raise RuntimeError("sandbox run interrupted: " + type(exc).__name__) from None
+     finally:
+         if sandbox is not None:
+             try:
+                 sandbox.kill()
+                 log(system, "sandbox stopped")
+             except Exception as exc:
+-                log(system, f"warning: sandbox cleanup failed: {exc}")
++                log(system, f"warning: sandbox cleanup failed: {type(exc).__name__}")
+ 
+ 
+ def main() -> int:
+@@ -230,7 +263,21 @@
+     parser.add_argument("--output", type=Path, required=True)
+     parser.add_argument("--seed", type=int, default=42)
+     parser.add_argument("--sandbox-lifetime", type=int, default=86400, help="E2B platform lifetime ceiling; not an attempt timeout")
++    parser.add_argument("--pablo-archive", type=Path)
++    parser.add_argument("--archive-sha256")
++    parser.add_argument("--binary-sha256")
++    parser.add_argument("--prompt-caching", choices=["provider_default", "auto"], default="provider_default")
++    parser.add_argument("--repeats", type=int, default=1)
++    parser.add_argument("--serial", action="store_true")
+     args = parser.parse_args()
++    candidate = args.pablo_archive.read_bytes() if args.pablo_archive else None
++    if candidate is not None:
++        if not args.archive_sha256 or hashlib.sha256(candidate).hexdigest() != args.archive_sha256:
++            raise SystemExit("candidate archive checksum mismatch")
++        if not args.binary_sha256 or not re.fullmatch(r"[0-9a-f]{64}", args.binary_sha256):
++            raise SystemExit("candidate binary checksum is required")
++    if args.repeats < 1:
++        raise SystemExit("repeats must be positive")
+     if args.output.exists():
+         raise SystemExit(f"output already exists: {args.output}")
+ 
+@@ -244,7 +291,7 @@
+     unknown = sorted(set(selected_systems) - set(SYSTEMS))
+     if unknown:
+         raise SystemExit(f"unknown systems: {', '.join(unknown)}")
+-    with ThreadPoolExecutor(max_workers=len(selected_systems)) as executor:
++    with ThreadPoolExecutor(max_workers=1 if args.serial else len(selected_systems)) as executor:
+         futures = {
+             executor.submit(
+                 run_one,
+@@ -255,6 +302,8 @@
+                 seed=args.seed,
+                 sandbox_lifetime=args.sandbox_lifetime,
+                 api_key=api_key,
++                candidate=candidate, candidate_sha256=args.archive_sha256,
++                binary_sha256=args.binary_sha256, caching=args.prompt_caching, repeats=args.repeats,
+             ): system
+             for system in selected_systems
+         }
+@@ -263,7 +312,7 @@
+             try:
+                 completed[system] = future.result()
+             except Exception as exc:
+-                errors[system] = f"{type(exc).__name__}: {exc}"
++                errors[system] = type(exc).__name__
+                 log(system, errors[system])
+ 
+     reports = {}
+@@ -273,13 +322,23 @@
+         with tarfile.open(fileobj=io.BytesIO(result.pop("results_archive")), mode="r:gz") as archive_file:
+             archive_file.extractall(system_dir, filter="data")
+         (system_dir / "e2b.json").write_text(json.dumps(result, indent=2) + "\n")
+-        reports[system] = json.loads((system_dir / "report.json").read_text())
++        if result.get("error"):
++            errors[system] = result["error"]
++        elif (system_dir / "report.json").is_file():
++            reports[system] = json.loads((system_dir / "report.json").read_text())
++        else:
++            errors[system] = "report unavailable"
+ 
+     manifest = {
+         "created_at": datetime.now(timezone.utc).isoformat(),
+-        "concurrent": True,
++        "concurrent": not args.serial,
+         "template": "base",
+         "tasks": args.tasks,
++        "prompt_caching": args.prompt_caching,
++        "candidate_archive_sha256": args.archive_sha256,
++        "candidate_binary_sha256": args.binary_sha256,
++        "repeats": args.repeats,
++        "seed": args.seed,
+         "systems": sorted(selected_systems),
+         "completed": sorted(completed),
+         "errors": errors,
+@@ -296,13 +355,13 @@
+         "suite_version": next(iter(reports.values()))["suite_version"],
+         "generated_at": datetime.now(timezone.utc).isoformat(),
+         "seed": args.seed,
+-        "repeats": 1,
++        "repeats": args.repeats,
+         "task_count": next(iter(reports.values()))["task_count"],
+         "systems": {
+             name: report["systems"][name]
+             for name, report in reports.items()
+         },
+-        "host": "two concurrent E2B base sandboxes",
++        "host": "E2B base sandboxes; serial" if args.serial else "E2B base sandboxes; concurrent",
+         "logical_cpus": None,
+         "measurement_notes": {
+             "execution": "one system per E2B sandbox, started concurrently; serial attempts within each sandbox",
+--- /dev/null
++++ b/scripts/opus_caching_experiment.py
+@@ -0,0 +1,61 @@
++#!/usr/bin/env python3
++"""Frozen 10-attempt pilot; expand only with cache hits and full billing coverage."""
++import argparse
++import hashlib
++import json
++from pathlib import Path
++import subprocess
++import sys
++
++PILOT = 'notice-cure-01,corporate-approval-01,incident-notification-01,privilege-review-01'
++ROOT = Path(__file__).resolve().parents[1]
++
++
++def pilot_gate(reports):
++    rows = [a for r in reports for a in r['attempts']]
++    return len(rows) == 8 and all(a['events'].get('billing_complete') and all(
++        r and r.get('provider') and r.get('cache_read_input_tokens') is not None
++        and r.get('cache_write_input_tokens') is not None for r in a['events'].get('generation_records', []))
++        for a in rows) and any(r.get('cache_read_input_tokens', 0) > 0
++        for a in rows[4:] for r in a['events'].get('generation_records', []) if r)
++
++
++def main():
++    p = argparse.ArgumentParser()
++    p.add_argument('--archive', type=Path, required=True)
++    p.add_argument('--archive-sha256', required=True)
++    p.add_argument('--binary-sha256', required=True)
++    p.add_argument('--source-revision', required=True)
++    p.add_argument('--output', type=Path, required=True)
++    args = p.parse_args()
++    if args.output.exists():
++        raise SystemExit('output already exists; interrupted attempts must be retained')
++    args.output.mkdir(parents=True)
++    def run(label, systems, tasks, caching, seed):
++        out = args.output / label
++        result = subprocess.run([sys.executable, str(ROOT/'scripts/run_e2b.py'),
++            '--systems',systems,'--tasks',tasks,'--output',str(out),'--serial',
++            '--pablo-archive',str(args.archive),'--archive-sha256',args.archive_sha256,
++            '--binary-sha256',args.binary_sha256,'--prompt-caching',caching,'--seed',str(seed)])
++        if result.returncode:
++            raise SystemExit('experiment stopped; preserve partial results in '+str(out))
++        return json.loads((out/'report.json').read_text())
++    identity = {'source_revision':args.source_revision,'archive_sha256':args.archive_sha256,
++                'binary_sha256':args.binary_sha256,'task_manifest_sha256':hashlib.sha256((ROOT/'tasks/manifest.json').read_bytes()).hexdigest()}
++    (args.output/'identity.json').write_text(json.dumps(identity,indent=2)+'\n')
++    off = run('pilot-off','pablo-opus5-vercel',PILOT,'provider_default',41)
++    on = run('pilot-on','pablo-opus5-vercel',PILOT,'auto',41)
++    run('pilot-competitors','claude-opus,claude-sdk-opus','notice-cure-01','provider_default',41)
++    passed = pilot_gate([off,on])
++    (args.output/'pilot-gate.json').write_text(json.dumps({'passed':passed,
++        'requires':'8 attempted tasks; every generation has gateway cost, provider, cache reads/writes; auto has cache reads'},indent=2)+'\n')
++    if not passed:
++        raise SystemExit('pilot observability/cache-read gate failed; no main attempts authorized by gate')
++    for seed in (41,42,43):
++        order = ['provider_default','auto'] if seed != 42 else ['auto','provider_default']
++        for caching in order:
++            run(f'main-{seed}-{caching}','pablo-opus5-vercel','all',caching,seed)
++    run('main-competitors','claude-opus,claude-sdk-opus','all','provider_default',42)
++
++if __name__ == '__main__':
++    main()
+--- a/tests/test_benchmark.py
++++ b/tests/test_benchmark.py
+@@ -107,15 +107,16 @@
+                     "input_tokens": "1000",
+                     "output_tokens": "100",
+                     "cache_read_input_tokens": "200",
++                    "cache_write_input_tokens": "0",
+                 },
+                 "cost_microusd": None,
+             },
+         }
+         normalized = registry["pablo-glm-vercel"].normalize(json.dumps(event) + "\n", [])
+-        self.assertAlmostEqual(normalized["reported_cost_usd"], 0.000176)
++        self.assertAlmostEqual(normalized["estimated_cost_usd"], 0.000176)
+         self.assertEqual(
+-            normalized["reported_cost_source"],
+-            "estimated_vercel_catalog_2026-09-16:zai/glm-5.3-flash",
++            normalized["estimated_cost_source"],
++            "vercel_catalog_2026-09-16:zai/glm-5.3-flash",
+         )
+ 
+     def test_pablo_opus5_profile_and_cost(self):
+@@ -137,7 +138,7 @@
+             },
+         }
+         normalized = profile.normalize(json.dumps(event) + "\n", [])
+-        self.assertAlmostEqual(normalized["reported_cost_usd"], 0.006725)
++        self.assertAlmostEqual(normalized["estimated_cost_usd"], 0.006725)
+ 
+     def test_monitor_captures_resources(self):
+         with tempfile.TemporaryDirectory() as tmp:
+--- /dev/null
++++ b/tests/test_billing.py
+@@ -0,0 +1,75 @@
++import json
++import unittest
++from unittest.mock import patch
++from legalbench.billing import counter, estimate, lookup, enrich, generation_ids
++from legalbench.adapters import adapters
++
++ID = 'gen_01ARZ3NDEKTSV4RRFFQ69G5FAV'
++
++class BillingTests(unittest.TestCase):
++    def test_counters_missing_zero_decimal_and_invalid(self):
++        for value in [None, True, -1, 1.2, '1.0', '+1', ' 1', '01', str(2**64)]:
++            self.assertIsNone(counter(value))
++        self.assertEqual(counter('0'), 0)
++        self.assertEqual(counter(str(2**64-1)), 2**64-1)
++        u = dict(input_tokens='100', output_tokens='2', cache_read_input_tokens='0', cache_write_input_tokens='0')
++        self.assertIsNotNone(estimate(u, 'anthropic/claude-opus-5'))
++        u['cache_write_input_tokens'] = None
++        self.assertIsNone(estimate(u, 'anthropic/claude-opus-5'))
++        u.update(cache_write_input_tokens='60', cache_read_input_tokens='50')
++        self.assertIsNone(estimate(u, 'anthropic/claude-opus-5'))
++
++    def test_decimal_cost_is_reported_and_estimates_are_separate(self):
++        a = adapters('opus', 'glm')['pablo-opus5-vercel']
++        n = a.normalize(json.dumps({'accounting': {'cost_microusd':'123456'}}), [])
++        self.assertEqual(n['reported_cost_usd'], .123456)
++        self.assertEqual(n['reported_cost_source'], 'provider_reported')
++        self.assertIsNone(n['estimated_cost_usd'])
++
++    def test_delayed_lookup_and_unknown_fields(self):
++        calls = iter([{'error':'Usage event not found'}, {'data': {'id':ID, 'total_cost':'.02', 'provider_name':'anthropic', 'native_tokens_cached':0}}])
++        sleeps = []
++        r = lookup(ID, 'private', fetch=lambda: next(calls), sleep=sleeps.append)
++        self.assertEqual(sleeps, [1])
++        self.assertEqual(r['gateway_cost_usd'], .02)
++        self.assertEqual(r['cache_read_input_tokens'], 0)
++        self.assertIsNone(r['cache_write_input_tokens'])
++        self.assertIsNone(lookup(ID, 'private', fetch=lambda:{}, sleep=lambda _:None))
++        with self.assertRaises(ValueError):
++            lookup('gen_../../private', 'private')
++
++    def test_generation_validation_and_incomplete_coverage(self):
++        trace = '\n'.join(json.dumps({'type':'model.finished','diagnostics':{'generation_id':v}}) for v in [ID, 'private'])
++        self.assertEqual(generation_ids(trace), ([ID], 2))
++        with patch('legalbench.billing.lookup', return_value={'id':ID, 'gateway_cost_usd':.1}):
++            e = enrich({}, trace, 'private')
++        self.assertFalse(e['billing_complete'])
++        self.assertIsNone(e['reported_cost_usd'])
++
++if __name__ == '__main__':
++    unittest.main()
++
++class PilotAndAggregationTests(unittest.TestCase):
++    def test_pilot_requires_every_record_and_auto_cache_reads(self):
++        from scripts.opus_caching_experiment import pilot_gate
++        row = {'events': {'billing_complete': True, 'generation_records':[
++            {'provider':'anthropic','cache_read_input_tokens':0,'cache_write_input_tokens':0}]}}
++        import copy
++        off = {'attempts': [copy.deepcopy(row) for _ in range(4)]}
++        on = copy.deepcopy(off)
++        self.assertFalse(pilot_gate([off,on]))
++        on['attempts'][0]['events']['generation_records'][0]['cache_read_input_tokens'] = 1
++        self.assertTrue(pilot_gate([off,on]))
++        on['attempts'][1]['events']['generation_records'][0]['cache_write_input_tokens'] = None
++        self.assertFalse(pilot_gate([off,on]))
++
++    def test_cost_per_attempt_includes_failures_and_missing_cost_is_unknown(self):
++        from legalbench.report import _summary
++        def row(status, cost):
++            return {'status':status,'score':{'factual_accuracy':1 if status=='completed' else 0,'citation_score':1},
++                    'events':{'reported_cost_usd':cost}, 'resources':{'wall_ms':100,'first_stdout_ms':None,
++                    'cpu_total_s':.01,'sampled_tree_peak_rss_kib':100}}
++        result = _summary([row('completed',.1),row('failed',.3)])
++        self.assertEqual(result['failures'], 1)
++        self.assertEqual(result['reported_cost_usd_per_attempted_task'], .2)
++        self.assertIsNone(_summary([row('completed',.1),row('failed',None)])['reported_cost_usd_per_attempted_task'])

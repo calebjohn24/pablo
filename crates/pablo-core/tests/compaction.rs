@@ -9,6 +9,7 @@ use std::sync::Mutex;
 
 #[derive(Clone)]
 struct Seen {
+    prompt_caching: PromptCaching,
     reasoning: ReasoningConfig,
     messages: Vec<Message>,
     summary: bool,
@@ -22,6 +23,9 @@ struct Fixture {
     overflow: Mutex<bool>,
 }
 impl Provider for Fixture {
+    fn validate_prompt_caching(&self, _: PromptCaching) -> Result<(), &'static str> {
+        Ok(())
+    }
     fn validate_reasoning(
         &self,
         reasoning: ReasoningConfig,
@@ -39,6 +43,7 @@ impl Provider for Fixture {
         Box::pin(async move {
             let summary = matches!(r.messages.last(),Some(Message::User{text}) if text.starts_with("Create a concise handoff"));
             self.seen.lock().unwrap().push(Seen {
+                prompt_caching: r.prompt_caching,
                 reasoning: r.reasoning,
                 messages: r.messages.to_vec(),
                 summary,
@@ -107,6 +112,7 @@ async fn reasoning_budget_survives_compaction_or_rejects_before_replacing_histor
             "fixture/model",
         );
         spec.instructions = "unchanged authority".into();
+        spec.prompt_caching = PromptCaching::Auto;
         spec.reasoning = ReasoningConfig::Budget { budget_tokens };
         spec.limits.max_output_tokens = 2048;
         spec.context.max_summary_tokens = 128;
@@ -128,6 +134,7 @@ async fn reasoning_budget_survives_compaction_or_rejects_before_replacing_histor
             .unwrap();
         let seen = provider.seen.lock().unwrap();
         assert!(seen.iter().all(|r| r.reasoning == spec.reasoning));
+        assert!(seen.iter().all(|r| r.prompt_caching == PromptCaching::Auto));
         let record = events.last().unwrap().compaction.as_ref().unwrap();
         if budget_tokens == 64 {
             assert!(result.is_completed());

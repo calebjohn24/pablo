@@ -29,6 +29,7 @@ pub struct Options {
     input: String,
     workspace: Option<PathBuf>,
     model: Option<String>,
+    prompt_caching: Option<pablo_core::PromptCaching>,
     reasoning: Option<pablo_core::ReasoningConfig>,
     capture_content: bool,
     timeout_seconds: Option<u64>,
@@ -86,6 +87,7 @@ impl Options {
             input: String::new(),
             workspace: None,
             model: None,
+            prompt_caching: None,
             reasoning: None,
             capture_content: false,
             timeout_seconds: None,
@@ -152,6 +154,7 @@ impl Options {
                             | "--skill"
                             | "--workspace"
                             | "--model"
+                            | "--prompt-caching"
                             | "--reasoning-effort"
                             | "--reasoning-budget-tokens"
                             | "--provider"
@@ -202,6 +205,14 @@ impl Options {
                 "--provider" => {
                     options.provider =
                         Some(value.to_str().ok_or("provider must be UTF-8")?.parse()?);
+                }
+                "--prompt-caching" => {
+                    options.prompt_caching = Some(
+                        value
+                            .to_str()
+                            .ok_or("prompt caching must be UTF-8")?
+                            .parse()?,
+                    );
                 }
                 "--reasoning-effort" | "--reasoning-budget-tokens" => {
                     if options.reasoning.is_some() {
@@ -362,6 +373,12 @@ impl Options {
         if let Some(provider) = self.provider {
             overrides.insert("model.provider".into(), provider.name().into());
         }
+        if let Some(caching) = self.prompt_caching {
+            overrides.insert(
+                "model.prompt_caching".into(),
+                serde_json::to_value(caching).expect("typed caching"),
+            );
+        }
         if let Some(reasoning) = self.reasoning {
             overrides.insert(
                 "model.reasoning".into(),
@@ -505,6 +522,9 @@ impl Options {
         }
         spec.trace.capture_content = self.capture_content;
         spec.limits.max_tool_calls = self.max_tool_calls;
+        spec.prompt_caching = self.prompt_caching.unwrap_or_default();
+        spec.prompt_caching
+            .validate_gateway(self.provider.unwrap_or_default())?;
         spec.reasoning = self.reasoning.unwrap_or_default();
         spec.reasoning.validate_gateway(
             self.provider.unwrap_or_default(),

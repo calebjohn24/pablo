@@ -369,6 +369,21 @@ pub(super) fn reasoning_profile(
     model: &Value,
     max_output_tokens: u32,
 ) -> Result<(), ConfigError> {
+    profile.prompt_caching = model
+        .get("prompt_caching")
+        .or_else(|| {
+            model
+                .get("model_options")
+                .and_then(|o| o.get("prompt_caching"))
+        })
+        .map(|v| serde_json::from_value(v.clone()))
+        .transpose()
+        .map_err(|_| invalid("/model/prompt_caching"))?
+        .unwrap_or_default();
+    profile
+        .prompt_caching
+        .validate_gateway(profile.provider)
+        .map_err(|_| invalid("/model/prompt_caching"))?;
     let value = model
         .get("reasoning")
         .or_else(|| model.get("model_options").and_then(|o| o.get("reasoning")));

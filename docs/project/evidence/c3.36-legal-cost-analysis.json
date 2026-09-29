@@ -1,0 +1,103 @@
+{
+  "analysis_date": "2026-09-29",
+  "rates_basis": "Historical benchmark rates only: input 5, output 25, cache read 0.5, five-minute cache write 6.25 USD/million. Not current billing verification.",
+  "reports": [
+    {
+      "source": "e2b-pablo-opus5-unbounded-r1-20260916/pablo-opus5-vercel/report.json",
+      "sha256": "58a069cc1975b0b164f6c814d756889567090e08a8c33739a1bd557893b1da2e",
+      "attempts": 50,
+      "totals": {
+        "input_tokens": 966107,
+        "output_tokens": 137981,
+        "cache_read_input_tokens": 0,
+        "cache_write_input_tokens": null,
+        "tool_calls": 402,
+        "cost_usd": 8.280059999999999
+      },
+      "historical_rate_decomposition": {
+        "ordinary_input_usd": 4.830535,
+        "cache_read_usd": 0.0,
+        "cache_write_usd": 0.0,
+        "output_usd": 3.449525,
+        "unreconciled_reported_cost_usd": -1.7763568394002505e-15
+      },
+      "cost_source": "estimated_vercel_catalog_2026-09-16:anthropic/claude-opus-5",
+      "input_semantics": "inclusive of cache"
+    },
+    {
+      "source": "e2b-claude-unbounded-r1-20260916/claude-opus/report.json",
+      "sha256": "22266013908cdf74ccc02a5f033e926b34fa3852ebe63c4f45dc9030d26ceff5",
+      "attempts": 50,
+      "totals": {
+        "input_tokens": 482,
+        "output_tokens": 141181,
+        "cache_read_input_tokens": 1496777,
+        "cache_write_input_tokens": 202207,
+        "tool_calls": 400,
+        "cost_usd": 5.599922250000001
+      },
+      "historical_rate_decomposition": {
+        "ordinary_input_usd": 0.00241,
+        "cache_read_usd": 0.7483885,
+        "cache_write_usd": 1.26379375,
+        "output_usd": 3.529525,
+        "unreconciled_reported_cost_usd": 0.055805000000001215
+      },
+      "cost_source": "provider_reported",
+      "input_semantics": "uncached only; cache counts separate"
+    },
+    {
+      "source": "e2b-claude-sdk-unbounded-r1-20260917/claude-sdk-opus/report.json",
+      "sha256": "7ce5385b0c05512dceb587820b21b7e7083afa0e36414f5f7ac5f3d7082aecc1",
+      "attempts": 50,
+      "totals": {
+        "input_tokens": 426,
+        "output_tokens": 121557,
+        "cache_read_input_tokens": 851546,
+        "cache_write_input_tokens": 187413,
+        "tool_calls": 400,
+        "cost_usd": 4.693934250000001
+      },
+      "historical_rate_decomposition": {
+        "ordinary_input_usd": 0.00213,
+        "cache_read_usd": 0.425773,
+        "cache_write_usd": 1.17133125,
+        "output_usd": 3.038925,
+        "unreconciled_reported_cost_usd": 0.055775000000000574
+      },
+      "cost_source": "provider_reported",
+      "input_semantics": "uncached only; cache counts separate"
+    }
+  ],
+  "pablo_trace_reconciliation": {
+    "attempts": 50,
+    "all_token_sums_match": true,
+    "events": {
+      "model_status:completed": 233,
+      "fs.read": 250,
+      "tool_status:completed": 402,
+      "fs.list": 50,
+      "fs.write": 102
+    },
+    "phases": {
+      "first": {
+        "input_tokens": 110450,
+        "output_tokens": 5650,
+        "calls": 50,
+        "reasoning_tokens": 0
+      },
+      "middle": {
+        "input_tokens": 537563,
+        "output_tokens": 114466,
+        "calls": 133,
+        "reasoning_tokens": 20902
+      },
+      "final": {
+        "input_tokens": 318094,
+        "output_tokens": 17865,
+        "calls": 50,
+        "reasoning_tokens": 0
+      }
+    }
+  }
+}

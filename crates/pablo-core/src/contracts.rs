@@ -13,6 +13,8 @@ pub struct RunSpec {
     pub instructions: String,
     pub workspace: PathBuf,
     pub model: String,
+    #[serde(default, skip_serializing_if = "crate::PromptCaching::is_default")]
+    pub prompt_caching: crate::PromptCaching,
     #[serde(default, skip_serializing_if = "crate::ReasoningConfig::is_default")]
     pub reasoning: crate::ReasoningConfig,
     pub session_id: Option<String>,
@@ -31,6 +33,7 @@ impl RunSpec {
             instructions: String::new(),
             workspace,
             model: model.into(),
+            prompt_caching: crate::PromptCaching::default(),
             reasoning: crate::ReasoningConfig::default(),
             session_id: None,
             limits: RunLimits::default(),

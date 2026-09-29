@@ -36,3 +36,6 @@ pub mod output;
 pub mod mcp;
 #[cfg(test)]
 mod protocol_properties;
+
+pub mod prompt_caching;
+pub use prompt_caching::PromptCaching;

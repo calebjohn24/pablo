@@ -793,6 +793,13 @@
             },
             "reasoning_capabilities": {
               "$ref": "#/$defs/reasoningCapabilities"
+            },
+            "prompt_caching": {
+              "type": "string",
+              "enum": [
+                "provider_default",
+                "auto"
+              ]
             }
           }
         },
@@ -1409,6 +1416,13 @@
             },
             "reasoning_capabilities": {
               "$ref": "#/$defs/reasoningCapabilities"
+            },
+            "prompt_caching": {
+              "type": "string",
+              "enum": [
+                "provider_default",
+                "auto"
+              ]
             }
           },
           "required": [
@@ -2462,6 +2476,13 @@
             },
             "reasoning": {
               "$ref": "#/$defs/reasoning"
+            },
+            "prompt_caching": {
+              "type": "string",
+              "enum": [
+                "provider_default",
+                "auto"
+              ]
             }
           }
         },
@@ -2477,6 +2498,13 @@
             },
             "reasoning": {
               "$ref": "#/$defs/reasoningCapabilities"
+            },
+            "prompt_caching": {
+              "type": "string",
+              "enum": [
+                "provider_default",
+                "auto"
+              ]
             }
           }
         },
@@ -2545,6 +2573,13 @@
             },
             "reasoning": {
               "$ref": "#/$defs/reasoning"
+            },
+            "prompt_caching": {
+              "type": "string",
+              "enum": [
+                "provider_default",
+                "auto"
+              ]
             }
           },
           "required": [
@@ -2563,6 +2598,13 @@
             },
             "reasoning": {
               "$ref": "#/$defs/reasoningCapabilities"
+            },
+            "prompt_caching": {
+              "type": "string",
+              "enum": [
+                "provider_default",
+                "auto"
+              ]
             }
           },
           "required": [

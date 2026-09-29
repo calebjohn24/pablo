@@ -1,0 +1,38 @@
+{
+  "legalbench/adapters.py": {
+    "before_sha256": "f1e365993c1fe17f18532bfd5587c2f714cda9a40572ee9873113740e8fa5356",
+    "after_sha256": "aa3f5fd16acb4b0cfac0730ed70b837a9211c1586b00400d42d6ce9732dc88aa"
+  },
+  "legalbench/cli.py": {
+    "before_sha256": "adf28bcad9e645f238e32eefb54e51ef34b796805b30105f9fa200b2dd5ed809",
+    "after_sha256": "9d1acea1a909303a7a9034de5e426c87acfc1b4a988f720bc1d695359cd3fdd3"
+  },
+  "legalbench/runner.py": {
+    "before_sha256": "6da9fd02e5fac45cb628cc7b2383abb73b52eb9faa0e83f0552b893c5b142aa2",
+    "after_sha256": "7c963b6010de8ed65f5bac57b1a56697247c5e788b71013065b987df33e62778"
+  },
+  "legalbench/report.py": {
+    "before_sha256": "fdb2110d44f8232ea8ecb87f7129e84a86912241888f7c7ee5ba05f67e3c273c",
+    "after_sha256": "28ae54afcc2f0fb81dcab6fefa8ea504168361707956ba378a6277633f222d3c"
+  },
+  "legalbench/billing.py": {
+    "before_sha256": null,
+    "after_sha256": "12f12d1963384ae004bd675749bd845223e264883023bc120dfe1e241d254be8"
+  },
+  "scripts/run_e2b.py": {
+    "before_sha256": "fd6d5d5815019038e5528e31842fd4bcc8beed6e8692bb1dd9f3af8c807e6ad1",
+    "after_sha256": "3cd4b0ef5e990884476e6600bcb557cc2600f85089f108b3f973b5cea11f4e94"
+  },
+  "scripts/opus_caching_experiment.py": {
+    "before_sha256": null,
+    "after_sha256": "3a3d3cc1a32a5fd6c95b149ffcc93ea4aff95ff4c95015bb2917ff8aaef00074"
+  },
+  "tests/test_benchmark.py": {
+    "before_sha256": "4f44eeea6bca03e56b8b27c8104c13d1d5e644b218987d8d1a503234be7b8339",
+    "after_sha256": "b33cfaffb651455b4bb2dea3cf26d5eb74f6fe32282ee1936369c2a17add4d15"
+  },
+  "tests/test_billing.py": {
+    "before_sha256": null,
+    "after_sha256": "94c37b4552bbf9c69b66630d0c6ae1bcdb9f5b099d491880b7abb3caed119537"
+  }
+}

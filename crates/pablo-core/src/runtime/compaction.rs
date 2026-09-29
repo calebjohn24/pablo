@@ -408,7 +408,12 @@ where
             .provider
             .validate_reasoning(selected.reasoning, max_output_tokens)
             .map_err(|_| reject(lifecycle, "summary_reasoning_unsupported"))?;
+        selected
+            .provider
+            .validate_prompt_caching(selected.prompt_caching)
+            .map_err(|_| reject(lifecycle, "summary_caching_unsupported"))?;
         let attempt = Attempt {
+            prompt_caching: selected.prompt_caching,
             reasoning: selected.reasoning,
             provider: selected.provider,
             model: selected.model,
